@@ -1,0 +1,173 @@
+{% extends "parent/base.html" %}
+{% load static %}
+{% block title %}مدیریت کانال‌ها{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          href="{% static 'influencers/css/pages/channels.css' %}">
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css' %}">
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/filepond/dist/filepond.min.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="container py-5">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+                     role="alert">
+                    {{ message }}
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="row">
+            {% include 'accounts/partials/account_nav.html' %}
+            <div class="col-lg-8">
+                <h3 class="text-light mb-4">مدیریت کانال‌های من</h3>
+                <div class="card bg-dark border-light mb-4">
+                    <div class="card-body">
+                        <h5 class="text-light mb-3">
+                            {% if edit_mode %}
+                                ویرایش کانال: {{ instance.channel_name }}
+                            {% else %}
+                                افزودن کانال جدید
+                            {% endif %}
+                        </h5>
+                        <form method="post"
+                              enctype="multipart/form-data"
+                              action="{% if edit_mode %}{% url 'influencers:edit_channel' instance.pk %}{% endif %}">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-12 d-flex justify-content-center">
+                                    <div style="width: 250px;">
+                                        <label class="form-label text-light">تصویر پروفایل کانال</label>
+                                        {{ form.avatar }}
+                                        {% if instance.avatar %}
+                                            <div class="mt-2 text-center text-muted" style="font-size: 0.8rem;">تصویر فعلی بالا نمایش داده شده است</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">پلتفرم</label>
+                                    {{ form.platform }}
+                                    {{ form.platform.errors }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">آیدی کانال</label>
+                                    {{ form.channel_id }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">نام کانال</label>
+                                    {{ form.channel_name }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">تعداد فالوور</label>
+                                    {{ form.followers_count }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">استان</label>
+                                    {{ form.province }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">شهر</label>
+                                    {{ form.city }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">دسته بندی</label>
+                                    {{ form.category }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">لینک کانال</label>
+                                    {{ form.url }}
+                                </div>
+                            </div>
+                            <div class="mt-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    {% if edit_mode %}
+                                        ذخیره تغییرات
+                                    {% else %}
+                                        افزودن کانال
+                                    {% endif %}
+                                </button>
+                                {% if edit_mode %}
+                                    <a href="{% url 'influencers:influencer_channels' %}"
+                                       class="btn btn-outline-light w-100">انصراف</a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card bg-dark border-light">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>تصویر</th>
+                                        <th>پلتفرم</th>
+                                        <th>نام</th>
+                                        <th>فالوور</th>
+                                        <th>عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for channel in channels %}
+                                        <tr>
+                                            <td>
+                                                {% if channel.avatar %}
+                                                    <img src="{{ channel.avatar.url }}" class="channel-avatar" alt="avatar">
+                                                {% else %}
+                                                    <div class="channel-avatar placeholder-avatar">
+                                                        <i class="fi-user text-secondary"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ channel.platform.name }}</td>
+                                            <td>{{ channel.channel_name }}</td>
+                                            <td>{{ channel.followers_formatted }}</td>
+                                            <td>
+                                                <a href="{% url 'influencers:edit_channel' channel.pk %}"
+                                                   class="btn btn-sm btn-outline-info me-2">ویرایش</a>
+                                                <button class="btn btn-sm btn-outline-danger delete-btn"
+                                                        data-id="{{ channel.id }}"
+                                                        data-name="{{ channel.channel_name }}">حذف</button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="confirm-overlay">
+            <div id="confirm-box">
+                <div class="confirm-title">حذف کانال</div>
+                <div class="confirm-text">آیا از حذف این کانال مطمئن هستید؟</div>
+                <div class="confirm-channel" id="confirm-channel-name"></div>
+                <div class="confirm-actions">
+                    <button id="confirm-cancel" class="btn-cancel">انصراف</button>
+                    <button id="confirm-delete" class="btn-delete">حذف کانال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    <script src="{% static 'influencers/js/pages/channels.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-crop/dist/filepond-plugin-image-crop.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-transform/dist/filepond-plugin-image-transform.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond/dist/filepond.min.js' %}"></script>
+    <script>
+        FilePond.setOptions({ storeAsFile: true });
+        FilePond.parse(document.body);
+    </script>
+{% endblock %}

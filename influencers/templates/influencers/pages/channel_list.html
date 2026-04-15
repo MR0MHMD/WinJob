@@ -1,0 +1,415 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}لیست اینفلوئنسرها | WinJob{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_list.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- هدر صفحه -->
+<div class="hero-header py-5 mb-4">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-7">
+                <h1 class="display-5 fw-bold text-light mb-3">
+                    <i class="fi-star-filled text-primary me-2"></i>
+                    کانال های برتر
+                </h1>
+                <p class="text-muted fs-lg mb-4">
+                    بهترین کانال‌ها و پیج‌ها برای تبلیغات هدفمند در پلتفرم‌های مختلف
+                </p>
+                
+                <!-- سرچ بار + دکمه فیلتر -->
+                <div class="d-flex gap-3">
+                    <div class="flex-grow-1 search-input-wrapper">
+                        <i class="fi-search"></i>
+                        <input type="text" id="searchInput" placeholder="جستجوی نام کانال، آیدی یا اینفلوئنسر..." 
+                               value="{{ selected_filters.q|default:'' }}">
+                    </div>
+                    <button class="filter-toggle-btn" data-bs-toggle="modal" data-bs-target="#filterModal">
+                        <i class="fi-filter me-2"></i>
+                        فیلتر
+                        {% if selected_filters.platform or selected_filters.category or selected_filters.followers_min or selected_filters.ad_type %}
+                            <span class="badge bg-danger rounded-pill me-1" style="font-size: 0.6rem;">!</span>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    
+    <!-- نوار ابزار (تعداد نتایج + مرتب‌سازی) -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-light fw-bold fs-5">{{ channels.paginator.count }}</span>
+            <span class="text-muted">اینفلوئنسر</span>
+            {% if selected_filters.platform or selected_filters.category or selected_filters.followers_min or selected_filters.ad_type %}
+                <span class="badge bg-faded-primary text-primary px-2 py-1">
+                    <i class="fi-filter me-1"></i> فیلتر فعال
+                </span>
+            {% endif %}
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small"><i class="fi-arrows-sort me-1"></i> مرتب‌سازی:</span>
+            <select class="form-select form-select-light" id="sortSelect">
+                <option value="-followers_count" {% if selected_filters.sort == '-followers_count' %}selected{% endif %}>
+                     بیشترین فالوور
+                </option>
+                <option value="followers_count" {% if selected_filters.sort == 'followers_count' %}selected{% endif %}>
+                     کمترین فالوور
+                </option>
+                <option value="-avg_rating" {% if selected_filters.sort == '-avg_rating' %}selected{% endif %}>
+                     بالاترین امتیاز
+                </option>
+                <option value="-created_at" {% if selected_filters.sort == '-created_at' %}selected{% endif %}>
+                     جدیدترین
+                </option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- لیست کارت‌ها -->
+    {% if channels %}
+        <div class="row g-4">
+            {% for channel in channels %}
+                <!-- داخل حلقه for channels، جایگزین کارت قبلی کن -->
+
+<div class="col-md-6 col-xl-4" style="--i: {{ forloop.counter0 }}">
+    <div class="card card-light influencer-card h-100 border-0">
+        <div class="card-body p-4">
+            
+            <!-- هدر کارت با آواتار و اطلاعات -->
+            <div class="d-flex gap-3 mb-3">
+                <!-- آواتار با افکت -->
+                {% if channel.avatar %}
+                    <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}" 
+                         class="influencer-avatar flex-shrink-0">
+                {% else %}
+                    <div class="influencer-avatar flex-shrink-0 d-flex align-items-center justify-content-center">
+                        <i class="fi-user fs-1 text-primary opacity-50"></i>
+                    </div>
+                {% endif %}
+                
+                <!-- اطلاعات اصلی -->
+                <div class="flex-grow-1 min-width-0">
+                    <h5 class="text-light mb-1 text-truncate">
+                        {{ channel.channel_name }}
+                    </h5>
+                    <div class="channel-id">
+                        <i class="fi-at-sign"></i>
+                        <span>{{ channel.channel_id }}</span>
+                    </div>
+                    
+                    <!-- امتیاز با ستاره -->
+                    <div class="rating-stars mt-2">
+                        {% with avg=channel.avg_rating|default:0 %}
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= avg %}
+                                    <i class="fi-star-filled"></i>
+                                {% elif forloop.counter <= avg|add:0.5 %}
+                                    <i class="fi-star-half"></i>
+                                {% else %}
+                                    <i class="fi-star inactive"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                        {% if channel.avg_rating > 0 %}
+                            <span class="rating-count">({{ channel.total_reviews }} نظر)</span>
+                        {% else %}
+                            <span class="rating-count">بدون نظر</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- پلتفرم + دسته‌بندی -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="platform-item">
+                    {% if channel.platform.logo %}
+                        <img src="{{ channel.platform.logo.url }}" class="platform-logo" alt="{{ channel.platform.name }}">
+                    {% else %}
+                        <i class="fi-device-mobile"></i>
+                    {% endif %}
+                    {{ channel.platform.name }}
+                </span>
+                {% if channel.category %}
+                    <span class="category-tag">
+                        <i class="fi-grid"></i>
+                        {{ channel.category.name }}
+                    </span>
+                {% endif %}
+            </div>
+            
+            <!-- توضیحات مختصر -->
+            {% if channel.influencer.description %}
+                <p class="text-muted small mt-2 mb-3" style="line-height: 1.65; min-height: 65px;">
+                    {{ channel.influencer.description|truncatewords:18 }}
+                </p>
+            {% endif %}
+            
+            <!-- استاتس‌ها (فالوور + کمپین موفق) -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <div class="stat-badge flex-grow-1 justify-content-center">
+                    <i class="fi-users"></i>
+                    <strong>{{ channel.followers_formatted }}</strong>
+                    <span>فالوور</span>
+                </div>
+                
+                <div class="stat-badge flex-grow-1 justify-content-center">
+                    <i class="fi-check-circle"></i>
+                    <strong>{{ channel.influencer.completed_campaigns|default:0 }}</strong>
+                    <span>کمپین موفق</span>
+                </div>
+            </div>
+            
+            <!-- لوکیشن (اختیاری) -->
+            {% if channel.province %}
+                <div class="location-text text-muted small mb-3">
+                    <i class="fi-geo"></i>
+                    {{ channel.province.name }}
+                    {% if channel.city %} - {{ channel.city.name }}{% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- دکمه اقدام -->
+            <div class="mt-2 text-center">
+                <a href="{% url 'influencers:channel_detail' channel.id %}" 
+                   class="btn-view w-100 justify-content-center">
+                    <span>مشاهده پروفایل</span>
+                    <i class="fi-arrow-left"></i>
+                </a>
+            </div>
+            
+        </div>
+    </div>
+</div>
+            {% endfor %}
+        </div>
+        
+        <!-- صفحه‌بندی -->
+        {% if channels.has_other_pages %}
+            <div class="d-flex justify-content-center mt-5">
+                <nav>
+                    <ul class="pagination pagination-custom">
+                        {% if channels.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ channels.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="fi-chevron-right"></i></span>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in channels.paginator.page_range %}
+                            {% if channels.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > channels.number|add:'-3' and num < channels.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if channels.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ channels.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="fi-chevron-left"></i></span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- حالت خالی -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fi-search fs-1 text-muted"></i>
+            </div>
+            <h4 class="text-light mb-2">نتیجه‌ای یافت نشد!</h4>
+            <p class="text-muted">هیچ اینفلوئنسری با فیلترهای انتخاب شده پیدا نشد.</p>
+            <a href="{% url 'influencers:channel_list' %}" class="btn btn-outline-primary rounded-pill mt-2">
+                <i class="fi-refresh me-2"></i> حذف همه فیلترها
+            </a>
+        </div>
+    {% endif %}
+    
+</div>
+
+<!-- ========== مودال فیلتر ========== -->
+<div class="modal fade filter-modal" id="filterModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title text-light">
+                    <i class="fi-filter text-primary me-2"></i>
+                    فیلترهای جستجو
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <form method="get" id="filterForm">
+                <div class="modal-body">
+                    
+                    <!-- پلتفرم -->
+                    <div class="filter-group">
+                        <label for="platform"><i class="fi-device-mobile"></i> پلتفرم</label>
+                        <select id="platform" name="platform" class="filter-select">
+                            <option value="">همه پلتفرم‌ها</option>
+                            {% for platform in platforms %}
+                                <option value="{{ platform.slug }}" 
+                                        {% if selected_filters.platform == platform.slug %}selected{% endif %}>
+                                    {{ platform.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- دسته‌بندی -->
+                    <div class="filter-group">
+                        <label for="category"><i class="fi-grid"></i> دسته‌بندی محتوایی</label>
+                        <select id="category" name="category" class="filter-select">
+                            <option value="">همه دسته‌ها</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                        {% if selected_filters.category|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- استان -->
+                    <div class="filter-group">
+                        <label for="province"><i class="fi-geo"></i> استان</label>
+                        <select id="province" name="province" class="filter-select">
+                            <option value="">همه استان‌ها</option>
+                            {% for province in provinces %}
+                                <option value="{{ province.id }}" 
+                                        {% if selected_filters.province|stringformat:"s" == province.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ province.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- محدوده فالوور -->
+                    <div class="filter-group">
+                        <label><i class="fi-users"></i> تعداد فالوور</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label>
+                                    <input type="number" name="followers_min" class="filter-input" 
+                                           placeholder="حداقل" value="{{ selected_filters.followers_min|default:'' }}">
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label>
+                                    <input type="number" name="followers_max" class="filter-input" 
+                                           placeholder="حداکثر" value="{{ selected_filters.followers_max|default:'' }}">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- نوع تبلیغ -->
+                    <div class="filter-group">
+                        <label><i class="fi-play-circle"></i> نوع تبلیغ</label>
+                        <select name="ad_type" class="filter-select">
+                            <option value="">همه انواع</option>
+                            {% for ad_type in ad_types %}
+                                <option value="{{ ad_type.slug }}" 
+                                        {% if selected_filters.ad_type == ad_type.slug %}selected{% endif %}>
+                                    {{ ad_type.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- حداقل امتیاز -->
+                    <div class="filter-group">
+                        <label><i class="fi-star-filled"></i> حداقل امتیاز</label>
+                        <select name="min_rating" class="filter-select">
+                            <option value="">همه امتیازها</option>
+                            <option value="4" {% if selected_filters.min_rating == '4' %}selected{% endif %}>⭐⭐⭐⭐⭐ 4 به بالا</option>
+                            <option value="3" {% if selected_filters.min_rating == '3' %}selected{% endif %}>⭐⭐⭐ 3 به بالا</option>
+                            <option value="2" {% if selected_filters.min_rating == '2' %}selected{% endif %}>⭐⭐ 2 به بالا</option>
+                        </select>
+                    </div>
+                    
+                </div>
+                
+                <div class="modal-footer">
+                    <div class="row g-2 w-100">
+                        <div class="col-6">
+                            <button type="button" class="btn-reset-filter" onclick="resetFilters()">
+                                <i class="fi-refresh me-2"></i> بازنشانی
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="submit" class="btn-apply-filter">
+                                <i class="fi-check me-2"></i> اعمال فیلتر
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    // مرتب‌سازی
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('sort', this.value);
+            window.location.href = url.toString();
+        });
+    }
+    
+    // جستجو با Enter
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('q', this.value);
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            }
+        });
+    }
+    
+    // بازنشانی فیلترها
+    function resetFilters() {
+        window.location.href = "{% url 'influencers:channel_list' %}";
+    }
+    
+    // انیمیشن کارت‌ها
+    document.querySelectorAll('.influencer-card').forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.05}s`;
+        card.style.opacity = '1';
+    });
+</script>
+{% endblock %}

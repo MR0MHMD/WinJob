@@ -1,0 +1,475 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}داشبورد | {{ influencer.full_name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 dashboard-container">
+        <div class="welcome-banner">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="stat-icon avatar-wrapper">
+                            {% if influencer.user.avatar %}
+                                <img src="{{ influencer.user.avatar.url }}" alt="آواتار" class="user-avatar">
+                            {% else %}
+                                
+                                <div class="default-avatar">
+                                    <i class="fi-star-filled"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    
+                        <div>
+                            <h1 class="h2 text-white mb-1"> {% now "H" as current_hour %} {% if current_hour|add:"0" < 12 %} صبح بخیر  {% elif current_hour|add:"0" < 17 %} ظهر بخیر  {% elif current_hour|add:"0" < 19 %} عصر بخیر  {% else %} شب بخیر {% endif %} , {{ influencer.user.nickname|default:influencer.full_name }}! 👋 </h1>
+                        
+                            <p class="text-muted mb-0">
+                                <i class="fi-calendar-alt ms-1"></i>
+                                امروز {{ persian_date }} -
+                                <span class="text-primary">به پنل کاربری خود خوش آمدید</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline-primary">
+                            <i class="fi-wallet ms-1"></i> کیف پول
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <img width="40" src="{% static 'influencers/icons/request.svg' %}" alt="">
+                        </div>
+                        
+                        <span class="badge bg-primary px-3 py-1">درخواست‌ها</span>
+                    </div>
+                    
+                    <div class="stat-value">{{ total_bookings|default:"۰" }}</div>
+                    
+                    <div class="stat-label">کل درخواست‌های همکاری</div>
+                    
+                    <div class="small text-muted mt-2">
+                        <span class="text-warning">⏳ {{ pending_bookings|default:"۰" }} در انتظار</span>
+                        
+                        <span class="mx-2">|</span>
+                        
+                        <span class="text-success">✓ {{ completed_bookings|default:"۰" }} تکمیل شده</span>
+                        
+                    </div>
+                </div>
+            </div>
+
+        
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card earnings-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon"><i class="fi-cash"></i></div>
+                        
+                        <span class="badge bg-success px-3 py-1">درآمد</span>
+                    </div>
+                    <div class="stat-value text-success">{{ total_earned|floatformat:0|default:"۰" }}</div>
+                    
+                    <div class="stat-label">کل درآمد (تومان)</div>
+                    
+                    <div class="small text-muted mt-2">
+                        
+                        <i class="fi-clock ms-1"></i>
+                        {{ pending_earnings|floatformat:0|default:"۰" }} تومان در انتظار تسویه
+                    </div>
+                </div>
+            </div>
+ّ
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <img width="40" src="{% static 'advertisers/icons/click.svg' %}" alt="">
+                        </div>
+                        
+                        <span class="badge bg-accent px-3 py-1">کلیک</span>
+                    </div>
+                
+                    <div class="stat-value">{{ total_clicks|default:"۰" }}</div>
+                
+                    <div class="stat-label">کل کلیک‌ها</div>
+                
+                    <div class="small text-muted mt-2">
+                    
+                        <i class="fi-user-check ms-1"></i>
+                        {{ total_unique_clicks|default:"۰" }} کلیک یکتا
+                        {% if avg_ctr > 0 %}
+                            <span class="mx-2">|</span>
+                            
+                            <span class="text-info">CTR: {{ avg_ctr }}%</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon"><i class="fi-wallet"></i></div>
+                        
+                        <span class="badge bg-accent px-3 py-1">کیف پول</span>
+                    </div>
+                    
+                    <div class="stat-value">{{ wallet_balance|floatformat:0|default:"۰" }}</div>
+                    
+                    <div class="stat-label">موجودی کیف پول (تومان)</div>
+                    
+                    <div class="mt-2">
+                        <a href="#" class="small text-primary text-decoration-none">
+                            درخواست برداشت <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-5">
+            <div class="col-12">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-zap text-primary"></i>
+                            
+                            <h5 class="text-white mb-0">دسترسی سریع</h5>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-4 col-6">
+                                <a href="{% url 'influencers:order_list' %}" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-list"></i>
+                                    
+                                    <span class="small text-white">درخواست‌های من</span>
+                                </a>
+                            </div>
+                            
+                            <div class="col-md-4 col-6">
+                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                    <div class="quick-action-icon">
+                                        <img width="30" height="30" src="{% static 'influencers/icons/performance.svg' %}" alt="">
+                                    </div>
+                                    
+                                    <span class="small text-white">گزارش عملکرد</span>
+                                </a>
+                            </div>
+                            
+                            <div class="col-md-4 col-6">
+                                <a href="{% url 'accounts:wallet_dashboard' %}" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-wallet"></i>
+                                    
+                                    <span class="small text-white">کیف پول</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="dashboard-card earnings-chart-card mb-4">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="chart-header-icon">
+                                    <i class="fi-cash"></i>
+                                </div>
+                                
+                                <h5 class="text-white mb-0">درآمد روزانه</h5>
+                            </div>
+                            
+                            <span class="badge bg-faded-success">۳۰ روز اخیر</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-4">
+                        <div class="chart-container">
+                            <canvas id="dailyEarningsChart" width="800" height="400" data-labels='{{ daily_earnings_labels_json|safe }}' data-values='{{ daily_earnings_data_json|safe }}'></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                {% if active_orders %}
+                    <div class="dashboard-card mb-4">
+                        <div class="dashboard-card-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-play-circle text-success"></i>
+                                
+                                <h5 class="text-white mb-0">سفارشات در حال انجام</h5>
+                                
+                                <span class="badge bg-success px-2 py-1">{{ active_orders|length }}</span>
+                            </div>
+                        </div>
+                    
+                        <div class="card-body p-0">
+                            {% for booking in active_orders %}
+                                <div class="booking-item">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <div class="text-white fw-bold">
+                                                <a class="text-decoration-none" href="{% url 'influencers:order_detail' booking.id %}">{{ booking.campaign.name }}</a>
+                                            </div>
+                                            
+                                            <div class="small text-muted">
+                                                <i class="fi-user ms-1"></i>
+                                                {{ booking.campaign.advertiser.business_name }}
+                                                <span class="mx-2">•</span>
+                                                <i class="fi-calendar ms-1"></i>
+                                                {{ booking.campaign.start_date|date:"Y/m/d" }} - {{ booking.campaign.end_date|date:"Y/m/d" }}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <span class="status-badge status-accepted">پذیرفته شده</span>
+                                            
+                                            <a href="{% url 'influencers:submit_report' booking.id %}" class="btn btn-sm btn-outline-primary">
+                                                آپلود محتوا <i class="fi-upload ms-1"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-history text-primary"></i>
+                            
+                            <h5 class="text-white mb-0">آخرین درخواست‌های همکاری</h5>
+                        </div>
+                        
+                        <a href="{% url 'influencers:order_list' %}" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                
+                    <div class="card-body p-0">
+                        {% if recent_bookings %}
+                            {% for booking in recent_bookings %}
+                                <div class="booking-item">
+                                    <a class="text-decoration-none" href="{% url 'influencers:order_detail' booking.id %}">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <div class="text-white fw-bold">{{ booking.campaign.name }}</div>
+                                                
+                                                <div class="small text-muted mt-1">
+                                                    <i class="fi-building ms-1"></i>
+                                                    {{ booking.campaign.advertiser.business_name }}
+                                                    <span class="mx-2">•</span>
+                                                    <i class="fi-cash ms-1"></i>
+                                                    {{ booking.price|floatformat:0 }} تومان
+                                                </div>
+                                            </div>
+                                        
+                                            <div>
+                                                <span class="status-badge status-{{ booking.status }}">
+                                                    {% if booking.status == 'pending' %}در انتظار
+                                                    {% elif booking.status == 'accepted' %}پذیرفته شده
+                                                    {% elif booking.status == 'completed' %}تکمیل شده
+                                                    {% elif booking.status == 'rejected' %}رد شده
+                                                    {% else %}{{ booking.get_status_display }}{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-bell fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز درخواست همکاری دریافت نکرده‌اید</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="dashboard-card mb-4">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-star-filled text-warning"></i>
+                            <h5 class="text-white mb-0">کانال‌های من</h5>
+                        </div>
+                        
+                        <a href="{% url 'influencers:influencer_channels' %}" class="small text-primary text-decoration-none">
+                            مدیریت <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                
+                    <div class="card-body p-0">
+                        {% if channels %}
+                            {% for channel in channels %}
+                                <div class="channel-item">
+                                    <div class="flex-shrink-0">
+                                        {% if channel.avatar %}
+                                            <img src="{{ channel.avatar.url }}" class="channel-avatar" alt="{{ channel.channel_name }}">
+                                        {% else %}
+                                            <div class="default-channel-avatar">
+                                                <i class="fi-user text-white fs-5"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                
+                                    <div class="flex-grow-1">
+                                        <div class="text-white fw-bold">{{ channel.channel_name|truncatechars:25 }}</div>
+                                        
+                                        <div class="small text-muted">
+                                            {{ channel.platform.name }} | {{ channel.channel_id }}
+                                        </div>
+                                        
+                                        <div class="small text-muted mt-1">
+                                            <i class="fi-users ms-1"></i>
+                                            {{ channel.followers_formatted }} دنبال‌کننده
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-users fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هیچ کانالی ثبت نشده است</p>
+                                <a href="#" class="btn btn-primary">
+                                    <i class="fi-plus ms-1"></i> افزودن کانال
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="dashboard-card mb-4">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-ticket text-primary"></i>
+                            <h5 class="text-white mb-0">تکمیل تعرفه‌ها</h5>
+                        </div>
+                        
+                        <a href="{% url 'influencers:service_rates' %}" class="small text-primary text-decoration-none">
+                            مدیریت <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                
+                    <div class="card-body p-3">
+                        {% if channels_data %}
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="text-muted small">تکمیل کلی تعرفه‌ها</span>
+                                <span class="text-primary small fw-semibold">{{ global_fill_percent }}%</span>
+                            </div>
+                            
+                            <div class="progress mb-3">
+                                <div class="progress-bar" style="width: {{ global_fill_percent }}%;"></div>
+                            </div>
+                            
+                            {% for item in channels_data %}
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if item.channel.avatar %}
+                                                <img src="{{ item.channel.avatar.url }}" class="channel-thumb" alt="{{ item.channel.channel_name }}">
+                                            {% else %}
+                                                <div class="default-channel-thumb">
+                                                    <i class="fi-user text-white fs-6"></i>
+                                                </div>
+                                            {% endif %}
+                                            <span class="small text-white">{{ item.channel.channel_name|truncatechars:20 }}</span>
+                                        </div>
+                                    
+                                        <span class="small text-muted">{{ item.filled_count }} از {{ item.total_ad_types }}</span>
+                                    </div>
+                                
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar" style="width: {{ item.fill_percent }}%;"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fi-ticket fs-1 text-muted mb-2 d-block"></i>
+                                <p class="text-muted small mb-0">هیچ کانالی ثبت نشده است</p>
+                                <a href="{% url 'influencers:influencer_channels' %}" class="btn btn-sm btn-outline-primary mt-3">
+                                    افزودن کانال <i class="fi-plus ms-1"></i>
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-list text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
+                        </div>
+                        
+                        <a href="#" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                
+                    <div class="card-body p-0">
+                        {% if recent_transactions %}
+                            {% for transaction in recent_transactions %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
+                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
+                                            </div>
+                                        
+                                            <div>
+                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
+                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                                                {% if transaction.description %}
+                                                    <div class="small text-muted mt-1">{{ transaction.description|truncatechars:30 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
+                                            {{ transaction.sign_display }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
+                                <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-primary">
+                                    <i class="fi-plus ms-1"></i> شارژ کیف پول
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+    <script src="{% static 'influencers/js/pages/dashboard.js' %}"></script>
+{% endblock %}

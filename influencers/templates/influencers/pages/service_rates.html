@@ -1,0 +1,294 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container py-5">
+        <div class="row">
+            {% include "accounts/partials/account_nav.html" with rates=True %}
+            <!-- ستون اصلی -->
+            <div class="col-lg-8 col-md-7 mb-5">
+                <div class="py-4">
+                    <!-- Page Header + راهنما - یه ردیف -->
+                    <div class="row align-items-center mb-4">
+                        <!-- هدر - سمت چپ -->
+                        <div class="col-lg-7 col-md-6">
+                            <h4 class="text-light mb-1 fw-semibold">تعرفه‌های خدمات</h4>
+                            <p class="text-muted small mb-0">قیمت هر نوع تبلیغ را برای کانال‌های خود تعیین کنید</p>
+                        </div>
+                        <!-- راهنما + پیشرفت کلی - سمت راست -->
+                        <div class="col-lg-5 col-md-6">
+                            <div class="card border-0 mb-3"
+                                 style="background-color: rgba(99,102,241,0.08);
+                                        border: 1px solid rgba(99,102,241,0.2) !important">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <i class="fi-info-circle text-primary fs-5"></i>
+                                        <h6 class="text-light mb-0 fw-semibold">راهنمای تعرفه‌گذاری</h6>
+                                    </div>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="d-flex align-items-start gap-2 mb-1">
+                                            <i class="fi-check text-success mt-1 flex-shrink-0"
+                                               style="font-size: 0.75rem"></i>
+                                            <span class="text-muted small">اگر نرخی ثبت نکنید، یعنی آن نوع تبلیغ را انجام نمی‌دهید</span>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2 mb-1">
+                                            <i class="fi-check text-success mt-1 flex-shrink-0"
+                                               style="font-size: 0.75rem"></i>
+                                            <span class="text-muted small">برای حذف قیمت، فیلد را خالی بگذارید و ذخیره کنید</span>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2">
+                                            <i class="fi-check text-success mt-1 flex-shrink-0"
+                                               style="font-size: 0.75rem"></i>
+                                            <span class="text-muted small">قیمت‌ها به تومان وارد می‌شوند</span>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2 mb-1">
+                                            <i class="fi-check text-success mt-1 flex-shrink-0"
+                                               style="font-size: 0.75rem"></i>
+                                            <span class="text-muted small">اگر برای تعرفه ای مقدار 0 (صفر) را بگذارید و ذخیره کنید، یعنی آن نوع تبلیغ را برای آن کانال رایگان انجام میدهید</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            {% if channels_data %}
+                                <div class="card border-0"
+                                     style="background-color: rgba(255,255,255,0.03)">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <span class="text-muted small">تکمیل کلی تعرفه‌ها</span>
+                                            <span class="text-primary small fw-semibold" id="global-percent">-</span>
+                                        </div>
+                                        <div class="progress"
+                                             style="height: 6px;
+                                                    background-color: rgba(255,255,255,0.08)">
+                                            <div class="progress-bar"
+                                                 id="global-progress-bar"
+                                                 style="background-color: #a78bfa;
+                                                        transition: width 0.4s ease;
+                                                        width: 0"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if not channels_data %}
+                        <div class="text-center py-5">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                                 style="width:72px;
+                                        height:72px;
+                                        background-color: rgba(99,102,241,0.1)">
+                                <i class="fi-alert-circle text-primary" style="font-size: 2rem;"></i>
+                            </div>
+                            <h6 class="text-light mb-2">کانالی ثبت نشده</h6>
+                            <p class="text-muted small">ابتدا یک کانال فعال اضافه کنید</p>
+                        </div>
+                    {% endif %}
+                    <!-- کارت‌های کانال‌ها -->
+                    <div class="row g-4">
+                        {% for item in channels_data %}
+                            {% with channel=item.channel rows=item.rows total=item.rows|length %}
+                                <div class="col-xl-6 col-12">
+                                    <div class="card border-0 h-100" style="background-color: #1f1b2d;">
+                                        <div class="card-header px-4 pt-3 pb-0"
+                                             style="background-color: rgba(255,255,255,0.04);
+                                                    border-bottom: none;
+                                                    border-radius: 0.75rem 0.75rem 0 0">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    {% if channel.avatar %}
+                                                        <img src="{{ channel.avatar.url }}"
+                                                             alt="{{ channel.channel_name }}"
+                                                             class="rounded-circle flex-shrink-0"
+                                                             style="width:42px;
+                                                                    height:42px;
+                                                                    object-fit:cover;
+                                                                    border: 2px solid rgba(99,102,241,0.3)">
+                                                    {% else %}
+                                                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                             style="width:42px;
+                                                                    height:42px;
+                                                                    background-color: rgba(99,102,241,0.15)">
+                                                            <i class="fi-globe text-primary fs-5"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <h6 class="text-light mb-0 fw-semibold">{{ channel.channel_name }}</h6>
+                                                        <span class="text-muted small">{{ channel.platform.name }} &nbsp;·&nbsp; {{ channel.channel_id }}</span>
+                                                    </div>
+                                                </div>
+                                                <span class="badge rounded-pill"
+                                                      style="background-color: rgba(99,102,241,0.15);
+                                                             color: #a78bfa;
+                                                             font-size: 0.72rem"
+                                                      id="badge-{{ channel.id }}">
+                                                    <span id="filled-count-{{ channel.id }}">{{ item.filled_count }}</span> از {{ total }} مشخص شده
+                                                </span>
+                                            </div>
+                                            <div class="progress mb-0"
+                                                 style="height: 3px;
+                                                        background-color: rgba(255,255,255,0.08);
+                                                        border-radius: 0">
+                                                <div class="progress-bar"
+                                                     id="progress-{{ channel.id }}"
+                                                     role="progressbar"
+                                                     style="width: {{ item.fill_percent }}%;
+                                                             background-color: #a78bfa;
+                                                             transition: width 0.4s ease"
+                                                     aria-valuenow="{{ item.fill_percent }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            {% for row in rows %}
+                                                {% with ad_type=row.ad_type rate=row.rate %}
+                                                    <div class="border-bottom px-4 py-0"
+                                                         style="border-color: rgba(255,255,255,0.06) !important"
+                                                         id="row-{{ channel.id }}-{{ ad_type.id }}">
+                                                        <div class="d-flex align-items-center justify-content-between py-3">
+                                                            <div class="pe-2">
+                                                                <div class="text-light small fw-medium mb-1">{{ ad_type.name }}</div>
+                                                                <div class="fw-semibold"
+                                                                     id="price-display-{{ channel.id }}-{{ ad_type.id }}"
+                                                                     style="{% if rate %}color: #a78bfa;
+                                                                     {% else %}color: #6b7280;
+                                                                     {% endif %} font-size: 0.88rem">
+                                                                    {% if rate %}
+                                                                        {{ rate.formatted_price }}
+                                                                    {% else %}
+                                                                        هنوز مشخص نشده
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <a class="nav-link nav-link-light py-0 px-2"
+                                                               href="#edit-{{ channel.id }}-{{ ad_type.id }}"
+                                                               data-bs-toggle="collapse"
+                                                               aria-expanded="false">
+                                                                <i class="fi-edit opacity-70"></i>
+                                                            </a>
+                                                        </div>
+                                                        <div class="collapse pb-3"
+                                                             id="edit-{{ channel.id }}-{{ ad_type.id }}">
+                                                            <div class="d-flex align-items-center gap-2"
+                                                                 style="background-color: rgba(255,255,255,0.03);
+                                                                        border-radius: 0.5rem;
+                                                                        padding: 0.75rem 1rem">
+                                                                <input type="text"
+                                                                       inputmode="numeric"
+                                                                       class="form-control form-control-sm bg-dark text-light border-secondary"
+                                                                       placeholder="قیمت به تومان"
+                                                                       value="{% if rate %}{{ rate.price }}{% endif %}"
+                                                                       id="price-input-{{ channel.id }}-{{ ad_type.id }}"
+                                                                       oninput="formatNumberInput(this)"
+                                                                       style="max-width: 220px">
+                                                                <button type="button"
+                                                                        class="btn btn-sm btn-primary px-3"
+                                                                        onclick="saveRate({{ channel.id }}, {{ ad_type.id }}, {{ total }}, this)">
+                                                                    ذخیره
+                                                                </button>
+                                                                <span id="save-feedback-{{ channel.id }}-{{ ad_type.id }}"
+                                                                      class="text-success small d-none">
+                                                                    <i class="fi-check me-1"></i>ذخیره شد
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endwith %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    <script>
+        const CSRF_TOKEN = '{{ csrf_token }}';
+        document.addEventListener('DOMContentLoaded', () => updateGlobalProgress());
+
+        function formatNumberInput(input) {
+            let raw = input.value.replace(/[^0-9]/g, '');
+            input.value = raw === '' ? '' : parseInt(raw).toLocaleString('en-US');
+        }
+
+        function saveRate(channelId, adTypeId, totalCount, btn) {
+            const input = document.getElementById(`price-input-${channelId}-${adTypeId}`);
+            const rawValue = input.value.replace(/,/g, '');
+            if (rawValue !== '' && (isNaN(rawValue) || Number(rawValue) < 0)) {
+                input.classList.add('is-invalid');
+                return;
+            }
+            input.classList.remove('is-invalid');
+            btn.disabled = true;
+            btn.textContent = '...';
+            fetch(`/influencers/service-rates/edit/${channelId}/${adTypeId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                },
+                body: JSON.stringify({price: rawValue}),
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const display = document.getElementById(`price-display-${channelId}-${adTypeId}`);
+                        if (data.deleted) {
+                            display.textContent = 'هنوز مشخص نشده';
+                            display.style.color = '#6b7280';
+                        } else {
+                            display.textContent = data.formatted_price;
+                            display.style.color = '#a78bfa';
+                        }
+                        updateProgress(channelId, totalCount);
+                        updateGlobalProgress();
+                        const feedback = document.getElementById(`save-feedback-${channelId}-${adTypeId}`);
+                        feedback.classList.remove('d-none');
+                        setTimeout(() => feedback.classList.add('d-none'), 2500);
+                        const collapseEl = document.getElementById(`edit-${channelId}-${adTypeId}`);
+                        bootstrap.Collapse.getInstance(collapseEl)?.hide();
+                    } else {
+                        alert(data.error || 'خطا در ذخیره‌سازی');
+                    }
+                })
+                .catch(() => alert('خطا در ارتباط با سرور'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'ذخیره';
+                });
+        }
+
+        function updateProgress(channelId, totalCount) {
+            let filled = 0;
+            document.querySelectorAll(`[id^="price-display-${channelId}-"]`).forEach(el => {
+                if (el.style.color === 'rgb(167, 139, 250)') filled++;
+            });
+            const percent = totalCount > 0 ? Math.round((filled / totalCount) * 100) : 0;
+            const bar = document.getElementById(`progress-${channelId}`);
+            if (bar) {
+                bar.style.width = percent + '%';
+                bar.setAttribute('aria-valuenow', percent);
+            }
+            const countEl = document.getElementById(`filled-count-${channelId}`);
+            if (countEl) countEl.textContent = filled;
+        }
+
+        function updateGlobalProgress() {
+            const allDisplays = document.querySelectorAll('[id^="price-display-"]');
+            const total = allDisplays.length;
+            let filled = 0;
+            allDisplays.forEach(el => {
+                if (el.style.color === 'rgb(167, 139, 250)') filled++;
+            });
+            const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+            const bar = document.getElementById('global-progress-bar');
+            const label = document.getElementById('global-percent');
+            if (bar) bar.style.width = percent + '%';
+            if (label) label.textContent = percent + '%';
+        }
+    </script>
+{% endblock %}
