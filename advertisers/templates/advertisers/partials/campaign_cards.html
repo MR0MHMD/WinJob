@@ -1,0 +1,137 @@
+<div class="row g-4" style="margin-top: 2rem">
+
+    {% for campaign in campaigns %}
+        <div class="col-md-6 col-lg-4">
+
+    <a href="{% url 'advertisers:campaign_detail' campaign.id %}" class="campaign-card-link">
+
+        <div class="campaign-card-wrapper h-100">
+
+            <div class="campaign-card-inner h-100 p-3">
+
+                <!-- STATUS -->
+                <div class="campaign-status status-{{ campaign.status }}">
+                    {{ campaign.get_status_display }}
+                </div>
+
+                <!-- PAYMENT STATUS -->
+                <div class="campaign-payment-status {% if campaign.invoice.is_paid and campaign.invoice %}paid{% else %}unpaid{% endif %}">
+                    {% if campaign.invoice.is_paid and campaign.invoice %}
+                        پرداخت شده
+                    {% else %}
+                        پرداخت نشده
+                    {% endif %}
+                </div>
+
+                <!-- IMAGE -->
+                <div class="d-flex flex-column align-items-center text-center mb-3 mt-1">
+
+                    {% if campaign.platform.logo %}
+                        <img src="{{ campaign.platform.logo.url }}"
+                             alt="{{ campaign.platform.name }}"
+                             class="campaign-logo mb-3">
+                    {% else %}
+                        <div class="campaign-logo-placeholder mb-3">
+                            📱
+                        </div>
+                    {% endif %}
+
+                    <h6 class="text-light fw-bold mb-0 campaign-name">
+                        {{ campaign.name }}
+                    </h6>
+
+                </div>
+
+                <!-- BADGES -->
+                <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
+
+                    <span class="badge badge-platform">
+                        {{ campaign.platform.name }}
+                    </span>
+
+                    <span class="badge badge-content">
+                        {% if campaign.content_type.icon %}
+                            <i class="{{ campaign.content_type.icon }} me-1"></i>
+                        {% endif %}
+                        {{ campaign.content_type.name }}
+                    </span>
+
+                    <span class="badge badge-adtype">
+                        {% if campaign.ad_type.icon %}
+                            <i class="{{ campaign.ad_type.icon }} me-1"></i>
+                        {% endif %}
+                        {{ campaign.ad_type.name }}
+                    </span>
+
+                </div>
+
+                <!-- SERVICE -->
+                <div class="service-box text-center mb-3">
+
+                    {% if campaign.content_service_type %}
+                        {% if campaign.content_service_type.icon %}
+                            <i class="{{ campaign.content_service_type.icon }} me-1"></i>
+                        {% endif %}
+                        {{ campaign.content_service_type.name }}
+                    {% else %}
+                        <span class="service-placeholder">
+                            <i class="fa-solid fa-ban me-1"></i>
+                            بدون تولید محتوا
+                        </span>
+                    {% endif %}
+
+                </div>
+
+                <!-- DESCRIPTION -->
+                {% if campaign.description %}
+                    <div class="campaign-description mb-3">
+                        {{ campaign.description|truncatewords:18 }}
+                    </div>
+                {% endif %}
+
+                <!-- STATS -->
+                <div class="row g-2">
+
+                    <div class="col-6">
+                        <div class="stat-box text-center">
+                            <div class="stat-value">
+                                {{ campaign.duration_days }}
+                            </div>
+                            <div class="stat-label">مدت کمپین</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="stat-box text-center">
+                            <div class="stat-value">
+                                {{ campaign.invoice.payable_amount_display|default:"-" }}
+                            </div>
+                            <div class="stat-label">هزینه</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ACTION -->
+                <div class="mt-3 text-center">
+
+                    {% if campaign.is_editable %}
+                        <span class="btn btn-accent btn-sm">
+                            ویرایش
+                        </span>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </a>
+
+</div>
+
+
+    {% endfor %}
+
+</div>

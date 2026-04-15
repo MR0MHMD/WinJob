@@ -1,0 +1,43 @@
+# advertisers/models
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from django_jalali.db import models as jmodels
+from accounts.models import CustomUser
+from core.models import Category
+from location.models import Province, City
+
+
+class AdvertiserProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='advertiser_profile',
+                                verbose_name=_('کاربر'))
+    business_name = models.CharField(_('نام کسب‌وکار'), max_length=200)
+    province = models.ForeignKey(Province, on_delete=models.CASCADE,
+                                 related_name='advertisers', verbose_name=_('استان'), null=True, blank=True)
+    city = models.ForeignKey(City, verbose_name=_('شهر'), on_delete=models.CASCADE, related_name=_('advertisers'),
+                             null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True,
+                                 verbose_name=_('دسته‌بندی'))
+    description = models.TextField(_('توضیحات کسب‌وکار'), blank=True)
+    website = models.URLField(_('وبسایت'), blank=True)
+    is_verified = models.BooleanField(_('تأیید شده'), default=True)
+    created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
+    updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('تبلیغ‌دهنده')
+        verbose_name_plural = _('تبلیغ‌دهندگان')
+        ordering = ['-created_at']
+
+    def __str__(self): return f"{self.business_name} - {self.province}"
+
+    @property
+    def wallet_balance(self):
+        return self.user.wallet.balance
+
+    def get_full_location(self): return f"{self.city}، {self.province}"
+
+    get_full_location.short_description = _('موقعیت جغرافیایی')
+
+    def active_campaigns_count(self): return self.campaigns.filter(campaign_status='approved').count()
+
+    active_campaigns_count.short_description = _('کمپین‌های فعال')

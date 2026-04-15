@@ -1,0 +1,176 @@
+{% extends 'parent/base.html' %}
+{% load static jformat %}
+{% block title %}لیست پست ها{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/simplebar/dist/simplebar.min.css' %}" />
+    <style>
+        .blog-card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+        
+        .blog-card-img img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container pt-5 pb-lg-4 my-5">
+        <!-- Breadcrumb-->
+        <nav class="mb-3 pb-md-1 pt-md-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb breadcrumb-light m-0">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'core:home' %}">خانه</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">اخبار و مقالات</li>
+            </ol>
+        </nav>
+        <!-- Page title-->
+        <h1 class="text-light mb-4 h4 font-vazir">اخبار و مقالات</h1>
+        <!-- Sorting, filters and search-->
+        <div class="d-lg-flex pt-1 pb-4 mb-3">
+            <div class="d-flex mb-3 mb-lg-0 pe-lg-2">
+                <div class="d-flex flex-md-row flex-column align-items-md-center flex-grow-1 border-end-md border-light pe-md-4 me-md-4">
+                    <label class="d-inline-block text-light me-sm-2 mb-md-0 mb-2 text-nowrap"
+                           for="sortby">
+                        <i class="fi-arrows-sort mt-n1 me-2 align-middle opacity-70"></i>مرتب سازی براساس:
+                    </label>
+                    <select class="form-select form-select-light me-md-2" id="sortby">
+                        <option>جدیدترین</option>
+                        <option>قدیمی ترین</option>
+                        <option>پربازدید</option>
+                        <option>اسپانسری</option>
+                    </select>
+                </div>
+                <div class="d-flex flex-md-row flex-column align-items-md-center flex-grow-1 border-end-lg border-light ps-3 ps-md-2 pe-lg-4 me-lg-4">
+                    <label class="d-inline-block text-light me-sm-2 mb-md-0 mb-2 text-nowrap"
+                           for="categories">
+                        <i class="fi-align-left mt-n1 me-2 align-middle opacity-70"></i>دست بندی ها:
+                    </label>
+                    <select class="form-select form-select-light ms-lg-2" id="categories">
+                        <option>همه</option>
+                        {% for category in categories %}<option>{{ category.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="position-relative flex-grow-1">
+                <input class="form-control form-control-light"
+                       type="text"
+                       placeholder="جستجو...">
+                <i class="fi-search position-absolute top-50 end-0 translate-middle-y text-light opacity-70 me-3"></i>
+            </div>
+        </div>
+        <!-- Featured article-->
+        <article class="row pb-2 pb-md-1 mb-4 mb-md-5">
+            <div class="col-md-7 col-lg-8 mb-lg-0 mb-3 mb-md-0">
+                <a class="d-block position-relative"
+                   href="{{ hot_post.get_absolute_url }}">
+                    <span class="badge bg-info position-absolute top-0 start-0 m-3 fs-sm">جدید</span>
+                    <img class="rounded-3"
+                         src="{% if hot_post.image %}{{ hot_post.image.url }}{% else %}{% static 'finder/img/car-finder/brands/honda.svg' %}{% endif %}"
+                         alt="Post image">
+                </a>
+            </div>
+            <div class="col-md-5 col-lg-4">
+                <a class="fs-sm text-uppercase text-decoration-none" href="#">{{ hot_post.category }}</a>
+                <h2 class="h6 text-light pt-1 font-nonBold">
+                    <a class="nav-link" href="{{ hot_post.get_absolute_url }}">{{ hot_post.title }}</a>
+                </h2>
+                <p class="d-md-none d-xl-block text-light opacity-70 mb-4 line-h18">{{ hot_post.content|truncatewords:100 }}</p>
+                <a class="d-flex align-items-center text-decoration-none"
+                   href="{% url 'blog:person_posts' hot_post.user.id %}">
+                    <img class="rounded-circle"
+                         src="{% if hot_post.user.avatar %}{{ hot_post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/06.jpg' %}{% endif %}"
+                         width="48"
+                         alt="Kristin Watson">
+                    <div class="ps-2">
+                        <h6 class="fs-base text-light lh-base mb-1 fw-500">{{ hot_post.user.nickname }}</h6>
+                        <div class="d-flex fs-xs text-light opacity-70">
+                            <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1"></i>{{ hot_post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                            <span><i class="fi-chat-circle opacity-70 mt-n1 me-1"></i>{{ hot_post.comment_count }} نظر</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </article>
+        <!-- Latest articles (2 columns)-->
+        <div class="row row-cols-1 row-cols-md-2 gy-md-5 gy-4 mb-lg-5 mb-4">
+            {% if latest_post %}
+                {% for post in latest_post %}
+                    <article class="col pb-2 pb-md-1">
+                        <a class="blog-card d-block position-relative mb-3"
+                           href="{{ post.get_absolute_url }}">
+                            <span class="badge bg-info position-absolute top-0 start-0 m-3 fs-sm">جدید</span>
+                            <img class="card-img-top d-block rounded-3"
+                                 src="{% if post.image %}{{ post.image.url }}{% else %}{% static 'finder/img/car-finder/blog/02.jpg' %}{% endif %}"
+                                 alt="Post image"
+                                 style="object-fit: cover">
+                        </a>
+                        <a class="fs-sm text-uppercase text-decoration-none" href="#">{{ post.category }}</a>
+                        <h3 class="h6 font-nonBold text-light mb-2 pt-1">
+                            <a class="nav-link" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                        </h3>
+                        <p class="text-light opacity-70 mb-3 line-h18">{{ post.content|truncatewords:30 }}</p>
+                        <a class="d-flex align-items-center text-decoration-none"
+                           href="{% url 'blog:person_posts' post.user.id %}">
+                            <img class="rounded-circle"
+                                 src="{% if post.user.avatar %}{{ post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/07.jpg' %}{% endif %}"
+                                 width="48"
+                                 alt="Cody Fisher">
+                            <div class="ps-2">
+                                <h6 class="fs-base text-light lh-base mb-1 fw-500">{{ post.user.nickname }}</h6>
+                                <div class="d-flex fs-xs text-light opacity-70">
+                                    <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1 align-middle"></i>{{ post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                                    <span><i class="fi-chat-circle opacity-70 mt-n1 me-1 align-middle"></i>{{ post.comment_count }} نظر</span>
+                                </div>
+                            </div>
+                        </a>
+                    </article>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <!-- Latest articles (3 columns)-->
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 gx-3 gx-md-4 gy-md-5 gy-4 mb-lg-5 mb-4 blog-list">
+            {% if Controversial_post %}
+                {% for post in Controversial_post %}
+                    <article class="col pb-2 pb-md-1">
+                        <a class="blog-card-img d-block position-relative mb-3"
+                           href="{{ post.get_absolute_url }}">
+                            <span class="badge bg-info position-absolute top-0 start-0 m-3 fs-sm">جدید</span>
+                            <img class="d-block rounded-3"
+                                 src="{% if post.image %}{{ post.image.url }}{% else %}{% static 'finder/img/car-finder/blog/02.jpg' %}{% endif %}"
+                                 alt="Post image">
+                        </a>
+                        <a class="fs-sm text-uppercase text-decoration-none" href="#">{{ post.category }}</a>
+                        <h3 class="h6 font-nonBold text-light mb-2 pt-1">
+                            <a class="nav-link" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                        </h3>
+                        <p class="text-light opacity-70 mb-3 line-h18">{{ post.content|truncatewords:30 }}</p>
+                        <a class="d-flex align-items-center text-decoration-none"
+                           href="{% url 'blog:person_posts' post.user.id %}">
+                            <img class="rounded-circle"
+                                 src="{% if post.user.avatar %}{{ post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/07.jpg' %}{% endif %}"
+                                 width="48"
+                                 alt="Cody Fisher">
+                            <div class="ps-2">
+                                <h6 class="fs-base text-light lh-base mb-1 fw-500">{{ post.user.nickname }}</h6>
+                                <div class="d-flex fs-xs text-light opacity-70">
+                                    <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1 align-middle"></i>{{ post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                                    <span><i class="fi-chat-circle opacity-70 mt-n1 me-1 align-middle"></i>{{ post.comment_count }} نظر</span>
+                                </div>
+                            </div>
+                        </a>
+                    </article>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    <script src="{% static 'finder/vendor/simplebar/dist/simplebar.min.js' %}"></script>
+{% endblock %}

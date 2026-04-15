@@ -1,0 +1,52 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}کمپین‌های من{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'advertisers/css/pages/campaign_list.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-5">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div>
+                <div class="page-title">کمپین‌های من</div>
+                <div class="page-sub">نمایش و مدیریت کمپین‌ها</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                {% if statuses|length > 1 %}
+                    <div class="filter-bar">
+                        <a href="?status=all" class="filter-item {% if status_filter == 'all' %}active{% endif %}">
+                            همه
+                        </a>
+
+                        {% for value,label in statuses %}
+                            <a href="?status={{ value }}"
+                               class="filter-item {% if status_filter == value %}active{% endif %}">
+                                {{ label }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if campaigns.paginator.count == 0 %}
+            <div class="text-center py-5">
+                <h4 class="text-white mb-2">هیچ کمپینی پیدا نشد</h4>
+                <p class="text-muted mb-4">هنوز کمپینی نساختی. شروع کن!</p>
+                <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-primary px-4">ساخت کمپین</a>
+            </div>
+        {% else %}
+            <div id="campaign-list">
+                {% include 'advertisers/partials/campaign_cards.html' %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'advertisers/js/pages/campaign_list.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'parent/base.html' %}
+{% load static jformat %}
+{% block title %}پست های {{ user.nickname }}{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/simplebar/dist/simplebar.min.css' %}" />
+    <style>
+        .blog-card img {
+                width: 100%;
+                height: 350px;
+                object-fit: cover;
+            }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container pt-5 pb-lg-4 my-5">
+        <div class="d-sm-flex align-items-center justify-content-center mb-3 mb-sm-4 pb-2">
+            <h2 class="h4 text-light mb-3 font-vazir">پست های {{ user.nickname }}</h2>
+        </div>
+        <div class="row justify-content-center text-center">
+            <div class="col-1 col-sm-3 col-md-2">
+                <div class="d-flex flex-column align-items-center">
+                    <img src="{{ user.avatar.url }}" width="220" class="rounded-circle" alt="">
+                    <h6 class="fw-bold mb-1 text-light">{{ user.nickname }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 gy-md-5 gy-4 mb-lg-5 mb-4"
+             style="margin-top: 2.55rem">
+            {% for post in posts %}
+                <article class="col pb-2 pb-md-1">
+                    <a class="blog-card d-block position-relative mb-3"
+                       href="{{ post.get_absolute_url }}">
+                        <span class="badge bg-info position-absolute top-0 start-0 m-3 fs-sm">جدید</span>
+                        <img class="card-img-top d-block rounded-3"
+                             src="{% if post.image %}{{ post.image.url }}{% else %}{% static 'finder/img/car-finder/blog/02.jpg' %}{% endif %}"
+                             alt="Post image"
+                             style="object-fit: cover">
+                    </a>
+                    <a class="fs-sm text-uppercase text-decoration-none" href="#">{{ post.category }}</a>
+                    <h3 class="h6 font-nonBold text-light mb-2 pt-1">
+                        <a class="nav-link" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                    </h3>
+                    <p class="text-light opacity-70 mb-3 line-h18">{{ post.content|truncatewords:30 }}</p>
+                    <a class="d-flex align-items-center text-decoration-none" href="#">
+                        <img class="rounded-circle"
+                             src="{% if post.user.avatar %}{{ post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/07.jpg' %}{% endif %}"
+                             width="48"
+                             alt="Cody Fisher">
+                        <div class="ps-2">
+                            <h6 class="fs-base text-light lh-base mb-1 fw-500">{{ post.user.nickname }}</h6>
+                            <div class="d-flex fs-xs text-light opacity-70">
+                                <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1 align-middle"></i>{{ post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                                <span><i class="fi-chat-circle opacity-70 mt-n1 me-1 align-middle"></i>{{ post.comment_count }} نظر</span>
+                            </div>
+                        </div>
+                    </a>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    <script src="{% static 'finder/vendor/simplebar/dist/simplebar.min.js' %}"></script>
+{% endblock %}

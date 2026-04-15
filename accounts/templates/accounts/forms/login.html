@@ -1,0 +1,71 @@
+{% load static %}
+<!--suppress ALL -->
+<div class="modal fade modal-login"
+     id="signin-modal"
+     tabindex="-1"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered p-2 my-0 mx-auto"
+         style="max-width: 950px">
+        <div class="modal-content bg-dark border-light">
+            <div class="modal-body px-0 py-2 py-sm-0">
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-3 me-3"
+                        type="button"
+                        data-bs-dismiss="modal"></button>
+                <div class="row mx-0 align-items-center">
+                    <div class="col-md-6 border-end-md border-light p-4 p-sm-5">
+                        <h2 class="h4 text-light mb-4 mb-sm-5">
+                            سلام!
+                            <br>
+                            به سایت ما خوش آمدید.
+                        </h2>
+                        <img class="d-block mx-auto"
+                             src="{% static 'finder/img/signin-modal/signin-dark.svg' %}"
+                             width="344"
+                             alt="Illustartion">
+                        <div class="text-light mt-4 mt-sm-5">
+                            <span class="opacity-60">هنوز ثبت نام نکرده اید؟</span><a class="text-light"
+   href="#signup-modal"
+   data-bs-toggle="modal"
+   data-bs-dismiss="modal">ثبت
+                            نام</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 px-4 pt-2 pb-4 px-sm-5 pb-sm-5 pt-md-5">
+                        <a class="btn btn-outline-info w-100 mb-3" href="#"><i class="fi-google fs-lg me-1"></i>ورود با اکانت گوگل</a>
+                        <div class="d-flex align-items-center py-3 mb-3">
+                            <hr class="hr-light w-100">
+                            <div class="text-light opacity-70 px-3">یـا</div>
+                            <hr class="hr-light w-100">
+                        </div>
+                        <form class="needs-validation"
+                              novalidate
+                              method="POST"
+                              action="{% url 'accounts:login' %}">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <label class="form-label text-light mb-2" for="signin-phone">تلفن همراه</label>
+                                {{ login_form.phone_number }}
+                                <div class="invalid-feedback">لطفاً شماره تلفن را وارد کنید.</div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="form-label text-light mb-0" for="signin-password">رمز عبور</label>
+                                    <a class="fs-sm text-light" href="#">رمز عبور را فراموش کرده اید؟</a>
+                                </div>
+                                <div class="password-toggle">
+                                    {{ login_form.password }}
+                                    <label class="password-toggle-btn" aria-label="نمایش/پنهان کردن رمز عبور">
+                                        <input class="password-toggle-check" type="checkbox">
+                                        <span class="password-toggle-indicator"></span>
+                                    </label>
+                                </div>
+                                <div class="invalid-feedback">لطفاً رمز عبور را وارد کنید.</div>
+                            </div>
+                            <button class="btn btn-primary btn-lg w-100" type="submit">ورود به حساب کاربری</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

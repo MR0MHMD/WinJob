@@ -1,0 +1,220 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block title %}اطلاعات فردی{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/simplebar/dist/simplebar.min.css' %}"/>
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css' %}"/>
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/filepond/dist/filepond.min.css' %}"/>
+{% endblock %}
+
+{% block content %}
+    <div class="container pt-5 pb-lg-4 mt-5 mb-sm-2">
+
+        <!-- Breadcrumb-->
+        <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+
+            <ol class="breadcrumb breadcrumb-light">
+                <li class="breadcrumb-item">
+                    <a href="#">خانه</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="#">اکانت من</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">اطلاعات فردی</li>
+            </ol>
+
+        </nav>
+
+        <!-- Page content-->
+        <div class="row">
+
+            <!-- Sidebar-->
+            {% include 'accounts/partials/account_nav.html' with personal_info=True %}
+
+            <!-- Content-->
+            <div class="col-lg-8 col-md-7 mb-5">
+                <h1 class="h4 font-vazir text-light">اطلاعات فردی</h1>
+
+                <div id="alert-container"></div>
+
+                <div class="text-light mb-2 pt-1">{{ percentage }}% از اطلاعات فردی خود را تکمیل کرده اید.</div>
+
+                <div class="progress progress-light mb-4" style="height: .25rem;">
+                    <div class="progress-bar bg-warning"
+                         role="progressbar"
+                         style="width: {{ percentage }}%"
+                         aria-valuenow="50"
+                         aria-valuemin="0"
+                         aria-valuemax="100"></div>
+                </div>
+
+                <ul class="nav nav-tabs nav-tabs-light" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#user" data-bs-toggle="tab" role="tab">
+                            <i class="fi-home me-2"></i>
+                            ویرایش اطلاعات شخصی
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link"
+                           href="#{% if request.user.is_advertiser %}advertiser{% elif request.user.is_influencer %}influencer{% endif %}"
+                           data-bs-toggle="tab"
+                           role="tab">
+                            <i class="fi-user me-2"></i>
+                            ویرایش اطلاعات کسب و کار
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="row pt-2">
+                    <div class="col-lg-9 col-md-12 col-sm-8 mb-2 mb-m-4">
+                        <div class="tab-content border border-light rounded-3 p-3 mb-4"
+                             id="personal-info">
+                            <form method="post"
+                                  enctype="multipart/form-data"
+                                  class="tab-pane fade show active"
+                                  id="user"
+                                  action="{% url 'accounts:update' %}">
+                                {% csrf_token %}
+                                {% for field in user_form %}
+                                    <div class="border-bottom border-light pb-3 mb-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="pe-2 opacity-70">
+                                                <label class="form-label fw-bold text-light">{{ field.label }}</label>
+                                                <div class="text-light selection"
+                                                     id="{{ field.name }}-value" >{% if field.name == "sheba_code" %}{{ user_form.instance.display_sheba|safe }}{% else %}{{ field.value|default:"مشخص نشده است" }}{% endif %}</div>
+                                            </div>
+                                            <div class="me-n3" data-bs-toggle="tooltip" title="ویرایش">
+                                                <a class="nav-link nav-link-light py-0"
+                                                   href="#{{ field.name }}-collapse"
+                                                   data-bs-toggle="collapse">
+                                                    <i class="fi-edit"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="collapse"
+                                             id="{{ field.name }}-collapse"
+                                             data-bs-parent="#personal-info">
+                                            {{ field }}
+                                            {% if field.errors %}
+                                                <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </form>
+                            {% if profile_form %}
+                                <form method="post"
+                                      enctype="multipart/form-data"
+                                      class="tab-pane fade"
+                                      id="{% if request.user.is_advertiser %}advertiser{% elif request.user.is_influencer %}influencer{% endif %}">
+                                    {% csrf_token %}
+                                    {% for field in profile_form %}
+                                        <div class="border-bottom border-light pb-3 mb-3">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="pe-2 opacity-70">
+                                                    <label class="form-label fw-bold text-light">{{ field.label }}</label>
+                                                    <div class="text-light"
+                                                         id="{{ field.name }}-value">{{ field.value|default:"مشخص نشده است" }}</div>
+                                                </div>
+                                                <div class="me-n3" data-bs-toggle="tooltip" title="ویرایش">
+                                                    <a class="nav-link nav-link-light py-0"
+                                                       href="#{{ field.name }}-collapse"
+                                                       data-bs-toggle="collapse">
+                                                        <i class="fi-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="collapse"
+                                                 id="{{ field.name }}-collapse"
+                                                 data-bs-parent="#personal-info">
+                                                {{ field }}
+                                                {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-12 col-sm-4 mb-4">
+                        <div class="pt-4 pb-2 py-lg-5">
+                            <h6 class="text-light mb-2 fw-500">چه کسی می تواند مشخصات من را ببیند؟</h6>
+                            <p class="fs-sm text-light opacity-70 mb-0">
+                                مشخصات شما صرفا برای کمک کردن به شما برای انجام
+                                تبلیغات بهتر و دقیق تر میباشد. این اطلاعات برای تبلیغ کنندگان الزامی هستند
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- در داخل مودال -->
+                <div class="modal fade" id="delete-account" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title">حذف حساب کاربری</h4>
+                                <button class="btn-close"
+                                        type="button"
+                                        data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>آیا از حذف حساب کاربری خود اطمینان دارید؟</p>
+                                <p>این کار به هیچ عنوان قابل بازگشت نیست</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-primary btn-shadow btn-sm"
+                                        type="button"
+                                        data-bs-dismiss="modal">انصراف
+                                </button>
+                                <!-- دکمه حذف حساب کاربری -->
+                                <form method="POST" action="{% url 'accounts:delete_account' %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-secondary btn-sm" type="submit">حذف حساب کاربری</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action buttons-->
+                <div class="row">
+                    <div class="col-lg-9">
+                        <div class="d-flex align-items-center justify-content-between pb-1">
+                            <button class="btn btn-primary" id="form_submit" type="submit">ذخیره تغییرات</button>
+                            <button class="btn btn-link btn-light btn-sm px-0"
+                                    type="button"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#delete-account">
+                                <i class="fi-trash me-2"></i>حذف اکانت
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'accounts/js/submit.js' %}"></script>
+    <script src="{% static 'finder/vendor/jquery-3.6.0.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-resize/dist/filepond-plugin-image-resize.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/simplebar/dist/simplebar.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-crop/dist/filepond-plugin-image-crop.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond-plugin-image-transform/dist/filepond-plugin-image-transform.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/filepond/dist/filepond.min.js' %}"></script>
+    <script src="{% static 'accounts/js/edit.js' %}"></script>
+{% endblock %}
+

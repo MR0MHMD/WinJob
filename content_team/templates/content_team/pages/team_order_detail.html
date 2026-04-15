@@ -1,0 +1,1574 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    جزئیات سفارش | {{ order.campaign.name }}
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ========== VARIABLES & RESET ========== */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #fd5631 0%, #fd8a4a 50%, #fd5631 100%);
+        --accent-gradient: linear-gradient(135deg, #5d3cf2 0%, #8b6cff 50%, #5d3cf2 100%);
+        --success-gradient: linear-gradient(135deg, #07c98b 0%, #1ae6a5 50%, #07c98b 100%);
+        --warning-gradient: linear-gradient(135deg, #fdbc31 0%, #ffd700 50%, #fdbc31 100%);
+        --danger-gradient: linear-gradient(135deg, #f23c49 0%, #ff6b6b 50%, #f23c49 100%);
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* ========== ANIMATIONS ========== */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.4);
+        }
+        50% { 
+            box-shadow: 0 0 0 15px rgba(253, 86, 49, 0);
+        }
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+    
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    @keyframes borderGlow {
+        0%, 100% { border-color: rgba(253, 86, 49, 0.3); }
+        50% { border-color: rgba(253, 86, 49, 0.8); }
+    }
+    
+    .animate-up {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+    
+    .animate-left {
+        animation: fadeInLeft 0.6s ease forwards;
+    }
+    
+    .animate-right {
+        animation: fadeInRight 0.6s ease forwards;
+    }
+    
+    /* ========== GLASS MORPHISM CARDS ========== */
+    .glass-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--primary-gradient);
+        transform: scaleX(0);
+        transition: transform 0.6s ease;
+    }
+    
+    .glass-card:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-8px);
+        border-color: rgba(253, 86, 49, 0.3);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(253, 86, 49, 0.1);
+    }
+    
+    /* ========== HERO SECTION ========== */
+    .hero-section {
+        background: linear-gradient(135deg, rgba(253, 86, 49, 0.15) 0%, rgba(93, 60, 242, 0.1) 100%);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(253, 86, 49, 0.1) 0%, transparent 70%);
+        animation: rotate 20s linear infinite;
+    }
+    
+    .order-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.5rem;
+        border-radius: 2rem;
+        font-weight: 700;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .order-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .order-badge:hover::before {
+        left: 100%;
+    }
+    
+    /* ========== INFO GRID ========== */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-item {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 1rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .info-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(-5px);
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(93, 60, 242, 0.2));
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .info-icon i {
+        font-size: 1.25rem;
+        background: var(--primary-gradient);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+    }
+    
+    /* ========== STATUS TIMELINE ========== */
+    .timeline-progress {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        margin: 2rem 0;
+    }
+    
+    .timeline-progress::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .timeline-step {
+        text-align: center;
+        flex: 1;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .timeline-step .step-marker {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .timeline-step.active .step-marker {
+        background: var(--primary-gradient);
+        border-color: transparent;
+        animation: pulse 1.5s infinite;
+    }
+    
+    .timeline-step.completed .step-marker {
+        background: var(--success-gradient);
+        border-color: transparent;
+    }
+    
+    .timeline-step .step-title {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 500;
+    }
+    
+    .timeline-step.active .step-title,
+    .timeline-step.completed .step-title {
+        color: #fff;
+    }
+    
+    /* ========== FILE GALLERY ========== */
+    .file-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .file-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .file-card:hover {
+        transform: translateY(-5px);
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.05);
+    }
+    
+    .file-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(253, 86, 49, 0.1);
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    /* ========== REVISION TIMELINE ========== */
+    .revision-timeline {
+        position: relative;
+        padding-right: 1rem;
+    }
+    
+    .revision-timeline::before {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, #fd5631, #5d3cf2, transparent);
+    }
+    
+    .revision-item {
+        position: relative;
+        padding-right: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .revision-item::before {
+        content: '';
+        position: absolute;
+        right: -5px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        border: 2px solid #1f1b2d;
+    }
+    
+    .revision-content {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+    
+    /* ========== ACTION BUTTONS ========== */
+    .action-btn {
+        position: relative;
+        padding: 0.875rem 1.5rem;
+        border-radius: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .action-btn:hover::before {
+        left: 100%;
+    }
+    
+    .action-btn-primary {
+        background: var(--primary-gradient);
+        border: none;
+        box-shadow: 0 5px 20px rgba(253, 86, 49, 0.3);
+    }
+    
+    .action-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(253, 86, 49, 0.4);
+    }
+    
+    .action-btn-success {
+        background: var(--success-gradient);
+        border: none;
+        box-shadow: 0 5px 20px rgba(7, 201, 139, 0.3);
+    }
+    
+    .action-btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(7, 201, 139, 0.4);
+    }
+    
+    /* ========== MODAL STYLES ========== */
+    .dark-modal .modal-content {
+        background: linear-gradient(135deg, #1a1625, #0f0c14);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+    
+    .dark-input {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .dark-input:focus {
+        border-color: #fd5631;
+        box-shadow: 0 0 0 0.2rem rgba(253, 86, 49, 0.25);
+        background: rgba(0, 0, 0, 0.6);
+    }
+    
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        border-radius: 10px;
+    }
+    
+    /* ========== LOADING SPINNER ========== */
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.7;
+    }
+    
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        top: 50%;
+        left: 1rem;
+        margin-top: -9px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: rotate 0.8s linear infinite;
+    }
+    
+    /* استایل لیست فایل‌ها */
+.file-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.5rem;
+}
+
+.file-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.file-list-item:hover {
+    background: rgba(253, 86, 49, 0.1);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.file-icon-small {
+    width: 32px;
+    height: 32px;
+    background: rgba(253, 86, 49, 0.15);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.file-details {
+    flex: 1;
+}
+
+.file-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 0.2rem;
+}
+
+.file-size {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.file-remove {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.3s ease;
+}
+
+.file-remove:hover {
+    color: #f23c49;
+    background: rgba(242, 60, 73, 0.1);
+}
+
+/* انیمیشن برای فایل جدید */
+@keyframes fileSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.file-list-item {
+    animation: fileSlideIn 0.3s ease forwards;
+}
+    
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 1.5rem;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .timeline-progress {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .timeline-progress::before {
+            display: none;
+        }
+        
+        .timeline-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-align: right;
+        }
+        
+        .timeline-step .step-marker {
+            margin: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+    <!-- هدر اصلی با افکت -->
+    <div class="hero-section animate-up">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <a href="{% url 'content_team:team_orders_list' %}" class="btn btn-outline-primary rounded-pill">
+                    <i class="fi-chevron-right"></i> بازگشت
+                </a>
+                <div>
+                    <h1 class="display-6 text-light mb-1">{{ order.campaign.name }}</h1>
+                    <p class="text-muted mb-0">سفارش #{{ order.id }}</p>
+                </div>
+            </div>
+            <div class="order-badge {{ current_status_info.badge_class }}">
+                <i class="{{ current_status_info.icon }}"></i>
+                {{ current_status_info.text }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- تایم لاین وضعیت سفارش -->
+    <div class="glass-card p-4 mb-4 animate-up" style="animation-delay: 0.1s;">
+        <h5 class="text-light mb-4">
+            <i class="fi-trending-up me-2 text-primary"></i>
+            وضعیت پیشرفت سفارش
+        </h5>
+        <div class="timeline-progress">
+            <div class="timeline-step {% if order.status == 'pending' %}active{% elif order.status == 'in_progress' or order.status == 'completed' %}completed{% endif %}">
+                <div class="step-marker">
+                    <i class="fi-clock"></i>
+                </div>
+                <div class="step-title">ثبت سفارش</div>
+            </div>
+            <div class="timeline-step {% if order.status == 'in_progress' %}active{% elif order.status == 'completed' %}completed{% endif %}">
+                <div class="step-marker">
+                    <i class="fi-settings"></i>
+                </div>
+                <div class="step-title">در حال انجام</div>
+            </div>
+            <div class="timeline-step {% if order.status == 'completed' %}active completed{% endif %}">
+                <div class="step-marker">
+                    <i class="fi-check-circle"></i>
+                </div>
+                <div class="step-title">تکمیل شده</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- ستون اصلی -->
+        <div class="col-lg-8">
+            <!-- اطلاعات سفارش -->
+            <div class="glass-card p-4 mb-4 animate-left" style="animation-delay: 0.15s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-info-circle"></i>
+                    </div>
+                    <h5 class="text-light mb-0">اطلاعات سفارش</h5>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon small">
+                            <i class="fi-tag"></i>
+                        </div>
+                        <div class="small text-muted mb-1">نوع خدمت</div>
+                        <div class="fw-bold text-light">{{ order.service_rate.service_type.name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon small">
+                            <i class="fi-wallet"></i>
+                        </div>
+                        <div class="small text-muted mb-1">قیمت</div>
+                        <div class="fw-bold text-success fs-5">{{ order.price|floatformat:0 }} تومان</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon small">
+                            <i class="fi-calendar"></i>
+                        </div>
+                        <div class="small text-muted mb-1">تاریخ ثبت</div>
+                        <div class="fw-bold text-light">{{ order.created_at|date:'Y/m/d H:i' }}</div>
+                    </div>
+                    {% if order.minutes %}
+                    <div class="info-item">
+                        <div class="info-icon small">
+                            <i class="fi-clock"></i>
+                        </div>
+                        <div class="small text-muted mb-1">مدت زمان</div>
+                        <div class="fw-bold text-light">{{ order.minutes }} دقیقه</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- بریف سفارش -->
+            {% if brief %}
+            <div class="glass-card p-4 mb-4 animate-left" style="animation-delay: 0.2s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-file"></i>
+                    </div>
+                    <h5 class="text-light mb-0">بریف سفارش</h5>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">هدف محتوا</div>
+                        <div class="fw-bold text-light">{{ brief.get_goal_display }}</div>
+                        {% if brief.goal_description %}
+                            <small class="text-muted">{{ brief.goal_description }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">لحن محتوا</div>
+                        <div class="fw-bold text-light">{{ brief.get_tone_display }}</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">نام برند</div>
+                        <div class="fw-bold text-primary">{{ brief.brand_name }}</div>
+                    </div>
+                    {% if brief.hashtags %}
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">هشتگ‌ها</div>
+                        <div class="text-primary">{{ brief.hashtags }}</div>
+                    </div>
+                    {% endif %}
+                    {% if brief.target_audience %}
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">مخاطب هدف</div>
+                        <div class="text-light">{{ brief.target_audience }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">توضیحات</div>
+                        <div class="text-light" style="line-height: 1.8;">{{ brief.description|linebreaks }}</div>
+                    </div>
+                    {% if brief.do_not_include %}
+                    <div class="col-12">
+                        <div class="small text-warning mb-1">⚠️ نکات ممنوع</div>
+                        <div class="text-light">{{ brief.do_not_include|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- فایل‌های پیوست -->
+            {% if attached_files %}
+            <div class="glass-card p-4 mb-4 animate-left" style="animation-delay: 0.25s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-attachment"></i>
+                    </div>
+                    <h5 class="text-light mb-0">فایل‌های پیوست ({{ attached_files.count }})</h5>
+                </div>
+                <div class="file-gallery">
+                    {% for file in attached_files %}
+                    <div class="file-card" onclick="window.open('{{ file.file.url }}', '_blank')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="file-icon">
+                                <i class="fi-file fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="small fw-bold text-light mb-1">{{ file.original_name|truncatechars:25 }}</div>
+                                <div class="small text-muted">{{ file.file_size_display }}</div>
+                                {% if file.description %}
+                                    <div class="small text-muted mt-1">{{ file.description|truncatechars:30 }}</div>
+                                {% endif %}
+                            </div>
+                            <i class="fi-download text-primary"></i>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- تاریخچه ویرایش‌ها با قابلیت قبول/رد -->
+            {% if revisions %}
+            <div class="glass-card p-4 animate-left" style="animation-delay: 0.3s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-edit"></i>
+                    </div>
+                    <h5 class="text-light mb-0">درخواست‌های ویرایش ({{ revisions.count }})</h5>
+                </div>
+                <div class="revision-timeline">
+                    {% for revision in revisions %}
+                    <div class="revision-item">
+                        <div class="revision-content">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="small text-primary">
+                                    <i class="fi-user"></i> {{ revision.requested_by.nickname }}
+                                </div>
+                                <div class="small text-muted">{{ revision.created_at|date:'Y/m/d H:i' }}</div>
+                            </div>
+                            
+                            <div class="text-light small mb-3">{{ revision.feedback|linebreaks }}</div>
+                            
+                            <!-- وضعیت و دکمه‌های اقدام -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge 
+                                    {% if revision.status == 'pending' %}bg-warning
+                                    {% elif revision.status == 'accepted' %}bg-info
+                                    {% elif revision.status == 'done' %}bg-success
+                                    {% elif revision.status == 'rejected' %}bg-danger
+                                    {% else %}bg-secondary{% endif %} 
+                                    bg-opacity-25 text-light rounded-pill px-3 py-1">
+                                    {% if revision.status == 'pending' %}⏳ در انتظار بررسی
+                                    {% elif revision.status == 'accepted' %}✅ پذیرفته شده
+                                    {% elif revision.status == 'done' %}✔️ انجام شده
+                                    {% elif revision.status == 'rejected' %}❌ رد شده
+                                    {% else %}{{ revision.get_status_display }}{% endif %}
+                                </span>
+                                
+                                <!-- دکمه‌های اقدام فقط برای درخواست‌های pending -->
+                                {% if revision.status == 'pending' and order.status == 'review_pending' %}
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-success accept-revision-btn" 
+                                            data-order-id="{{ order.id }}" 
+                                            data-revision-id="{{ revision.id }}">
+                                        <i class="fi-check"></i> قبول ویرایش
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger reject-revision-btn" 
+                                            data-order-id="{{ order.id }}" 
+                                            data-revision-id="{{ revision.id }}">
+                                        <i class="fi-x"></i> رد
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if revision.file %}
+    <div class="mt-2 pt-2 border-top border-light">
+        <div class="small text-muted mb-1">📎 فایل مرجع:</div>
+        <a href="{{ revision.file.url }}" class="small text-primary d-block" download>
+            <i class="fi-attachment"></i> {{ revision.file_name|truncatechars:30 }}
+        </a>
+    </div>
+{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- ستون کناری -->
+        <div class="col-lg-4">
+            <!-- کارت تبلیغ‌دهنده -->
+            <div class="glass-card p-4 mb-4 animate-right" style="animation-delay: 0.15s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-user"></i>
+                    </div>
+                    <h5 class="text-light mb-0">تبلیغ‌دهنده</h5>
+                </div>
+                <div class="text-center mb-3">
+                    <div class="avatar-circle mx-auto" style="width: 80px; height: 80px; font-size: 2rem; background: var(--primary-gradient);">
+                        {{ order.campaign.advertiser.user.nickname|first|upper }}
+                    </div>
+                    <h5 class="text-light mt-3 mb-1">{{ order.campaign.advertiser.user.nickname }}</h5>
+                    {% if order.campaign.advertiser.business_name %}
+                        <div class="small text-muted">{{ order.campaign.advertiser.business_name }}</div>
+                    {% endif %}
+                    <div class="small text-muted mt-2">
+                        <i class="fi-mail"></i> {{ order.campaign.advertiser.user.email }}
+                    </div>
+                </div>
+                <hr class="border-light opacity-25">
+                <div class="small text-muted text-center">
+                    <i class="fi-calendar"></i> عضویت از {{ order.campaign.advertiser.user.date_joined|date:'Y/m/d' }}
+                </div>
+            </div>
+            
+            <!-- کارت وضعیت تحویل -->
+            <div class="glass-card p-4 mb-4 animate-right" style="animation-delay: 0.2s;">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="info-icon">
+                        <i class="fi-truck"></i>
+                    </div>
+                    <h5 class="text-light mb-0">وضعیت تحویل</h5>
+                </div>
+                {% if delivery %}
+                    {% with delivery_status=delivery.status %}
+                        <div class="text-center mb-3">
+                            <div class="order-badge d-inline-flex mx-auto
+                                {% if delivery_status == 'pending' %}status-pending
+                                {% elif delivery_status == 'delivered' %}status-progress
+                                {% elif delivery_status == 'final_accepted' %}status-completed
+                                {% elif delivery_status == 'revision_requested' %}status-cancelled
+                                {% endif %}" style="padding: 0.4rem 1.25rem;">
+                                <i class="
+                                    {% if delivery_status == 'pending' %}fi-clock
+                                    {% elif delivery_status == 'delivered' %}fi-download
+                                    {% elif delivery_status == 'final_accepted' %}fi-check-circle
+                                    {% elif delivery_status == 'revision_requested' %}fi-edit
+                                    {% else %}fi-alert
+                                    {% endif %} me-1"></i>
+                                {% if delivery_status == 'pending' %}در انتظار تحویل
+                                {% elif delivery_status == 'delivered' %}تحویل داده شده
+                                {% elif delivery_status == 'final_accepted' %}تأیید نهایی
+                                {% elif delivery_status == 'revision_requested' %}درخواست ویرایش
+                                {% else %}تحویل بخشی
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if delivery.delivered_at %}
+                            <div class="small text-muted text-center mb-3">
+                                <i class="fi-clock"></i> {{ delivery.delivered_at|date:'Y/m/d H:i' }}
+                            </div>
+                        {% endif %}
+                        {% if delivery.notes %}
+                            <div class="p-3 rounded-3 mb-3" style="background: rgba(255,255,255,0.03);">
+                                <div class="small text-muted mb-1">📝 توضیحات</div>
+                                <div class="small text-light">{{ delivery.notes }}</div>
+                            </div>
+                        {% endif %}
+                        {% if delivery and delivery.file %}
+                            <div class="delivery-file d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fi-file text-primary"></i>
+                                    <span class="small text-light">{{ delivery.file_name|truncatechars:25 }}</span>
+                                </div>
+                                <a href="{{ delivery.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill" download>
+                                    <i class="fi-download"></i>
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fi-clock fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                        <p class="text-muted small mb-0">هنوز فایلی تحویل داده نشده است</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- کارت اقدامات -->
+            <!-- کارت اقدامات - جایگزین دکمه‌ها -->
+<div class="glass-card p-4 animate-right" style="animation-delay: 0.25s;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <div class="info-icon">
+            <i class="fi-settings"></i>
+        </div>
+        <h5 class="text-light mb-0">اقدامات سریع</h5>
+    </div>
+    <div class="d-grid gap-3">
+        
+        <!-- وضعیت: در انتظار - نمایش دکمه قبول و رد -->
+        {% if order.status == 'pending' %}
+            <!-- دکمه قبول سفارش -->
+            <button class="btn action-btn action-btn-primary accept-order-btn" 
+                    data-order-id="{{ order.id }}"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#acceptConfirmModal">
+                <i class="fi-check-circle me-2"></i> قبول سفارش
+            </button>
+            
+            <!-- دکمه رد سفارش -->
+            <button class="btn btn-outline-danger rounded-pill py-3 reject-order-btn" 
+                    data-order-id="{{ order.id }}"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#rejectConfirmModal">
+                <i class="fi-x-circle me-2"></i> رد سفارش
+            </button>
+        
+        <!-- وضعیت: در حال انجام - نمایش دکمه تحویل -->
+        {% elif order.status == 'in_progress' %}
+            <button class="btn action-btn action-btn-success" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#deliveryModal">
+                <i class="fi-upload me-2"></i> تحویل سفارش
+            </button>
+        
+        {% elif order.status == 'review_pending' %}
+            <div class="text-center py-3">
+                <i class="fi-warning-circle text-success fs-1 mb-2 d-block"></i>
+                <p class="text-warning mb-0">تبلیغ دهنده درخواست ویرایش دارد</p>
+                <small class="text-muted">پس از تقبل شما میتوانید محتوای ویرایش شده را آپلود کنید</small>
+            </div>
+        
+        <!-- وضعیت: تکمیل شده - نمایش پیام -->
+        {% elif order.status == 'completed' %}
+            <div class="text-center py-3">
+                <i class="fi-check-circle text-success fs-1 mb-2 d-block"></i>
+                <p class="text-success mb-0">این سفارش تکمیل شده است</p>
+                <small class="text-muted">در انتظار تأیید نهایی تبلیغ‌دهنده</small>
+            </div>
+        
+        {% elif order.status == 'cancelled' %}
+            <div class="text-center py-3">
+                <i class="fi-x-circle text-danger fs-1 mb-2 d-block"></i>
+                <p class="text-danger mb-0">این سفارش لغو شده است</p>
+            </div>
+        {% endif %}
+        
+    </div>
+</div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تحویل سفارش - فقط یک فایل -->
+<div class="modal fade" id="deliveryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-dark bg-dark border-light">
+            <div class="modal-header border-light p-4">
+                <h5 class="modal-title text-light">
+                    <i class="fi-upload me-2 text-primary"></i> تحویل سفارش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'content_team:deliver_order' order.id %}" enctype="multipart/form-data" id="deliveryForm">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label text-light small fw-semibold mb-2">📎 فایل تحویلی <span class="text-danger">*</span></label>
+                        <div class="dropzone-area" id="dropzoneArea" 
+                             style="border: 2px dashed rgba(255,255,255,0.1); border-radius: 1rem; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fi-cloud-upload fs-1 text-primary mb-2 d-block"></i>
+                            <p class="text-muted small mb-0" id="dropzoneText">برای آپلود کلیک کنید یا فایل را بکشید</p>
+                            <input type="file" name="delivery_file" id="fileInput" class="d-none">
+                        </div>
+                        <small class="text-muted">فایل نهایی خود را آپلود کنید (حداکثر 50 مگابایت)</small>
+                    </div>
+                    
+                    <!-- نمایش فایل انتخاب شده -->
+                    <div id="selectedFileContainer" class="mb-4" style="display: none;">
+                        <label class="form-label text-light small fw-semibold mb-2">📋 فایل انتخاب شده:</label>
+                        <div id="selectedFile" class="selected-file"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="desc-textarea" class="form-label text-light small fw-semibold mb-2">📝 توضیحات تحویل</label>
+                        <textarea id="desc-textarea" name="notes" class="form-control form-control-light dark-textarea" rows="4" 
+                                  placeholder="توضیحات خود را وارد کنید... (اختیاری)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-light p-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="deliverSubmitBtn">
+                        <i class="fi-upload me-2"></i> تحویل سفارش
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- مودال لغو سفارش -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-light p-4">
+                <h5 class="modal-title text-light">
+                    <i class="fi-alert-circle me-2 text-danger"></i> لغو سفارش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="#">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fi-alert-triangle fs-1 text-warning mb-3 d-block"></i>
+                        <p class="text-light mb-2">آیا از لغو این سفارش مطمئن هستید؟</p>
+                        <p class="text-muted small">این اقدام غیرقابل بازگشت است</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label text-light small fw-semibold mb-2">دلیل لغو (اختیاری)</label>
+                        <textarea id="cancel_reason" name="cancel_reason" class="form-control form-control-light dark-textarea" rows="3" placeholder="لطفاً دلیل لغو را وارد کنید..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-light p-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">بازگشت</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">تأیید لغو</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+    
+<!-- مودال تأیید قبول سفارش -->
+<div class="modal fade" id="acceptConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-light p-4">
+                <h5 class="modal-title text-light">
+                    <i class="fi-check-circle me-2 text-success"></i> قبول سفارش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <i class="fi-check-circle fs-1 text-success mb-3 d-block"></i>
+                    <p class="text-light mb-2">آیا از قبول این سفارش مطمئن هستید؟</p>
+                    <p class="text-muted small">پس از قبول، سفارش وارد مرحله "در حال انجام" می‌شود و شما موظف به تحویل آن خواهید بود.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-light p-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-success rounded-pill px-4 confirm-accept-btn">قبول سفارش</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تأیید رد سفارش با هشدار جریمه -->
+<div class="modal fade" id="rejectConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-light p-4">
+                <h5 class="modal-title text-light">
+                    <i class="fi-alert-triangle me-2 text-danger"></i> رد سفارش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="#">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fi-alert-triangle fs-1 text-warning mb-3 d-block"></i>
+                        <p class="text-light mb-2">⚠️ توجه!</p>
+                        <p class="text-danger fw-bold mb-3">رد این سفارش ۱۰ امتیاز منفی برای تیم شما خواهد داشت!</p>
+                        <p class="text-muted small">آیا از رد این سفارش مطمئن هستید؟</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-semibold mb-2">دلیل رد (اختیاری)</label>
+                        <textarea name="reason" class="form-control dark-textarea" rows="3" placeholder="لطفاً دلیل رد سفارش را وارد کنید..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-light p-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 reject-submit-btn">تأیید رد سفارش</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+// تابع دریافت CSRF token از کوکی
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// تابع کمکی برای نمایش مودال نوتیفیکیشن (از base.html استفاده میکنه)
+function showMessage(title, message, type = 'info', onClose = null) {
+    if (typeof window.showNotificationModal === 'function') {
+        window.showNotificationModal(title, message, type, onClose);
+    } else {
+        // fallback اگر مودال تعریف نشده بود
+        alert(message);
+        if (onClose) onClose();
+    }
+}
+
+// تابع کمکی برای نمایش مودال تایید (confirm)
+function showConfirmModal(title, message, onConfirm, onCancel = null) {
+    // بررسی وجود مودال تایید در صفحه، اگه نبود ایجاد کن
+    let confirmModal = document.getElementById('customConfirmModal');
+    
+    if (!confirmModal) {
+        // ایجاد مودال تایید
+        confirmModal = document.createElement('div');
+        confirmModal.id = 'customConfirmModal';
+        confirmModal.className = 'modal fade';
+        confirmModal.setAttribute('tabindex', '-1');
+        confirmModal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark border-light">
+                    <div class="modal-header border-light">
+                        <h5 class="modal-title text-light">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                            <span id="confirmModalTitle">تأیید عملیات</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="notification-icon warning mb-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                        </div>
+                        <p class="text-light mb-0" id="confirmModalMessage" style="font-size: 1rem; line-height: 1.6;">
+                            آیا از انجام این عملیات مطمئن هستید؟
+                        </p>
+                    </div>
+                    <div class="modal-footer border-light">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" id="confirmModalCancelBtn">
+                            <i class="bi bi-x-lg me-1"></i> انصراف
+                        </button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmModalConfirmBtn">
+                            <i class="bi bi-check-lg me-1"></i> تأیید
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(confirmModal);
+    }
+    
+    // تنظیم عنوان و پیام
+    document.getElementById('confirmModalTitle').innerHTML = `<i class="fi-alert-triangle me-2 text-warning"></i> ${title}`;
+    document.getElementById('confirmModalMessage').innerHTML = message;
+    
+    // نمایش مودال
+    const modal = new bootstrap.Modal(confirmModal);
+    modal.show();
+    
+    // هندلر دکمه تأیید
+    const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+    const cancelBtn = document.getElementById('confirmModalCancelBtn');
+    
+    const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        confirmModal.addEventListener('hidden.bs.modal', () => modal.dispose(), { once: true });
+    };
+    
+    const handleConfirm = () => {
+        modal.hide();
+        cleanup();
+        if (onConfirm) onConfirm();
+    };
+    
+    const handleCancel = () => {
+        modal.hide();
+        cleanup();
+        if (onCancel) onCancel();
+    };
+    
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ========== مدیریت فایل تحویل (یک فایل) ==========
+    const dropzoneArea = document.getElementById('dropzoneArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectedFileContainer = document.getElementById('selectedFileContainer');
+    const selectedFileDiv = document.getElementById('selectedFile');
+    const dropzoneText = document.getElementById('dropzoneText');
+    let selectedDeliveryFile = null;
+    
+    // تابع فرمت حجم فایل
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // تابع آیکون بر اساس نوع فایل
+    function getFileIcon(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        const icons = {
+            'jpg': 'fi-image',
+            'jpeg': 'fi-image',
+            'png': 'fi-image',
+            'gif': 'fi-image',
+            'mp4': 'fi-video',
+            'avi': 'fi-video',
+            'mov': 'fi-video',
+            'mp3': 'fi-music',
+            'wav': 'fi-music',
+            'pdf': 'fi-file',
+            'doc': 'fi-file',
+            'docx': 'fi-file',
+            'zip': 'fi-archive',
+            'rar': 'fi-archive'
+        };
+        return icons[ext] || 'fi-file';
+    }
+    
+    // تابع نمایش فایل انتخاب شده
+    function updateSelectedFileDisplay() {
+        if (!selectedDeliveryFile) {
+            if (selectedFileContainer) selectedFileContainer.style.display = 'none';
+            if (dropzoneText) dropzoneText.innerHTML = 'برای آپلود کلیک کنید یا فایل را بکشید';
+            return;
+        }
+        
+        if (selectedFileContainer) selectedFileContainer.style.display = 'block';
+        if (dropzoneText) dropzoneText.innerHTML = '1 فایل انتخاب شده';
+        
+        if (selectedFileDiv) {
+            selectedFileDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-2 bg-faded-dark">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="file-icon-small">
+                            <i class="${getFileIcon(selectedDeliveryFile.name)}"></i>
+                        </div>
+                        <div>
+                            <div class="small text-light fw-semibold">${selectedDeliveryFile.name.length > 35 ? selectedDeliveryFile.name.substring(0, 35) + '...' : selectedDeliveryFile.name}</div>
+                            <div class="small text-muted">${formatFileSize(selectedDeliveryFile.size)}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn">
+                        <i class="fi-x"></i>
+                    </button>
+                </div>
+            `;
+        }
+        
+        document.querySelector('.remove-file-btn')?.addEventListener('click', function() {
+            selectedDeliveryFile = null;
+            if (fileInput) fileInput.value = '';
+            updateSelectedFileDisplay();
+        });
+    }
+    
+    if (dropzoneArea) {
+        dropzoneArea.addEventListener('click', () => {
+            if (fileInput) fileInput.click();
+        });
+        
+        dropzoneArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzoneArea.style.borderColor = '#fd5631';
+            dropzoneArea.style.background = 'rgba(253, 86, 49, 0.05)';
+        });
+        
+        dropzoneArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropzoneArea.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            dropzoneArea.style.background = 'transparent';
+        });
+        
+        dropzoneArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzoneArea.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            dropzoneArea.style.background = 'transparent';
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                selectedDeliveryFile = files[0];
+                updateSelectedFileDisplay();
+            }
+        });
+    }
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                selectedDeliveryFile = this.files[0];
+                updateSelectedFileDisplay();
+            }
+        });
+    }
+    
+    // ========== قبول سفارش ==========
+    const confirmAcceptBtn = document.querySelector('.confirm-accept-btn');
+    if (confirmAcceptBtn) {
+        confirmAcceptBtn.addEventListener('click', async function() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('acceptConfirmModal'));
+            const acceptBtn = document.querySelector('.accept-order-btn');
+            const orderId = acceptBtn?.dataset.orderId;
+            
+            if (!orderId) return;
+            
+            this.innerHTML = '<i class="fi-loading"></i> در حال پردازش...';
+            this.disabled = true;
+            
+            try {
+                const response = await fetch(`/content_team/team/orders/${orderId}/accept/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    modal.hide();
+                    showMessage('موفقیت', data.message, 'success', () => {
+                        location.reload();
+                    });
+                } else {
+                    showMessage('خطا', data.error, 'error');
+                    this.innerHTML = 'قبول سفارش';
+                    this.disabled = false;
+                }
+            } catch (error) {
+                showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                this.innerHTML = 'قبول سفارش';
+                this.disabled = false;
+            }
+        });
+    }
+    
+    // ========== رد سفارش ==========
+    const rejectSubmitBtn = document.querySelector('.reject-submit-btn');
+    if (rejectSubmitBtn) {
+        rejectSubmitBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rejectConfirmModal'));
+            const rejectBtn = document.querySelector('.reject-order-btn');
+            const orderId = rejectBtn?.dataset.orderId;
+            const reason = document.querySelector('textarea[name="reason"]')?.value || '';
+            
+            if (!orderId) return;
+            
+            this.innerHTML = '<i class="fi-loading"></i> در حال پردازش...';
+            this.disabled = true;
+            
+            try {
+                const response = await fetch(`/content_team/team/orders/${orderId}/reject/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `reason=${encodeURIComponent(reason)}`
+                });
+                const data = await response.json();
+                if (data.success) {
+                    modal.hide();
+                    let message = data.message;
+                    if (data.penalty) {
+                        message = `⚠️ توجه: این سفارش رد شد و ${data.penalty_points} امتیاز منفی برای تیم شما ثبت شد!`;
+                    }
+                    showMessage('توجه', message, 'warning', () => {
+                        location.reload();
+                    });
+                } else {
+                    showMessage('خطا', data.error, 'error');
+                    this.innerHTML = 'تأیید رد سفارش';
+                    this.disabled = false;
+                }
+            } catch (error) {
+                showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                this.innerHTML = 'تأیید رد سفارش';
+                this.disabled = false;
+            }
+        });
+    }
+    
+    // ========== تحویل سفارش (یک فایل) ==========
+    const deliveryForm = document.getElementById('deliveryForm');
+    if (deliveryForm) {
+        deliveryForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedDeliveryFile) {
+                showMessage('خطا', 'لطفاً یک فایل برای تحویل انتخاب کنید!', 'error');
+                return;
+            }
+            
+            const orderId = {{ order.id }};
+            const formData = new FormData();
+            formData.append('delivery_file', selectedDeliveryFile);
+            const notes = document.querySelector('textarea[name="notes"]')?.value || '';
+            formData.append('notes', notes);
+            
+            const submitBtn = document.getElementById('deliverSubmitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fi-loading"></i> در حال ارسال...';
+            submitBtn.disabled = true;
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            try {
+                const response = await fetch(`/content_team/team/orders/${orderId}/deliver/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deliveryModal'));
+                    modal.hide();
+                    showMessage('موفقیت', data.message, 'success', () => {
+                        location.reload();
+                    });
+                } else {
+                    showMessage('خطا', data.error || 'خطا در تحویل سفارش', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error details:', error);
+                showMessage('خطا', 'خطا در ارتباط با سرور: ' + error.message, 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+    
+    // ========== قبول درخواست ویرایش ==========
+    document.querySelectorAll('.accept-revision-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            const revisionId = this.dataset.revisionId;
+            
+            showConfirmModal(
+                'قبول درخواست ویرایش',
+                'آیا از قبول این درخواست ویرایش مطمئن هستید؟\nسفارش دوباره وارد مرحله "در حال انجام" خواهد شد.',
+                async () => {
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fi-loading"></i>';
+                    this.disabled = true;
+                    
+                    try {
+                        const response = await fetch(`/content_team/team/orders/${orderId}/revision/${revisionId}/accept/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showMessage('موفقیت', data.message, 'success', () => {
+                                location.reload();
+                            });
+                        } else {
+                            showMessage('خطا', data.error, 'error');
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    } catch (error) {
+                        showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                }
+            );
+        });
+    });
+    
+    // ========== رد درخواست ویرایش ==========
+    document.querySelectorAll('.reject-revision-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            const revisionId = this.dataset.revisionId;
+            
+            showConfirmModal(
+                'رد درخواست ویرایش',
+                'آیا از رد این درخواست ویرایش مطمئن هستید؟',
+                async () => {
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fi-loading"></i>';
+                    this.disabled = true;
+                    
+                    try {
+                        const response = await fetch(`/content_team/team/orders/${orderId}/revision/${revisionId}/reject/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showMessage('اطلاعیه', data.message, 'info', () => {
+                                location.reload();
+                            });
+                        } else {
+                            showMessage('خطا', data.error, 'error');
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    } catch (error) {
+                        showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                }
+            );
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends 'parent/base.html' %}
+{% load static jformat %}
+{% load blog_tags %}
+{% block title %}جزئیات {{ post.title }}{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/simplebar/dist/simplebar.min.css' %}" />
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/tiny-slider/dist/tiny-slider.css' %}" />
+    <link rel="stylesheet"
+          media="screen"
+          href="{% static 'finder/vendor/lightgallery.js/dist/css/lightgallery.min.css' %}" />
+    <style>
+        .blog-card img {
+            width: 100px;
+            height: 65px;
+            object-fit: cover;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container pt-5 pb-lg-4 my-5">
+        <!-- Breadcrumb-->
+        <nav class="mb-3 pb-md-1 pt-md-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb breadcrumb-light m-0">
+                <li class="breadcrumb-item">
+                    <a href="#">خانه</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="#">{{ post.category }}</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">{{ post.title }}</li>
+            </ol>
+        </nav>
+        <!-- Page title-->
+        <h1 class="h4 font-vazir text-light pb-3">{{ post.title }}</h1>
+        {% if post.image %}
+            <img class="rounded-3" src="{{ post.image.url }}" alt="Image">
+        {% else %}
+            <img class="rounded-3"
+                 src="{% static 'finder/img/car-finder/blog/10.jpg' %}"
+                 alt="Image">
+        {% endif %}
+        <div class="row mt-4 pt-3">
+            <!-- Post content-->
+            <div class="col-lg-8">
+                <!-- Post meta-->
+                <div class="d-flex flex-wrap border-bottom border-light pb-3 mb-4">
+                    <a class="text-uppercase text-decoration-none border-end border-light pe-3 me-3 mb-2">{{ post.category }}</a>
+                    <div class="d-flex align-items-center text-light border-end border-light pe-3 me-3 mb-2">
+                        <i class="fi-calendar-alt opacity-70 me-2"></i><span>{{ post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                    </div>
+                    <div class="d-flex align-items-center text-light border-end border-light pe-3 me-3 mb-2">
+                        <i class="fi-clock opacity-70 me-2"></i><span>{{ post.read_time }} دقیقه زمان مطالعه</span>
+                    </div>
+                    <a class="d-flex align-items-center text-light text-decoration-none ms-3 mb-2"
+                       href="#comments"
+                       data-scroll><i class="fi-chat-circle opacity-70 me-2"></i><span>{{ post.comment_count }} نظر</span></a>
+                </div>
+                <div class="text-light opacity-70 line-h18">{{ post.content|markdown }}</div>
+                <!-- Tags + Sharing-->
+                <div class="pt-4 pb-5 mb-md-3">
+                    <div class="d-md-flex align-items-center justify-content-between border-top border-light pt-4">
+                        <div class="d-flex align-items-center me-3 mb-3 mb-md-0">
+                            <div class="d-none d-sm-block text-light text-nowrap mb-2 me-2 pe-1">تگ ها:</div>
+                            <div class="d-flex flex-wrap">
+                                {% for tag in post.tags.all %}
+                                    <a class="btn btn-xs btn-translucent-light rounded-pill fs-sm fw-normal me-2 mb-2"
+                                       href="#">{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="text-light text-nowrap pe-1 mb-2">اشتراک گذاری:</div>
+                            <div class="d-flex">
+                                <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+                                   href="#"
+                                   data-bs-toggle="tooltip"
+                                   title="Share with Facebook"><i class="fi-facebook"></i></a><a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+   href="#"
+   data-bs-toggle="tooltip"
+   title="Share with Twitter"><i class="fi-twitter"></i></a><a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+   href="#"
+   data-bs-toggle="tooltip"
+   title="Share with LinkedIn"><i class="fi-linkedin"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Comments-->
+                <div class="mb-4 mb-md-5" id="comments">
+                    <h3 class="text-light mb-4 pb-2 font-vazir h5">{{ post.comment_count }} نظر ثبت شده</h3>
+                    <!-- Comment-->
+                    {% if comments %}
+                        {% for comment in comments %}
+                            <div class="border-bottom border-light pb-4 mb-4">
+                                <p class="text-light opacity-70">{{ comment.content }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center pe-2">
+                                        <img class="rounded-circle me-1"
+                                             src="{% if comment.user.avatar %}{{ comment.user.avatar.url }}{% else %}{% static 'finder/img/avatars/05.jpg' %}{% endif %}"
+                                             width="48"
+                                             alt="Daniel Adams">
+                                        <div class="ps-2">
+                                            <h6 class="text-light fs-base mb-0 fw-500">
+                                                {{ comment.name }}
+                                                {% if not comment.user %}(کاربر مهمان){% endif %}
+                                            </h6>
+                                            <span class="text-light opacity-50 fs-sm">{{ comment.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-link btn-light btn-sm" type="button">
+                                        <i class="fi-reply fs-lg me-2"></i><span class="fw-normal">پاسخ</span>
+                                    </button>
+                                </div>
+                                <!-- Reply to comment-->
+                                {% if comment.replies %}
+                                    {% for reply in comment.replies.all %}
+                                        <div class="border-start border-4 border-light ps-4 ms-4 mt-4">
+                                            <div class="text-light opacity-70">{{ reply.content|markdown }}</div>
+                                            <div class="d-flex align-items-center pe-2">
+                                                <img class="rounded-circle me-1"
+                                                     src="{% if reply.user.avatar %}{{ reply.user.avatar.url }}{% else %}{% static 'finder/img/avatars/06.jpg' %}{% endif %}"
+                                                     width="48"
+                                                     alt="Kristin Watsons">
+                                                <div class="ps-2">
+                                                    <h6 class="text-light fs-base mb-0 fw-500">
+                                                        {{ reply.name }}
+                                                        {% if not comment.user %}( کاربر مهمان ){% endif %}
+                                                        {% if request.user == reply.user %}<span class="badge bg-info rounded-pill fs-xs ms-2">نویسنده</span>{% endif %}
+                                                    </h6>
+                                                    <span class="text-light opacity-50 fs-sm">{{ reply.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <!-- Comment form-->
+                <h3 class="text-light mb-4 pb-sm-2 h5 font-vazir">ثبت نظر</h3>
+                <form class="needs-validation row gy-md-4 gy-3 pb-sm-2"
+                      method="post"
+                      action="{% url 'blog:comment' post.id post.slug 0 %}">
+                    {% csrf_token %}
+                    {% if not request.user.is_authenticated %}
+                        <div class="col-sm-6">
+                            <label class="form-label text-light" for="comment-name">نام و نام خانوادگی</label>
+                            <input class="form-control form-control-light form-control-lg"
+                                   type="text"
+                                   id="comment-name"
+                                   name="name"
+                                   placeholder="نام و نام خانوادگی شما"
+                                   required>
+                            <div class="invalid-feedback">نام خود را وارد کنید</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label text-light" for="comment-email">پست الکترونیکی</label>
+                            <input class="form-control form-control-light form-control-lg"
+                                   type="email"
+                                   id="comment-email"
+                                   name="email"
+                                   placeholder="ایمیل شما"
+                                   required>
+                            <div class="invalid-feedback">یک ایمیل معتبر وارد کنید</div>
+                        </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <label class="form-label text-light" for="comment-text">نظرات</label>
+                        <textarea class="form-control form-control-light form-control-lg"
+                                  id="comment-text"
+                                  name="content"
+                                  rows="4"
+                                  placeholder="نظر شما"
+                                  required></textarea>
+                        <div class="invalid-feedback">لطفا نظر خود را بنویسید</div>
+                    </div>
+                    <div class="col-12 py-2">
+                        <button class="btn btn-lg btn-primary" type="submit">ثبت</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Sidebar-->
+            <aside class="col-lg-4">
+                <div class="offcanvas-lg offcanvas-end bg-dark" id="blog-sidebar">
+                    <div class="offcanvas-body">
+                        <!-- Search-->
+                        <div class="position-relative mb-4">
+                            <input class="form-control form-control-light"
+                                   type="text"
+                                   placeholder="جستجو...">
+                            <i class="fi-search position-absolute top-50 end-0 translate-middle-y text-light opacity-70 me-3"></i>
+                        </div>
+                        <!-- Author widget-->
+                        <div class="card card-flush bg-transparent border-light mb-4">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start pt-3 pt-lg-0">
+                                    <a href="{% url 'blog:person_posts' post.user_id %}">
+                                        <img class="rounded-circle"
+                                             src="{% if post.user.avatar %}{{ post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/32.jpg' %}{% endif %}"
+                                             width="80"
+                                             alt="Kristin Watson">
+                                    </a>
+                                    <div class="ps-3">
+                                        <a class="text-decoration-none"
+                                           href="{% url 'blog:person_posts' post.user_id %}">
+                                            <h3 class="h6 fw-500 text-light mb-2">{{ post.user.nickname }}</h3>
+                                        </a>
+                                        <p class="fs-sm text-light opacity-70">{{ post.user.user_type }}</p>
+                                        <div class="d-flex">
+                                            <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+                                               href="#"><i class="fi-facebook"></i></a><a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+   href="#"><i class="fi-twitter"></i></a><a class="btn btn-icon btn-translucent-light btn-xs rounded-circle me-2"
+   href="#"><i class="fi-linkedin"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Recent posts widget-->
+                        <div class="card card-flush bg-transparent border-light mb-4">
+                            <div class="card-body blog-list">
+                                <h3 class="h5 text-light pt-3 pt-lg-0">آخرین اخبار</h3>
+                                {% for l_post in latest_post %}
+                                    <div class="d-flex align-items-start border-bottom border-light pb-3 mb-3">
+                                        <a class="blog-card flex-shrink-0" href="{{ l_post.get_absolute_url }}">
+                                            <img class="rounded-3"
+                                                 src="{% if l_post.image %}{{ l_post.image.url }}{% else %}{% static 'finder/img/car-finder/blog/th01.jpg' %}{% endif %}"
+                                                 width="80"
+                                                 alt="Image">
+                                        </a>
+                                        <div class="ps-3">
+                                            <a class="fs-sm text-uppercase text-primary text-decoration-none"
+                                               href="#">{{ l_post.category }}</a>
+                                            <h4 class="fs-base text-light pt-1 mb-2">
+                                                <a class="nav-link" href="{{ l_post.get_absolute_url }}">{{ l_post.title }}</a>
+                                            </h4>
+                                            <div class="d-flex fs-xs text-light opacity-70">
+                                                <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1 align-middle"></i>{{ l_post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span><span><i class="fi-chat-circle opacity-70 mt-n1 me-1 align-middle"></i>{{ l_post.comment_count }} نظر</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Post carousel widget-->
+                    <div class="card card-flush bg-transparent border-light mb-4">
+                        <div class="card-body">
+                            <h3 class="h5 font-nonBold text-light pt-3 pt-lg-0">پربحث ترین ها</h3>
+                            <div class="tns-carousel-wrapper">
+                                <div class="tns-carousel-inner d-block"
+                                     data-carousel-options="{&quot;nav&quot;: false, &quot;gutter&quot;: 20, &quot;autoHeight&quot;: true, &quot;controlsContainer&quot;: &quot;#externalControls&quot;}">
+                                    {% for post in Controversial_post %}
+                                        <article><a class="d-block position-relative mb-3"
+   href="{{ post.get_absolute_url }}">
+                                            <img class="d-block rounded-3"
+                                                 src="{% if post.image %}{{ post.image.url }}{% else %}{% static 'finder/img/car-finder/blog/04.jpg' %}{% endif %}"
+                                                 alt="Post image">
+                                        </a><a class="fs-sm text-uppercase text-decoration-none" href="#">{{ post.category }}</a>
+                                        <h3 class="fs-base text-light pt-1">
+                                            <a class="nav-link" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                                        </h3>
+                                        <a class="d-flex align-items-center text-decoration-none"
+                                           href="{{ post.get_absolute_url }}">
+                                            <img class="rounded-circle"
+                                                 src="{% if post.user.avatar %}{{ post.user.avatar.url }}{% else %}{% static 'finder/img/avatars/08.jpg' %}{% endif %}"
+                                                 width="44"
+                                                 alt="Darrell Steward">
+                                            <div class="ps-2">
+                                                <h6 class="fs-sm text-light lh-base mb-1 fw-500">{{ post.user.nickname }}</h6>
+                                                <div class="d-flex fs-xs text-light opacity-70">
+                                                    <span class="me-2 pe-1"><i class="fi-calendar-alt opacity-70 mt-n1 me-1 align-middle"></i>{{ post.created_at|jformat:"%Y/%m/%d | %H:%M" }}</span><span><i class="fi-chat-circle opacity-70 mt-n1 me-1 align-middle"></i>{{ post.comment_count }} نظر</span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </article>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="tns-carousel-controls tns-carousel-light pt-4 mt-lg-2"
+                             id="externalControls">
+                            <button class="me-3" type="button">
+                                <i class="fi-chevron-left fs-xs"></i>
+                            </button>
+                            <button type="button">
+                                <i class="fi-chevron-right fs-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Subscription form-->
+                <div class="card card-flush bg-transparent border-light mb-4">
+                    <div class="card-body">
+                        <h3 class="h6 font-nonBold text-light pt-3 pt-lg-0 pb-1 mb-2">عضویت در خبرنامه</h3>
+                        <p class="fs-sm text-light opacity-70">
+                            در خبرنامه ما مشترک شوید و اولین کسی باشید که جدیدترین پست ها و نکات را مشاهده می کنید.
+                        </p>
+                        <form class="form-group form-group-light w-100">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"> <i class="fi-mail"></i></span>
+                                <input class="form-control" type="text" placeholder="ایمیل شما...">
+                            </div>
+                            <button class="btn btn-primary btn-sm" type="button">عضویت</button>
+                        </form>
+                        <p class="fs-sm pt-3 mb-0">
+                            <span class="text-light opacity-70">* با ثبت نام در خبرنامه</span><a href="#">شرایط و قوانین</a> سایت را میپذیرم.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+    <script src="{% static 'finder/vendor/simplebar/dist/simplebar.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/tiny-slider/dist/min/tiny-slider.js' %}"></script>
+    <script src="{% static 'finder/vendor/lightgallery.js/dist/js/lightgallery.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/lg-video.js/dist/lg-video.min.js' %}"></script>
+{% endblock %}

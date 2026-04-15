@@ -1,0 +1,498 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}مرحله سوم - آپلود محتوا{% endblock %}
+
+{% block extra_style %}
+
+<link rel="stylesheet" href="{% static 'campaigns/css/previews/bale_preview.css' %}">
+
+<style>
+
+.upload-dropzone {
+    border: 1px dashed var(--fi-primary);
+    background-color: var(--fi-dark);
+    border-radius: var(--fi-border-radius);
+    padding: 1.75rem 1.25rem;
+    transition: .2s ease;
+    text-align: center;
+    cursor: pointer;
+}
+.upload-dropzone:hover {
+    border-color: var(--fi-primary);
+    background-color: var(--fi-gray-200);
+}
+
+/* Placeholder */
+.upload-placeholder i {
+    color: var(--fi-primary);
+}
+
+/* Preview image/video box */
+.upload-preview-wrapper {
+    text-align: center;
+}
+.upload-preview-media {
+    max-width: 100%;
+    max-height: 260px;
+    border-radius: var(--fi-border-radius);
+    background: var(--fi-gray-200);
+    object-fit: contain;
+}
+
+/* Remove button */
+.upload-remove-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    padding: 0;
+    background: var(--fi-light);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Progress bar */
+.upload-progress {
+    height: 8px;
+    background: var(--fi-gray-200);
+    border-radius: var(--fi-border-radius-pill);
+}
+.upload-progress .progress-bar {
+    background: var(--fi-primary);
+    transition: width .25s ease;
+}
+
+</style>
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container py-5">
+
+    {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+
+    <div class="card border-0 shadow-sm bg-dark">
+        <div class="card-body p-4">
+
+            <h4 class="mb-4 text-light">آپلود محتوای تبلیغ</h4>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="row">
+
+                    <!-- LEFT: Upload + Form fields -->
+                    <div class="col-lg-7">
+
+                        <label class="form-label text-light">
+                            {{ form.media.label }}
+                        </label>
+
+                        <div class="d-none">
+                            {{ form.media }}
+                        </div>
+
+                        <!-- Upload Zone -->
+                        <div id="uploadZone" class="upload-dropzone">
+
+                            <div id="uploadPlaceholder" class="upload-placeholder">
+                                <i class="fi-cloud-upload fs-2 d-block mb-3"></i>
+                                <p class="text-muted mb-1">تصویر یا ویدیو را بکشید و رها کنید</p>
+                                <p class="text-muted mb-3">یا کلیک کنید</p>
+                                <span class="badge bg-primary px-3 py-2">انتخاب فایل</span>
+                            </div>
+
+                            <div id="uploadPreviewWrapper" class="upload-preview-wrapper d-none">
+                                <div class="position-relative d-inline-block">
+
+                                    <img id="uploadPreviewImage"
+                                         class="upload-preview-media d-none"
+                                         alt="">
+
+                                    <video id="uploadPreviewVideo"
+                                           class="upload-preview-media d-none"
+                                           controls></video>
+
+                                    <button type="button" id="removeUploadBtn"
+                                            class="upload-remove-btn shadow">
+                                        <i class="fi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Progress -->
+                        <div id="uploadProgressBox" class="progress upload-progress mt-3 d-none">
+                            <div id="uploadProgressBar"
+                                 class="progress-bar"
+                                 role="progressbar"
+                                 style="width:0%"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between small text-muted mt-2">
+                            <span id="uploadFileName"></span>
+                            <span id="uploadPercent"></span>
+                        </div>
+
+                        <div class="mt-3 text-muted small">
+                            فرمت مجاز: عکس یا ویدیو<br>
+                            حداکثر حجم: 50MB
+                        </div>
+
+                        <!-- Fields -->
+                        <div class="mb-3">
+                            <label class="form-label text-light">{{ form.caption.label }}</label>
+                            {{ form.caption }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-light">{{ form.link.label }}</label>
+                            {{ form.link }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-light">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <!-- UTM -->
+                        <div class="form-check form-switch mt-4 mb-3">
+                            {{ form.utm_enabled }}
+                            <label class="form-check-label text-light">
+                                {{ form.utm_enabled.label }}
+                            </label>
+                        </div>
+
+                        <div id="utmFields" class="row g-3 d-none">
+                            <div class="col-md-6">
+                                <label class="form-label text-light">{{ form.utm_source.label }}</label>
+                                {{ form.utm_source }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light">{{ form.utm_medium.label }}</label>
+                                {{ form.utm_medium }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light">{{ form.utm_campaign.label }}</label>
+                                {{ form.utm_campaign }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light">{{ form.utm_content.label }}</label>
+                                {{ form.utm_content }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light">{{ form.utm_term.label }}</label>
+                                {{ form.utm_term }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RIGHT: Bale Preview -->
+                    <div class="col-lg-5">
+
+                        <div class="mt-4">
+                            <div id="balePreview" class="bale-card">
+
+                                <div class="bale-header">وینجاب</div>
+
+                                <div class="bale-image-wrapper">
+
+                                    <img id="baleImage"
+                                         class="bale-image d-none"
+                                         alt="">
+
+                                    <video id="baleVideo"
+                                           class="bale-image d-none"
+                                           controls></video>
+
+                                </div>
+
+                                <div class="bale-content">
+
+                                    <p id="baleCaption" class="bale-text"></p>
+
+                                    <a id="baleLink"
+                                       href="#"
+                                       class="bale-link d-none"
+                                       target="_blank"></a>
+
+                                    <div class="bale-meta">
+                                        <span>3.2K views 👁</span>
+                                        <span>16:13</span>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-outline-light">
+                        مرحله قبل
+                    </a>
+
+                    <button type="submit" class="btn btn-primary px-4">ادامه</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+
+{% block script %}
+
+// قسمت script رو کامل با این عوض کن
+
+<script>
+
+const input = document.getElementById("id_media");
+const zone = document.getElementById("uploadZone");
+const placeholder = document.getElementById("uploadPlaceholder");
+const previewWrapper = document.getElementById("uploadPreviewWrapper");
+
+const previewImg = document.getElementById("uploadPreviewImage");
+const previewVideo = document.getElementById("uploadPreviewVideo");
+
+const removeBtn = document.getElementById("removeUploadBtn");
+
+const progressBox = document.getElementById("uploadProgressBox");
+const progressBar = document.getElementById("uploadProgressBar");
+const fileName = document.getElementById("uploadFileName");
+const uploadPercent = document.getElementById("uploadPercent");
+
+const baleImage = document.getElementById("baleImage");
+const baleVideo = document.getElementById("baleVideo");
+
+const baleCaption = document.getElementById("baleCaption");
+const baleLink = document.getElementById("baleLink");
+
+// ---------- جدید: المان‌های فرم ----------
+const submitBtn = document.querySelector("button[type='submit']");
+const captionInput = document.getElementById("id_caption");
+const linkInput = document.getElementById("id_link");
+const utmEnabledCheckbox = document.getElementById("id_utm_enabled");
+const utmFields = document.getElementById("utmFields");
+const utmSource = document.getElementById("id_utm_source");
+const utmMedium = document.getElementById("id_utm_medium");
+const utmCampaign = document.getElementById("id_utm_campaign");
+const utmContent = document.getElementById("id_utm_content");
+
+// ---------- تابع چک کردن اعتبار فرم ----------
+function validateForm() {
+    let isValid = true;
+    
+    // چک کردن caption
+    if (!captionInput.value.trim()) {
+        isValid = false;
+    }
+    
+    // چک کردن link
+    const linkValue = linkInput.value.trim();
+    if (!linkValue) {
+        isValid = false;
+    }
+    // اگه لینک داره ولی با http شروع نشه
+    if (linkValue && !linkValue.startsWith('http://') && !linkValue.startsWith('https://')) {
+        isValid = false;
+    }
+    
+    // اگه utm فعال باشه، فیلدهای اجباری رو چک کن
+    if (utmEnabledCheckbox.checked) {
+        if (!utmSource.value.trim()) isValid = false;
+        if (!utmMedium.value.trim()) isValid = false;
+        if (!utmCampaign.value.trim()) isValid = false;
+        if (!utmContent.value.trim()) isValid = false;
+    }
+    
+    // فعال/غیرفعال کردن دکمه
+    if (isValid) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("opacity-50");
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.add("opacity-50");
+    }
+}
+
+// ---------- تابع نمایش/مخفی کردن فیلدهای UTM ----------
+function toggleUtmFields() {
+    if (utmEnabledCheckbox.checked) {
+        utmFields.classList.remove("d-none");
+        // فیلدها رو required کن (سمت کلاینت)
+        utmSource.required = true;
+        utmMedium.required = true;
+        utmCampaign.required = true;
+        utmContent.required = true;
+        document.getElementById("id_utm_term").required = false;
+    } else {
+        utmFields.classList.add("d-none");
+        // required رو بردار
+        utmSource.required = false;
+        utmMedium.required = false;
+        utmCampaign.required = false;
+        utmContent.required = false;
+    }
+    validateForm();
+}
+
+// ---------- Event Listeners ----------
+utmEnabledCheckbox.addEventListener("change", toggleUtmFields);
+captionInput.addEventListener("input", validateForm);
+linkInput.addEventListener("input", validateForm);
+utmSource.addEventListener("input", validateForm);
+utmMedium.addEventListener("input", validateForm);
+utmCampaign.addEventListener("input", validateForm);
+utmContent.addEventListener("input", validateForm);
+
+// Helpers ---------------------------
+function showPreview(file, url) {
+    const type = file.type;
+    fileName.textContent = file.name;
+    placeholder.classList.add("d-none");
+    previewWrapper.classList.remove("d-none");
+    previewImg.classList.add("d-none");
+    previewVideo.classList.add("d-none");
+    baleImage.classList.add("d-none");
+    baleVideo.classList.add("d-none");
+    if (type.startsWith("image/")) {
+        previewImg.src = url;
+        previewImg.classList.remove("d-none");
+        baleImage.src = url;
+        baleImage.classList.remove("d-none");
+    } else if (type.startsWith("video/")) {
+        previewVideo.src = url;
+        previewVideo.classList.remove("d-none");
+        baleVideo.src = url;
+        baleVideo.classList.remove("d-none");
+    }
+    validateForm();
+}
+
+function resetPreview() {
+    input.value = "";
+    previewImg.src = "";
+    previewVideo.src = "";
+    baleImage.src = "";
+    baleVideo.src = "";
+    previewImg.classList.add("d-none");
+    previewVideo.classList.add("d-none");
+    baleImage.classList.add("d-none");
+    baleVideo.classList.add("d-none");
+    previewWrapper.classList.add("d-none");
+    placeholder.classList.remove("d-none");
+    progressBox.classList.add("d-none");
+    progressBar.style.width = "0%";
+    fileName.textContent = "";
+    uploadPercent.textContent = "";
+    validateForm();
+}
+
+function simulateProgress(callback) {
+    let p = 0;
+    progressBox.classList.remove("d-none");
+    const timer = setInterval(() => {
+        p += 10 + (Math.random() * 10);
+        if (p >= 100) p = 100;
+        progressBar.style.width = p + "%";
+        uploadPercent.textContent = p + "%";
+        if (p === 100) {
+            clearInterval(timer);
+            setTimeout(() => progressBox.classList.add("d-none"), 400);
+            callback();
+        }
+    }, 80);
+}
+
+// Events ---------------------------------
+zone.addEventListener("click", () => input.click());
+removeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    resetPreview();
+});
+input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    simulateProgress(() => {
+        showPreview(file, url);
+    });
+});
+
+// Load existing media (edit mode)
+document.addEventListener("DOMContentLoaded", () => {
+    // تنظیم اولیه UTM fields
+    toggleUtmFields();
+    
+    // Caption + Link preview
+    baleCaption.textContent = captionInput.value.trim();
+    const link = linkInput.value.trim();
+    if (link) {
+        baleLink.href = link;
+        baleLink.textContent = link;
+        baleLink.classList.remove("d-none");
+    }
+    
+    // Existing media
+    const existing = "{{ existing_media|default:'' }}";
+    if (!existing) return;
+    placeholder.classList.add("d-none");
+    previewWrapper.classList.remove("d-none");
+    const ext = existing.split('.').pop().toLowerCase();
+    const videos = ["mp4", "webm", "ogg"];
+    if (videos.includes(ext)) {
+        previewVideo.src = existing;
+        previewVideo.classList.remove("d-none");
+        baleVideo.src = existing;
+        baleVideo.classList.remove("d-none");
+    } else {
+        previewImg.src = existing;
+        previewImg.classList.remove("d-none");
+        baleImage.src = existing;
+        baleImage.classList.remove("d-none");
+    }
+    validateForm();
+});
+
+// Caption + Link preview update
+captionInput.addEventListener("input", () => {
+    baleCaption.textContent = captionInput.value.trim();
+    validateForm();
+});
+linkInput.addEventListener("input", () => {
+    const link = linkInput.value.trim();
+    if (link) {
+        baleLink.href = link;
+        baleLink.textContent = link;
+        baleLink.classList.remove("d-none");
+    } else {
+        baleLink.classList.add("d-none");
+    }
+    validateForm();
+});
+
+// Disable submit button initially
+submitBtn.disabled = true;
+submitBtn.classList.add("opacity-50");
+
+</script>
+
+{% endblock %}

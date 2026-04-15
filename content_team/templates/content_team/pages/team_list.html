@@ -1,0 +1,71 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block title %}تیم‌های تولید محتوا{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          href="{% static 'content_team/css/pages/team_list.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="container py-5" dir="rtl">
+        {# ---- هدر صفحه ---- #}
+        <div class="text-center mb-5">
+            <h1 class="text-light fw-bold mb-2">تیم‌های تولید محتوا</h1>
+            <p class="text-secondary">بهترین تیم‌ها برای تولید محتوای کمپین خود را انتخاب کنید</p>
+        </div>
+        {# ---- لیست تیم‌ها ---- #}
+        <div class="row g-4">
+            {% for team in teams %}
+                <div class="col-md-6 col-lg-4">
+                    <a href="{% url 'content_team:team_detail' team.slug %}"
+                       class="text-decoration-none">
+                        <div class="team-list-card h-100 p-4">
+                            {# لوگو و نام #}
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                {% if team.logo %}
+                                    <img src="{{ team.logo.url }}"
+                                         alt="{{ team.name }}"
+                                         class="team-list-avatar">
+                                {% else %}
+                                    <div class="team-list-avatar-placeholder">🎬</div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="text-light fw-bold mb-0">{{ team.name }}</h6>
+                                    <small class="text-secondary" style="direction:ltr;">@{{ team.slug }}</small>
+                                </div>
+                            </div>
+                            {# توضیحات #}
+                            {% if team.description %}
+                                <p class="text-secondary small mb-3" style="line-height:1.7;">{{ team.description|truncatechars:100 }}</p>
+                            {% endif %}
+                            {# امتیاز و سفارش‌ها #}
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="star-rating">
+                                    {% with avg=team.avg_rating|default:0 %}
+                                        {% for i in "12345" %}
+                                            <i class="star-rating-icon fi-star{% if forloop.counter <= avg %} active{% endif %}"></i>
+                                        {% endfor %}
+                                        <small class="text-secondary ms-1">({{ team.avg_rating|floatformat:1|default:"—" }})</small>
+                                    {% endwith %}
+                                </div>
+                                <span class="badge bg-faded-secondary text-light">{{ team.completed_orders_count }} سفارش تکمیل‌شده</span>
+                            </div>
+                            {# قیمت پایه #}
+                            <div class="team-list-price-box text-center mt-auto">
+                                <div class="team-price-label">قیمت پایه</div>
+                                <div class="team-price-value">
+                                    {{ team.base_price|floatformat:0 }}
+                                    <span class="team-price-unit">تومان</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <div style="font-size:3rem;">😕</div>
+                    <p class="text-secondary mt-3">در حال حاضر هیچ تیم فعالی وجود ندارد.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

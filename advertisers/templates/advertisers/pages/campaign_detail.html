@@ -1,0 +1,1247 @@
+{% extends "parent/base.html" %}
+{% load static jformat %}
+
+{% block title %}
+    {{ campaign.name }} | جزئیات کمپین
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* استایل‌های اضافی که در تم نبود - فقط برای انیمیشن‌ها */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.4);
+        }
+        50% { 
+            box-shadow: 0 0 0 10px rgba(253, 86, 49, 0);
+        }
+    }
+    
+    .animate-up {
+        animation: fadeInUp 0.5s ease forwards;
+    }
+    
+    .animate-left {
+        animation: fadeInLeft 0.5s ease forwards;
+    }
+    
+    .animate-right {
+        animation: fadeInRight 0.5s ease forwards;
+    }
+    
+    .stat-card-hover {
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .stat-card-hover:hover {
+        transform: translateY(-5px);
+        border-color: rgba(253, 86, 49, 0.3);
+    }
+    
+    .info-item-hover {
+        transition: all 0.3s ease;
+    }
+    
+    .info-item-hover:hover {
+        transform: translateX(-5px);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .team-logo-hover {
+        transition: all 0.3s ease;
+    }
+    
+    .team-logo-hover:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(253, 86, 49, 0.3);
+    }
+    
+    .delivery-file-hover {
+        transition: all 0.3s ease;
+    }
+    
+    .delivery-file-hover:hover {
+        border-color: #fd5631;
+        transform: translateX(-5px);
+    }
+    
+    .btn-hover-scale {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-hover-scale:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* تایم لاین ویرایش */
+    .revision-timeline {
+        position: relative;
+        padding-right: 1.25rem;
+    }
+    
+    .revision-timeline::before {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, #fd5631, #5d3cf2, transparent);
+    }
+    
+    .revision-item {
+        position: relative;
+        padding-right: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .revision-item::before {
+        content: '';
+        position: absolute;
+        right: -5px;
+        top: 8px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fd5631;
+        border: 2px solid #1f1b2d;
+    }
+    
+    .modal-dark .modal-content {
+        background: #1f1b2d;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* اسکرول بار */
+    .revision-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    
+    .revision-scroll::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+    
+    .revision-scroll::-webkit-scrollbar-thumb {
+        background: #fd5631;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4" style="margin-top: 2rem;">
+    
+    <!-- ==================== هدر اصلی ==================== -->
+    <div class="card glass-box bg-dark border-light mb-4 animate-up">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h1 class="text-light mb-2">{{ campaign.name }}</h1>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-faded-primary rounded-pill">
+                            <i class="fi-tag me-1"></i> {{ campaign.platform.name }}
+                        </span>
+                        <span class="badge bg-faded-secondary rounded-pill">
+                            <i class="fi-calendar me-1"></i> {{ campaign.duration_days }} روز
+                        </span>
+                        <span class="badge 
+                            {% if campaign.status == 'running' %}bg-faded-success
+                            {% elif campaign.status == 'completed' %}bg-faded-info
+                            {% else %}bg-faded-warning{% endif %} rounded-pill">
+                            <i class="fi-settings me-1"></i> {{ campaign.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="text-center text-md-end">
+                    <div class="h2 text-primary mb-0">
+                        {{ campaign.invoice.payable_amount|floatformat:0|default:0 }}
+                        <small class="fs-6 text-muted">تومان</small>
+                    </div>
+                    <div class="small text-muted">قابل پرداخت</div>
+                </div>
+            </div>
+            
+            <!-- پیشرفت کمپین -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small text-muted">پیشرفت کمپین</span>
+                    <span class="small fw-bold text-light">{{ progress_percent }}%</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%; background-color: {{ progress_color }};"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== آمار سریع ==================== -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-left" style="animation-delay: 0.05s;">
+                <i class="fi-users fs-2 text-primary mb-2 d-block"></i>
+                <div class="h3 text-light mb-0">{{ channels_count }}</div>
+                <div class="small text-muted">کانال‌ها</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-left" style="animation-delay: 0.1s;">
+                <i class="fi-calendar fs-2 text-info mb-2 d-block"></i>
+                <div class="h3 text-light mb-0">{{ campaign.duration_days }}</div>
+                <div class="small text-muted">روز</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-right" style="animation-delay: 0.15s;">
+                <i class="fi-wallet fs-2 {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %} mb-2 d-block"></i>
+                <div class="small text-muted">وضعیت پرداخت</div>
+                <div class="fw-bold {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %}">
+                    {% if campaign.invoice and campaign.invoice.is_paid %}پرداخت شده{% else %}پرداخت نشده{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-right" style="animation-delay: 0.2s;">
+                <i class="bi bi-mouse2 text-warning mb-2 d-block" style="font-size: 1.55rem"></i>
+                <div class="h3 text-light mb-0">{{ total_clicks|default:0 }}</div>
+                <div class="small text-muted">کلیک</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- ==================== ستون راست: مشخصات کمپین ==================== -->
+        <div class="col-lg-4">
+            <div class="card glass-box bg-dark border-light h-100 animate-left" style="animation-delay: 0.1s;">
+                <div class="card-body">
+                    <h5 class="card-title text-light mb-3">
+                        <i class="fi-info-circle text-primary me-2"></i>
+                        مشخصات کمپین
+                    </h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
+                            <span class="text-muted">پلتفرم</span>
+                            <span class="text-light">{{ campaign.platform.name }}</span>
+                        </li>
+                        <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
+                            <span class="text-muted">نوع محتوا</span>
+                            <span class="text-light">
+                                {% if campaign.content_type.icon %}
+                                    <i class="{{ campaign.content_type.icon }} me-1"></i>
+                                {% endif %}
+                                {{ campaign.content_type.name }}
+                            </span>
+                        </li>
+                        <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
+                            <span class="text-muted">نوع تبلیغ</span>
+                            <span class="text-light">
+                                {% if campaign.ad_type.icon %}
+                                    <i class="{{ campaign.ad_type.icon }} me-1"></i>
+                                {% endif %}
+                                {{ campaign.ad_type.name }}
+                            </span>
+                        </li>
+                        <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
+                            <span class="text-muted">تولید محتوا</span>
+                            <span class="text-light">
+                                {% if campaign.content_service_type %}
+                                    {% if campaign.content_service_type.icon %}
+                                        <i class="{{ campaign.content_service_type.icon }} me-1"></i>
+                                    {% endif %}
+                                    {{ campaign.content_service_type.name }}
+                                {% else %}
+                                    <span class="text-muted">ندارد</span>
+                                {% endif %}
+                            </span>
+                        </li>
+                        {% if campaign.description %}
+                            <li class="mt-3 pt-2">
+                                <div class="text-muted small mb-2">توضیحات</div>
+                                <p class="small text-light mb-0">{{ campaign.description|truncatewords:50 }}</p>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ==================== ستون میانی: هزینه‌ها ==================== -->
+        <div class="col-lg-4">
+            <div class="card glass-box bg-dark border-light h-100 animate-up" style="animation-delay: 0.15s;">
+                <div class="card-body">
+                    <h5 class="card-title text-light mb-3">
+                        <i class="fi-wallet text-primary me-2"></i>
+                        هزینه‌ها
+                    </h5>
+                    {% if campaign.invoice %}
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-3 d-flex justify-content-between">
+                                <span class="text-muted">هزینه اینفلوئنسر</span>
+                                <span class="text-light">{{ campaign.invoice.influencer_cost }} تومان</span>
+                            </li>
+                            <li class="mb-3 d-flex justify-content-between">
+                                <span class="text-muted">تولید محتوا</span>
+                                <span class="text-light">{{ campaign.invoice.content_cost }} تومان</span>
+                            </li>
+                            <li class="mb-3 d-flex justify-content-between">
+                                <span class="text-muted">حق العمل</span>
+                                <span class="text-light">{{ campaign.invoice.commission }} تومان</span>
+                            </li>
+                            {% if campaign.invoice.discount_amount %}
+                                <li class="mb-3 d-flex justify-content-between">
+                                    <span class="text-muted text-success">تخفیف</span>
+                                    <span class="text-success">-{{ campaign.invoice.discount_amount }} تومان</span>
+                                </li>
+                            {% endif %}
+                            <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
+                                <span class="fw-bold text-light">مبلغ کل</span>
+                                <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fi-inbox fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                            <p class="text-muted mb-0">هنوز فاکتور ایجاد نشده</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- ==================== ستون چپ: محتوای کمپین ==================== -->
+        <!-- ستون چپ: محتوای کمپین - نسخه ساده شده -->
+<!-- ستون چپ: محتوای کمپین - نسخه ساده شده (بدون دکمه) -->
+<div class="col-lg-4">
+    {% if campaign.content_type.slug == "content-production-team" %}
+        {% with order=campaign.content_orders.first %}
+            {% if order %}
+                <div class="card glass-box bg-dark border-light h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-light mb-3">
+                            <i class="fi-truck text-primary me-2"></i>
+                            وضعیت سفارش
+                        </h5>
+                        
+                        <!-- تیم تولید (خلاصه) -->
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            {% if order.team.logo %}
+                                <img src="{{ order.team.logo.url }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fi-users fs-3 text-light"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="text-light fw-semibold">{{ order.team.name }}</div>
+                                <div class="small text-muted">{{ order.team.members_count }} عضو</div>
+                            </div>
+                        </div>
+                        
+                        <!-- وضعیت سفارش -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">وضعیت سفارش</span>
+                            <span class="badge 
+                                {% if order.status == 'pending' %}bg-faded-warning text-warning
+                                {% elif order.status == 'in_progress' %}bg-faded-info text-info
+                                {% elif order.status == 'completed' %}bg-faded-success text-success
+                                {% else %}bg-faded-danger text-danger{% endif %} rounded-pill">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <!-- وضعیت تحویل -->
+                        {% if order.delivery %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">وضعیت تحویل</span>
+                            <span class="badge 
+                                {% if order.delivery.status == 'pending' %}bg-faded-secondary text-secondary
+                                {% elif order.delivery.status == 'delivered' %}bg-faded-info text-info
+                                {% elif order.delivery.status == 'revision_requested' %}bg-faded-warning text-warning
+                                {% elif order.delivery.status == 'final_accepted' %}bg-faded-success text-success
+                                {% else %}bg-faded-secondary{% endif %} rounded-pill">
+                                {{ order.delivery.get_status_display }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- قیمت -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted small">قیمت</span>
+                            <span class="text-success fw-bold">{{ order.price }} تومان</span>
+                        </div>
+                        
+                        <!-- فقط دکمه مشاهده جزئیات کامل -->
+                        <button class="btn btn-outline-light w-100 mt-2 rounded-pill" data-bs-toggle="modal" data-bs-target="#campaignContentModal">
+                            <i class="fi-eye me-2"></i> مشاهده جزئیات کامل
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card glass-box bg-dark border-light h-100 text-center py-5">
+                    <i class="fi-file fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                    <p class="text-muted mb-0">هنوز محتوایی ثبت نشده است</p>
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% else %}
+        <!-- محتوای آماده -->
+        <div class="card glass-box bg-dark border-light h-100">
+            <div class="card-body">
+                <h5 class="card-title text-light mb-3">
+                    <i class="fi-file text-primary me-2"></i>
+                    محتوای کمپین
+                </h5>
+                {% if campaign.content %}
+                    <div class="small text-muted mb-2">نوع محتوا: محتوای آماده</div>
+                    <button class="btn btn-outline-primary w-100 rounded-pill" data-bs-toggle="modal" data-bs-target="#campaignContentModal">
+                        <i class="fi-eye me-2"></i> مشاهده محتوا
+                    </button>
+                {% else %}
+                    <p class="text-muted text-center mb-0">هنوز محتوایی ثبت نشده است</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+    </div>
+    
+    <!-- ==================== جدول اینفلوئنسرها ==================== -->
+    <div class="card glass-box bg-dark border-light mt-4 animate-up" style="animation-delay: 0.25s;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title text-light mb-0">
+                    <i class="fi-users text-primary me-2"></i>
+                    اینفلوئنسرها
+                    <span class="badge bg-faded-primary rounded-pill ms-2">{{ channels_count }}</span>
+                </h5>
+            </div>
+            
+            {% if channels %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>پروفایل</th>
+                                <th>کانال</th>
+                                <th>پلتفرم</th>
+                                <th>فالوورها</th>
+                                <th>قیمت</th>
+                                <th>وضعیت</th>
+                                <th>کلیک</th>
+                                <th>لینک</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ch in channels %}
+                                <tr>
+                                    <td>
+                                        {% if ch.channel.avatar %}
+                                            <img src="{{ ch.channel.avatar.url }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fi-user text-light"></i>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-light">{{ ch.channel.channel_name }}</div>
+                                        <div class="small text-muted">{{ ch.channel.channel_id }}</div>
+                                    </td>
+                                    <td>{{ ch.channel.platform.name }}</td>
+                                    <td>{{ ch.channel.followers_formatted }}</td>
+                                    <td class="text-success fw-semibold">{{ ch.price }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if ch.status == 'pending' %}bg-faded-warning text-warning
+                                            {% elif ch.status == 'accepted' %}bg-faded-success text-success
+                                            {% elif ch.status == 'rejected' %}bg-faded-danger text-danger
+                                            {% elif ch.status == 'completed' %}bg-faded-info text-info
+                                            {% endif %} rounded-pill">
+                                            {{ ch.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ ch.tracking_link.clicks|default:0 }}</td>
+                                    <td>
+                                        {% if ch.channel.url %}
+                                            <a href="{{ ch.channel.url }}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill">
+                                                <i class="fi-external-link"></i>
+                                            </a>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fi-users fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                    <p class="text-muted mb-0">هنوز کانالی برای این کمپین ثبت نشده است</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ==================== مودال جزئیات کامل سفارش ==================== -->
+<div class="modal fade" id="campaignContentModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modal-dark bg-dark border-light">
+            <div class="modal-header border-light">
+                <h5 class="modal-title text-light">
+                    <i class="fi-file text-primary me-2"></i>
+                    جزئیات کامل سفارش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs px-3 pt-3" style="border-bottom-color: rgba(255,255,255,0.1);">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-team">
+                            <i class="fi-users me-1"></i> تیم تولید
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-files">
+                            <i class="fi-download me-1"></i> فایل‌های تحویلی
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-brief">
+                            <i class="fi-file me-1"></i> بریف سفارش
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-revisions">
+                            <i class="fi-edit me-1"></i> تاریخچه ویرایش
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-attachments">
+                            <i class="fi-attachment me-1"></i> فایل‌های پیوست
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-4">
+                    <!-- تب تیم تولید -->
+                    <!-- تب تیم تولید (نسخه کامل با همه اقدامات) -->
+<div class="tab-pane fade show active" id="modal-team">
+    {% with order=campaign.content_orders.first %}
+        {% if order %}
+            <!-- اطلاعات پایه تیم و سفارش -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4 text-center">
+                    {% if order.team.logo %}
+                        <img src="{{ order.team.logo.url }}" class="rounded-circle mb-3 team-logo-hover" style="width: 100px; height: 100px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 100px; height: 100px;">
+                            <i class="fi-users fs-1 text-light"></i>
+                        </div>
+                    {% endif %}
+                    <h5 class="text-light">{{ order.team.name }}</h5>
+                    <div class="small text-muted">{{ order.team.members_count }} عضو فعال</div>
+                    {% if order.team.avg_rating %}
+                        <div class="mt-2">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= order.team.avg_rating %}
+                                    <i class="fi-star-filled text-warning"></i>
+                                {% else %}
+                                    <i class="fi-star text-muted"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="small text-muted ms-1">({{ order.team.avg_rating }})</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-8">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="p-3 rounded-2 bg-faded-dark">
+                                <div class="text-muted small mb-1">وضعیت سفارش</div>
+                                <span class="badge 
+                                    {% if order.status == 'pending' %}bg-faded-warning text-warning
+                                    {% elif order.status == 'in_progress' %}bg-faded-info text-info
+                                    {% elif order.status == 'completed' %}bg-faded-success text-success
+                                    {% else %}bg-faded-danger text-danger{% endif %} fs-6">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 rounded-2 bg-faded-dark">
+                                <div class="text-muted small mb-1">وضعیت تحویل</div>
+                                <span class="badge 
+                                    {% if order.delivery.status == 'pending' %}bg-faded-secondary
+                                    {% elif order.delivery.status == 'delivered' %}bg-faded-info text-info
+                                    {% elif order.delivery.status == 'revision_requested' %}bg-faded-warning text-warning
+                                    {% elif order.delivery.status == 'final_accepted' %}bg-faded-success text-success
+                                    {% else %}bg-faded-secondary{% endif %} fs-6">
+                                    {{ order.delivery.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 rounded-2 bg-faded-dark">
+                                <div class="text-muted small mb-1">قیمت سفارش</div>
+                                <div class="text-success fw-bold fs-5">{{ order.price }} تومان</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 rounded-2 bg-faded-dark">
+                                <div class="text-muted small mb-1">نوع خدمت</div>
+                                <div class="text-light">{{ order.service_rate.service_type.name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 rounded-2 bg-faded-dark">
+                                <div class="text-muted small mb-1">تاریخ ثبت</div>
+                                <div class="text-light">{{ order.created_at|jformat:"%Y/%m/%d" }}</div>
+                            </div>
+                        </div>
+                        {% if order.minutes %}
+                            <div class="col-6">
+                                <div class="p-3 rounded-2 bg-faded-dark">
+                                    <div class="text-muted small mb-1">مدت زمان</div>
+                                    <div class="text-light">{{ order.minutes }} دقیقه</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- وضعیت درخواست ویرایش فعال (اگر وجود داشته باشد) -->
+            {% with pending_revision=order.revisions.all|dictsortreversed:"created_at"|first %}
+                {% if pending_revision and pending_revision.status == 'pending' %}
+                    <div class="alert alert-warning bg-faded-warning text-warning mb-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fi-edit fs-2"></i>
+                            <div>
+                                <strong class="d-block">درخواست ویرایش در انتظار بررسی</strong>
+                                <span class="small">{{ pending_revision.feedback|truncatewords:30 }}</span>
+                                <div class="small text-muted mt-1">تاریخ درخواست: {{ pending_revision.created_at|jformat:"%Y/%m/%d %H:%M" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- دکمه‌های اقدام (فقط برای سفارشات completed که تأیید نهایی نشده‌اند) -->
+            {% if order.status == 'completed' %}
+                {% if not order.delivery or order.delivery.status != 'final_accepted' %}
+                    <div class="d-grid gap-3 mt-4 pt-2 border-top border-light">
+                        <h6 class="text-light mb-2">اقدامات</h6>
+                        <button class="btn btn-success rounded-pill py-3 final-accept-btn" data-order-id="{{ order.id }}">
+                            <i class="fi-check-circle me-2"></i> تأیید نهایی سفارش
+                        </button>
+                        <button class="btn btn-outline-warning rounded-pill py-3 request-revision-btn" 
+                                data-order-id="{{ order.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#revisionModal">
+                            <i class="fi-edit me-2"></i> درخواست ویرایش
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success bg-faded-success text-success text-center mt-4">
+                        <i class="fi-check-circle fs-3 d-block mb-2"></i>
+                        <strong>سفارش تأیید شده است</strong>
+                        <p class="mb-0 small">شما این سفارش را تأیید کرده‌اید. از همکاری شما متشکریم.</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <!-- اگر سفارش در وضعیت دیگه‌ای هست -->
+            {% if order.status == 'in_progress' %}
+                <div class="alert alert-info bg-faded-info text-info text-center mt-4">
+                    <i class="fi-settings fs-3 d-block mb-2"></i>
+                    <strong>سفارش در حال انجام است</strong>
+                    <p class="mb-0 small">تیم تولید محتوا در حال کار روی سفارش شماست.</p>
+                </div>
+            {% endif %}
+            
+            {% if order.status == 'pending' %}
+                <div class="alert alert-warning bg-faded-warning text-warning text-center mt-4">
+                    <i class="fi-clock fs-3 d-block mb-2"></i>
+                    <strong>در انتظار شروع</strong>
+                    <p class="mb-0 small">سفارش هنوز توسط تیم تولید شروع نشده است.</p>
+                </div>
+            {% endif %}
+            
+        {% endif %}
+    {% endwith %}
+</div>
+                    
+                    <!-- تب فایل‌های تحویلی با نمایش نسخه‌ها -->
+<div class="tab-pane fade" id="modal-files">
+    {% with order=campaign.content_orders.first %}
+        {% if order.delivery and order.delivery.file %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="badge bg-primary rounded-pill px-3 py-2">
+                        <i class="fi-tag me-1"></i> نسخه {{ order.delivery.version }}
+                    </span>
+                    {% if order.delivery.version == 1 %}
+                        <span class="small text-muted">(تحویل اولیه)</span>
+                    {% else %}
+                        <span class="small text-muted">(ویرایش {{ order.delivery.version|add:"-1" }})</span>
+                    {% endif %}
+                    <span class="badge 
+                        {% if order.delivery.status == 'pending' %}bg-faded-secondary
+                        {% elif order.delivery.status == 'delivered' %}bg-faded-info text-info
+                        {% elif order.delivery.status == 'revision_requested' %}bg-faded-warning text-warning
+                        {% elif order.delivery.status == 'final_accepted' %}bg-faded-success text-success
+                        {% else %}bg-faded-secondary{% endif %} rounded-pill">
+                        {{ order.delivery.get_status_display }}
+                    </span>
+                </div>
+                
+                <!-- نمایش یک فایل (به جای حلقه for) -->
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-2 bg-faded-dark delivery-file-hover">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fi-file fs-3 text-primary"></i>
+                        <div>
+                            <div class="small text-light fw-semibold">{{ order.delivery.file_name|truncatechars:35 }}</div>
+                            <div class="small text-muted">{{ order.delivery.file_size_display }}</div>
+                            <div class="small text-info">
+                                <i class="fi-calendar"></i> {{ order.delivery.delivered_at|jformat:"%Y/%m/%d %H:%M" }}
+                            </div>
+                            {% if order.delivery.notes %}
+                                <div class="small text-muted mt-1">
+                                    <i class="fi-message"></i> {{ order.delivery.notes|truncatechars:50 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="{{ order.delivery.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill" download>
+                        <i class="fi-download"></i>
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fi-inbox fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                <p class="text-muted">هنوز فایلی تحویل داده نشده است</p>
+            </div>
+        {% endif %}
+    {% endwith %}
+</div>
+                    
+                    <!-- تب بریف سفارش -->
+                    <div class="tab-pane fade" id="modal-brief">
+                        {% with order=campaign.content_orders.first %}
+                            {% if order.brief %}
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="text-muted small mb-1">هدف محتوا</div>
+                                            <div class="text-light">{{ order.brief.get_goal_display }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="text-muted small mb-1">لحن محتوا</div>
+                                            <div class="text-light">{{ order.brief.get_tone_display }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="mb-3">
+                                            <div class="text-muted small mb-1">نام برند</div>
+                                            <div class="text-light fw-bold">{{ order.brief.brand_name }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="mb-3">
+                                            <div class="text-muted small mb-1">توضیحات</div>
+                                            <div class="text-light p-3 rounded-2 bg-faded-dark">
+                                                {{ order.brief.description|linebreaks }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fi-file fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                                    <p class="text-muted">بریفی ثبت نشده است</p>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    
+                    <!-- تب تاریخچه ویرایش -->
+                    <div class="tab-pane fade" id="modal-revisions">
+                        {% with order=campaign.content_orders.first %}
+                            {% if order.revisions.all %}
+                                <div class="revision-timeline revision-scroll" style="max-height: 400px; overflow-y: auto;">
+                                    {% for revision in order.revisions.all|dictsortreversed:"created_at" %}
+                                        <div class="revision-item">
+                                            <div class="p-3 rounded-2 bg-faded-dark">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div class="small text-muted">
+                                                        <i class="fi-calendar"></i> {{ revision.created_at|jformat:"%Y/%m/%d %H:%M" }}
+                                                    </div>
+                                                    <span class="badge 
+                                                        {% if revision.status == 'pending' %}bg-faded-warning text-warning
+                                                        {% elif revision.status == 'accepted' %}bg-faded-info text-info
+                                                        {% elif revision.status == 'done' %}bg-faded-success text-success
+                                                        {% else %}bg-faded-danger text-danger{% endif %}">
+                                                        {{ revision.get_status_display }}
+                                                    </span>
+                                                </div>
+                                                <div class="text-light small mb-2">
+                                                    {{ revision.feedback|linebreaks }}
+                                                </div>
+                                                {% if revision.files.all %}
+                                                    <div class="mt-2 pt-2 border-top border-light">
+                                                        <div class="small text-muted mb-2">📎 فایل‌های پیوست:</div>
+                                                        {% for file in revision.files.all %}
+                                                            <a href="{{ file.file.url }}" class="small text-primary d-block" download>
+                                                                <i class="fi-attachment"></i> {{ file.original_name }}
+                                                            </a>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fi-edit fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                                    <p class="text-muted">هیچ درخواست ویرایشی ثبت نشده است</p>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    
+                    <!-- تب فایل‌های پیوست اولیه -->
+                    <div class="tab-pane fade" id="modal-attachments">
+                        {% with order=campaign.content_orders.first %}
+                            {% if order.files.all %}
+                                <div class="row g-3">
+                                    {% for file in order.files.all %}
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center p-3 rounded-2 bg-faded-dark">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <i class="fi-file fs-3 text-info"></i>
+                                                    <div>
+                                                        <div class="small text-light">{{ file.original_name|truncatechars:35 }}</div>
+                                                        <div class="small text-muted">{{ file.file_size_display }}</div>
+                                                    </div>
+                                                </div>
+                                                <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-info rounded-pill" download>
+                                                    <i class="fi-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fi-attachment fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                                    <p class="text-muted">هیچ فایل پیوستی وجود ندارد</p>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-light">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">بستن</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال درخواست ویرایش - فقط یک فایل مرجع -->
+<div class="modal fade" id="revisionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-dark bg-dark border-light">
+            <div class="modal-header border-light p-4">
+                <h5 class="modal-title text-light">
+                    <i class="fi-edit me-2 text-warning"></i> درخواست ویرایش
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="revisionForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label text-light small fw-semibold mb-2">
+                            📝 توضیحات ویرایش <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="feedback" class="form-control bg-faded-dark border-light text-light" rows="5" 
+                                  placeholder="لطفاً توضیح دهید چه تغییراتی می‌خواهید..."></textarea>
+                        <small class="text-muted">توضیحات دقیق به تیم کمک میکند تا ویرایش بهتری انجام دهد</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-semibold mb-2">
+                            📎 فایل مرجع (اختیاری)
+                        </label>
+                        <div class="dropzone-revision bg-faded-dark border border-light rounded-3 p-4 text-center" 
+                             id="revisionDropzone" style="border-style: dashed !important; cursor: pointer;">
+                            <i class="fi-cloud-upload fs-1 text-primary mb-2 d-block"></i>
+                            <p class="text-muted small mb-0" id="dropzoneText">برای آپلود کلیک کنید یا فایل را بکشید</p>
+                            <input type="file" name="revision_file" id="revisionFileInput" class="d-none">
+                        </div>
+                        <small class="text-muted">می‌توانید یک فایل مرجع آپلود کنید (تصویر، ویدیو، سند)</small>
+                    </div>
+                    
+                    <div id="selectedFileContainer" class="mt-3" style="display: none;">
+                        <div class="small text-muted mb-2">📋 فایل انتخاب شده:</div>
+                        <div id="selectedFile" class="selected-file"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-light p-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-warning rounded-pill px-4">
+                        <i class="fi-edit me-2"></i> ثبت درخواست
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+// تابع دریافت CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// تابع کمکی برای نمایش مودال نوتیفیکیشن (از base.html استفاده میکنه)
+function showMessage(title, message, type = 'info', onClose = null) {
+    if (typeof window.showNotificationModal === 'function') {
+        window.showNotificationModal(title, message, type, onClose);
+    } else {
+        alert(message);
+        if (onClose) onClose();
+    }
+}
+
+// تابع کمکی برای نمایش مودال تایید (confirm)
+function showConfirmModal(title, message, onConfirm, onCancel = null) {
+    let confirmModal = document.getElementById('customConfirmModal');
+    
+    if (!confirmModal) {
+        confirmModal = document.createElement('div');
+        confirmModal.id = 'customConfirmModal';
+        confirmModal.className = 'modal fade';
+        confirmModal.setAttribute('tabindex', '-1');
+        confirmModal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark border-light">
+                    <div class="modal-header border-light">
+                        <h5 class="modal-title text-light">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                            <span id="confirmModalTitle">تأیید عملیات</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="notification-icon warning mb-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                        </div>
+                        <p class="text-light mb-0" id="confirmModalMessage" style="font-size: 1rem; line-height: 1.6;">
+                            آیا از انجام این عملیات مطمئن هستید؟
+                        </p>
+                    </div>
+                    <div class="modal-footer border-light">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" id="confirmModalCancelBtn">
+                            <i class="bi bi-x-lg me-1"></i> انصراف
+                        </button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmModalConfirmBtn">
+                            <i class="bi bi-check-lg me-1"></i> تأیید
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(confirmModal);
+    }
+    
+    document.getElementById('confirmModalTitle').innerHTML = ` ${title}`;
+    document.getElementById('confirmModalMessage').innerHTML = message;
+    
+    const modal = new bootstrap.Modal(confirmModal);
+    modal.show();
+    
+    const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+    const cancelBtn = document.getElementById('confirmModalCancelBtn');
+    
+    const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        confirmModal.addEventListener('hidden.bs.modal', () => modal.dispose(), { once: true });
+    };
+    
+    const handleConfirm = () => {
+        modal.hide();
+        cleanup();
+        if (onConfirm) onConfirm();
+    };
+    
+    const handleCancel = () => {
+        modal.hide();
+        cleanup();
+        if (onCancel) onCancel();
+    };
+    
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ========== مدیریت فایل مرجع ویرایش (یک فایل) ==========
+    let selectedRevisionFile = null;
+    const revisionDropzone = document.getElementById('revisionDropzone');
+    const revisionFileInput = document.getElementById('revisionFileInput');
+    const revisionFileContainer = document.getElementById('revisionFileContainer');
+    const revisionFileList = document.getElementById('revisionFileList');
+    const dropzoneText = document.getElementById('dropzoneText');
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function getFileIcon(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        const icons = {
+            'jpg': 'fi-image', 'jpeg': 'fi-image', 'png': 'fi-image', 'gif': 'fi-image',
+            'mp4': 'fi-video', 'avi': 'fi-video', 'mov': 'fi-video',
+            'mp3': 'fi-music', 'wav': 'fi-music',
+            'pdf': 'fi-file', 'doc': 'fi-file', 'docx': 'fi-file',
+            'zip': 'fi-archive', 'rar': 'fi-archive'
+        };
+        return icons[ext] || 'fi-file';
+    }
+    
+    function updateRevisionFileDisplay() {
+        if (!selectedRevisionFile) {
+            if (revisionFileContainer) revisionFileContainer.style.display = 'none';
+            if (dropzoneText) dropzoneText.innerHTML = 'برای آپلود کلیک کنید یا فایل را بکشید';
+            return;
+        }
+        
+        if (revisionFileContainer) revisionFileContainer.style.display = 'block';
+        if (dropzoneText) dropzoneText.innerHTML = '1 فایل انتخاب شده';
+        
+        if (revisionFileList) {
+            revisionFileList.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-2 bg-faded-dark">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                        <div class="file-icon-small">
+                            <i class="${getFileIcon(selectedRevisionFile.name)}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="small text-light fw-semibold">${selectedRevisionFile.name.length > 35 ? selectedRevisionFile.name.substring(0, 35) + '...' : selectedRevisionFile.name}</div>
+                            <div class="small text-muted">${formatFileSize(selectedRevisionFile.size)}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-revision-file-btn">
+                        <i class="fi-x"></i>
+                    </button>
+                </div>
+            `;
+        }
+        
+        document.querySelector('.remove-revision-file-btn')?.addEventListener('click', function() {
+            selectedRevisionFile = null;
+            if (revisionFileInput) revisionFileInput.value = '';
+            updateRevisionFileDisplay();
+        });
+    }
+    
+    if (revisionDropzone) {
+        revisionDropzone.addEventListener('click', () => revisionFileInput.click());
+        revisionDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            revisionDropzone.style.borderColor = '#fd5631';
+            revisionDropzone.style.background = 'rgba(253, 86, 49, 0.05)';
+        });
+        revisionDropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            revisionDropzone.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            revisionDropzone.style.background = 'transparent';
+        });
+        revisionDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            revisionDropzone.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            revisionDropzone.style.background = 'transparent';
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                selectedRevisionFile = files[0];
+                updateRevisionFileDisplay();
+            }
+        });
+    }
+    
+    if (revisionFileInput) {
+        revisionFileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                selectedRevisionFile = this.files[0];
+                updateRevisionFileDisplay();
+            }
+        });
+    }
+    
+    // ========== ثبت درخواست ویرایش ==========
+    const revisionForm = document.getElementById('revisionForm');
+    if (revisionForm) {
+        revisionForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const feedback = document.querySelector('textarea[name="feedback"]').value;
+            if (!feedback.trim()) {
+                showMessage('خطا', 'لطفاً توضیحات ویرایش را وارد کنید', 'error');
+                return;
+            }
+            
+            const orderId = document.querySelector('.request-revision-btn')?.dataset.orderId;
+            if (!orderId) return;
+            
+            const formData = new FormData();
+            formData.append('feedback', feedback.trim());
+            if (selectedRevisionFile) {
+                formData.append('revision_file', selectedRevisionFile);
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fi-loading"></i> در حال ارسال...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`/advertisers/campaign/order/${orderId}/request-revision/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('revisionModal'));
+                    if (modal) modal.hide();
+                    showMessage('موفقیت', data.message, 'success', () => {
+                        location.reload();
+                    });
+                } else {
+                    showMessage('خطا', data.error, 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+    
+    // ========== تأیید نهایی سفارش ==========
+    document.querySelectorAll('.final-accept-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            
+            showConfirmModal(
+                'تأیید نهایی سفارش',
+                'آیا از تأیید نهایی این سفارش مطمئن هستید؟\nپس از تأیید، پس از تایید این فایل به عنوان فایل اصلی کمپین سما در نظر گرفته خواهد شد و تبلیغ شما با این فایل منتشر خواهد شد.',
+                async () => {
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fi-loading"></i> در حال پردازش...';
+                    this.disabled = true;
+                    
+                    try {
+                        const response = await fetch(`/advertisers/campaign/order/${orderId}/final-accept/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showMessage('موفقیت', data.message, 'success', () => {
+                                location.reload();
+                            });
+                        } else {
+                            showMessage('خطا', data.error, 'error');
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    } catch (error) {
+                        showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                }
+            );
+        });
+    });
+});
+</script>
+{% endblock %}

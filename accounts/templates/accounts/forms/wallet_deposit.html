@@ -1,0 +1,46 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}شارژ کیف پول | WinJob{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-6 mx-auto">
+            <div class="card bg-faded-light border-0">
+                <div class="card-header bg-transparent border-light py-3">
+                    <h4 class="text-white mb-0">شارژ کیف پول</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="form-label text-white">مبلغ (تومان)</label>
+                            <input type="number" name="amount" class="form-control bg-dark border-light text-white" 
+                                   placeholder="مبلغ مورد نظر را وارد کنید" min="1000" max="50000000" required>
+                            <div class="form-text text-muted">
+                                حداقل مبلغ: ۱,۰۰۰ تومان - حداکثر مبلغ: ۵۰,۰۰۰,۰۰۰ تومان
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-3">
+                            <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline-light flex-grow-1">
+                                انصراف
+                            </a>
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="fi-check-circle ms-1"></i>
+                                شارژ آزمایشی
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="alert alert-info mt-4 py-2 small">
+                        <i class="fi-info-circle ms-1"></i>
+                        این یک روش شارژ آزمایشی است. مبلغ مستقیماً به کیف پول شما اضافه می‌شود.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,426 @@
+{% extends 'parent/base.html' %}
+{% load i18n static jformat %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          href="{% static 'campaigns/css/forms/create_step_4.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="container mt-4 pb-5" dir="rtl">
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        <div class="card border-0 shadow-sm page-card bg-dark">
+            <div class="card-body p-4">
+                {# ---- عنوان ---- #}
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-light fw-bold mb-1">پرداخت و تأیید نهایی</h5>
+                        <p class="text-secondary small mb-0">خلاصه سفارش خود را بررسی کنید و پرداخت را تأیید نمایید.</p>
+                    </div>
+                    <div class="text-secondary small">
+                        کمپین: <span class="fw-bold text-light">{{ campaign.name }}</span>
+                    </div>
+                </div>
+                {# ======== اطلاعات پایه کمپین ======== #}
+                <div class="summary-card mb-3">
+                    <div class="summary-card-header">
+                        <span class="summary-icon">📋</span>
+                        <span>اطلاعات کمپین</span>
+                    </div>
+                    <div class="summary-card-body">
+                        <div class="summary-row">
+                            <span class="summary-label">پلتفرم</span>
+                            <span class="summary-value text-light d-flex align-items-center gap-2">
+                                {% if campaign.platform.logo %}
+                                    <img src="{{ campaign.platform.logo.url }}"
+                                         alt="{{ campaign.platform.name }}"
+                                         class="platform-logo">
+                                {% endif %}
+                                {{ campaign.platform.name }}
+                            </span>
+                        </div>
+                        {% if campaign.content_type %}
+                            <div class="summary-row">
+                                <span class="summary-label">نوع محتوا</span>
+                                <span class="summary-value text-light">{{ campaign.content_type.name }}</span>
+                            </div>
+                        {% endif %}
+                        {% if campaign.ad_type %}
+                            <div class="summary-row">
+                                <span class="summary-label">نوع تبلیغ</span>
+                                <span class="summary-value text-light">{{ campaign.ad_type.name }}</span>
+                            </div>
+                        {% endif %}
+                        <div class="summary-row">
+                            <span class="summary-label">تاریخ شروع</span>
+                            <span class="summary-value text-light ltr-date">{{ campaign.start_date|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">تاریخ پایان</span>
+                            <span class="summary-value text-light ltr-date">{{ campaign.end_date|jformat:"%Y/%m/%d | %H:%M" }}</span>
+                        </div>
+                    </div>
+                </div>
+                {# ======== لیست اینفلوئنسرها ======== #}
+                {% if influencer_bookings %}
+                    <div class="summary-card mb-3">
+                        <div class="summary-card-header">
+                            <span class="summary-icon">🌟</span>
+                            <span>اینفلوئنسرهای انتخاب‌شده</span>
+                            <span class="influencer-count-badge">{{ campaign.influencers.count }} نفر</span>
+                        </div>
+                        <div class="summary-card-body">
+                            {% for booking in influencer_bookings %}
+                                <div class="influencer-row">
+                                
+                                    <div class="influencer-info">
+                                
+                                        {% if booking.channel.avatar %}
+                                            <img src="{{ booking.channel.avatar.url }}" class="influencer-avatar" alt="">
+                                        {% endif %}
+                                
+                                        <div class="influencer-meta">
+                                            <span class="influencer-name">
+                                                {{ booking.channel.channel_name }}
+                                            </span>
+                                
+                                            <span class="influencer-platform">
+                                                {{ booking.channel.platform.name }}
+                                            </span>
+                                        </div>
+                                
+                                    </div>
+                                
+                                    <div class="influencer-rate">
+                                        {{ booking.price|floatformat:0 }} تومان
+                                    </div>
+                                
+                                </div>
+                                {% endfor %}
+
+                            <div class="summary-row subtotal-row">
+                                <span class="summary-label">جمع هزینه اینفلوئنسرها</span>
+                                <span class="summary-value subtotal-value">{{ influencer_cost|floatformat:0 }} تومان</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {# ======== سفارش تولید محتوا ======== #}
+                {% if content_order %}
+                    <div class="summary-card mb-3">
+                        <div class="summary-card-header">
+                            <span class="summary-icon">🎬</span>
+                            {% if content_order.team.logo %}
+                                <img src="{{ content_order.team.logo.url }}"
+                                     alt="{{ content_order.team.name }}"
+                                     class="team-logo">
+                            {% endif %}
+                            <span>سفارش تولید محتوا</span>
+                        </div>
+                        <div class="summary-card-body">
+                            <div class="summary-row">
+                                <span class="summary-label">تیم تولید محتوا</span>
+                                <span class="summary-value text-light d-flex align-items-center gap-2">
+                                    {% if content_order.team.logo %}
+                                        <img src="{{ content_order.team.logo.url }}"
+                                             alt="{{ content_order.team.name }}"
+                                             class="team-logo">
+                                    {% endif %}
+                                    {{ content_order.team.name }}
+                                </span>
+                            </div>
+                            {% if content_order.briefing %}
+                                <div class="summary-row align-items-start">
+                                    <span class="summary-label">توضیحات سفارش</span>
+                                    <span class="summary-value text-light briefing-text">{{ content_order.briefing }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="summary-row subtotal-row">
+                                <span class="summary-label">جمع هزینه تیم محتوا</span>
+                                <span class="summary-value subtotal-value">{{ team_cost|floatformat:0 }} تومان</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {# ======== تفکیک هزینه‌ها ======== #}
+                <div class="cost-breakdown mb-4">
+                    {% if influencer_cost > 0 %}
+                        <div class="cost-breakdown-row">
+                            <span class="cost-breakdown-label">
+                                <span class="cost-dot dot-influencer"></span>
+                                هزینه اینفلوئنسرها
+                            </span>
+                            <span class="cost-breakdown-value">{{ influencer_cost|floatformat:0 }} تومان</span>
+                        </div>
+                    {% endif %}
+                    {% if team_cost > 0 %}
+                        <div class="cost-breakdown-row">
+                            <span class="cost-breakdown-label">
+                                <span class="cost-dot dot-team"></span>
+                                هزینه تیم تولید محتوا
+                            </span>
+                            <span class="cost-breakdown-value">{{ team_cost|floatformat:0 }} تومان</span>
+                        </div>
+                    {% endif %}
+                    <div class="cost-breakdown-divider"></div>
+                    <div class="cost-breakdown-row">
+                        <span class="cost-breakdown-label">جمع کل</span>
+                        <span class="cost-breakdown-value">{{ total_price|floatformat:0 }} تومان</span>
+                    </div>
+                    <div class="cost-breakdown-row commission-row">
+                        <span class="cost-breakdown-label">
+                            <span class="cost-dot dot-commission"></span>
+                            حق‌العمل پلتفرم (15٪)
+                        </span>
+                        <span class="cost-breakdown-value text-warning">+ {{ commission|floatformat:0 }} تومان</span>
+                    </div>
+                    {# ردیف تخفیف — پیش‌فرض مخفی #}
+                    <div class="cost-breakdown-row discount-row d-none"
+                         id="breakdown-discount-row">
+                        <span class="cost-breakdown-label text-success">
+                            <span class="cost-dot dot-discount"></span>
+                            تخفیف اعمال‌شده
+                            <span class="discount-code-badge ms-1" id="breakdown-discount-code-badge"></span>
+                        </span>
+                        <span class="cost-breakdown-value text-success fw-bold"
+                              id="breakdown-discount-value"></span>
+                    </div>
+                    <div class="cost-breakdown-divider"></div>
+                    <div class="cost-breakdown-row total-row">
+                        <span class="cost-breakdown-label fw-bold text-light">قیمت نهایی (با حق‌العمل)</span>
+                        <span class="cost-breakdown-value fw-bold text-light"
+                              id="breakdown-final-total">{{ final_total|floatformat:0 }} تومان</span>
+                    </div>
+                    {# ردیف مبلغ قابل پرداخت — پیش‌فرض مخفی #}
+                    <div class="cost-breakdown-row payable-row d-none"
+                         id="breakdown-payable-row">
+                        <span class="cost-breakdown-label fw-bold text-info">مبلغ قابل پرداخت (بعد از تخفیف)</span>
+                        <span class="cost-breakdown-value fw-bold text-info"
+                              id="breakdown-payable-value"></span>
+                    </div>
+                </div>
+                {# ======== کد تخفیف ======== #}
+                <div class="discount-box mb-4" id="discount-box">
+                    <div class="discount-box-header">
+                        <span class="discount-icon">🏷️</span>
+                        <span>کد تخفیف دارید؟</span>
+                    </div>
+                    <div class="discount-input-row">
+                        <input type="text"
+                               id="discount-code-input"
+                               class="discount-input"
+                               placeholder="کد تخفیف را وارد کنید"
+                               autocomplete="off"
+                               maxlength="50">
+                        <button type="button" class="btn-apply-discount" id="apply-discount-btn">اعمال</button>
+                    </div>
+                    <div id="discount-message" class="discount-message d-none"></div>
+                </div>
+                {# ======== نوار قیمت نهایی ======== #}
+                <div class="final-price-box mb-5" id="final-price-box">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <div class="final-price-label">مبلغ قابل پرداخت</div>
+                            <div class="final-price-value" id="display-final-total">
+                                {{ final_total|floatformat:0 }}
+                                <span class="final-price-unit">تومان</span>
+                            </div>
+                            <div class="text-warning small mt-1">شامل {{ commission|floatformat:0 }} تومان حق‌العمل پلتفرم</div>
+                            <div class="discount-applied-info d-none mt-1" id="discount-applied-info">
+                                <span class="text-success small">✅ تخفیف اعمال شد:</span>
+                                <span class="text-success small fw-bold" id="discount-amount-display"></span>
+                            </div>
+                        </div>
+                        <div class="text-secondary small text-start">
+                            <div>پس از پرداخت، کمپین شما</div>
+                            <div>در صف بررسی تیم قرار می‌گیرد.</div>
+                        </div>
+                    </div>
+                </div>
+                {# ======== انتخاب روش پرداخت ======== #}
+                <div class="payment-methods mb-4">
+                
+                    <div class="payment-methods-header mb-3">
+                        <span class="payment-icon">💳</span>
+                        <span class="fw-bold text-light">انتخاب روش پرداخت</span>
+                    </div>
+                
+                    <div class="row g-3">
+                
+                        {# درگاه پرداخت #}
+                        <div class="col-md-6">
+                            <div class="payment-card active" data-method="gateway">
+                
+                                <div class="payment-card-header">
+                                    <span class="payment-method-icon">🏦</span>
+                                    <span class="payment-method-title">درگاه پرداخت</span>
+                                </div>
+                
+                                <div class="payment-method-desc">
+                                    پرداخت امن از طریق درگاه بانکی
+                                </div>
+                
+                            </div>
+                        </div>
+                
+                
+                        {# کیف پول #}
+                        <div class="col-md-6">
+                            <div class="payment-card {% if wallet.balance < invoice.payable_amount %}disabled{% endif %}" 
+                                 data-method="wallet">
+                        
+                                <div class="payment-card-header">
+                                    <span class="payment-method-icon">👛</span>
+                                    <span class="payment-method-title">کیف پول</span>
+                                </div>
+                        
+                                <div class="payment-method-desc">
+                        
+                                    موجودی شما:
+                                    <span class="text-info fw-bold">
+                                        {{ wallet.balance|floatformat:0 }} تومان
+                                    </span>
+                        
+                                    {% if wallet.balance < invoice.payable_amount %}
+                                    <div class="text-danger small mt-1">
+                                        موجودی کیف پول کافی نیست
+                                    </div>
+                                    {% endif %}
+                        
+                                </div>
+                        
+                            </div>
+                        </div>
+
+                
+                    </div>
+                
+                </div>
+
+                {# ======== فرم پرداخت ======== #}
+                <form method="POST" id="step4-form">
+                    {% csrf_token %}
+                    <input type="hidden"
+                           name="discount_code"
+                           id="applied-discount-code"
+                           value="">
+                    <input type="hidden" name="payment_method" id="payment-method-input" value="gateway">
+                    <div class="d-flex justify-content-between mt-2 flex-wrap gap-2">
+                        <a href="{% url 'campaigns:campaign_create_step3' %}"
+                           class="btn btn-accent px-4">← مرحله قبل</a>
+                        <button type="submit" class="btn btn-primary px-5" id="pay-btn">تایید نهایی و پرداخت</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block script %}
+    {{ block.super }}
+    <script>
+        // disable دکمه پرداخت هنگام submit
+        document.getElementById('step4-form').addEventListener('submit', function () {
+            const btn = document.getElementById('pay-btn');
+            btn.disabled = true;
+            btn.textContent = 'در حال پردازش...';
+        });
+
+        // اعمال کد تخفیف
+        document.getElementById('apply-discount-btn').addEventListener('click', function () {
+            const code = document.getElementById('discount-code-input').value.trim();
+            const msgBox = document.getElementById('discount-message');
+            const btn = this;
+
+            if (!code) {
+                showDiscountMessage('لطفاً کد تخفیف را وارد کنید.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'در حال بررسی...';
+
+            fetch("{% url 'campaigns:apply_discount' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    code: code,
+                    campaign_id: {{ campaign.id }},
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+            if (data.success) {
+                // --- آپدیت final-price-box (قبلی) ---
+                document.getElementById('display-final-total').innerHTML =
+                    data.payable_amount_formatted + ' <span class="final-price-unit">تومان</span>';
+            
+                document.getElementById('discount-amount-display').textContent =
+                    data.discount_amount_formatted + ' تومان تخفیف';
+                document.getElementById('discount-applied-info').classList.remove('d-none');
+            
+                document.getElementById('applied-discount-code').value = code;
+                document.getElementById('discount-code-input').disabled = true;
+                btn.textContent = '✓ اعمال شد';
+                btn.classList.add('btn-discount-applied');
+            
+                // --- آپدیت cost-breakdown ---
+                // نمایش ردیف تخفیف
+                document.getElementById('breakdown-discount-row').classList.remove('d-none');
+                document.getElementById('breakdown-discount-value').textContent =
+                    '- ' + data.discount_amount_formatted + ' تومان';
+                document.getElementById('breakdown-discount-code-badge').textContent =
+                    '(' + code + ')';
+            
+                // نمایش ردیف مبلغ قابل پرداخت
+                document.getElementById('breakdown-payable-row').classList.remove('d-none');
+                document.getElementById('breakdown-payable-value').textContent =
+                    data.payable_amount_formatted + ' تومان';
+            
+                showDiscountMessage(data.message || 'کد تخفیف با موفقیت اعمال شد.', 'success');
+            }
+             else {
+                btn.disabled = false;
+                btn.textContent = 'اعمال';
+                showDiscountMessage(data.message || 'کد تخفیف نامعتبر است.', 'error');
+            }
+        })
+
+            .catch(() => {
+                btn.disabled = false;
+                btn.textContent = 'اعمال کد';
+                showDiscountMessage('خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+            });
+        });
+
+        function showDiscountMessage(text, type) {
+            const msgBox = document.getElementById('discount-message');
+            msgBox.textContent = text;
+            msgBox.className = 'discount-message ' + (type === 'success' ? 'discount-success' : 'discount-error');
+        }
+        // انتخاب روش پرداخت
+
+        const paymentCards = document.querySelectorAll('.payment-card');
+        const paymentInput = document.getElementById('payment-method-input');
+        
+        paymentCards.forEach(card => {
+        
+            card.addEventListener('click', function () {
+        
+                if (this.classList.contains('disabled')) {
+                    return;
+                }
+        
+                paymentCards.forEach(c => c.classList.remove('active'));
+        
+                this.classList.add('active');
+        
+                paymentInput.value = this.dataset.method;
+        
+            });
+        
+        });
+
+
+    </script>
+{% endblock %}

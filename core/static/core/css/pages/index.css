@@ -1,0 +1,847 @@
+/* ============================================
+   فایل: index.css
+   توضیح: استایل‌های صفحه اصلی (هماهنگ با index.html)
+   تاریخ: بازنویسی شده ۱۴۰۴
+   ============================================ */
+
+/* ========== متغیرها و رنگ‌ها ========== */
+:root {
+    --primary: #fd5631;
+    --primary-dark: #e44a28;
+    --accent: #5d3cf2;
+    --accent-dark: #4a30c2;
+    --gold: #fdbc31;
+    --dark: #0a0a1a;
+    --darker: #05050f;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --glow-primary: 0 0 30px rgba(253, 86, 49, 0.3);
+    --glow-accent: 0 0 30px rgba(93, 60, 242, 0.3);
+}
+
+/* ========== انیمیشن‌های پایه ========== */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes float-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes shine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes border-pulse {
+    0%, 100% { border-color: rgba(253, 86, 49, 0.3); box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.2); }
+    50% { border-color: rgba(253, 86, 49, 0.8); box-shadow: 0 0 0 10px rgba(253, 86, 49, 0); }
+}
+
+@keyframes particle-float {
+    0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ========== کلاس‌های کمکی انیمیشن ========== */
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* ========== اسکرول انیمیشن ========== */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+.scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ========== هیرو سکشن ========== */
+.hero-section {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--dark) 0%, #0f0f1a 50%, var(--darker) 100%);
+    padding: 2rem 0;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(253, 86, 49, 0.15), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(93, 60, 242, 0.15), transparent 50%);
+    pointer-events: none;
+}
+
+.hero-bg-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.hero-bg-particles span {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(253, 86, 49, 0.3);
+    border-radius: 50%;
+    animation: particle-float 15s linear infinite;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 0.5rem 1.25rem;
+    background: rgba(253, 86, 49, 0.15);
+    border: 1px solid rgba(253, 86, 49, 0.3);
+    border-radius: 50px;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.hero-title {
+    font-size: 4.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--primary) 40%, var(--gold) 70%, #fff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero-gradient-text {
+    background: linear-gradient(135deg, var(--primary), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+#changing-text {
+    display: inline-block;
+    min-width: 150px;
+    text-align: center;
+    transition: opacity 0.3s ease;
+}
+
+/* رنگ‌های هر پلتفرم */
+.platform-telegram {
+    color: #02d1ff;
+}
+
+.platform-bale {
+    background: linear-gradient(-135deg, #4df1b6, #2d2b73);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.platform-eitaa {
+    color: #ff6a00;
+}
+
+.platform-rubika {
+    background: linear-gradient(135deg, #7a4587, #5bd5bd, #b8cd06, #f4a926, #e54d52);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.platform-instagram {
+    background: radial-gradient(circle at 30% 110%, #ffdb7e, #f9ce34, #ee2a7b, #6228d7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.platform-soroush {
+    background: linear-gradient(180deg, #3991ac, #155c72);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* کارت کمپین هیرو */
+.hero-campaign-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    backdrop-filter: blur(20px);
+    border-radius: 2rem;
+    padding: 1.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+}
+
+.hero-campaign-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--gold), var(--accent), var(--primary));
+    animation: shine 3s linear infinite;
+    background-size: 200% 100%;
+}
+
+.hero-campaign-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(253, 86, 49, 0.4);
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.3);
+}
+
+.campaign-badge-hot {
+    display: inline-block;
+    padding: 0.35rem 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.campaign-stats {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.campaign-stat {
+    text-align: center;
+}
+
+.campaign-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gold);
+    display: block;
+}
+
+.campaign-stat-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.influencer-stack {
+    display: flex;
+    align-items: center;
+}
+
+.influencer-stack-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    margin-left: -10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.influencer-stack-avatar:first-child { margin-left: 0; }
+
+.influencer-stack-more {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    margin-left: -10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+.progress-bar.bg-gradient {
+    background: linear-gradient(90deg, var(--primary), var(--gold));
+}
+
+/* ========== بخش آمار (۴ تایی) ========== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(10px);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(253, 86, 49, 0.3);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ========== اسلایدر ساده (پلتفرم‌ها) ========== */
+.simple-slider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.simple-slider-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.simple-slider-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fd5631, #ff8c42);
+    transform: scale(1.05);
+}
+
+.simple-slider-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.simple-slider-viewport {
+    flex: 1;
+    overflow: hidden;
+}
+
+.simple-slider-track {
+    display: flex;
+    transition: transform 0.4s ease-in-out;
+    gap: 25px;
+}
+
+.simple-slide {
+    flex-shrink: 0;
+}
+
+/* دسکتاپ: 3 کارت */
+@media (min-width: 1200px) {
+    .simple-slide { width: calc(33.333% - 17px); }
+}
+/* تبلت: 2 کارت */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .simple-slide { width: calc(50% - 12.5px); }
+}
+/* موبایل: 1 کارت */
+@media (max-width: 767px) {
+    .simple-slide { width: 100%; }
+    .simple-slider { gap: 10px; }
+    .simple-slider-btn { width: 35px; height: 35px; }
+}
+
+.simple-slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 40px;
+}
+
+.simple-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.simple-dot.active {
+    width: 28px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #fd5631, #ff8c42);
+}
+
+/* کارت پلتفرم */
+.platform-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s;
+    height: 100%;
+}
+
+.platform-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(253, 86, 49, 0.3);
+}
+
+.platform-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.platform-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.logo-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.platform-name {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.channels-count {
+    color: #fd5631;
+    font-size: 14px;
+}
+
+.platform-desc {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 15px 0;
+}
+
+.btn-platform {
+    display: inline-block;
+    padding: 8px 20px;
+    border: 1px solid rgba(253, 86, 49, 0.5);
+    border-radius: 50px;
+    color: #fd5631;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.3s;
+}
+
+.btn-platform:hover {
+    background: linear-gradient(135deg, #fd5631, #ff8c42);
+    border-color: transparent;
+    color: white;
+}
+
+/* ========== اینفلوئنسرها و تیم‌ها (لایوت کارتی) ========== */
+.channels-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2rem;
+}
+
+.teams-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
+}
+
+.influencer-card-circle {
+    text-align: center;
+    position: relative;
+}
+
+.influencer-avatar-wrapper {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin: 0 auto 1rem;
+    cursor: pointer;
+}
+
+.influencer-avatar-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent), var(--gold));
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 0;
+}
+
+.influencer-avatar-wrapper:hover::before {
+    opacity: 1;
+    animation: border-pulse 1.5s infinite;
+}
+
+.influencer-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    position: relative;
+    z-index: 1;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s;
+}
+
+.influencer-avatar-wrapper:hover .influencer-avatar {
+    transform: scale(1.02);
+    border-color: var(--primary);
+}
+
+.influencer-online-badge {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 14px;
+    height: 14px;
+    background: #07c98b;
+    border-radius: 50%;
+    border: 2px solid var(--dark);
+    z-index: 2;
+}
+
+.influencer-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.25rem;
+}
+
+.influencer-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: rgba(253, 86, 49, 0.15);
+    border-radius: 50px;
+    font-size: 0.7rem;
+    color: var(--primary);
+}
+
+/* استار ریتینگ */
+.rating-star {
+    color: var(--gold);
+    font-size: 0.7rem;
+}
+.rating-star-empty {
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.7rem;
+}
+
+/* ========== اسلایدر بی‌نهایت برندها ========== */
+.brands-ticker-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    border-radius: 20px;
+    padding: 20px 0;
+}
+
+.brands-ticker-track {
+    display: flex;
+    gap: 30px;
+    width: fit-content;
+    will-change: transform;
+}
+
+.brands-ticker-group {
+    display: flex;
+    gap: 30px;
+}
+
+.brand-card {
+    min-width: 80px;
+    border-radius: 15px;
+    padding: 20px 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.brand-logo {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: inline-block;
+}
+
+.brand-name {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ========== اسلایدر بی‌نهایت نظرات ========== */
+.testimonials-slider-container {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.testimonials-slider-track {
+    display: flex;
+    width: fit-content;
+    gap: 30px;
+}
+
+.testimonial-card {
+    flex-shrink: 0;
+    width: 350px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(12px);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s;
+}
+
+.testimonial-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(93, 60, 242, 0.3);
+}
+
+.testimonial-quote {
+    font-size: 2.5rem;
+    color: rgba(253, 86, 49, 0.3);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+/* ========== بلاگ (۴ تایی) ========== */
+.blog-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.blog-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(12px);
+    border-radius: 1.2rem;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.blog-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(253, 86, 49, 0.3);
+    box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3);
+}
+
+.blog-image {
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+}
+
+.blog-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.blog-card:hover .blog-image img {
+    transform: scale(1.05);
+}
+
+.blog-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(93, 60, 242, 0.2));
+}
+
+.blog-category {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    color: var(--primary);
+}
+
+.blog-content {
+    padding: 1.2rem;
+}
+
+.blog-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.blog-excerpt {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.blog-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========== CTA نهایی ========== */
+.cta-section {
+    background: linear-gradient(135deg, #1a1a2e, var(--darker));
+    border-radius: 2rem;
+    padding: 4rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(253, 86, 49, 0.3), transparent);
+    border-radius: 50%;
+    filter: blur(60px);
+    animation: float 6s ease-in-out infinite;
+}
+
+.cta-glow:nth-child(1) {
+    top: -100px;
+    left: -100px;
+}
+.cta-glow:nth-child(2) {
+    bottom: -100px;
+    right: -100px;
+    animation-delay: 2s;
+    background: radial-gradient(circle, rgba(93, 60, 242, 0.3), transparent);
+}
+
+/* ========== دکمه‌ها ========== */
+.btn-gradient {
+    background: linear-gradient(135deg, #fd5631, #ff8c42);
+    border: none;
+    color: #fff !important;
+    transition: all 0.3s;
+}
+
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(253, 86, 49, 0.3);
+    color: #fff;
+}
+
+.btn-outline-gradient {
+    background: transparent;
+    border: 1px solid rgba(253, 86, 49, 0.5);
+    color: var(--primary);
+    transition: all 0.3s;
+}
+
+.btn-outline-gradient:hover {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-color: transparent;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.btn-link.text-primary {
+    color: var(--primary) !important;
+    text-decoration: none;
+}
+
+.btn-link.text-primary:hover {
+    color: var(--gold) !important;
+}
+
+/* ========== پس‌زمینه‌های متناوب ========== */
+.bg-faded-light {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+}
+
+/* ========== ریسپانسیو ========== */
+@media (max-width: 1200px) {
+    .teams-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 992px) {
+    .hero-title { font-size: 3rem; }
+    .influencers-grid { grid-template-columns: repeat(2, 1fr); }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .blog-grid { grid-template-columns: repeat(2, 1fr); }
+    .teams-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .hero-title { font-size: 2rem; }
+    .hero-campaign-card { margin-top: 2rem; }
+    .testimonial-card { width: 280px; }
+    .brand-card { min-width: 110px; padding: 15px 10px; }
+    .brand-logo { font-size: 36px; }
+    .brand-name { font-size: 12px; }
+    .brands-ticker-group { gap: 15px; }
+    .brands-ticker-track { gap: 15px; }
+    .blog-grid { grid-template-columns: 1fr; }
+    .teams-grid { grid-template-columns: repeat(2, 1fr); }
+    .cta-section { padding: 2rem; }
+}
+
+@media (max-width: 576px) {
+    .influencers-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .teams-grid { grid-template-columns: 1fr; }
+    .influencer-avatar-wrapper { width: 100px; height: 100px; }
+}

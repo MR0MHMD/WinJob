@@ -1,0 +1,126 @@
+{% load static %}
+<!--suppress ALL -->
+<div class="modal fade modal-register"
+     id="signup-modal"
+     tabindex="-1"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered p-2 my-0 mx-auto"
+         style="max-width: 950px">
+        <div class="modal-content bg-dark border-light">
+            <div class="modal-body px-0 py-2 py-sm-0">
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-3 me-3"
+                        type="button"
+                        data-bs-dismiss="modal"></button>
+                <div class="row mx-0 align-items-center">
+                    <div class="col-md-6 border-end-md border-light p-4 p-sm-5">
+                        <h2 class="h4 text-light mb-4 mb-sm-5">درسایت ما با اطمینان ثبت نام کنید.</h2>
+                        <ul class="list-unstyled mb-4 mb-sm-5">
+                            <li class="d-flex mb-2">
+                                <i class="fi-check-circle text-primary mt-1 me-2"></i><span class="text-light">ثبت و بروزرسانی آگهی</span>
+                            </li>
+                            <li class="d-flex mb-2">
+                                <i class="fi-check-circle text-primary mt-1 me-2"></i><span class="text-light">مدیریت لیست علاقه مندی ها</span>
+                            </li>
+                            <li class="d-flex mb-0">
+                                <i class="fi-check-circle text-primary mt-1 me-2"></i><span class="text-light">ثبت نظر</span>
+                            </li>
+                        </ul>
+                        <img class="d-block mx-auto rotate-img"
+                             src="{% static 'finder/img/signin-modal/signup-dark.svg' %}"
+                             width="344"
+                             alt="Illustartion">
+                        <div class="text-light mt-sm-4 pt-md-3">
+                            <span class="opacity-60">ثبت نام کرده اید؟</span><a class="text-light"
+   href="#signin-modal"
+   data-bs-toggle="modal"
+   data-bs-dismiss="modal">ورود
+                            به حساب کاربری</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 px-4 pt-2 pb-4 px-sm-5 pb-sm-5 pt-md-5">
+                        <a class="btn btn-outline-info w-100 mb-3" href="#"><i class="fi-google fs-lg me-1"></i>ورود با
+                            اکانت گوگل</a><a class="btn btn-outline-info w-100 mb-3" href="#"><i class="fi-facebook fs-lg me-1"></i>ورود با اکانت فیسبوک</a>
+                            <div class="d-flex align-items-center py-3 mb-3">
+                                <hr class="hr-light w-100">
+                                <div class="text-light opacity-70 px-3">یـا</div>
+                                <hr class="hr-light w-100">
+                            </div>
+                            <form class="needs-validation"
+                                  novalidate
+                                  method="POST"
+                                  action="{% url 'accounts:register' %}">
+                                {% csrf_token %}
+                                <div class="mb-4">
+                                    <label for="text-input" class="form-label-light">نام مستعار</label>
+                                    {{ register_form.nickname }}
+                                </div>
+                                <div class="mb-4">
+                                    <label for="tel-input" class="form-label-light">تلفن همراه</label>
+                                    {{ register_form.phone_number }}
+                                </div>
+                                <!-- داخل فرم، بعد از فیلد نقش کاربری اضافه کن -->
+<div class="mb-4" style="margin-bottom: 1rem;">
+    <label for="inline-form-select">نوع کاربری</label>
+    {{ register_form.role }}
+</div>
+
+<!-- بخش مخصوص عضو تیم (پنهان در ابتدا) -->
+<div id="team-fields" style="display: none;">
+    <div class="mb-4">
+        <div class="form-check form-check-light mb-3">
+            {{ register_form.create_new_team }}
+            <label class="form-check-label" for="create-new-team">
+                می‌خواهم تیم خودم را بسازم
+            </label>
+        </div>
+    </div>
+    
+    <div id="existing-team-field" class="mb-4">
+        <label for="team-slug" class="form-label-light">شناسه تیم</label>
+        {{ register_form.team_slug }}
+        <small class="text-muted">شناسه تیم را از مدیر تیم دریافت کنید</small>
+    </div>
+    
+    <div id="new-team-field" class="mb-4" style="display: none;">
+        <label for="team-name" class="form-label-light">نام تیم جدید</label>
+        {{ register_form.team_name }}
+    </div>
+</div>
+                                <div class="mb-4">
+                                    <label class="form-label text-light" for="signup-password">رمز عبور</label>
+                                    <div class="password-toggle">
+                                        {{ register_form.password }}
+                                        <label class="password-toggle-btn" aria-label="Show/hide password">
+                                            <input class="password-toggle-check" type="checkbox">
+                                            <span class="password-toggle-indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label text-light" for="signup-password-confirm">
+                                        تایید رمز
+                                        عبور
+                                    </label>
+                                    <div class="password-toggle">
+                                        {{ register_form.password_confirm }}
+                                        <label class="password-toggle-btn" aria-label="Show/hide password">
+                                            <input class="password-toggle-check" type="checkbox">
+                                            <span class="password-toggle-indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-check form-check-light mb-4">
+                                    <input class="form-check-input" type="checkbox" id="agree-to-terms" required>
+                                    <label class="form-check-label" for="agree-to-terms">
+                                        <span class='opacity-70'>با ثبت نام در این سایت</span>
+                                        <a href='#' class='text-light'>شرایط</a> <span class='opacity-70'>و</span> <a href='#' class='text-light'>قوانین</a> سایت را قبول دارم.
+                                    </label>
+                                </div>
+                                <button class="btn btn-primary btn-lg w-100" type="submit">ثبت نام</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>

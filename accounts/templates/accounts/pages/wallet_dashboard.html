@@ -1,0 +1,57 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}کیف پول | WinJob{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-6 mx-auto">
+            <div class="card bg-faded-light border-0">
+                <div class="card-header bg-transparent border-light py-3">
+                    <h4 class="text-white mb-0">کیف پول من</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fi-wallet fs-1 text-primary"></i>
+                        <h2 class="text-white mt-2">{{ wallet.balance|floatformat:0 }} تومان</h2>
+                        <p class="text-muted">موجودی فعلی شما</p>
+                    </div>
+                    
+                    <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-primary">
+                        <i class="fi-plus ms-1"></i>
+                        شارژ کیف پول
+                    </a>
+                </div>
+            </div>
+            
+            <!-- تراکنش‌های اخیر -->
+            <div class="card bg-faded-light border-0 mt-4">
+                <div class="card-header bg-transparent border-light py-3">
+                    <h5 class="text-white mb-0">تراکنش‌های اخیر</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for transaction in recent_transactions %}
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
+                        <div>
+                            <div class="text-white small">{{ transaction.get_type_display }}</div>
+                            <div class="text-muted small">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                            {% if transaction.description %}
+                            <div class="text-muted small mt-1">{{ transaction.description|truncatechars:40 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="{% if transaction.is_income %}text-success{% else %}text-danger{% endif %}">
+                            {{ transaction.sign_display }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <p class="text-muted">هنوز تراکنشی انجام نشده است</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

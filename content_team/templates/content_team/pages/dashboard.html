@@ -1,0 +1,558 @@
+{# content_team/pages/dashboard.html #}
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}داشبورد تیم | {{ team.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 dashboard-container">
+        <!-- بنر خوش‌آمدگویی -->
+        <div class="welcome-banner">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="stat-icon avatar-wrapper">
+                            {% if team.logo %}
+                                <img src="{{ team.logo.url }}" alt="آواتار تیم" class="user-avatar">
+                            {% else %}
+                                <div class="default-avatar">
+                                    <i class="fi-users"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h1 class="h2 text-white mb-1">
+                                {% now "H" as current_hour %}
+                                {% if current_hour|add:"0" < 12 %} صبح بخیر
+                                {% elif current_hour|add:"0" < 17 %} ظهر بخیر
+                                {% elif current_hour|add:"0" < 19 %} عصر بخیر
+                                {% else %} شب بخیر {% endif %}،
+                                {{ current_member.user.nickname|default:current_member.user.phone_number }}! 👋
+                            </h1>
+                            <p class="text-muted mb-0">
+                                <i class="fi-calendar-alt ms-1"></i>
+                                امروز {{ persian_date }} -
+                                {% if is_manager %}
+                                    <span class="text-primary">مدیر تیم {{ team.name }}</span>
+                                {% else %}
+                                    <span class="text-primary">عضو تیم {{ team.name }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline-primary">
+                            <i class="fi-wallet ms-1"></i> کیف پول
+                        </a>
+                        {% if is_manager %}
+                            <a href="#" class="btn btn-outline-accent">
+                                <i class="fi-settings ms-1"></i> مدیریت تیم
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- کارت‌های آماری -->
+        <div class="row g-4 mb-5">
+            <!-- سفارشات -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <i class="fi-list"></i>
+                        </div>
+                        <span class="badge bg-primary px-3 py-1">سفارشات</span>
+                    </div>
+                    <div class="stat-value">{{ total_orders|default:"۰" }}</div>
+                    <div class="stat-label">کل سفارشات تیم</div>
+                    <div class="small text-muted mt-2">
+                        <span class="text-warning">⏳ {{ pending_orders|default:"۰" }} در انتظار</span>
+                        <span class="mx-2">|</span>
+                        <span class="text-info">⚡ {{ in_progress_orders|default:"۰" }} در حال انجام</span>
+                        <span class="mx-2">|</span>
+                        <span class="text-success">✓ {{ completed_orders|default:"۰" }} تکمیل شده</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- درآمد تیم -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card earnings-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <i class="fi-cash"></i>
+                        </div>
+                        <span class="badge bg-success px-3 py-1">درآمد تیم</span>
+                    </div>
+                    <div class="stat-value text-success">{{ total_revenue|floatformat:0|default:"۰" }}</div>
+                    <div class="stat-label">کل درآمد تیم (تومان)</div>
+                    <div class="small text-muted mt-2">
+                        <i class="fi-clock ms-1"></i>
+                        {{ pending_revenue|floatformat:0|default:"۰" }} تومان در انتظار تسویه
+                    </div>
+                </div>
+            </div>
+
+            <!-- سهم شخصی -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <i class="fi-user"></i>
+                        </div>
+                        <span class="badge bg-accent px-3 py-1">سهم من</span>
+                    </div>
+                    <div class="stat-value text-accent">{{ personal_earned|floatformat:0|default:"۰" }}</div>
+                    <div class="stat-label">درآمد شخصی (تومان)</div>
+                    <div class="small text-muted mt-2">
+                        <i class="fi-percent ms-1"></i>
+                        سهم {{ personal_share_percent }}% از درآمد تیم
+                    </div>
+                </div>
+            </div>
+
+            <!-- کیف پول -->
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon">
+                            <i class="fi-wallet"></i>
+                        </div>
+                        <span class="badge bg-accent px-3 py-1">کیف پول</span>
+                    </div>
+                    <div class="stat-value">{{ wallet_balance|floatformat:0|default:"۰" }}</div>
+                    <div class="stat-label">موجودی کیف پول (تومان)</div>
+                    <div class="mt-2">
+                        <a href="#" class="small text-primary text-decoration-none">
+                            درخواست برداشت <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- کارت‌های عملکرد تیم (امتیاز و اعضا) -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-star-filled text-warning"></i>
+                            <h5 class="text-white mb-0">امتیاز تیم</h5>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-center">
+                                <div class="display-4 text-warning mb-2">{{ avg_rating|default:"۰" }}</div>
+                                <div class="star-rating">
+                                    {% with ''|center:5 as range %}
+                                        {% for i in range %}
+                                            {% if forloop.counter <= avg_rating|default:0 %}
+                                                <i class="fi-star-filled star-rating-icon active"></i>
+                                            {% elif forloop.counter <= avg_rating|default:0|add:0.5 %}
+                                                <i class="fi-star-half star-rating-icon active"></i>
+                                            {% else %}
+                                                <i class="fi-star star-rating-icon"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
+                                <div class="small text-muted mt-2">از {{ total_reviews }} نظر</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="display-4 text-primary mb-2">{{ total_members }}</div>
+                                <div class="stat-label">نفر</div>
+                                <div class="small text-muted mt-2">اعضای فعال تیم</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-percent text-primary"></i>
+                            <h5 class="text-white mb-0">توزیع سهم اعضا</h5>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">مجموع درصدها</span>
+                            <span class="{% if total_percent_sum == 100 %}text-success{% else %}text-danger{% endif %} fw-semibold">
+                                {{ total_percent_sum }}%
+                            </span>
+                        </div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar" style="width: {{ total_percent_sum }}%; 
+                                {% if total_percent_sum > 100 %}background: #f23c49{% endif %}"></div>
+                        </div>
+                        <div class="small text-muted">
+                            <i class="fi-info-circle ms-1"></i>
+                            مجموع سهم اعضا باید ۱۰۰٪ باشد
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- دسترسی سریع -->
+        <div class="row g-3 mb-5">
+            <div class="col-12">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-zap text-primary"></i>
+                            <h5 class="text-white mb-0">دسترسی سریع</h5>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-3 col-6">
+                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-list"></i>
+                                    <span class="small text-white">همه سفارشات</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-play-circle"></i>
+                                    <span class="small text-white">سفارشات جاری</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-dashboard"></i>
+                                    <span class="small text-white">گزارش عملکرد</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <a href="{% url 'accounts:wallet_dashboard' %}" class="quick-action-btn d-block text-decoration-none">
+                                    <i class="fi-wallet"></i>
+                                    <span class="small text-white">کیف پول</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <!-- نمودار درآمد ماهانه -->
+                <div class="dashboard-card earnings-chart-card mb-4">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="chart-header-icon">
+                                    <i class="fi-cash"></i>
+                                </div>
+                                <h5 class="text-white mb-0">درآمد ماهانه تیم</h5>
+                            </div>
+                            <span class="badge bg-faded-success">۶ ماه اخیر</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="chart-container">
+                            <canvas id="monthlyRevenueChart" width="800" height="400" 
+                                data-labels='{{ monthly_labels_json|safe }}' 
+                                data-values='{{ monthly_data_json|safe }}'></canvas>
+                        </div>
+                    </div>
+                </div>
+            
+                <!-- نمودار تعداد سفارشات روزانه -->
+                <div class="dashboard-card mb-4">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="chart-header-icon" style="background: rgba(253, 86, 49, 0.15);">
+                                    <i class="fi-list" style="color: #fd5631;"></i>
+                                </div>
+                                <h5 class="text-white mb-0">تعداد سفارشات روزانه</h5>
+                            </div>
+                            <span class="badge bg-faded-primary">۳۰ روز اخیر</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="chart-container">
+                            <canvas id="monthlyOrdersChart" width="800" height="400" 
+                                data-labels='{{ monthly_orders_labels_json|safe }}' 
+                                data-values='{{ monthly_orders_data_json|safe }}'></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- سفارشات در حال انجام -->
+                {% if active_orders %}
+                    <div class="dashboard-card mb-4">
+                        <div class="dashboard-card-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-play-circle text-success"></i>
+                                <h5 class="text-white mb-0">سفارشات در حال انجام</h5>
+                                <span class="badge bg-success px-2 py-1">{{ active_orders|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% for order in active_orders %}
+                                <div class="booking-item">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <div class="text-white fw-bold">
+                                                <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
+                                                    {{ order.campaign.name }}
+                                                </a>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <i class="fi-user ms-1"></i>
+                                                {{ order.campaign.advertiser.business_name }}
+                                                <span class="mx-2">•</span>
+                                                <i class="fi-calendar ms-1"></i>
+                                                {{ order.campaign.start_date|date:"Y/m/d" }} - {{ order.campaign.end_date|date:"Y/m/d" }}
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <span class="status-badge status-in-progress">در حال انجام</span>
+                                            <a href="#" class="btn btn-sm btn-outline-primary">
+                                                آپلود محتوا <i class="fi-upload ms-1"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- سفارشات در انتظار تایید (فقط مدیر) -->
+                {% if is_manager and pending_approval_orders %}
+                    <div class="dashboard-card mb-4">
+                        <div class="dashboard-card-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-clock text-warning"></i>
+                                <h5 class="text-white mb-0">سفارشات در انتظار تایید</h5>
+                                <span class="badge bg-warning px-2 py-1">{{ pending_approval_orders|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% for order in pending_approval_orders %}
+                                <div class="booking-item">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <div class="text-white fw-bold">{{ order.campaign.name }}</div>
+                                            <div class="small text-muted">
+                                                {{ order.campaign.advertiser.business_name }} | 
+                                                مبلغ: {{ order.price|floatformat:0 }} تومان
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="status-badge status-pending">در انتظار تایید</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- آخرین سفارشات -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-history text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین سفارشات</h5>
+                        </div>
+                        <a href="{% url 'content_team:team_orders_list' %}" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_orders %}
+                            {% for order in recent_orders %}
+                                <div class="booking-item">
+                                    <a class="text-decoration-none" href="#">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <div class="text-white fw-bold">{{ order.campaign.name }}</div>
+                                                <div class="small text-muted mt-1">
+                                                    <i class="fi-building ms-1"></i>
+                                                    {{ order.campaign.advertiser.business_name }}
+                                                    <span class="mx-2">•</span>
+                                                    <i class="fi-cash ms-1"></i>
+                                                    {{ order.price|floatformat:0 }} تومان
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="status-badge status-{{ order.status }}">
+                                                    {% if order.status == 'pending' %}در انتظار
+                                                    {% elif order.status == 'in_progress' %}در حال انجام
+                                                    {% elif order.status == 'completed' %}تکمیل شده
+                                                    {% elif order.status == 'cancelled' %}لغو شده
+                                                    {% else %}{{ order.get_status_display }}{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-bell fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز سفارشی ثبت نشده است</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- اعضای تیم (فقط مدیر) -->
+                {% if is_manager %}
+                    <div class="dashboard-card mb-4">
+                        <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-users text-primary"></i>
+                                <h5 class="text-white mb-0">اعضای تیم</h5>
+                            </div>
+                            <a href="{% url 'content_team:team_members_manage' team.slug %}" class="small text-primary text-decoration-none">
+                                مدیریت <i class="fi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if team_members %}
+                                {% for member in team_members %}
+                                    <div class="channel-item">
+                                        <div class="flex-shrink-0">
+                                            {% if member.user.avatar %}
+                                                <img src="{{ member.user.avatar.url }}" class="channel-avatar" alt="{{ member.user.get_full_name }}">
+                                            {% else %}
+                                                <div class="default-channel-avatar">
+                                                    <i class="fi-user text-white fs-5"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="text-white fw-bold">
+                                                {{ member.user.nickname|default:member.user.phone_number }}
+                                                {% if member.role == 'manager' %}
+                                                    <span class="badge bg-primary ms-2" style="font-size: 0.65rem;">مدیر</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-muted">
+                                                سهم: {{ member.revenue_share_percent }}% | 
+                                                وضعیت: {% if member.is_active %}فعال{% else %}غیرفعال{% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <p class="text-muted small mb-0">هیچ عضوی یافت نشد</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- آخرین نظرات -->
+                <div class="dashboard-card mb-4">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-star-filled text-warning"></i>
+                            <h5 class="text-white mb-0">آخرین نظرات</h5>
+                        </div>
+                        <a href="#" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_reviews %}
+                            {% for review in recent_reviews %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="text-white fw-bold small">{{ review.advertiser.business_name|default:review.advertiser.user.nickname }}</div>
+                                            <div class="star-rating star-rating-sm mt-1">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= review.rating %}
+                                                        <i class="fi-star-filled star-rating-icon active"></i>
+                                                    {% else %}
+                                                        <i class="fi-star star-rating-icon"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            {% if review.comment %}
+                                                <div class="small text-muted mt-1">{{ review.comment|truncatechars:40 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted">{{ review.created_at|date:"Y/m/d" }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-star fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز نظری ثبت نشده است</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- آخرین تراکنش‌ها -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-list text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
+                        </div>
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_transactions %}
+                            {% for transaction in recent_transactions %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
+                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
+                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
+                                            {{ transaction.sign_display }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/dashboard.js' %}"></script>
+{% endblock %}

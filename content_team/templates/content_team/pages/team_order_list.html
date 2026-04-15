@@ -1,0 +1,542 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    لیست سفارشات | {{ user_team.name }}
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* استایل‌های سفارشی برای صفحه */
+    .order-card {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    }
+    
+    .order-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(253, 86, 49, 0.3);
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.85rem;
+        border-radius: 50rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    
+    .status-pending {
+        background: rgba(253, 188, 49, 0.15);
+        color: #fdbc31;
+    }
+    
+    .status-progress {
+        background: rgba(60, 118, 242, 0.15);
+        color: #3c76f2;
+    }
+    
+    .status-completed {
+        background: rgba(7, 201, 139, 0.15);
+        color: #07c98b;
+    }
+    
+    .status-cancelled {
+        background: rgba(242, 60, 73, 0.15);
+        color: #f23c49;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, rgba(253, 86, 49, 0.1) 0%, rgba(93, 60, 242, 0.05) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(253, 86, 49, 0.3);
+    }
+    
+    .search-input {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    
+    .search-input:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: #fd5631;
+        box-shadow: 0 0 0 0.2rem rgba(253, 86, 49, 0.25);
+    }
+    
+    .filter-select {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    
+    .filter-select option {
+        background: rgb(255, 86, 8);
+    }
+    
+    .table-dark-custom {
+        background: transparent;
+    }
+    
+    .table-dark-custom th {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+    }
+    
+    .table-dark-custom td {
+        border-bottom-color: rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+    }
+    
+    .table-dark-custom tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    
+    .pagination-dark .page-link {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .pagination-dark .page-link:hover {
+        background: rgba(253, 86, 49, 0.2);
+        border-color: #fd5631;
+        color: #fd5631;
+    }
+    
+    .pagination-dark .active .page-link {
+        background: #fd5631;
+        border-color: #fd5631;
+        color: #fff;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 1rem;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .order-card, .stat-card {
+        animation: fadeInUp 0.5s ease forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+    <!-- هدر تیم -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
+            <div class="avatar-circle" style="width: 70px; height: 70px; font-size: 1.8rem;">
+                {% if user_team.logo %}
+                    <img class="rounded-circle" src="{{ user_team.logo.url }}" alt="">
+                {% else %}
+                    {{ user_team.name|first }}
+                {% endif %}
+            </div>
+            <div>
+                <h1 class="h3 text-light mb-1">{{ user_team.name }}</h1>
+                <div class="d-flex gap-3 text-muted">
+                    <span><i class="fi-user-check me-1"></i> {{ team_member.get_role_display }}</span>
+                    <span><i class="fi-star-filled me-1 text-warning"></i> {{ stats.avg_rating|floatformat:1 }}/5</span>
+                    <span><i class="fi-check-circle me-1 text-success"></i> {{ stats.completed_count }} پروژه تکمیل شده</span>
+                </div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fi-filter me-1"></i> فیلتر پیشرفته
+            </button>
+        </div>
+    </div>
+    
+    <!-- کارت‌های آمار -->
+    <div class="row justify-content-sm-center g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small">کل سفارشات</span>
+                        <h2 class="h3 text-light mb-0">{{ stats.total }}</h2>
+                    </div>
+                    <i class="fi-shopping-cart fs-1 text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small">در انتظار</span>
+                        <h2 class="h3 text-light mb-0">{{ stats.pending }}</h2>
+                    </div>
+                    <i class="fi-clock fs-1 text-warning opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small">در حال انجام</span>
+                        <h2 class="h3 text-light mb-0">{{ stats.in_progress }}</h2>
+                    </div>
+                    <i class="fi-settings fs-1 text-info opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نوار جستجو و فیلتر -->
+    <div class="card bg-faded-dark border-light mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 justify-content-sm-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control form-control-light search-input" 
+                               placeholder="جستجو در نام کمپین، برند یا تبلیغ‌دهنده..."
+                               value="{{ search_query }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select form-select-light filter-select" onchange="this.form.submit()">
+                        <option class="text-light" value="">همه وضعیت‌ها</option>
+                        {% for value, label in status_choices %}
+                            <option class="text-light" value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="sort" class="form-select form-select-light filter-select" onchange="this.form.submit()">
+                        <option class="text-light" value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>جدیدترین</option>
+                        <option class="text-light" value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>قدیمی‌ترین</option>
+                        <option class="text-light" value="-price" {% if sort_by == '-price' %}selected{% endif %}>گران‌ترین</option>
+                        <option class="text-light" value="price" {% if sort_by == 'price' %}selected{% endif %}>ارزان‌ترین</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    {% if search_query or current_status or price_min or price_max %}
+                        <a href="{% url 'content_team:team_orders_list' %}" class="btn btn-outline-secondary w-100">
+                            <i class="fi-x me-1"></i> لغو فیلتر
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- لیست سفارشات به صورت کارتی (نمایش مدرن) -->
+    {% if orders %}
+        <div class="row g-4">
+            {% for order in orders %}
+                <div class="col-lg-6 col-xl-4">
+                    <div class="card card-light order-card rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <!-- هدر کارت با وضعیت و تاریخ -->
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    {% if order.status == 'pending' %}
+                                        <span class="status-badge status-pending">
+                                            <i class="fi-clock"></i> در انتظار
+                                        </span>
+                                    {% elif order.status == 'in_progress' %}
+                                        <span class="status-badge status-progress">
+                                            <i class="fi-settings"></i> در حال انجام
+                                        </span>
+                                    {% elif order.status == 'completed' %}
+                                        <span class="status-badge status-completed">
+                                            <i class="fi-check-circle"></i> انجام شده
+                                        </span>
+                                    {% elif order.status == 'cancelled' %}
+                                        <span class="status-badge status-cancelled">
+                                            <i class="fi-x-circle"></i> لغو شده
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="fi-calendar"></i>
+                                    {{ order.created_at|date:'Y/m/d' }}
+                                </div>
+                            </div>
+                            
+                            <!-- عنوان کمپین -->
+                            <h5 class="text-light mb-2">{{ order.campaign.name|truncatechars:40 }}</h5>
+                            {% if order.brief.brand_name %}
+                                <div class="text-primary small mb-3">
+                                    <i class="fi-tag"></i> {{ order.brief.brand_name }}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- اطلاعات تبلیغ‌دهنده -->
+                            <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.02);">
+                                <div class="avatar-circle" style="width: 45px; height: 45px; font-size: 1rem;">
+                                    {% if order.campaign.advertiser.user.avatar %}
+                                    	<img class="rounded-circle" src="{{ order.campaign.advertiser.user.avatar.url }}" alt="">
+                                    {% else %}
+                                        {{ order.campaign.advertiser.user.nickname|first|upper }}
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-light">{{ order.campaign.advertiser.user.nickname }}</div>
+                                    {% if order.campaign.advertiser.business_name %}
+                                        <div class="small text-muted">{{ order.campaign.advertiser.business_name|truncatechars:25 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- جزئیات خدمت و قیمت -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex gap-2">
+                                    <span class="service-badge">
+                                        <i class="fi-video"></i> {{ order.service_rate.service_type.name }}
+                                    </span>
+                                    {% if order.minutes %}
+                                        <span class="service-badge">
+                                            <i class="fi-clock"></i> {{ order.minutes }} دقیقه
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-success fw-bold fs-4">
+                                    {{ order.price|floatformat:0 }}
+                                    <small class="fs-6">تومان</small>
+                                </div>
+                            </div>
+                            
+                            <!-- اطلاعات اضافی -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 pt-2 border-top" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <div class="text-muted small">
+                                    <i class="fi-attachment"></i> {{ order.files.count }} فایل
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="fi-refresh"></i> {{ order.revisions.count }} ویرایش
+                                </div>
+                            </div>
+                            
+                            <!-- دکمه‌های اقدام -->
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="{% url 'content_team:team_order_detail' order.id %}" 
+                                   class="btn btn-primary flex-grow-1">
+                                    <i class="fi-eye"></i> مشاهده جزئیات
+                                </a>
+                                {% if order.status == 'in_progress' %}
+                                    <button class="btn glass-btn deliver-order" data-order-id="{{ order.id }}">
+                                        <i class="fi-upload"></i> تحویل
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- صفحه‌بندی -->
+        {% if orders.has_other_pages %}
+            <div class="d-flex justify-content-center mt-5">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-dark">
+                        {% if orders.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevrons-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ orders.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in orders.paginator.page_range %}
+                            {% if orders.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if orders.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ orders.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ orders.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fi-chevrons-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- حالت خالی -->
+        <div class="empty-state">
+            <i class="fi-inbox"></i>
+            <h5 class="text-light mb-2">هیچ سفارشی یافت نشد!</h5>
+            <p class="text-muted">
+                {% if search_query or current_status or price_min or price_max %}
+                    هیچ سفارشی با فیلترهای اعمال شده وجود ندارد.
+                    <br>
+                    <a href="{% url 'content_team:team_orders_list' %}" class="btn btn-link text-primary">
+                        حذف فیلترها
+                    </a>
+                {% else %}
+                    هنوز سفارشی برای تیم شما ثبت نشده است.
+                    <br>
+                    <span class="text-muted small">به زودی سفارشات جدید در اینجا نمایش داده می‌شوند.</span>
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- مودال فیلتر پیشرفته -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-light">
+            <div class="modal-header border-light">
+                <h5 class="modal-title text-light">
+                    <i class="fi-filter me-2"></i> فیلتر پیشرفته
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="GET">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-light small">وضعیت سفارش</label>
+                        <select name="status" class="form-select form-select-light filter-select">
+                            <option class="text-light" value="">همه</option>
+                            {% for value, label in status_choices %}
+                                <option class="text-light" value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light small">جستجو</label>
+                        <input type="text" name="search" class="form-control form-control-light search-input" 
+                               placeholder="نام کمپین، برند یا تبلیغ‌دهنده"
+                               value="{{ search_query }}">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col">
+                            <label class="form-label text-light small">حداقل قیمت</label>
+                            <input type="number" name="price_min" class="form-control form-control-light search-input" 
+                                   placeholder="۰" value="{{ price_min }}">
+                        </div>
+                        <div class="col">
+                            <label class="form-label text-light small">حداکثر قیمت</label>
+                            <input type="number" name="price_max" class="form-control form-control-light search-input" 
+                                   placeholder="نامحدود" value="{{ price_max }}">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label text-light small">مرتب‌سازی بر اساس</label>
+                        <select name="sort" class="form-select form-select-light filter-select">
+                            <option class="text-light" value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>جدیدترین</option>
+                            <option class="text-light" value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>قدیمی‌ترین</option>
+                            <option class="text-light" value="-price" {% if sort_by == '-price' %}selected{% endif %}>گران‌ترین</option>
+                            <option class="text-light" value="price" {% if sort_by == 'price' %}selected{% endif %}>ارزان‌ترین</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">اعمال فیلتر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    // جاوااسکریپت برای عملیات‌های AJAX
+    document.addEventListener('DOMContentLoaded', function() {
+        // شروع سفارش
+        document.querySelectorAll('.start-order').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if(confirm('آیا مطمئن هستید میخواهید این سفارش را شروع کنید؟')) {
+                    const orderId = this.dataset.orderId;
+                    // اینجا میتونی یه درخواست AJAX بزاری
+                    fetch(`/content/team/orders/${orderId}/start/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        }
+                    }).then(response => response.json())
+                      .then(data => {
+                          if(data.success) {
+                              location.reload();
+                          }
+                      });
+                }
+            });
+        });
+        
+        // تحویل سفارش
+        document.querySelectorAll('.deliver-order').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // میتونی یه مودال برای آپلود فایل باز کنی
+                alert('در حال توسعه... به زودی میتونید فایل‌ها رو آپلود کنید');
+            });
+        });
+    });
+</script>
+{% endblock %}

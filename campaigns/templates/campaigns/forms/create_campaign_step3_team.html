@@ -1,0 +1,494 @@
+{% extends 'parent/base.html' %}
+
+{% load i18n static %}
+
+{% block title %}
+	انتخاب تیم تولید محتوا
+{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/team.css' %}">
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/layout-price.css' %}">
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/badges-stats.css' %}">
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/forms-upload.css' %}">
+    
+    <style>
+        /* استایل کارت محتوای تبلیغ */
+        .ad-content-card {
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .ad-content-card:hover {
+            border-color: rgba(253, 86, 49, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .required-field::after {
+            content: "*";
+            color: #f23c49;
+            margin-right: 4px;
+        }
+        
+        .char-counter {
+            font-size: 0.75rem;
+            transition: color 0.3s ease;
+        }
+        
+        .char-counter.valid {
+            color: #07c98b;
+        }
+        
+        .char-counter.invalid {
+            color: #f23c49;
+        }
+        
+        .preview-link {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4 pb-5" dir="rtl">
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        
+        <div class="card border-0 shadow-sm page-card bg-dark">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-light fw-bold mb-1">انتخاب تیم تولید محتوا</h5>
+                        <p class="text-secondary small mb-0">تیم‌های فعال برای <span class="badge ms-1 service-badge">{{ service_type.name }}</span>{% if minutes %}<span class="badge ms-1 minutes-badge">{{ minutes }} دقیقه</span>{% endif %}</p>
+                    </div>
+                    <div class="text-secondary small text-start">
+                        <span id="selected-count" class="fw-bold text-light">0</span> تیم انتخاب شده
+                    </div>
+                </div>
+                
+                <form method="POST" id="step3-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- لیست تیم‌ها -->
+                    <div class="row g-3" id="teams-list">
+                        {% if rates_with_price %}
+                            {% for item in rates_with_price %}
+                                {% with rate=item.rate total_price=item.total_price %}
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="team-card-wrapper h-100" data-id="{{ rate.id }}" data-price="{{ total_price }}">
+                                            <label for="rate_{{ rate.id }}"></label>
+                                            <input type="radio" name="selected_rate" value="{{ rate.id }}" class="team-radio d-none" id="rate_{{ rate.id }}" {% if existing_order and existing_order.service_rate.id == rate.id %}checked{% endif %}>
+                                                   
+                                            <div class="team-card-inner h-100 p-3">
+                                                <div class="check-badge">✓</div>
+                                    
+                                                <div class="d-flex flex-column align-items-center text-center mb-3 mt-1">
+                                                    {% if rate.team.logo %}
+                                                        <img src="{{ rate.team.logo.url }}" alt="{{ rate.team.name }}" class="team-logo mb-3">
+                                                    {% else %}
+                                                        <div class="team-logo-placeholder mb-3">🎬</div>
+                                                    {% endif %}
+                                                    <h6 class="text-light fw-bold mb-0 team-name">{{ rate.team.name }}</h6>
+                                                </div>
+                                    
+                                                <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
+                                                    <span class="badge badge-service">{{ service_type.name }}</span>
+                                                    <span class="badge badge-members">👥 {{ rate.team.members_count }} نفر</span>
+                                                </div>
+                                    
+                                                {% if rate.team.description %}
+                                                    <div class="team-description mb-3">
+                                                        {{ rate.team.description|truncatewords:15 }}
+                                                    </div>
+                                                {% endif %}
+                                    
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <div class="stat-box text-center">
+                                                            <div class="stat-value stat-experience">
+                                                                {{ rate.team.avg_rating|default:"-" }}
+                                                            </div>
+                                                            <div class="stat-label">امتیاز</div>
+                                                        </div>
+                                                    </div>
+                                    
+                                                    <div class="col-6">
+                                                        <div class="stat-box text-center">
+                                                            <div class="stat-value stat-projects">
+                                                                {{ rate.team.completed_orders_count|default:"0" }}
+                                                            </div>
+                                                            <div class="stat-label">پروژه</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                    
+                                                <div class="mt-3 text-center">
+                                                    <a class="btn btn-primary btn-sm ms-2 order-lg-3" 
+                                                       href="{% url 'content_team:team_detail' rate.team.slug %}">
+                                                        مشاهده پروفایل
+                                                    </a>
+                                                </div>
+                                    
+                                                <div class="mt-3 text-center">
+                                                    <span class="text-warning fw-bold">
+                                                        {{ rate.price_per_unit|floatformat:0 }} تومان
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                {% endwith %}
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <div>😕</div>
+                                    <p class="text-secondary mt-3">هیچ تیم تولید محتوایی برای <strong class="text-light">{{ service_type.name }}</strong> یافت نشد.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- ==================== کارت محتوای تبلیغ (جدید) ==================== -->
+                    <div class="mt-5">
+                        <div class="ad-content-card p-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="bi bi-megaphone-fill text-primary fs-4"></i>
+                                <h5 class="text-light mb-0">محتوای تبلیغ</h5>
+                                <span class="badge bg-danger rounded-pill">اجباری برای رهگیری کلیک</span>
+                            </div>
+                            <p class="text-secondary small mb-3">
+                                اطلاعات زیر برای محتوای نهایی کمپین و رهگیری کلیک‌های کاربران استفاده خواهد شد.
+                            </p>
+                            
+                            <div class="row g-3">
+                                <!-- متن تبلیغ -->
+                                <div class="col-12">
+                                    <label class="form-label text-light fw-semibold required-field">
+                                        متن تبلیغ
+                                    </label>
+                                    {{ brief_form.ad_caption }}
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small class="text-secondary">متن تبلیغی که در پست اینفلوئنسر منتشر می‌شود.</small>
+                                        <small class="char-counter" id="ad-caption-counter">حداقل ۱۰ کاراکتر</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- لینک مقصد (اجباری) -->
+                                <div class="col-12">
+                                    <label class="form-label text-light fw-semibold required-field">
+                                        لینک مقصد
+                                    </label>
+                                    {{ brief_form.ad_link }}
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small class="text-secondary">
+                                            <i class="bi bi-info-circle-fill"></i> لینکی که کاربران پس از کلیک روی تبلیغ به آن هدایت می‌شوند.
+                                            <strong class="text-warning">این لینک برای رهگیری کلیک‌ها الزامی است.</strong>
+                                        </small>
+                                        <small class="char-counter" id="ad-link-counter"></small>
+                                    </div>
+                                    <div class="preview-link mt-2 d-none" id="link-preview">
+                                        <i class="bi bi-link-45deg text-primary"></i>
+                                        <span class="text-light" id="link-preview-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ==================== بریف برای تیم تولید محتوا ==================== -->
+                    <div id="brief-section" class="brief-section mt-4">
+                        <div class="description-card">
+                            <div class="description-header mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-file-text-fill text-primary"></i>
+                                <h6 class="mb-0 fw-bold text-light">بریف سفارش برای تیم تولید محتوا</h6>
+                                <span class="badge bg-secondary rounded-pill">اطلاعات داخلی</span>
+                            </div>
+                            <p class="text-secondary small mb-3">
+                                اطلاعات زیر فقط برای تیم تولید محتوا نمایش داده می‌شود و در محتوای نهایی کمپین استفاده نمی‌شود.
+                            </p>
+                            <div class="description-body">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">هدف محتوا</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.goal }}
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-4" id="goal-description-wrapper">
+                                        <label class="form-label text-light">توضیح هدف</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.goal_description }}
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">لحن محتوا</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.tone }}
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">نام برند</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.brand_name }}
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">هشتگ‌ها</label>
+                                        {{ brief_form.hashtags }}
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">مخاطب هدف</label>
+                                        {{ brief_form.target_audience }}
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label text-light">لینک‌های مرجع</label>
+                                        {{ brief_form.reference_links }}
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label text-light">چه چیزهایی نباشد</label>
+                                        {{ brief_form.do_not_include }}
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-light">{{ brief_form.description.label_tag }}</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.description }}
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <small class="min-char-warning" id="min-char-warning">حداقل ۵۰ کاراکتر لازم است</small>
+                                            <small><span id="char-count">۰</span> / ۵۰</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- فایل‌های پیوست -->
+                                    <div class="col-12 mt-3">
+                                        <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#attachmentsModal">افزودن فایل پیوست</button>
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-dark table-striped align-middle" id="attachments-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>پیش نمایش</th>
+                                                        <th>نام فایل</th>
+                                                        <th>نوع فایل</th>
+                                                        <th>حجم فایل</th>
+                                                        <th>حذف</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="attachments-list">
+                                                    {% for file in attachments %}
+                                                        <tr data-existing="true">
+                                                            <td>
+                                                                {% if file.file_type == "image" %}
+                                                                    <img class="file-preview" src="{{ file.file.url }}" alt="پیش نمایش">
+                                                                {% else %}
+                                                                    <span class="text-secondary">—</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-light">
+                                                                <a href="{{ file.file.url }}" class="text-decoration-none text-light" target="_blank">{{ file.original_name }}</a>
+                                                            </td>
+                                                            <td class="text-secondary">{{ file.mime_type }}</td>
+                                                            <td class="text-info">{{ file.file_size_display }}</td>
+                                                            <td>
+                                                                <span class="text-danger fs-4 remove-existing-file" data-id="{{ file.id }}">&times;</span>
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" name="attachments" id="attachments-input" multiple hidden>
+                                        <input type="hidden" name="attachment_descriptions" id="attachment-descriptions">
+                                        <input type="hidden" name="deleted_attachments" id="deleted-attachments" value="[]">
+                                        <small class="text-secondary">حداکثر 5 فایل، هرکدام تا ۲۰ مگابایت</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-5">
+                        <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-accent px-4">← مرحله قبل</a>
+                        <button type="submit" id="submit-btn" class="btn btn-primary px-5" disabled>مرحله بعد ←</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="price-summary-bar" id="price-summary-bar">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <div class="text-secondary small mb-0">هزینه تولید محتوا</div>
+                        <div class="total-price-display" id="total-price-display">۰ تومان</div>
+                    </div>
+                </div>
+                <div class="text-secondary small text-start price-breakdown-wrapper">
+                    <div id="price-breakdown" class="text-secondary price-breakdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- مودال آپلود فایل -->
+    <div class="modal fade" id="attachmentsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-light">افزودن فایل پیوست</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="file-upload-box" id="fileUploadBox">
+                        <input type="file" id="modal-file-input" multiple hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                            </div>
+                            <div class="upload-text">
+                                <strong>آپلود فایل</strong>
+                                <p>فایل را بکشید اینجا یا کلیک کنید</p>
+                                <span>حداکثر 20MB برای هر فایل</span>
+                            </div>
+                        </div>
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+                    <label class="modal-file-description-label" for="modal-file-description">توضیحات فایل</label>
+                    <textarea id="modal-file-description" class="form-control form-control-light" rows="3" placeholder="مثلا: لوگوی شرکت"></textarea>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-primary" id="save-file-btn">ذخیره فایل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script>
+        window.TEAM_RATES = {
+            {% for item in rates_with_price %}
+                "{{ item.rate.id }}": {
+                    "price": {{ item.total_price|stringformat:"d" }},
+                    "teamName": "{{ item.rate.team.name|escapejs }}"
+                }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        };
+        window.EXISTING_RATE_ID = {% if existing_order %}{{ existing_order.service_rate.id }}{% else %}null{% endif %};
+        window.CONTENT_MINUTES = {% if minutes %}{{ minutes }}{% else %}0{% endif %};
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // عناصر DOM
+            const adCaptionInput = document.getElementById('id_ad_caption');
+            const adCaptionCounter = document.getElementById('ad-caption-counter');
+            const adLinkInput = document.getElementById('id_ad_link');
+            const adLinkCounter = document.getElementById('ad-link-counter');
+            const linkPreview = document.getElementById('link-preview');
+            const linkPreviewText = document.getElementById('link-preview-text');
+            
+            // شمارش کاراکتر متن تبلیغ
+            if (adCaptionInput && adCaptionCounter) {
+                function updateAdCaptionCounter() {
+                    const length = adCaptionInput.value.length;
+                    adCaptionCounter.textContent = `${length} / حداقل ۱۰ کاراکتر`;
+                    if (length >= 10) {
+                        adCaptionCounter.classList.add('valid');
+                        adCaptionCounter.classList.remove('invalid');
+                    } else {
+                        adCaptionCounter.classList.add('invalid');
+                        adCaptionCounter.classList.remove('valid');
+                    }
+                }
+                updateAdCaptionCounter();
+                adCaptionInput.addEventListener('input', updateAdCaptionCounter);
+            }
+            
+            // اعتبارسنجی لینک و پیش‌نمایش
+            if (adLinkInput && adLinkCounter) {
+                function validateLink() {
+                    const link = adLinkInput.value.trim();
+                    if (link === '') {
+                        adLinkCounter.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> لینک الزامی است';
+                        adLinkCounter.classList.add('invalid');
+                        adLinkCounter.classList.remove('valid');
+                        linkPreview.classList.add('d-none');
+                        return false;
+                    }
+                    
+                    // اعتبارسنجی فرمت لینک
+                    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+                    if (urlPattern.test(link)) {
+                        adLinkCounter.innerHTML = '<i class="bi bi-check-circle-fill"></i> معتبر';
+                        adLinkCounter.classList.add('valid');
+                        adLinkCounter.classList.remove('invalid');
+                        
+                        // نمایش پیش‌نمایش
+                        let displayLink = link;
+                        if (!link.startsWith('http')) {
+                            displayLink = 'https://' + link;
+                        }
+                        linkPreviewText.textContent = displayLink;
+                        linkPreview.classList.remove('d-none');
+                        return true;
+                    } else {
+                        adLinkCounter.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> لینک نامعتبر است';
+                        adLinkCounter.classList.add('invalid');
+                        adLinkCounter.classList.remove('valid');
+                        linkPreview.classList.add('d-none');
+                        return false;
+                    }
+                }
+                
+                validateLink();
+                adLinkInput.addEventListener('input', validateLink);
+                adLinkInput.addEventListener('blur', validateLink);
+            }
+            
+            // اعتبارسنجی فرم قبل از ارسال
+            const form = document.getElementById('step3-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const adCaption = adCaptionInput?.value.trim() || '';
+                    const adLink = adLinkInput?.value.trim() || '';
+                    let hasError = false;
+                    
+                    if (adCaption.length < 10) {
+                        alert('❌ متن تبلیغ باید حداقل ۱۰ کاراکتر باشد.');
+                        adCaptionInput?.focus();
+                        hasError = true;
+                    }
+                    
+                    if (adLink === '') {
+                        alert('❌ لینک مقصد الزامی است. برای رهگیری کلیک‌ها نیاز داریم.');
+                        adLinkInput?.focus();
+                        hasError = true;
+                    } else {
+                        const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+                        if (!urlPattern.test(adLink)) {
+                            alert('❌ لینک مقصد معتبر نیست. لطفاً یک آدرس صحیح وارد کنید.');
+                            adLinkInput?.focus();
+                            hasError = true;
+                        }
+                    }
+                    
+                    if (hasError) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <script src="{% static 'campaigns/js/create_step_3/team-selection.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/brief-control.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/modal-upload-dragdrop.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/attachments-manager.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/step3-init.js' %}"></script>
+{% endblock %}

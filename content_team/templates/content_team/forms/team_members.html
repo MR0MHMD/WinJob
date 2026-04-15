@@ -1,0 +1,753 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}مدیریت اعضای تیم {{ team.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/forms/team_members.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 py-lg-5">
+        <nav aria-label="breadcrumb" class="mb-4 animate-fade-up">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'core:home' %}">
+                        <i class="fi-home me-1"></i> خانه
+                    </a>
+                </li>
+                
+                <li class="breadcrumb-item">
+                    <a href="{% url 'content_team:dashboard' %}">داشبورد {{ team.name }}</a>
+                </li>
+                
+                <li class="breadcrumb-item active" aria-current="page">{{ team.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="team-header p-4 mb-4 animate-fade-up">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        {% if team.logo %}
+                            <img class="content-team--logo" src="{{ team.logo.url }}" alt="{{ team.name }}">
+                        {% else %}
+                            <div class="summary-icon summary-icon--custom">
+                                <i class="fi-users text-white"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h1 class="text-white mb-1">مدیریت اعضای تیم {{ team.name }}</h1>
+                            
+                            <div class="d-flex gap-3 flex-wrap">
+                                <span class="text-white-50 small">
+                                    <i class="fi-user-check me-1"></i>
+                                    {{ team.members_count }} عضو فعال
+                                </span>
+                                    <span class="text-white-50 small">
+                                    <i class="fi-check-circle me-1"></i>
+                                    {{ team.completed_orders_count }} سفارش تکمیل شده
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="{% url 'content_team:dashboard' %}" class="btn btn-light btn-sm rounded-pill px-3">
+                        <i class="fi-arrow-forward me-1"></i>
+                        بازگشت
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-4 animate-fade-up delay-100">
+                <div class="summary-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-white-50 mb-1 small">مجموع درصد سهام</p>
+                            
+                            <h2 class="text-white mb-0">
+                                {{ total_percent }}
+                                <span class="fs-6">%</span>
+                            </h2>
+                        </div>
+                        
+                        <div class="summary-icon">
+                            <i class="fi-pie-chart text-primary"></i>
+                        </div>
+                    </div>
+                
+                    {% if is_valid %}
+                        <span class="badge bg-success bg-opacity-25 text-success rounded-pill">
+                        <i class="fi-check-circle me-1"></i> معتبر
+                    </span>
+                    {% else %}
+                        <span class="badge bg-danger bg-opacity-25 text-danger rounded-pill">
+                        <i class="fi-alert-circle me-1"></i> نامعتبر
+                    </span>
+                    {% endif %}
+                
+                </div>
+            </div>
+        
+            <div class="col-md-4 animate-fade-up delay-200">
+                <div class="summary-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-white-50 mb-1 small">اعضای فعال</p>
+                            <h2 class="text-white mb-0">{{ active_members.count }}</h2>
+                        </div>
+                        
+                        <div class="summary-icon">
+                            <i class="fi-user-check text-success"></i>
+                        </div>
+                    </div>
+                
+                    <div class="progress-custom">
+                    
+                        {% with total=active_members.count|add:inactive_members.count %}
+                            {% if total > 0 %}
+                                <div class="progress-custom-bar bg-success" style="width: {% widthratio active_members.count total 100 %}%"></div>
+                            {% else %}
+                                <div class="progress-custom-bar bg-success" style="width: 0"></div>
+                            {% endif %}
+                        {% endwith %}
+                    
+                    </div>
+                
+                    <p class="text-white-50 small mt-2 mb-0">{% widthratio active_members.count total_members 100 %}% از کل اعضا</p>
+                </div>
+            </div>
+        
+            <div class="col-md-4 animate-fade-up delay-300">
+                <div class="summary-card p-4">
+                    <div class="d-flex text-light justify-content-between align-items-start mb-3">
+                        <div>
+                            <p class="text-light mb-1 small">اعضای غیرفعال</p>
+                            <h2 class="text-white mb-0">{{ inactive_members.count }}</h2>
+                        </div>
+                        
+                        <div class="summary-icon">
+                            <i class="fi-user-x text-muted"></i>
+                        </div>
+                    </div>
+                
+                    <div class="progress-custom">
+                    
+                        {% with total=active_members.count|add:inactive_members.count %}
+                            {% if total > 0 %}
+                                <div class="progress-custom-bar bg-danger"
+                                     style="width: {% widthratio inactive_members.count total 100 %}%"></div>
+                            {% else %}
+                                <div class="progress-custom-bar bg-danger" style="width: 0"></div>
+                            {% endif %}
+                        {% endwith %}
+                    
+                    </div>
+                
+                    <p class="text-white-50 small mt-2 mb-0">{% widthratio inactive_members.count total_members 100 %}% از کل اعضا</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4 animate-fade-up delay-200">
+            <div class="col-12">
+                <div class="glass-card">
+                    <div class="d-flex invite-code justify-content-between align-items-center p-4 border-bottom">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="mb-0 fw-semibold text-light">
+                                <i class="fi-link me-2 text-primary"></i>
+                                کد دعوت تیم
+                            </h5>
+                        
+                            {% if pending_requests_count > 0 %}
+                                <button type="button" class="btn btn-warning new-request btn-sm rounded-pill position-relative" data-bs-toggle="modal" data-bs-target="#joinRequestsModal">
+                                    <i class="fi-user-plus me-1"></i>
+                                    {{ pending_requests_count }} درخواست جدید
+                                    <span class="position-absolute new-request--span top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                        <span class="visually-hidden">جدید</span>
+                                    </span>
+                                </button>
+                            {% endif %}
+                        
+                        </div>
+                    
+                        <span class="badge bg-faded-primary text-primary rounded-pill">
+                            <i class="fi-star-filled me-1"></i>
+                            فقط مدیران می‌توانند این کد را ببینند
+                        </span>
+                    </div>
+                
+                    <div class="p-4">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-8">
+                                <div class="d-flex gap-3 align-items-center flex-wrap">
+                                    <div class="bg-dark rounded-3 p-3 flex-grow-1">
+                                        <code class="text-primary code">
+                                            {{ team.slug }}
+                                        </code>
+                                    </div>
+                                    
+                                    <button type="button" class="btn btn-primary rounded-pill px-4" id="copyInviteCodeBtn" onclick="copyInviteCode()">
+                                        <i class="fi-copy me-1"></i>
+                                        کپی کد
+                                    </button>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="alert alert-info bg-faded-primary border-0 rounded-3 p-3">
+                                        <i class="fi-info-circle me-2 text-primary"></i>
+                                        <small class="text-white-50">
+                                            این کد را در اختیار کاربرانی که می‌خواهید به تیم بپیوندند قرار دهید.
+                                            آنها می‌توانند با وارد کردن این کد در پنل کاربری خود، درخواست عضویت در تیم
+                                            شما را ثبت کنند.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="text-center p-3 rounded-3 invite-help">
+                                    <i class="fi-users fs-2 text-primary mb-2 d-block"></i>
+                                    <h6 class="text-white mb-1">روند عضویت</h6>
+                                    <p class="text-muted small mb-0">
+                                        ۱. کد را کپی کنید<br>
+                                        ۲. به کاربر مورد نظر بدهید<br>
+                                        ۳. کاربر درخواست عضویت می‌دهد<br>
+                                        ۴. شما درخواست را تأیید می‌کنید
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 animate-fade-up delay-200">
+                <div class="glass-card">
+                    <div class="d-flex justify-content-between align-items-center p-4 border-bottom" style="border-bottom-color: rgba(255,255,255,0.05);">
+                        <h5 class="text-light mb-0 fw-semibold">
+                            <i class="fi-users me-2 text-primary"></i>
+                            مدیریت اعضای تیم
+                            <span class="badge bg-faded-primary text-primary ms-2 rounded-pill">{{ active_members.count }}</span>
+                        </h5>
+                    </div>
+
+                    <div class="table-responsive-custom">
+                        <table class="table table-dark table-borderless mb-0">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <th class="text-light py-3 fw-semibold">عضو</th>
+                                    <th class="text-light py-3 fw-semibold">نقش</th>
+                                    <th class="text-light py-3 fw-semibold">درصد سهم</th>
+                                    <th class="text-light py-3 fw-semibold">وضعیت</th>
+                                    <th class="text-light py-3 fw-semibold text-center">عملیات</th>
+                                </tr>
+                            </thead>
+                        
+                            <tbody>
+                            {% for member in active_members %}
+                                <tr class="member-row">
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="member-avatar small">
+                                                {{ member.user.nickname|slice:":2" }}
+                                            </div>
+                                        
+                                            <div>
+                                                <div class="fw-semibold text-white">{{ member.user.nickname }}</div>
+                                                <div class="small text-muted">{{ member.user.phone|default:"شماره ثبت نشده" }}</div>
+                                            </div>
+                                        
+                                            {% if member.user == request.user %}
+                                                <span class="badge bg-faded-primary text-primary rounded-pill">مدیر</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                
+                                    <td class="py-3">
+                                        <span class="role-badge role-{{ member.role }}">
+                                            {{ member.get_role_display }}
+                                        </span>
+                                    </td>
+                                
+                                    <td class="py-3">
+                                        <span class="percent-badge">
+                                            {{ member.revenue_share_percent }}%
+                                        </span>
+                                    </td>
+                                
+                                    <td class="py-3">
+                                        <span class="status-badge status-active"></span>
+                                        <span class="small text-white-50">فعال</span>
+                                    </td>
+                                
+                                    <td class="py-3 text-center">
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <button type="button" class="btn btn-icon btn-xxs btn-outline-secondary btn-action rounded-pill" data-bs-toggle="modal" data-bs-target="#editMemberModal" onclick="populateEditForm('{{ member.id }}', '{{ member.role }}', '{{ member.revenue_share_percent }}')" title="ویرایش">
+                                                <i class="fi-edit"></i>
+                                            </button>
+
+                                            {% if member.user == request.user %}
+                                                <button type="button" class="btn btn-icon btn-xxs btn-outline-warning btn-action rounded-pill disabled" style="opacity: 0.5; cursor: not-allowed;" disabled title="نمی‌توانید خودتان را غیرفعال کنید">
+                                                    <i class="fi-eye-off"></i>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-icon btn-xxs btn-outline-warning btn-action rounded-pill" onclick="showDeactivateModal('{{ member.id }}', '{{ member.user.nickname }}')" title="غیرفعال کردن عضو">
+                                                    <i class="fi-eye-off"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            {% if member.user == request.user %}
+                                                <button type="button" class="btn btn-icon btn-xxs btn-outline-danger btn-action rounded-pill disabled" style="opacity: 0.5; cursor: not-allowed;" disabled title="نمی‌توانید خودتان را اخراج کنید">
+                                                    <i class="fi-trash"></i>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-icon btn-xxs btn-outline-danger btn-action rounded-pill" onclick="showExpelModal('{{ member.id }}', '{{ member.user.nickname }}')" title="اخراج عضو از تیم">
+                                                    <i class="fi-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <i class="fi-users fs-1 text-muted"></i>
+                                        <p class="text-muted mt-2 mb-0">هیچ عضو فعالی در تیم وجود ندارد</p>
+                                        <button type="button" class="btn btn-primary btn-sm rounded-pill mt-3" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                                            <i class="fi-user-plus me-1"></i>
+                                            افزودن عضو جدید
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if inactive_members %}
+                <div class="col-12 animate-fade-up delay-300">
+                    <div class="glass-card">
+                        <div class="p-4 border-bottom" style="border-bottom-color: rgba(255,255,255,0.05);">
+                            <h5 class="mb-0 fw-semibold text-white-50">
+                                <i class="fi-user-x me-2 "></i>
+                                <span>اعضای غیرفعال</span>
+                                <span class="badge bg-secondary bg-opacity-25 text-muted ms-2 rounded-pill">{{ inactive_members.count }}</span>
+                            </h5>
+                        </div>
+                    
+                        <div class="table-responsive-custom">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                {% for member in inactive_members %}
+                                    <tr class="member-row inactive">
+                                        <td class="py-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="member-avatar small" style="background: #666276;">
+                                                    {{ member.user.nickname|slice:":2" }}
+                                                </div>
+                                                
+                                                <div>
+                                                    <div class="fw-semibold text-white-50">{{ member.user.nickname }}</div>
+                                                    <div class="small text-muted">{{ member.user.phone|default:"شماره ثبت نشده" }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        
+                                        <td class="py-3">
+                                            <span class="role-badge role-{{ member.role }}" style="opacity: 0.6;">
+                                                {{ member.get_role_display }}
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="py-3">
+                                            <span class="percent-badge" style="opacity: 0.6;">
+                                                {{ member.revenue_share_percent }}%
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="py-3">
+                                            <span class="status-badge status-inactive"></span>
+                                            <span class="small text-muted">غیرفعال</span>
+                                        </td>
+                                        
+                                        <td class="py-3 text-end">
+                                            <form method="POST" action="" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="member_id" value="{{ member.id }}">
+                                                <button type="submit" name="activate_member"
+                                                        class="btn btn-sm btn-outline-success btn-action rounded-pill px-3">
+                                                    <i class="fi-user-check me-1"></i>
+                                                    فعال کردن
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="col-12 animate-fade-up delay-400">
+                <div class="glass-card">
+                    <div class="p-4 border-bottom" style="border-bottom-color: rgba(255,255,255,0.05);">
+                        <h5 class="mb-0 fw-semibold text-light">
+                            <i class="fi-info-circle me-2 text-primary"></i>
+                            راهنما
+                        </h5>
+                    </div>
+                    
+                    <div class="p-4">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="d-flex gap-3">
+                                    <div class="summary-icon bg-faded-primary" style="width: 40px; height: 40px;">
+                                        <i class="fi-pie-chart text-primary"></i>
+                                    </div>
+                                    
+                                    <div>
+                                        <h6 class="text-white mb-1">مجموع درصد سهام</h6>
+                                        <p class="text-muted small mb-0">باید دقیقاً ۱۰۰٪ باشد</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="d-flex gap-3">
+                                    <div class="summary-icon bg-faded-success" style="width: 40px; height: 40px;">
+                                        <i class="fi-user-plus text-success"></i>
+                                    </div>
+                                    
+                                    <div>
+                                        <h6 class="text-white mb-1">افزودن عضو</h6>
+                                        <p class="text-muted small mb-0">کاربران دیگر را دعوت کنید</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="d-flex gap-3">
+                                    <div class="summary-icon bg-faded-danger" style="width: 40px; height: 40px;">
+                                        <i class="fi-alert-triange text-danger"></i>
+                                    </div>
+                                    
+                                    <div>
+                                        <h6 class="text-white mb-1">نکات مهم</h6>
+                                        <p class="text-muted small mb-0">نمی‌توانید خودتان را حذف کنید</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="joinRequestsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark modal-glass">
+                <div class="modal-header border-0 p-4 pb-0">
+                    <h5 class="modal-title text-white">
+                        <i class="fi-user-plus text-warning me-2"></i>
+                        درخواست‌های عضویت
+                        <span class="badge bg-warning bg-opacity-25 text-warning ms-2 rounded-pill">{{ pending_requests_count }}</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            
+                <div class="modal-body p-4">
+                    {% if pending_requests %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-borderless">
+                                <thead>
+                                    <tr>
+                                        <th class="text-light py-3" style="width: 40%;">کاربر</th>
+                                        <th class="text-light py-3" style="width: 30%;">تاریخ درخواست</th>
+                                        <th class="text-light py-3 text-center" style="width: 30%;">عملیات</th>
+                                    </tr>
+                                </thead>
+                            
+                                <tbody>
+                                    {% for req in pending_requests %}
+                                        <tr class="border-bottom" style="border-bottom-color: rgba(255,255,255,0.05);">
+                                            <td class="py-3">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="member-avatar small">
+                                                        {{ req.user.nickname|slice:":2" }}
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <div class="fw-semibold text-white">{{ req.user.nickname }}</div>
+                                                        <div class="small text-muted">{{ req.user.phone|default:"شماره ثبت نشده" }}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            
+                                            <td class="py-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="fi-calendar text-muted" style="font-size: 0.875rem;"></i>
+                                                    <span class="small text-white-50">{{ req.created_at|date:"Y/m/d H:i" }}</span>
+                                                </div>
+                                            </td>
+                                            
+                                            <td class="py-3 text-center">
+                                                <div class="d-flex gap-2 justify-content-center">
+                                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3" onclick="showApproveModal('{{ team.slug }}', '{{ req.id }}', '{{ req.user.nickname }}')">
+                                                        <i class="fi-check me-1"></i>
+                                                        تایید
+                                                    </button>
+                                                    
+                                                    <button type="button" class="btn btn-sm btn-danger rounded-pill px-3" onclick="showRejectModal('{{ team.slug }}', '{{ req.id }}', '{{ req.user.nickname }}')">
+                                                        <i class="fi-x me-1"></i>
+                                                        رد
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fi-user-check fs-1 text-muted"></i>
+                            <p class="text-muted mt-2 mb-0">هیچ درخواست عضویت جدیدی وجود ندارد</p>
+                        </div>
+                    {% endif %}
+                </div>
+            
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">بستن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editMemberModal" tabindex="-1">
+        <div class="modal-dialog  modal-dialog-centered">
+            <div class="modal-content bg-dark modal-glass">
+                <div class="modal-header border-0 pb-0 p-4" style="margin-bottom: 1rem">
+                    <h5 class="modal-title text-white">
+                        <i class="fi-edit text-primary me-2"></i>
+                        ویرایش اطلاعات
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    <div class="modal-body pt-0 px-4">
+                        <input type="hidden" name="member_id" id="edit_member_id">
+                        <div class="mb-4">
+                            <label for="edit_role" class="form-label text-white">
+                                نقش در تیم
+                                <span class="text-danger">*</span>
+                            </label>
+                        
+                            <select name="role" id="edit_role" class="form-select form-select-light" required>
+                                <option value="">انتخاب نقش...</option>
+                                {% for value, label in role_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    
+                        <div class="mb-4">
+                            <label class="form-label text-white">
+                                درصد سهم از درآمد 
+                                <span class="text-danger">*</span>
+                            </label>
+                            
+                            <div class="input-group">
+                                <label for="edit_percent"></label>
+                                <input type="number" name="revenue_share_percent" id="edit_percent" class="form-control form-control-light" min="0" max="100" required>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class="modal-footer border-0 pt-0 p-4">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                            انصراف
+                        </button>
+                        
+                        <button type="submit" name="edit_member" class="btn btn-primary rounded-pill px-4">
+                            <i class="fi-save me-1"></i>
+                            ذخیره
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deactivateMemberModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark modal-glass text-center">
+                <div class="modal-body p-4">
+                    <div class="summary-icon bg-faded-warning d-inline-flex mb-3" style="width: 56px; height: 56px; border-radius: 50%;">
+                        <i class="fi-eye-off text-warning" style="font-size: 1.5rem;"></i>
+                    </div>
+                    
+                    <h6 class="text-white mb-2">غیرفعال کردن عضو</h6>
+                    
+                    <p class="text-muted small mb-3">
+                        آیا از غیرفعال کردن 
+                        <strong id="deactivate_member_name"></strong>
+                        مطمئن هستید؟
+                    </p>
+                    
+                    <form method="POST" action="" id="deactivateMemberForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="member_id" id="deactivate_member_id">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                            <button type="submit" name="deactivate_member" class="btn btn-warning btn-sm rounded-pill px-3">
+                                <i class="fi-eye-off me-1"></i>
+                                غیرفعال
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="expelMemberModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark modal-glass text-center">
+                <div class="modal-body p-4">
+                    <div class="summary-icon bg-faded-danger d-inline-flex mb-3" style="width: 56px; height: 56px; border-radius: 50%;">
+                        <i class="fi-trash text-danger" style="font-size: 1.5rem;"></i>
+                    </div>
+                    
+                    <h6 class="text-white mb-2">اخراج عضو از تیم</h6>
+                    
+                    <p class="text-muted small mb-3">
+                        آیا از اخراج 
+                        <strong id="expel_member_name"></strong>
+                        از تیم مطمئن هستید؟
+                    </p>
+                    
+                    <p class="text-danger small mb-3"> این عمل غیرقابل بازگشت نیست!</p>
+                    
+                    <form method="POST" action="" id="expelMemberForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="member_id" id="expel_member_id">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">
+                                انصراف
+                            </button>
+                            <button type="submit" name="expel_member" class="btn btn-danger btn-sm rounded-pill px-3">
+                                <i class="fi-trash me-1"></i>
+                                اخراج
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Approve Modal -->
+    <div class="modal fade" id="confirmApproveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark modal-glass text-center">
+                <div class="modal-body p-4">
+                    <div class="summary-icon bg-faded-success d-inline-flex mb-3" style="width: 56px; height: 56px; border-radius: 50%;">
+                        <i class="fi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <h6 class="text-white mb-2">تایید درخواست عضویت</h6>
+                    <p class="text-muted small mb-3">آیا از تایید درخواست <strong id="approve_member_name"></strong> مطمئن هستید؟</p>
+                    <form method="POST" action="" id="approveForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="role" value="other">
+                        <input type="hidden" name="revenue_share_percent" value="0">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">
+                                <i class="fi-check me-1"></i>
+                                تایید
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Reject Modal -->
+    <div class="modal fade" id="confirmRejectModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark modal-glass text-center">
+                <div class="modal-body p-4">
+                    <div class="summary-icon bg-faded-danger d-inline-flex mb-3" style="width: 56px; height: 56px; border-radius: 50%;">
+                        <i class="fi-x-circle text-danger" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <h6 class="text-white mb-2">رد درخواست عضویت</h6>
+                    <p class="text-muted small mb-3">آیا از رد درخواست <strong id="reject_member_name"></strong> مطمئن هستید؟</p>
+                    <form method="POST" action="" id="rejectForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                            <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3">
+                                <i class="fi-x me-1"></i>
+                                رد
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'content_team/js/forms/team_members.js' %}"></script>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const toastEls = document.querySelectorAll('.toast');
+                toastEls.forEach(function (toastEl) {
+                    const toast = new bootstrap.Toast(toastEl, {delay: 3000});
+                    toast.show();
+                });
+            });
+        </script>
+
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100; direction: ltr;">
+            {% for message in messages %}
+                <div class="toast align-items-center text-bg-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}primary{% endif %} border-0 mb-2"
+                     role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            {% if message.tags == 'success' %}
+                                <i class="fi-check-circle me-2"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="fi-alert-circle me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                                data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

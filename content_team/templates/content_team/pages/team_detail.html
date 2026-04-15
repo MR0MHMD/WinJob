@@ -1,0 +1,167 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block title %}{{ team.name }}{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet"
+          href="{% static 'content_team/css/pages/team_detail.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="container py-5" dir="rtl">
+        {# ======== هدر پروفایل ======== #}
+        <div class="team-profile-header card border-0 shadow-sm bg-dark p-4 mb-4">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                {% if team.logo %}
+                    <img src="{{ team.logo.url }}"
+                         alt="{{ team.name }}"
+                         class="team-profile-avatar">
+                {% else %}
+                    <div class="team-profile-avatar-placeholder">🎬</div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <h2 class="text-light fw-bold mb-1">{{ team.name }}</h2>
+                    <small class="text-secondary" style="direction:ltr;">@{{ team.slug }}</small>
+                    {# امتیاز #}
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <div class="star-rating">
+                            {% for i in "12345" %}
+                                <i class="star-rating-icon fi-star{% if forloop.counter <= avg_rating %} active{% endif %}"></i>
+                            {% endfor %}
+                        </div>
+                        <span class="text-secondary small">
+                            {{ avg_rating|floatformat:1 }} از ۵
+                            &nbsp;|&nbsp;
+                            {{ completed_orders }} سفارش تکمیل‌شده
+                        </span>
+                    </div>
+                </div>
+                {# قیمت و دکمه #}
+                <div class="text-center">
+                    <div class="team-price-label mb-1">قیمت پایه</div>
+                    <div class="team-price-value mb-3">
+                        {{ team.base_price|floatformat:0 }}
+                        <span class="team-price-unit">تومان</span>
+                    </div>
+                </div>
+            </div>
+            {% if team.description %}
+                <hr class="border-secondary mt-3 mb-3">
+                <p class="text-secondary mb-0" style="line-height:1.8;">{{ team.description }}</p>
+            {% endif %}
+        </div>
+        <div class="row g-4">
+            {# ======== ستون چپ: اعضا + پورتفولیو ======== #}
+            <div class="col-lg-8">
+                {# ---- اعضای تیم ---- #}
+                {% if members %}
+                    <div class="card border-0 shadow-sm bg-dark p-4 mb-4">
+                        <h5 class="text-light fw-bold mb-4">اعضای تیم</h5>
+                        <div class="row g-3">
+                            {% for member in members %}
+                                <div class="col-sm-6">
+                                    <div class="member-card p-3 d-flex align-items-center gap-3">
+                                        {% if member.avatar %}
+                                            <img src="{{ member.avatar.url }}"
+                                                 alt="{{ member.user.get_full_name }}"
+                                                 class="member-avatar">
+                                        {% else %}
+                                            <div class="member-avatar-placeholder">👤</div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="text-light fw-bold small">{{ member.user.get_full_name }}</div>
+                                            <div class="text-secondary" style="font-size:0.78rem;">{{ member.role }}</div>
+                                            {% if member.bio %}
+                                                <div class="text-secondary mt-1"
+                                                     style="font-size:0.78rem;
+                                                            line-height:1.5">{{ member.bio|truncatechars:60 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                {# ---- نمونه کارها ---- #}
+                {% if portfolios %}
+                    <div class="card border-0 shadow-sm bg-dark p-4 mb-4">
+                        <h5 class="text-light fw-bold mb-4">نمونه کارها</h5>
+                        <div class="row g-3">
+                            {% for item in portfolios %}
+                                <div class="col-sm-6">
+                                    <div class="portfolio-card h-100">
+                                        {% if item.thumbnail %}
+                                            <img src="{{ item.thumbnail.url }}"
+                                                 alt="{{ item.title }}"
+                                                 class="portfolio-thumb">
+                                        {% endif %}
+                                        <div class="p-3">
+                                            <h6 class="text-light fw-bold mb-1 small">{{ item.title }}</h6>
+                                            {% if item.description %}
+                                                <p class="text-secondary mb-2" style="font-size:0.8rem;line-height:1.6;">{{ item.description|truncatechars:80 }}</p>
+                                            {% endif %}
+                                            {% if item.link %}
+                                                <a href="{{ item.link }}"
+                                                   target="_blank"
+                                                   class="btn btn-outline-primary btn-sm">مشاهده نمونه کار</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {# ======== ستون راست: نظرات ======== #}
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm bg-dark p-4">
+                    <h5 class="text-light fw-bold mb-4">نظرات و امتیازات</h5>
+                    {% for review in reviews %}
+                        <div class="{% if not forloop.last %}border-bottom border-secondary pb-4 mb-4{% endif %}">
+                            {# هدر نظر: آواتار + نام + امتیاز + تاریخ #}
+                            <div class="d-flex justify-content-between mb-3">
+                                <div class="d-flex align-items-center pe-2">
+                                    {% if review.advertiser.avatar %}
+                                        <img class="rounded-circle me-1"
+                                             src="{{ review.advertiser.avatar.url }}"
+                                             width="48"
+                                             height="48"
+                                             style="object-fit:cover"
+                                             alt="{{ review.advertiser.get_full_name }}">
+                                    {% else %}
+                                        <div class="rounded-circle me-1 bg-secondary d-flex align-items-center justify-content-center"
+                                             style="width:48px;
+                                                    height:48px;
+                                                    font-size:1.2rem">👤</div>
+                                    {% endif %}
+                                    <div class="ps-2">
+                                        <h6 class="fs-base text-light mb-0">{{ review.advertiser.get_full_name }}</h6>
+                                        <div class="text-light">
+                                            <div class="star-rating">
+                                                {% for i in "12345" %}
+                                                    <i class="star-rating-icon fi-star{% if forloop.counter <= review.rating %}-filled active{% else %}{% endif %}"></i>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-light opacity-50 fs-sm">{{ review.created_at|date:"Y/m/d" }}</span>
+                            </div>
+                            {# متن نظر #}
+                            {% if review.comment %}
+                                <p class="text-light opacity-75 mb-0"
+                                   style="font-size:0.85rem;
+                                          line-height:1.8">{{ review.comment }}</p>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-4">
+                            <div style="font-size:2rem;">💬</div>
+                            <p class="text-secondary small mt-2">هنوز نظری ثبت نشده</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
