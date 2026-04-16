@@ -180,13 +180,31 @@ class Campaign(models.Model):
         verbose_name="وضعیت"
     )
 
-    coupon = models.ForeignKey(
+    influencer_coupon = models.ForeignKey(
         "Coupon",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="campaigns",
-        verbose_name="کد تخفیف"
+        related_name="influencer_campaigns",
+        verbose_name="کد تخفیف اینفلوئنسر"
+    )
+
+    content_team_coupon = models.ForeignKey(
+        "Coupon",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="content_team_campaigns",
+        verbose_name="کد تخفیف تیم محتوا"
+    )
+
+    platform_coupon = models.ForeignKey(
+        "Coupon",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="platform_campaigns",
+        verbose_name="کد تخفیف پلتفرم"
     )
 
     discount_amount = models.PositiveBigIntegerField(
@@ -250,7 +268,6 @@ class Campaign(models.Model):
     @property
     def total_clicks(self):
         """تعداد کل کلیک‌های کمپین (شمارش مستقیم)"""
-        from django.db.models import Count
 
         return CampaignClick.objects.filter(
             tracking_link__campaign_influencer__campaign=self
@@ -262,6 +279,7 @@ class CampaignInfluencer(models.Model):
         PENDING = "pending", "در انتظار"
         ACCEPTED = "accepted", "پذیرفته شد"
         REJECTED = "rejected", "رد شد"
+        RUNNING = "running", "در حال اجرا"
         COMPLETED = "completed", "انجام شد"
 
     campaign = models.ForeignKey(

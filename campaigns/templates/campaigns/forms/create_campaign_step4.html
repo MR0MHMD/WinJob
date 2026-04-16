@@ -140,6 +140,7 @@
                         </div>
                     </div>
                 {% endif %}
+            
                 {# ======== تفکیک هزینه‌ها ======== #}
                 <div class="cost-breakdown mb-4">
                     {% if influencer_cost > 0 %}
@@ -151,6 +152,7 @@
                             <span class="cost-breakdown-value">{{ influencer_cost|floatformat:0 }} تومان</span>
                         </div>
                     {% endif %}
+                    
                     {% if team_cost > 0 %}
                         <div class="cost-breakdown-row">
                             <span class="cost-breakdown-label">
@@ -160,11 +162,14 @@
                             <span class="cost-breakdown-value">{{ team_cost|floatformat:0 }} تومان</span>
                         </div>
                     {% endif %}
+                    
                     <div class="cost-breakdown-divider"></div>
+                    
                     <div class="cost-breakdown-row">
                         <span class="cost-breakdown-label">جمع کل</span>
                         <span class="cost-breakdown-value">{{ total_price|floatformat:0 }} تومان</span>
                     </div>
+                    
                     <div class="cost-breakdown-row commission-row">
                         <span class="cost-breakdown-label">
                             <span class="cost-dot dot-commission"></span>
@@ -172,61 +177,186 @@
                         </span>
                         <span class="cost-breakdown-value text-warning">+ {{ commission|floatformat:0 }} تومان</span>
                     </div>
-                    {# ردیف تخفیف — پیش‌فرض مخفی #}
-                    <div class="cost-breakdown-row discount-row d-none"
-                         id="breakdown-discount-row">
+                    
+                    {# ردیف‌های تخفیف - هر کدوم جداگونه #}
+                    <div class="cost-breakdown-row discount-row {% if not discount_breakdown.influencer_discount %}d-none{% endif %}"
+                         id="breakdown-influencer-discount-row">
                         <span class="cost-breakdown-label text-success">
                             <span class="cost-dot dot-discount"></span>
-                            تخفیف اعمال‌شده
-                            <span class="discount-code-badge ms-1" id="breakdown-discount-code-badge"></span>
+                            تخفیف اینفلوئنسر
+                            <span class="discount-code-badge ms-1" id="influencer-discount-code-badge">
+                                {% if campaign.influencer_coupon %}({{ campaign.influencer_coupon.code }}){% endif %}
+                            </span>
                         </span>
                         <span class="cost-breakdown-value text-success fw-bold"
-                              id="breakdown-discount-value"></span>
+                              id="breakdown-influencer-discount-value">
+                            {% if discount_breakdown.influencer_discount %}
+                                - {{ discount_breakdown.influencer_discount|floatformat:0 }} تومان
+                            {% endif %}
+                        </span>
                     </div>
+                    
+                    <div class="cost-breakdown-row discount-row {% if not discount_breakdown.content_discount %}d-none{% endif %}"
+                         id="breakdown-content-discount-row">
+                        <span class="cost-breakdown-label text-success">
+                            <span class="cost-dot dot-discount"></span>
+                            تخفیف تیم محتوا
+                            <span class="discount-code-badge ms-1" id="content-discount-code-badge">
+                                {% if campaign.content_team_coupon %}({{ campaign.content_team_coupon.code }}){% endif %}
+                            </span>
+                        </span>
+                        <span class="cost-breakdown-value text-success fw-bold"
+                              id="breakdown-content-discount-value">
+                            {% if discount_breakdown.content_discount %}
+                                - {{ discount_breakdown.content_discount|floatformat:0 }} تومان
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="cost-breakdown-row discount-row {% if not discount_breakdown.platform_discount %}d-none{% endif %}"
+                         id="breakdown-platform-discount-row">
+                        <span class="cost-breakdown-label text-success">
+                            <span class="cost-dot dot-discount"></span>
+                            تخفیف پلتفرم
+                            <span class="discount-code-badge ms-1" id="platform-discount-code-badge">
+                                {% if campaign.platform_coupon %}({{ campaign.platform_coupon.code }}){% endif %}
+                            </span>
+                        </span>
+                        <span class="cost-breakdown-value text-success fw-bold"
+                              id="breakdown-platform-discount-value">
+                            {% if discount_breakdown.platform_discount %}
+                                - {{ discount_breakdown.platform_discount|floatformat:0 }} تومان
+                            {% endif %}
+                        </span>
+                    </div>
+                    
                     <div class="cost-breakdown-divider"></div>
+                    
                     <div class="cost-breakdown-row total-row">
                         <span class="cost-breakdown-label fw-bold text-light">قیمت نهایی (با حق‌العمل)</span>
                         <span class="cost-breakdown-value fw-bold text-light"
                               id="breakdown-final-total">{{ final_total|floatformat:0 }} تومان</span>
                     </div>
-                    {# ردیف مبلغ قابل پرداخت — پیش‌فرض مخفی #}
-                    <div class="cost-breakdown-row payable-row d-none"
+                    
+                    <div class="cost-breakdown-row payable-row {% if not discount_amount %}d-none{% endif %}"
                          id="breakdown-payable-row">
                         <span class="cost-breakdown-label fw-bold text-info">مبلغ قابل پرداخت (بعد از تخفیف)</span>
                         <span class="cost-breakdown-value fw-bold text-info"
-                              id="breakdown-payable-value"></span>
+                              id="breakdown-payable-value">
+                            {% if discount_amount %}
+                                {{ payable_amount|floatformat:0 }} تومان
+                            {% endif %}
+                        </span>
                     </div>
                 </div>
-                {# ======== کد تخفیف ======== #}
-                <div class="discount-box mb-4" id="discount-box">
+            
+                {# ======== بخش‌های کد تخفیف ======== #}
+                
+                {# کد تخفیف اینفلوئنسر #}
+                <div class="discount-box mb-3" id="influencer-discount-box" 
+                     data-scope="influencer"
+                     {% if campaign.influencer_coupon %}data-applied="true"{% endif %}>
                     <div class="discount-box-header">
-                        <span class="discount-icon">🏷️</span>
-                        <span>کد تخفیف دارید؟</span>
+                        <span class="discount-icon">🌟</span>
+                        <span>کد تخفیف اینفلوئنسر</span>
+                        {% if campaign.influencer_coupon %}
+                            <span class="badge bg-success ms-2">اعمال شده: {{ campaign.influencer_coupon.code }}</span>
+                        {% endif %}
                     </div>
                     <div class="discount-input-row">
                         <input type="text"
-                               id="discount-code-input"
-                               class="discount-input"
-                               placeholder="کد تخفیف را وارد کنید"
+                               class="discount-input influencer-discount-input"
+                               placeholder="کد تخفیف اینفلوئنسر را وارد کنید"
                                autocomplete="off"
-                               maxlength="50">
-                        <button type="button" class="btn-apply-discount" id="apply-discount-btn">اعمال</button>
+                               maxlength="50"
+                               {% if campaign.influencer_coupon %}disabled{% endif %}>
+                        <button type="button" 
+                                class="btn-apply-discount apply-discount-btn"
+                                data-scope="influencer"
+                                {% if campaign.influencer_coupon %}disabled{% endif %}>
+                            {% if campaign.influencer_coupon %}✓ اعمال شد{% else %}اعمال{% endif %}
+                        </button>
                     </div>
-                    <div id="discount-message" class="discount-message d-none"></div>
+                    <div class="discount-message d-none" id="influencer-discount-message"></div>
                 </div>
+                
+                {# کد تخفیف تیم محتوا #}
+                <div class="discount-box mb-3" id="content-discount-box"
+                     data-scope="content_team"
+                     {% if campaign.content_team_coupon %}data-applied="true"{% endif %}>
+                    <div class="discount-box-header">
+                        <span class="discount-icon">🎬</span>
+                        <span>کد تخفیف تیم محتوا</span>
+                        {% if campaign.content_team_coupon %}
+                            <span class="badge bg-success ms-2">اعمال شده: {{ campaign.content_team_coupon.code }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="discount-input-row">
+                        <input type="text"
+                               class="discount-input content-discount-input"
+                               placeholder="کد تخفیف تیم محتوا را وارد کنید"
+                               autocomplete="off"
+                               maxlength="50"
+                               {% if campaign.content_team_coupon %}disabled{% endif %}>
+                        <button type="button" 
+                                class="btn-apply-discount apply-discount-btn"
+                                data-scope="content_team"
+                                {% if campaign.content_team_coupon %}disabled{% endif %}>
+                            {% if campaign.content_team_coupon %}✓ اعمال شد{% else %}اعمال{% endif %}
+                        </button>
+                    </div>
+                    <div class="discount-message d-none" id="content-discount-message"></div>
+                </div>
+                
+                {# کد تخفیف پلتفرم #}
+                <div class="discount-box mb-4" id="platform-discount-box"
+                     data-scope="platform"
+                     {% if campaign.platform_coupon %}data-applied="true"{% endif %}>
+                    <div class="discount-box-header">
+                        <span class="discount-icon">🏷️</span>
+                        <span>کد تخفیف پلتفرم</span>
+                        {% if campaign.platform_coupon %}
+                            <span class="badge bg-success ms-2">اعمال شده: {{ campaign.platform_coupon.code }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="discount-input-row">
+                        <input type="text"
+                               class="discount-input platform-discount-input"
+                               placeholder="کد تخفیف پلتفرم را وارد کنید"
+                               autocomplete="off"
+                               maxlength="50"
+                               {% if campaign.platform_coupon %}disabled{% endif %}>
+                        <button type="button" 
+                                class="btn-apply-discount apply-discount-btn"
+                                data-scope="platform"
+                                {% if campaign.platform_coupon %}disabled{% endif %}>
+                            {% if campaign.platform_coupon %}✓ اعمال شد{% else %}اعمال{% endif %}
+                        </button>
+                    </div>
+                    <div class="discount-message d-none" id="platform-discount-message"></div>
+                </div>
+            
                 {# ======== نوار قیمت نهایی ======== #}
                 <div class="final-price-box mb-5" id="final-price-box">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <div>
                             <div class="final-price-label">مبلغ قابل پرداخت</div>
                             <div class="final-price-value" id="display-final-total">
-                                {{ final_total|floatformat:0 }}
+                                {% if discount_amount %}
+                                    {{ payable_amount|floatformat:0 }}
+                                {% else %}
+                                    {{ final_total|floatformat:0 }}
+                                {% endif %}
                                 <span class="final-price-unit">تومان</span>
                             </div>
                             <div class="text-warning small mt-1">شامل {{ commission|floatformat:0 }} تومان حق‌العمل پلتفرم</div>
-                            <div class="discount-applied-info d-none mt-1" id="discount-applied-info">
-                                <span class="text-success small">✅ تخفیف اعمال شد:</span>
-                                <span class="text-success small fw-bold" id="discount-amount-display"></span>
+                            <div class="discount-applied-info {% if not discount_amount %}d-none{% endif %} mt-1" id="discount-applied-info">
+                                <span class="text-success small">✅ جمع تخفیف:</span>
+                                <span class="text-success small fw-bold" id="discount-amount-display">
+                                    {% if discount_amount %}
+                                        {{ discount_amount|floatformat:0 }} تومان
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                         <div class="text-secondary small text-start">
@@ -235,6 +365,7 @@
                         </div>
                     </div>
                 </div>
+            
                 {# ======== انتخاب روش پرداخت ======== #}
                 <div class="payment-methods mb-4">
                 
@@ -298,10 +429,6 @@
                 {# ======== فرم پرداخت ======== #}
                 <form method="POST" id="step4-form">
                     {% csrf_token %}
-                    <input type="hidden"
-                           name="discount_code"
-                           id="applied-discount-code"
-                           value="">
                     <input type="hidden" name="payment_method" id="payment-method-input" value="gateway">
                     <div class="d-flex justify-content-between mt-2 flex-wrap gap-2">
                         <a href="{% url 'campaigns:campaign_create_step3' %}"
@@ -313,6 +440,9 @@
         </div>
     </div>
 {% endblock %}
+
+// توی تمپلیت step4.html - بخش script
+
 {% block script %}
     {{ block.super }}
     <script>
@@ -322,105 +452,185 @@
             btn.disabled = true;
             btn.textContent = 'در حال پردازش...';
         });
-
-        // اعمال کد تخفیف
-        document.getElementById('apply-discount-btn').addEventListener('click', function () {
-            const code = document.getElementById('discount-code-input').value.trim();
-            const msgBox = document.getElementById('discount-message');
-            const btn = this;
-
-            if (!code) {
-                showDiscountMessage('لطفاً کد تخفیف را وارد کنید.', 'error');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'در حال بررسی...';
-
-            fetch("{% url 'campaigns:apply_discount' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}',
-                },
-                body: JSON.stringify({
-                    code: code,
-                    campaign_id: {{ campaign.id }},
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-            if (data.success) {
-                // --- آپدیت final-price-box (قبلی) ---
-                document.getElementById('display-final-total').innerHTML =
-                    data.payable_amount_formatted + ' <span class="final-price-unit">تومان</span>';
+        
+        // تابع نمایش پیام
+        function showDiscountMessage(elementId, text, type) {
+            const msgBox = document.getElementById(elementId);
+            if (!msgBox) return;
             
-                document.getElementById('discount-amount-display').textContent =
-                    data.discount_amount_formatted + ' تومان تخفیف';
-                document.getElementById('discount-applied-info').classList.remove('d-none');
-            
-                document.getElementById('applied-discount-code').value = code;
-                document.getElementById('discount-code-input').disabled = true;
-                btn.textContent = '✓ اعمال شد';
-                btn.classList.add('btn-discount-applied');
-            
-                // --- آپدیت cost-breakdown ---
-                // نمایش ردیف تخفیف
-                document.getElementById('breakdown-discount-row').classList.remove('d-none');
-                document.getElementById('breakdown-discount-value').textContent =
-                    '- ' + data.discount_amount_formatted + ' تومان';
-                document.getElementById('breakdown-discount-code-badge').textContent =
-                    '(' + code + ')';
-            
-                // نمایش ردیف مبلغ قابل پرداخت
-                document.getElementById('breakdown-payable-row').classList.remove('d-none');
-                document.getElementById('breakdown-payable-value').textContent =
-                    data.payable_amount_formatted + ' تومان';
-            
-                showDiscountMessage(data.message || 'کد تخفیف با موفقیت اعمال شد.', 'success');
-            }
-             else {
-                btn.disabled = false;
-                btn.textContent = 'اعمال';
-                showDiscountMessage(data.message || 'کد تخفیف نامعتبر است.', 'error');
-            }
-        })
-
-            .catch(() => {
-                btn.disabled = false;
-                btn.textContent = 'اعمال کد';
-                showDiscountMessage('خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
-            });
-        });
-
-        function showDiscountMessage(text, type) {
-            const msgBox = document.getElementById('discount-message');
             msgBox.textContent = text;
             msgBox.className = 'discount-message ' + (type === 'success' ? 'discount-success' : 'discount-error');
+            msgBox.classList.remove('d-none');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    msgBox.classList.add('d-none');
+                }, 5000);
+            }
         }
+        
+        // تابع آپدیت UI بعد از اعمال تخفیف
+        function updateUIAfterDiscount(data) {
+            // آپدیت مبلغ نهایی
+            const displayFinalTotal = document.getElementById('display-final-total');
+            if (displayFinalTotal) {
+                displayFinalTotal.innerHTML = 
+                    data.payable_amount_formatted + ' <span class="final-price-unit">تومان</span>';
+            }
+            
+            // آپدیت جمع تخفیف
+            if (data.discount_amount > 0) {
+                const discountAmountDisplay = document.getElementById('discount-amount-display');
+                const discountAppliedInfo = document.getElementById('discount-applied-info');
+                const breakdownPayableRow = document.getElementById('breakdown-payable-row');
+                const breakdownPayableValue = document.getElementById('breakdown-payable-value');
+                
+                if (discountAmountDisplay) {
+                    discountAmountDisplay.textContent = data.discount_amount_formatted + ' تومان';
+                }
+                if (discountAppliedInfo) {
+                    discountAppliedInfo.classList.remove('d-none');
+                }
+                if (breakdownPayableRow) {
+                    breakdownPayableRow.classList.remove('d-none');
+                }
+                if (breakdownPayableValue) {
+                    breakdownPayableValue.textContent = data.payable_amount_formatted + ' تومان';
+                }
+            }
+            
+            // آپدیت breakdown بر اساس اسکوپ
+            if (data.scope === 'influencer') {
+                if (data.discount_breakdown.influencer_discount > 0) {
+                    const row = document.getElementById('breakdown-influencer-discount-row');
+                    const value = document.getElementById('breakdown-influencer-discount-value');
+                    const badge = document.getElementById('influencer-discount-code-badge');
+                    
+                    if (row) row.classList.remove('d-none');
+                    if (value) {
+                        value.textContent = '- ' + data.discount_breakdown.influencer_discount.toLocaleString() + ' تومان';
+                    }
+                    if (badge) {
+                        badge.textContent = '(' + data.coupon_code + ')';
+                    }
+                }
+            } else if (data.scope === 'content_team') {
+                if (data.discount_breakdown.content_discount > 0) {
+                    const row = document.getElementById('breakdown-content-discount-row');
+                    const value = document.getElementById('breakdown-content-discount-value');
+                    const badge = document.getElementById('content-discount-code-badge');
+                    
+                    if (row) row.classList.remove('d-none');
+                    if (value) {
+                        value.textContent = '- ' + data.discount_breakdown.content_discount.toLocaleString() + ' تومان';
+                    }
+                    if (badge) {
+                        badge.textContent = '(' + data.coupon_code + ')';
+                    }
+                }
+            } else if (data.scope === 'platform') {
+                if (data.discount_breakdown.platform_discount > 0) {
+                    const row = document.getElementById('breakdown-platform-discount-row');
+                    const value = document.getElementById('breakdown-platform-discount-value');
+                    const badge = document.getElementById('platform-discount-code-badge');
+                    
+                    if (row) row.classList.remove('d-none');
+                    if (value) {
+                        value.textContent = '- ' + data.discount_breakdown.platform_discount.toLocaleString() + ' تومان';
+                    }
+                    if (badge) {
+                        badge.textContent = '(' + data.coupon_code + ')';
+                    }
+                }
+            }
+            
+            // آپدیت قیمت نهایی در breakdown
+            const breakdownFinalTotal = document.getElementById('breakdown-final-total');
+            if (breakdownFinalTotal) {
+                breakdownFinalTotal.textContent = data.final_total_formatted + ' تومان';
+            }
+        }
+        
+        // اعمال کد تخفیف
+        document.querySelectorAll('.apply-discount-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const scope = this.dataset.scope;
+                const boxId = scope === 'influencer' ? 'influencer' : 
+                             scope === 'content_team' ? 'content' : 'platform';
+                
+                const input = document.querySelector(`.${boxId}-discount-input`);
+                const code = input.value.trim();
+                const msgBoxId = `${boxId}-discount-message`;
+                
+                if (!code) {
+                    showDiscountMessage(msgBoxId, 'لطفاً کد تخفیف را وارد کنید.', 'error');
+                    return;
+                }
+                
+                const originalText = this.textContent;
+                this.disabled = true;
+                this.textContent = 'در حال بررسی...';
+                
+                const requestData = {
+                    code: code,
+                    scope: scope,
+                    campaign_id: {{ campaign.id }},
+                };
+                
+                fetch("{% url 'campaigns:apply_discount' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // غیرفعال کردن input و button
+                        input.disabled = true;
+                        this.textContent = '✓ اعمال شد';
+                        this.classList.add('btn-discount-applied');
+                        
+                        // آپدیت header
+                        const box = document.getElementById(`${boxId}-discount-box`);
+                        const header = box.querySelector('.discount-box-header');
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-success ms-2';
+                        badge.textContent = `اعمال شده: ${code}`;
+                        header.appendChild(badge);
+                        
+                        // آپدیت UI با داده‌های جدید
+                        updateUIAfterDiscount(data);
+                        
+                        showDiscountMessage(msgBoxId, data.message || 'کد تخفیف با موفقیت اعمال شد.', 'success');
+                    } else {
+                        this.disabled = false;
+                        this.textContent = originalText;
+                        showDiscountMessage(msgBoxId, data.message || 'کد تخفیف نامعتبر است.', 'error');
+                    }
+                })
+                .catch(error => {
+                    this.disabled = false;
+                    this.textContent = originalText;
+                    showDiscountMessage(msgBoxId, 'خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+                });
+            });
+        });
+        
         // انتخاب روش پرداخت
-
         const paymentCards = document.querySelectorAll('.payment-card');
         const paymentInput = document.getElementById('payment-method-input');
         
         paymentCards.forEach(card => {
-        
             card.addEventListener('click', function () {
-        
-                if (this.classList.contains('disabled')) {
-                    return;
-                }
-        
+                if (this.classList.contains('disabled')) return;
+                
                 paymentCards.forEach(c => c.classList.remove('active'));
-        
                 this.classList.add('active');
-        
                 paymentInput.value = this.dataset.method;
-        
             });
-        
         });
-
-
     </script>
 {% endblock %}

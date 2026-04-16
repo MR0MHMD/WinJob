@@ -85,9 +85,9 @@ def campaign_create_step3_router(request):
         messages.error(request, "نوع محتوای کمپین معتبر نیست.")
         return redirect("campaigns:campaign_create_step1")
 
+
 @login_required
 def api_content_team_rates(request):
-
     service_type = request.GET.get("service_type")
     minutes = request.GET.get("minutes")
 
@@ -128,14 +128,20 @@ def api_content_team_rates(request):
 @require_POST
 @login_required
 def apply_discount_code(request):
-
     try:
         body = json.loads(request.body)
         code = body.get("code", "").strip()
+        scope = body.get("scope", "")
 
         if not code:
             return JsonResponse(
                 {"success": False, "message": "کد تخفیف وارد نشده است."},
+                status=400
+            )
+
+        if scope not in ['influencer', 'content_team', 'platform']:
+            return JsonResponse(
+                {"success": False, "message": "نوع تخفیف نامعتبر است."},
                 status=400
             )
 
@@ -149,6 +155,7 @@ def apply_discount_code(request):
 
         from campaigns.models import Campaign, Coupon
         from campaigns.services import create_campaign_invoice
+        from django.utils import timezone
 
         campaign = Campaign.objects.filter(
             id=campaign_id,
@@ -161,40 +168,61 @@ def apply_discount_code(request):
                 status=404
             )
 
+        # Check if already has coupon for this scope
+        scope_field_map = {
+            'influencer': 'influencer_coupon_id',
+            'content_team': 'content_team_coupon_id',
+            'platform': 'platform_coupon_id'
+        }
+
+        existing_coupon = getattr(campaign, scope_field_map[scope])
+        if existing_coupon:
+            return JsonResponse({
+                "success": False,
+                "message": f"شما قبلاً از یک کد تخفیف {dict(Coupon.Scope.choices)[scope]} استفاده کرده‌اید."
+            }, status=400)
+
         try:
-            coupon = Coupon.objects.get(code=code)
+            coupon = Coupon.objects.get(code__iexact=code, scope=scope)
         except Coupon.DoesNotExist:
             return JsonResponse(
                 {"success": False, "message": "کد تخفیف معتبر نیست."},
                 status=404
             )
 
-        # ----------------------
         # Basic validation
-        # ----------------------
-
         if not coupon.is_valid():
             return JsonResponse(
                 {"success": False, "message": "این کد تخفیف قابل استفاده نیست."},
                 status=400
             )
 
+        # Check if user has used this coupon in other campaigns
+        user_coupon_used = Campaign.objects.filter(
+            advertiser=request.user.advertiser_profile,
+            **{f"{scope_field_map[scope]}": coupon}
+        ).exclude(
+            id=campaign_id
+        ).exclude(
+            status__in=[Campaign.Status.CANCELLED]
+        ).exists()
+
+        if user_coupon_used:
+            return JsonResponse({
+                "success": False,
+                "message": "شما قبلاً در یک کمپین دیگر از این کد تخفیف استفاده کرده‌اید."
+            }, status=400)
+
+        # Scope-specific validation
         influencer_bookings = campaign.influencer_bookings.select_related(
             "channel__influencer"
         )
-
         content_orders = campaign.content_orders.select_related("team")
 
-        # ----------------------
-        # Scope validation
-        # ----------------------
-
         if coupon.scope == Coupon.Scope.INFLUENCER:
-
-            if coupon.influencer:
-
+            if coupon.channel:
                 exists = influencer_bookings.filter(
-                    channel__influencer_id=coupon.influencer_id
+                    channel_id=coupon.channel_id
                 ).exists()
 
                 if not exists:
@@ -204,9 +232,7 @@ def apply_discount_code(request):
                     }, status=400)
 
         elif coupon.scope == Coupon.Scope.CONTENT_TEAM:
-
             if coupon.team:
-
                 exists = content_orders.filter(
                     team_id=coupon.team_id
                 ).exists()
@@ -217,28 +243,37 @@ def apply_discount_code(request):
                         "message": "این کد تخفیف مربوط به تیم محتوای دیگری است."
                     }, status=400)
 
-        # ----------------------
-        # Apply coupon
-        # ----------------------
+        # Apply coupon to campaign
+        if scope == 'influencer':
+            campaign.influencer_coupon = coupon
+        elif scope == 'content_team':
+            campaign.content_team_coupon = coupon
+        else:  # platform
+            campaign.platform_coupon = coupon
 
-        campaign.coupon = coupon
-        campaign.save(update_fields=["coupon"])
+        campaign.save(update_fields=[scope_field_map[scope]])
 
-        # ----------------------
         # Recalculate invoice
-        # ----------------------
-
         invoice = create_campaign_invoice(campaign)
+        discount_breakdown = getattr(invoice, 'discount_breakdown', {
+            'influencer_discount': 0,
+            'content_discount': 0,
+            'platform_discount': 0
+        })
 
         return JsonResponse({
             "success": True,
             "message": "کد تخفیف با موفقیت اعمال شد.",
+            "scope": scope,
+            "coupon_code": coupon.code,
 
             "discount_type": coupon.discount_type,
             "discount_value": float(coupon.value),
 
             "discount_amount": invoice.discount_amount,
             "discount_amount_formatted": f"{invoice.discount_amount:,}",
+
+            "discount_breakdown": discount_breakdown,
 
             "payable_amount": invoice.payable_amount,
             "payable_amount_formatted": f"{invoice.payable_amount:,}",
@@ -264,8 +299,3 @@ def apply_discount_code(request):
             {"error": str(e)},
             status=500
         )
-
-
-
-
-

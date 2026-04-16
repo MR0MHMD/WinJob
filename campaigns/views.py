@@ -463,7 +463,9 @@ def campaign_create_step4(request):
             "platform",
             "content_type",
             "ad_type",
-            "coupon"
+            "influencer_coupon",
+            "content_team_coupon",
+            "platform_coupon"
         ),
         id=campaign_id,
         advertiser=request.user.advertiser_profile
@@ -485,17 +487,14 @@ def campaign_create_step4(request):
     )
 
     invoice = create_campaign_invoice(campaign)
-
     wallet = request.user.wallet
 
     total_price = invoice.influencer_cost + invoice.content_cost
 
     if request.method == "POST":
-
         payment_method = request.POST.get("payment_method", "gateway")
 
         if payment_method == "wallet":
-
             if wallet.balance < invoice.payable_amount:
                 messages.error(request, "موجودی کیف پول کافی نیست.")
                 return redirect("campaigns:campaign_create_step4")
@@ -526,15 +525,16 @@ def campaign_create_step4(request):
                 invoice.is_paid = True
                 invoice.save(update_fields=["is_paid"])
 
-                if campaign.coupon:
-                    campaign.coupon.used_count += 1
-                    campaign.coupon.save(update_fields=["used_count"])
+                # افزایش تعداد استفاده برای هر سه نوع کوپن
+                for coupon in [campaign.influencer_coupon, campaign.content_team_coupon, campaign.platform_coupon]:
+                    if coupon:
+                        coupon.used_count += 1
+                        coupon.save(update_fields=["used_count"])
 
                 campaign.status = Campaign.Status.PENDING
                 campaign.save(update_fields=["status"])
 
             del request.session["campaign_draft_id"]
-
             messages.success(request, "کمپین با موفقیت ثبت شد.")
             return redirect("advertisers:my_campaigns")
 
@@ -563,15 +563,16 @@ def campaign_create_step4(request):
                 invoice.is_paid = True
                 invoice.save(update_fields=["is_paid"])
 
-                if campaign.coupon:
-                    campaign.coupon.used_count += 1
-                    campaign.coupon.save(update_fields=["used_count"])
+                # افزایش تعداد استفاده برای هر سه نوع کوپن
+                for coupon in [campaign.influencer_coupon, campaign.content_team_coupon, campaign.platform_coupon]:
+                    if coupon:
+                        coupon.used_count += 1
+                        coupon.save(update_fields=["used_count"])
 
                 campaign.status = Campaign.Status.PENDING
                 campaign.save(update_fields=["status"])
 
             del request.session["campaign_draft_id"]
-
             messages.success(request, "پرداخت با موفقیت انجام شد. کمپین ثبت گردید.")
             return redirect("advertisers:my_campaigns")
 
@@ -586,6 +587,11 @@ def campaign_create_step4(request):
         "final_total": invoice.total_amount,
         "discount_amount": invoice.discount_amount,
         "payable_amount": invoice.payable_amount,
+        "discount_breakdown": getattr(invoice, 'discount_breakdown', {
+            'influencer_discount': 0,
+            'content_discount': 0,
+            'platform_discount': 0
+        }),
         "invoice": invoice,
         "wallet": wallet,
         "step": 4,

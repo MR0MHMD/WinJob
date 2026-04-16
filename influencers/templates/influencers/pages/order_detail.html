@@ -9,18 +9,6 @@
 
 {% block content %}
     <div class="container pt-4 pb-2">
-        {% if messages %}
-            <div class="container mt-3">
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}info{% endif %} alert-dismissible fade show" role="alert">
-                        <i class="fi-{% if message.tags == 'error' %}x-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} ms-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
@@ -289,59 +277,67 @@
                                 پس از قبول سفارش، لینک ردیابی برای شما فعال می‌شود.
                             </div>
                             
-                        {% elif status == 'accepted' %}
-                            <div class="alert alert-success mt-3 mb-0">
-                                <i class="fi-check-circle ms-2"></i>
-                                شما این سفارش را پذیرفته‌اید.
-                            </div>
+                        {% elif status == 'accepted' or 'running' %}
+                            {% if status == 'accepted' %}
+                                <div class="alert alert-success mt-3 mb-0">
+                                    <i class="fi-check-circle ms-2"></i>
+                                    شما این سفارش را پذیرفته‌اید.
+                                </div>
+                            {% elif status == 'running' %}
+                                <div class="alert alert-success mt-3 mb-0">
+                                    <i class="fi-check-circle ms-2"></i>
+                                    شما در حال انجام این سفارش هستید
+                                </div>
+                            {% endif %} 
+                            
                             
                             <div class="card bg-faded-light border-0 mt-4">
-    <div class="card-header bg-transparent border-light py-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="fi-upload text-primary"></i>
-            <h5 class="text-white mb-0">گزارش انجام کار</h5>
-        </div>
-    </div>
-    <div class="card-body">
-        <p class="text-muted mb-3">
-            <i class="fi-info-circle ms-1"></i>
-            پس از انتشار تبلیغ، می‌توانید گزارش خود را ثبت کنید.
-        </p>
-        
-        {% if not order.report %}
-            {% if start_date <= now %}
-                <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary w-100">
-                    <i class="fi-send ms-2"></i>
-                    ثبت گزارش انجام کار
-                </a>
-            {% else %}
-                <button class="btn btn-secondary w-100" disabled>
-                    <i class="fi-clock ms-2"></i>
-                    از تاریخ {{ start_date|date:"Y/m/d H:i" }} قابل ثبت است
-                </button>
-            {% endif %}
-        {% else %}
-            <div class="info-row">
-                <span class="info-label">لینک پست</span>
-                <span class="info-value">
-                    <a href="{{ order.report.post_link }}" target="_blank" class="text-primary">{{ order.report.post_link|truncatechars:40 }}</a>
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">وضعیت بررسی</span>
-                <span class="info-value">
-                    {% if order.report.status == 'pending' %}
-                    <span class="badge bg-warning text-dark">در انتظار بررسی</span>
-                    {% elif order.report.status == 'approved' %}
-                    <span class="badge bg-success">تأیید شده ✓</span>
-                    {% elif order.report.status == 'rejected' %}
-                    <span class="badge bg-danger">رد شده ✗</span>
-                    {% endif %}
-                </span>
-            </div>
-        {% endif %}
-    </div>
-</div>
+                                <div class="card-header bg-transparent border-light py-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fi-upload text-primary"></i>
+                                        <h5 class="text-white mb-0">گزارش انجام کار</h5>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        <i class="fi-info-circle ms-1"></i>
+                                        پس از انتشار تبلیغ، می‌توانید گزارش خود را ثبت کنید.
+                                    </p>
+                                    
+                                    {% if not order.report %}
+                                        {% if start_date <= now %}
+                                            <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary w-100">
+                                                <i class="fi-send ms-2"></i>
+                                                ثبت گزارش انجام کار
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-secondary w-100" disabled>
+                                                <i class="fi-clock ms-2"></i>
+                                                از تاریخ {{ start_date|date:"Y/m/d H:i" }} قابل ثبت است
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="info-row">
+                                            <span class="info-label">لینک پست</span>
+                                            <span class="info-value">
+                                                <a href="{{ order.report.post_link }}" target="_blank" class="text-primary">{{ order.report.post_link|truncatechars:40 }}</a>
+                                            </span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="info-label">وضعیت بررسی</span>
+                                            <span class="info-value">
+                                                {% if order.report.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">در انتظار بررسی</span>
+                                                {% elif order.report.status == 'approved' %}
+                                                <span class="badge bg-success">تأیید شده ✓</span>
+                                                {% elif order.report.status == 'rejected' %}
+                                                <span class="badge bg-danger">رد شده ✗</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% elif status == 'completed' %}
                             <div class="alert alert-accent mt-3 mb-0">
                                 <i class="fi-star-filled ms-2"></i>

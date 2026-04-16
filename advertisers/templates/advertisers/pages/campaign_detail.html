@@ -318,10 +318,12 @@
                                 <span class="text-muted">هزینه اینفلوئنسر</span>
                                 <span class="text-light">{{ campaign.invoice.influencer_cost }} تومان</span>
                             </li>
-                            <li class="mb-3 d-flex justify-content-between">
-                                <span class="text-muted">تولید محتوا</span>
-                                <span class="text-light">{{ campaign.invoice.content_cost }} تومان</span>
-                            </li>
+                            {% if campaign.invoice.content_cost %}
+                                <li class="mb-3 d-flex justify-content-between">
+                                    <span class="text-muted">تولید محتوا</span>
+                                    <span class="text-light">{{ campaign.invoice.content_cost }} تومان</span>
+                                </li>
+                            {% endif %} 
                             <li class="mb-3 d-flex justify-content-between">
                                 <span class="text-muted">حق العمل</span>
                                 <span class="text-light">{{ campaign.invoice.commission }} تومان</span>
@@ -331,10 +333,14 @@
                                     <span class="text-muted text-success">تخفیف</span>
                                     <span class="text-success">-{{ campaign.invoice.discount_amount }} تومان</span>
                                 </li>
+                                <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
+                                    <span class="fw-bold text-light">مبلغ کل</span>
+                                    <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
+                                </li>
                             {% endif %}
                             <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
-                                <span class="fw-bold text-light">مبلغ کل</span>
-                                <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
+                                <span class="fw-bold text-light">مبلغ قابل پرداخت</span>
+                                <span class="fw-bold text-light">{{ campaign.invoice.payable_amount }} تومان</span>
                             </li>
                         </ul>
                     {% else %}
@@ -364,7 +370,7 @@
                         <!-- تیم تولید (خلاصه) -->
                         <div class="d-flex align-items-center gap-3 mb-3">
                             {% if order.team.logo %}
-                                <img src="{{ order.team.logo.url }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+                                <img src="{{ order.team.logo.url }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;" alt="{{ order.team.name }}">
                             {% else %}
                                 <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                                     <i class="fi-users fs-3 text-light"></i>
@@ -475,7 +481,7 @@
                                 <tr>
                                     <td>
                                         {% if ch.channel.avatar %}
-                                            <img src="{{ ch.channel.avatar.url }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;">
+                                            <img src="{{ ch.channel.avatar.url }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;" alt="{{ ch.channel.channel_name }}">
                                         {% else %}
                                             <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                 <i class="fi-user text-light"></i>
@@ -575,7 +581,7 @@
             <div class="row g-4 mb-4">
                 <div class="col-md-4 text-center">
                     {% if order.team.logo %}
-                        <img src="{{ order.team.logo.url }}" class="rounded-circle mb-3 team-logo-hover" style="width: 100px; height: 100px; object-fit: cover;">
+                        <img src="{{ order.team.logo.url }}" class="rounded-circle mb-3 team-logo-hover" style="width: 100px; height: 100px; object-fit: cover;" alt="{{ order.team.name }}">
                     {% else %}
                         <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 100px; height: 100px;">
                             <i class="fi-users fs-1 text-light"></i>
@@ -911,10 +917,10 @@
                 {% csrf_token %}
                 <div class="modal-body p-4">
                     <div class="mb-4">
-                        <label class="form-label text-light small fw-semibold mb-2">
+                        <label for="feedback" class="form-label text-light small fw-semibold mb-2">
                             📝 توضیحات ویرایش <span class="text-danger">*</span>
                         </label>
-                        <textarea name="feedback" class="form-control bg-faded-dark border-light text-light" rows="5" 
+                        <textarea id="feedback" name="feedback" class="form-control bg-faded-dark border-light text-light" rows="5" 
                                   placeholder="لطفاً توضیح دهید چه تغییراتی می‌خواهید..."></textarea>
                         <small class="text-muted">توضیحات دقیق به تیم کمک میکند تا ویرایش بهتری انجام دهد</small>
                     </div>

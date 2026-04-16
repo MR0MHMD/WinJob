@@ -8,82 +8,65 @@ def create_campaign_invoice(campaign):
         "channel__influencer"
     )
 
-    # ✅ استفاده از sum() پایتون
     influencer_cost = sum(booking.price for booking in influencer_bookings)
 
     content_orders = campaign.content_orders.select_related("team")
-
-    # ✅ استفاده از sum() پایتون
     content_cost = sum(order.price for order in content_orders)
 
     subtotal = influencer_cost + content_cost
-
     commission = int(subtotal * PLATFORM_COMMISSION)
 
-    coupon = campaign.coupon
+    total_discount = 0
+    discount_breakdown = {
+        'influencer_discount': 0,
+        'content_discount': 0,
+        'platform_discount': 0
+    }
 
-    discount_amount = 0
+    # Influencer Coupon
+    if campaign.influencer_coupon and campaign.influencer_coupon.is_valid():
+        coupon = campaign.influencer_coupon
 
-    # ----------------------------
-    # Coupon Logic
-    # ----------------------------
+        if coupon.channel:
+            target_amount = sum(
+                booking.price
+                for booking in influencer_bookings
+                if booking.channel_id == coupon.channel_id
+            )
+        else:
+            target_amount = influencer_cost
 
-    if coupon and coupon.is_valid():
+        discount = coupon.calculate_discount(target_amount)
+        discount_breakdown['influencer_discount'] = discount
+        total_discount += discount
 
-        # ========================
-        # Influencer Discount
-        # ========================
+    # Content Team Coupon
+    if campaign.content_team_coupon and campaign.content_team_coupon.is_valid():
+        coupon = campaign.content_team_coupon
 
-        if coupon.scope == Coupon.Scope.INFLUENCER:
+        if coupon.team:
+            target_amount = sum(
+                order.price
+                for order in content_orders
+                if order.team_id == coupon.team_id
+            )
+        else:
+            target_amount = content_cost
 
-            if coupon.influencer:
+        discount = coupon.calculate_discount(target_amount)
+        discount_breakdown['content_discount'] = discount
+        total_discount += discount
 
-                target_amount = sum(
-                    booking.price
-                    for booking in influencer_bookings
-                    if booking.channel.influencer_id == coupon.influencer_id
-                )
+    # Platform Coupon
+    if campaign.platform_coupon and campaign.platform_coupon.is_valid():
+        coupon = campaign.platform_coupon
+        discount = coupon.calculate_discount(commission)
+        discount_breakdown['platform_discount'] = discount
+        total_discount += discount
 
-            else:
-                target_amount = influencer_cost
-
-            discount_amount = coupon.calculate_discount(target_amount)
-
-        # ========================
-        # Content Team Discount
-        # ========================
-
-        elif coupon.scope == Coupon.Scope.CONTENT_TEAM:
-
-            if coupon.team:
-
-                target_amount = sum(
-                    order.price
-                    for order in content_orders
-                    if order.team_id == coupon.team_id
-                )
-
-            else:
-                target_amount = content_cost
-
-            discount_amount = coupon.calculate_discount(target_amount)
-
-        # ========================
-        # Platform Discount
-        # ========================
-
-        elif coupon.scope == Coupon.Scope.PLATFORM:
-
-            discount_amount = coupon.calculate_discount(commission)
-
-    # ----------------------------
     # Totals
-    # ----------------------------
-
     total_amount = subtotal + commission
-
-    # ✅ استفاده از max() پایتون
-    payable_amount = max(total_amount - discount_amount, 0)
+    payable_amount = max(total_amount - total_discount, 0)
 
     invoice, created = CampaignInvoice.objects.get_or_create(
         campaign=campaign,
@@ -91,7 +74,7 @@ def create_campaign_invoice(campaign):
             "influencer_cost": influencer_cost,
             "content_cost": content_cost,
             "commission": commission,
-            "discount_amount": discount_amount,
+            "discount_amount": total_discount,
             "total_amount": total_amount,
             "payable_amount": payable_amount,
         }
@@ -101,7 +84,7 @@ def create_campaign_invoice(campaign):
         invoice.influencer_cost = influencer_cost
         invoice.content_cost = content_cost
         invoice.commission = commission
-        invoice.discount_amount = discount_amount
+        invoice.discount_amount = total_discount
         invoice.total_amount = total_amount
         invoice.payable_amount = payable_amount
 
@@ -115,5 +98,7 @@ def create_campaign_invoice(campaign):
                 "payable_amount",
             ]
         )
+
+    invoice.discount_breakdown = discount_breakdown
 
     return invoice

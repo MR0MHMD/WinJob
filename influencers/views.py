@@ -165,7 +165,9 @@ def order_detail(request, order_id):
             "campaign__ad_type",
             "campaign__advertiser",
             "campaign__advertiser__category",
-            "campaign__coupon",
+            "campaign__influencer_coupon",
+            "campaign__content_team_coupon",
+            "campaign__platform_coupon",
             "campaign__content",
             "channel",
             "channel__platform",
@@ -329,6 +331,10 @@ def submit_report(request, order_id):
             screenshot=screenshot,
             status='pending'
         )
+
+        if order.status != CampaignInfluencer.Status.RUNNING:
+            order.status = CampaignInfluencer.Status.RUNNING
+            order.save(update_fields=['status'])
 
         messages.success(request, "گزارش شما با موفقیت ثبت شد. پس از بررسی، نتیجه به شما اطلاع داده می‌شود.")
         return redirect('influencers:order_detail', order_id=order.id)
