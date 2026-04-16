@@ -1,18 +1,22 @@
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink
+from django.db.models import Sum, Q, Avg, Count, Value, IntegerField, FloatField
 from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel
 from django.shortcuts import render, get_object_or_404, redirect
+from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models.functions import TruncDate
+from django.db import IntegrityError, models
+from django.core.paginator import Paginator
 from django.views.generic import ListView
 from .forms import InfluencerChannelForm
 from accounts.models import Transaction
+from plat_form.models import Platform
 from datetime import timedelta, date
-from django.db import IntegrityError
+from location.models import Province
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum, Min, Max
+from core.models import Category
 import jdatetime
 import json
 
@@ -249,21 +253,17 @@ def influencer_respond(request, order_id):
         id=order_id
     )
 
-    # چک دسترسی - فقط صاحب کانال
     if request.user != order.channel.influencer.user:
         messages.error(request, "شما دسترسی به این عملیات ندارید.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    # چک وضعیت - فقط در وضعیت pending قابل تغییره
     if order.status != CampaignInfluencer.Status.PENDING:
         messages.error(request, "این سفارش قبلاً پاسخ داده شده است و قابل تغییر نیست.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    # دریافت اکشن از فرم
     action = request.POST.get('action')
 
     if action == 'accept':
-        # تغییر وضعیت به پذیرفته شده
         order.status = CampaignInfluencer.Status.ACCEPTED
         order.save()
         messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ‌دهنده باشید.")
@@ -510,32 +510,6 @@ def influencer_dashboard(request):
     }
 
     return render(request, "influencers/pages/dashboard.html", context)
-
-
-# influencers/views.py
-
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Q, Avg, Count, F, Value, IntegerField
-from django.db.models.functions import Coalesce
-from django.core.paginator import Paginator
-from .models import InfluencerChannel, InfluencerServiceRate
-from plat_form.models import Platform
-from location.models import Province, City
-from core.models import Category
-from campaigns.models import AdType
-
-# influencers/views.py
-
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Q, Avg, Count, Min, F, Value, IntegerField, FloatField
-from django.db import models
-from django.db.models.functions import Coalesce
-from django.core.paginator import Paginator
-from .models import InfluencerChannel, InfluencerServiceRate
-from plat_form.models import Platform
-from location.models import Province, City
-from core.models import Category
-from campaigns.models import AdType
 
 
 def channel_list(request):
