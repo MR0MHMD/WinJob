@@ -238,7 +238,6 @@ class Campaign(models.Model):
     def is_editable(self):
         return self.status in ["draft", "pending"]
 
-
     @property
     def can_submit_report(self):
         """
@@ -247,6 +246,15 @@ class Campaign(models.Model):
         from django.utils import timezone
         now = timezone.now()
         return now >= self.start_date
+
+    @property
+    def total_clicks(self):
+        """تعداد کل کلیک‌های کمپین (شمارش مستقیم)"""
+        from django.db.models import Count
+
+        return CampaignClick.objects.filter(
+            tracking_link__campaign_influencer__campaign=self
+        ).count()
 
 
 class CampaignInfluencer(models.Model):
@@ -342,6 +350,9 @@ class CampaignInfluencer(models.Model):
         if self.status != self.Status.COMPLETED:
             self.status = self.Status.COMPLETED
             self.save()
+
+    def uniq_url(self):
+        return f"http://127.0.0.1:8000/campaigns/r/{self.tracking_code}"
 
 
 class CampaignContent(models.Model):
