@@ -1,21 +1,26 @@
-# views.py
-
-import json
-from datetime import timedelta
-from django.shortcuts import render
-from django.db.models import Count, Q, Sum, Avg
-from django.utils import timezone
-
 from influencers.models import InfluencerProfile, InfluencerChannel, InfluencerReview
-from content_team.models import ContentTeam
 from campaigns.models import CampaignInvoice, CampaignClick
-from core.models import Category
-from blog.models import Post
+from django.db.models import Count, Q, Sum, Avg
+from content_team.models import ContentTeam
 from plat_form.models import Platform
-
+from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.http import Http404
+from blog.models import Post
 
 
 def home(request):
+
+    user = request.user
+
+    if user.is_authenticated:
+        if user.is_advertiser:
+            return redirect("advertisers:dashboard")
+        elif user.is_influencer:
+            return redirect("influencers:dashboard")
+        elif user.is_team_member:
+            return redirect("content_team:dashboard")
+
     # ========== آمار کلی پلتفرم ==========
     total_influencers = InfluencerProfile.objects.filter(is_active=True).count()
     total_channels = InfluencerChannel.objects.filter(is_active=True).count()
@@ -64,3 +69,27 @@ def home(request):
     }
 
     return render(request, 'core/pages/index.html', context)
+
+
+def landing_page(request, platform):
+    """
+    فقط و فقط مسیریابی ساده به تمپلیت مناسب بر اساس اسم پلتفرم
+    """
+
+    # دیکشنری مسیر تمپلیت‌ها
+    templates = {
+        'telegram': 'core/landing/telegram_landing.html',
+        'instagram': 'core/landing/instagram_landing.html',
+        'bale': 'core/landing/bale_landing.html',
+        'eitaa': 'core/landing/eitaa_landing.html',
+        'rubika': 'core/landing/rubika_landing.html',
+        'sorush': 'core/landing/soroush_landing.html',
+    }
+
+    # پیدا کردن تمپلیت
+    template_name = templates.get(platform.lower())
+
+    if not template_name:
+        raise Http404("صفحه مورد نظر یافت نشد")
+
+    return render(request, template_name)

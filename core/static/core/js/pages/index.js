@@ -425,16 +425,6 @@ document.addEventListener('DOMContentLoaded', function() {
             speed = originalSpeed;
         });
     }
-
-    // مقداردهی اولیه
-    startAnimation();
-    window.addEventListener('resize', handleResize);
-
-    console.log('اسلایدر بی‌نهایت برندها راه‌اندازی شد:', {
-        isRTL: isRTL,
-        speed: speed,
-        trackWidth: trackWidth
-    });
 });
 
 const platforms = [
