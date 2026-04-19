@@ -215,7 +215,7 @@ class CampaignAdmin(admin.ModelAdmin):
                 "invoice_total",
                 "discount_amount",
                 "payable_amount",
-                "coupon",
+                # "coupon",
             ),
             "classes": ("collapse",)
         }),

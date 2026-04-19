@@ -1,0 +1,136 @@
+{% load static %}
+
+<div class="dropdown d-none d-lg-block order-lg-3 my-n2 me-2">
+    <a class="d-block py-2 position-relative" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="notificationDropdown">
+        <i class="fi-bell fs-4 text-light"></i>
+        {% if unread_notifications_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px; margin-top: 5px;">
+                {{ unread_notifications_count }}
+                <span class="visually-hidden">پیام خوانده نشده</span>
+            </span>
+        {% endif %}
+    </a>
+    
+    <div class="dropdown-menu dropdown-menu-dark dropdown-menu-start p-0" style="width: 380px; max-height: 500px; overflow: hidden;" aria-labelledby="notificationDropdown">
+        <div class="d-flex justify-content-between align-items-center px-3 py-3 border-bottom border-light">
+            <h6 class="mb-0 text-light">
+                <i class="fi-bell me-2"></i>
+                اعلان‌ها
+                {% if unread_notifications_count > 0 %}
+                    <span class="badge bg-danger ms-2">{{ unread_notifications_count }} جدید</span>
+                {% endif %}
+            </h6>
+            {% if unread_notifications_count > 0 %}
+                <a href="{% url 'notifications:mark_all_as_read' %}" class="text-muted small text-decoration-none">
+                    <i class="fi-check-circle me-1"></i>
+                    همه خوانده شد
+                </a>
+            {% endif %}
+        </div>
+        
+        <div class="notification-scroll-area" style="max-height: 380px; overflow-y: auto;">
+            {% if recent_notifications %}
+                {% for notif in recent_notifications %}
+                    <a href="{% url 'notifications:mark_as_read' notif.id %}" class="dropdown-item notification-item {% if not notif.is_read %}unread{% endif %} px-3 py-3 border-bottom border-light" style="white-space: normal;">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <div class="notification-icon-mini {{ notif.type }}">
+                                    {% if 'success' in notif.type or 'approved' in notif.type or 'deposit' in notif.type %}
+                                        <i class="fi-check-circle text-success"></i>
+                                    {% elif 'error' in notif.type or 'failed' in notif.type or 'rejected' in notif.type or 'penalty' in notif.type %}
+                                        <i class="fi-alert-circle text-danger"></i>
+                                    {% elif 'warning' in notif.type or 'delayed' in notif.type %}
+                                        <i class="fi-alert-triangle text-warning"></i>
+                                    {% else %}
+                                        <i class="fi-info-circle text-info"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 me-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="mb-1 text-light fs-sm">{{ notif.title|truncatechars:40 }}</h6>
+                                    <small class="text-muted flex-shrink-0 me-2">{{ notif.time_ago }}</small>
+                                </div>
+                                <p class="mb-0 text-muted small">{{ notif.message|truncatechars:80 }}</p>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fi-bell-off fs-1 text-muted mb-3 d-block"></i>
+                    <p class="text-muted mb-0">پیام جدیدی ندارید 🎉</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        {% if recent_notifications %}
+            <div class="border-top border-light p-2 text-center">
+                <a href="{% url 'notifications:list' %}" class="text-muted small text-decoration-none d-block py-1">
+                    مشاهده همه اعلان‌ها
+                    <i class="fi-chevron-left me-1"></i>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.notification-item {
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.notification-item.unread {
+    background-color: rgba(253, 86, 49, 0.08);
+    border-right: 3px solid #fd5631;
+}
+
+.notification-icon-mini {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.notification-icon-mini i {
+    font-size: 1rem;
+}
+
+.notification-scroll-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.notification-scroll-area::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.notification-scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.notification-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* توی فایل CSS اصلی سایت یا توی استایل‌های همون صفحه */
+.dropdown-menu {
+    inset: 0px auto auto 0px !important;
+    transform: translate3d(0px, 40px, 0px) !important;
+}
+
+/* برای منوی نوتیفیکیشن */
+.notification-dropdown-wrapper .dropdown-menu {
+    inset: 0px auto auto 0px !important;
+    transform: translate3d(calc(100% - 380px), 40px, 0px) !important;
+}
+</style>

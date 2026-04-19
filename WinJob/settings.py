@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "location.apps.LocationConfig",
     "plat_form.apps.PlatFormConfig",
     "content_team.apps.ContentTeamConfig",
+    "notifications.apps.NotificationsConfig"
 ]
 
 DAISY_SETTINGS = {
@@ -139,6 +140,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'accounts.context_processors.auth_forms',
                 'django.contrib.messages.context_processors.messages',
+                'notifications.context_processors.unread_notifications',
             ],
         },
     },
