@@ -24,9 +24,23 @@ def login_view(request):
             user = authenticate(request, phone_number=phone_number, password=password)
             if user is not None:
                 login(request, user)
-                return JsonResponse({"success": True, "redirect_url": '/'})
+
+                next_url = request.session.pop('next_url', None) or '/'
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        "success": True,
+                        "redirect_url": next_url
+                    })
+
+                return redirect(next_url)
             else:
-                return JsonResponse({"success": False, "error": "نام کاربری یا رمز عبور اشتباه است."})
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        "success": False,
+                        "error": "نام کاربری یا رمز عبور اشتباه است."
+                    })
+                return redirect('core:home')
     else:
         form = LoginForm()
     return JsonResponse({"success": False, "error": "درخواست نامعتبر است."})
