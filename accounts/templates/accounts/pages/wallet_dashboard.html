@@ -3,55 +3,111 @@
 
 {% block title %}کیف پول | WinJob{% endblock %}
 
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'accounts/css/pages/wallet_dashboard.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+<div class="container py-5">
+    <!-- Breadcrumb-->
+        <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb breadcrumb-light">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">تراکنش های من</li>
+            </ol>
+        </nav>
     <div class="row">
         <div class="col-lg-6 mx-auto">
-            <div class="card bg-faded-light border-0">
-                <div class="card-header bg-transparent border-light py-3">
-                    <h4 class="text-white mb-0">کیف پول من</h4>
-                </div>
-                <div class="card-body text-center">
-                    <div class="mb-4">
-                        <i class="fi-wallet fs-1 text-primary"></i>
-                        <h2 class="text-white mt-2">{{ wallet.balance|floatformat:0 }} تومان</h2>
-                        <p class="text-muted">موجودی فعلی شما</p>
+            <!-- کارت موجودی با افکت شیشه‌ای -->
+            <div class="card bg-dark balance-card border-0 mb-4">
+                <div class="card-body text-center p-4 p-md-5">
+                    <div class="balance-amount">
+                        {{ wallet.balance|floatformat:0 }} تومان
                     </div>
+                    <p class="text-white-50 small mb-4">موجودی فعلی کیف پول شما</p>
                     
-                    <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-primary">
+                    <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-gradient-primary text-light">
                         <i class="fi-plus ms-1"></i>
                         شارژ کیف پول
                     </a>
                 </div>
             </div>
             
-            <!-- تراکنش‌های اخیر -->
-            <div class="card bg-faded-light border-0 mt-4">
-                <div class="card-header bg-transparent border-light py-3">
-                    <h5 class="text-white mb-0">تراکنش‌های اخیر</h5>
+            <!-- کارت تراکنش‌های اخیر -->
+            <div class="card bg-dark transactions-card border-0">
+                <div class="transactions-header d-flex justify-content-between align-items-center">
+                    <h5 class="text-white mb-0 fw-semibold">
+                        <i class="fi-list fs-5 me-2"></i>
+                        تراکنش‌های اخیر
+                    </h5>
+                    <span class="badge bg-faded-primary text-primary small">
+                        <i class="fi-clock me-1"></i>
+                        5 تراکنش آخر
+                    </span>
                 </div>
-                <div class="card-body p-0">
-                    {% for transaction in recent_transactions %}
-                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
-                        <div>
-                            <div class="text-white small">{{ transaction.get_type_display }}</div>
-                            <div class="text-muted small">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
-                            {% if transaction.description %}
-                            <div class="text-muted small mt-1">{{ transaction.description|truncatechars:40 }}</div>
-                            {% endif %}
+                
+                <div id="transactionsContainer">
+                    <div id="transactionsList">
+                        {% for transaction in recent_transactions %}
+                        <div class="transaction-item">
+                            <div class="d-flex align-items-center">
+                                <div class="transaction-icon 
+                                    {% if transaction.type == 'deposit' %}deposit
+                                    {% elif transaction.type == 'withdraw' %}withdraw
+                                    {% elif transaction.type == 'purchase' %}purchase
+                                    {% else %}other{% endif %}">
+                                    <i class="
+                                        {% if transaction.type == 'deposit' %}fi-plus-circle
+                                        {% elif transaction.type == 'withdraw' %}fi-minus-circle
+                                        {% elif transaction.type == 'purchase' %}fi-cart
+                                        {% else %}fi-info-circle{% endif %} fs-5"></i>
+                                </div>
+                                <div class="transaction-info">
+                                    <div class="transaction-title">{{ transaction.get_type_display }}</div>
+                                    <div class="transaction-date">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                                    {% if transaction.description %}
+                                    <div class="transaction-desc">{{ transaction.description|truncatechars:40 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="transaction-amount {% if transaction.is_income %}income{% else %}expense{% endif %}">
+                                {{ transaction.sign_display }}
+                            </div>
                         </div>
-                        <div class="{% if transaction.is_income %}text-success{% else %}text-danger{% endif %}">
-                            {{ transaction.sign_display }}
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fi-inbox"></i>
+                            <p>هنوز تراکنشی انجام نشده است</p>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% empty %}
-                    <div class="text-center py-4">
-                        <p class="text-muted">هنوز تراکنشی انجام نشده است</p>
-                    </div>
-                    {% endfor %}
                 </div>
+                
+                <!-- دکمه لود بیشتر -->
+                {% if recent_transactions|length >= 5 %}
+                <div class="p-3 border-top border-light">
+                    <button type="button" id="loadMoreTransactions" class="btn-load-more">
+                        <i class="fi-arrow-down ms-1"></i>
+                        مشاهده بیشتر
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- کارت اطلاعات تکمیلی -->
+            <div class="text-center mt-4">
+                <p class="text-white-50 small mb-0">
+                    <i class="fi-shield ms-1"></i>
+                    تمام تراکنش‌های شما امن و محفوظ است
+                </p>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'accounts/js/wallet_dashboard.js' %}"></script>
 {% endblock %}

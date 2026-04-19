@@ -1,16 +1,18 @@
+from content_team.models import ContentTeam, TeamJoinRequest, ContentTeamMember
 from accounts.services.registration_service import RegistrationService
 from .forms import RegistrationForm, LoginForm, ProfileUpdateForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET
 from django.http import HttpResponseForbidden
 from core.utils import generate_random_slug
-from content_team.models import ContentTeam, TeamJoinRequest, ContentTeamMember
+from .models import CustomUser, Transaction
+from django.core.paginator import Paginator
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
 
-from .models import CustomUser
 
 
 def login_view(request):
@@ -181,3 +183,16 @@ def delete_account(request):
         messages.success(request, 'حساب کاربری شما با موفقیت حذف شد.')
         return redirect('core:home')
     return HttpResponseForbidden("Only POST requests are allowed.")
+
+
+@login_required
+def dashboard_router(request):
+    if request.user.is_advertiser:
+        return redirect("advertisers:dashboard")
+    elif request.user.is_influencer:
+        return redirect("influencers:dashboard")
+    elif request.user.is_team_member:
+        return redirect("content_team:dashboard")
+    else:
+        return redirect('core:home')
+

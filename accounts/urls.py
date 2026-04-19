@@ -13,4 +13,6 @@ urlpatterns = [
     path('delete_account/', delete_account, name='delete_account'),
     path('wallet/', wallet_dashboard, name='wallet_dashboard'),
     path('wallet/deposit/', wallet_deposit, name='wallet_deposit'),
+    path('wallet/transactions/load-more/', load_more_transactions, name='load_more_transactions'),
+    path('dashboard/router/', dashboard_router, name='dashboard_router')
 ]

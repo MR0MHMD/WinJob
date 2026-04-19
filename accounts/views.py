@@ -1,8 +1,11 @@
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage
+from django.views.decorators.http import require_GET
 from influencers.forms import InfluencerProfileForm
 from advertisers.forms import AdvertiserProfileForm
 from django.shortcuts import render, redirect
 from .forms import ProfileUpdateForm
+from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
 from .models import Transaction
@@ -101,16 +104,91 @@ def wallet_dashboard(request):
     """
     wallet = request.user.wallet
 
-    # تراکنش‌های اخیر
+    # فقط 10 تراکنش اول رو نشون بده
     recent_transactions = Transaction.objects.filter(
         user=request.user
-    ).order_by('-created_at')[:20]
+    ).order_by('-created_at')[:5]
 
     context = {
         'wallet': wallet,
         'recent_transactions': recent_transactions,
     }
     return render(request, 'accounts/pages/wallet_dashboard.html', context)
+
+
+@login_required
+@require_GET
+def load_more_transactions(request):
+    """
+    API برای لود تراکنش‌های بیشتر (Ajax)
+    فقط 10 تای بعدی رو برمیگردونه
+    """
+    try:
+        page = int(request.GET.get('page', 1))
+        per_page = 5
+
+        # گرفتن کل تراکنش‌ها
+        all_transactions = Transaction.objects.filter(
+            user=request.user
+        ).order_by('-created_at')
+
+        # ایجاد Paginator
+        paginator = Paginator(all_transactions, per_page)
+
+        # بررسی وجود صفحه
+        if page > paginator.num_pages:
+            return JsonResponse({
+                'transactions': [],
+                'has_more': False,
+                'error': False
+            })
+
+        # گرفتن تراکنش‌های صفحه مورد نظر
+        current_page = paginator.page(page)
+
+        # ساخت دیتا برای JSON
+        transactions_data = []
+        for transaction in current_page:
+            # تعیین نوع آیکون
+            trans_type = 'other'
+            if transaction.type == 'deposit':
+                trans_type = 'deposit'
+            elif transaction.type == 'withdraw':
+                trans_type = 'withdraw'
+            elif transaction.type == 'purchase':
+                trans_type = 'purchase'
+
+            transactions_data.append({
+                'id': transaction.id,
+                'title': transaction.get_type_display(),
+                'type': trans_type,
+                'amount': transaction.amount,
+                'is_income': transaction.is_income,
+                'description': transaction.description if transaction.description else '',
+                'date': transaction.created_at.strftime('%Y/%m/%d %H:%M'),
+            })
+
+        return JsonResponse({
+            'transactions': transactions_data,
+            'has_more': current_page.has_next(),
+            'current_page': page,
+            'error': False
+        })
+
+    except EmptyPage:
+        return JsonResponse({
+            'transactions': [],
+            'has_more': False,
+            'error': False
+        })
+    except Exception as e:
+        print(f"Error in load_more_transactions: {e}")
+        return JsonResponse({
+            'transactions': [],
+            'has_more': False,
+            'error': True,
+            'message': str(e)
+        })
 
 
 @login_required
