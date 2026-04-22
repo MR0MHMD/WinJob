@@ -11,8 +11,6 @@ class AdvertiserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='advertiser_profile',
                                 verbose_name=_('کاربر'))
     business_name = models.CharField(_('نام کسب‌وکار'), max_length=200)
-    province = models.ForeignKey(Province, on_delete=models.CASCADE,
-                                 related_name='advertisers', verbose_name=_('استان'), null=True, blank=True)
     city = models.ForeignKey(City, verbose_name=_('شهر'), on_delete=models.CASCADE, related_name=_('advertisers'),
                              null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True,
@@ -28,13 +26,13 @@ class AdvertiserProfile(models.Model):
         verbose_name_plural = _('تبلیغ‌دهندگان')
         ordering = ['-created_at']
 
-    def __str__(self): return f"{self.business_name} - {self.province}"
+    def __str__(self): return self.business_name
 
     @property
     def wallet_balance(self):
         return self.user.wallet.balance
 
-    def get_full_location(self): return f"{self.city}، {self.province}"
+    def get_full_location(self): return f"{self.city}، {self.user.province}"
 
     get_full_location.short_description = _('موقعیت جغرافیایی')
 

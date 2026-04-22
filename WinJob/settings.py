@@ -54,13 +54,13 @@ DAISY_SETTINGS = {
     'SIDEBAR_FOOTNOTE': 'ساخته شده با عشق در 2026',
 
     'DEFAULT_THEME_DARK': True,
-    'SHOW_THEME_SELECTOR': False,
+    'SHOW_THEME_SELECTOR': True,
 
     'APPS_REORDER': {
         'auth': {
             'icon': 'fa-solid fa-person-military-pointing',
             'name': 'Authentication',
-            'hide': True,
+            'hide': None,
             'divider_title': "Auth",
         },
         'core': {

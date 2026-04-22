@@ -47,7 +47,6 @@ def advertiser_profile_edit_view(request):
 
             fields = [
                 profile.business_name,
-                profile.province,
                 profile.city,
                 profile.category,
                 profile.description,

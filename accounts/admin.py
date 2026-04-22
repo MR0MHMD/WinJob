@@ -1,106 +1,15 @@
-from django.contrib import admin
+from .forms import CustomUserChangeForm, CustomUserCreationForm
+from django_jalali.admin.filters import JDateFieldListFilter
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.admin import UserAdmin
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
-from django.contrib import messages
-from django_jalali.admin.filters import JDateFieldListFilter
 from django.utils.html import format_html
-from django.urls import reverse
+from .models import CustomUser, Wallet
+from django.contrib import messages
 from django.db.models import Sum
-from .models import CustomUser, Wallet, Transaction
-from advertisers.models import AdvertiserProfile
-from influencers.models import InfluencerProfile
-from core.admin_utils import format_datetime
-from .forms import CustomUserChangeForm, CustomUserCreationForm
+from django.urls import reverse
+from .inline_admin import *
 
-
-# ==================== INLINE CLASSES ====================
-
-class AdvertiserProfileInline(admin.StackedInline):
-    model = AdvertiserProfile
-    can_delete = False
-    verbose_name = _('پروفایل تبلیغ‌دهنده')
-    verbose_name_plural = _('اطلاعات تبلیغ‌دهنده')
-    fields = [
-        'business_name',
-        'province',
-        'city',
-        'category',
-        'description',
-        'website',
-        'is_verified',
-        'formatted_created_at',
-        'formatted_updated_at'
-    ]
-    readonly_fields = ['formatted_created_at', 'formatted_updated_at']
-    extra = 0
-    max_num = 1
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    def formatted_updated_at(self, obj):
-        return format_datetime(obj.updated_at)
-
-    formatted_created_at.short_description = "تاریخ ایجاد"
-    formatted_updated_at.short_description = "تاریخ ویرایش"
-
-
-class InfluencerProfileInline(admin.StackedInline):
-    model = InfluencerProfile
-    can_delete = False
-    verbose_name = _('پروفایل اینفلوئنسر')
-    verbose_name_plural = _('اطلاعات اینفلوئنسر')
-
-    fields = [
-        'full_name',
-        'description',
-        'is_active',
-        'formatted_created_at',
-        'formatted_updated_at'
-    ]
-
-    readonly_fields = [
-        'formatted_created_at',
-        'formatted_updated_at'
-    ]
-
-    extra = 0
-    max_num = 1
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    def formatted_updated_at(self, obj):
-        return format_datetime(obj.updated_at)
-
-    formatted_created_at.short_description = "تاریخ ایجاد"
-    formatted_updated_at.short_description = "تاریخ ویرایش"
-
-
-# ==================== TRANSACTION INLINE ====================
-
-class TransactionInline(admin.TabularInline):
-    """نمایش تراکنش‌های کاربر در صفحه ادمین"""
-    model = Transaction
-    extra = 0
-    can_delete = False
-    max_num = 5
-    fields = ('amount', 'type', 'status', 'sign_display', 'formatted_created_at')
-    readonly_fields = ('amount', 'type', 'status', 'sign_display', 'formatted_created_at')
-
-    def sign_display(self, obj):
-        return obj.sign_display
-
-    sign_display.short_description = "مبلغ"
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    formatted_created_at.short_description = "تاریخ"
-
-
-# ==================== MAIN ADMIN ====================
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -112,10 +21,7 @@ class CustomUserAdmin(UserAdmin):
         'phone_number',
         'nickname',
         'user_type_display',
-        'wallet_balance_display',
         'profile_status',
-        'is_active',
-        'is_staff',
         'formatted_created_at',
     ]
 
@@ -124,6 +30,7 @@ class CustomUserAdmin(UserAdmin):
         'is_staff',
         'is_superuser',
         ('created_at', JDateFieldListFilter),
+        ('province', admin.RelatedOnlyFieldListFilter),
     ]
 
     search_fields = [
@@ -155,14 +62,15 @@ class CustomUserAdmin(UserAdmin):
                 'fields': ('phone_number', 'password')
             }),
             (_('اطلاعات شخصی'), {
-                'fields': ('nickname', 'email', 'avatar', 'display_sheba')
+                'fields': ('nickname', 'email', 'avatar', 'display_sheba', 'province',),
             }),
             (_('اطلاعات مالی'), {
                 'fields': ('wallet_balance_display', 'total_spent_display', 'total_deposits_display'),
                 'classes': ('collapse',)
             }),
             (_('مجوزها'), {
-                'fields': ('is_active', 'is_staff', 'is_superuser')
+                'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager',),
+                'classes': ('collapse',)
             }),
             (_('گروه‌ها و دسترسی‌ها'), {
                 'classes': ('collapse',),
@@ -207,8 +115,15 @@ class CustomUserAdmin(UserAdmin):
             return mark_safe('<span style="color: #4CAF50;">🏢 تبلیغ‌دهنده</span>')
         elif hasattr(obj, 'influencer_profile'):
             return mark_safe('<span style="color: #2196F3;">🌟 اینفلوئنسر</span>')
+        elif hasattr(obj, 'team_member'):
+            return mark_safe('<span style="color: #2196F3;">🌟 عضو تیم</span>')
         elif obj.is_superuser:
             return mark_safe('<span style="color: #f44336;">👑 مدیر سیستم</span>')
+        elif obj.is_staff and obj.is_regional_manager:
+            return mark_safe('<span style="color: #f44336;">👑 مدیر استانی</span>')
+        elif obj.is_staff:
+            return mark_safe('<span style="color: #f44336;">👑 کارمند</span>')
+
         return '-'
 
     user_type_display.short_description = 'نوع کاربر'
@@ -218,7 +133,6 @@ class CustomUserAdmin(UserAdmin):
         try:
             balance = obj.wallet.balance
             color = '#4CAF50' if balance > 0 else '#f44336'
-            # اصلاح: استفاده از f-string به جای {:,}
             return format_html('<span style="color: {}; font-weight: bold;">{} تومان</span>', color, f"{balance:,}")
         except:
             return mark_safe('<span style="color: #f44336;">کیف پول ایجاد نشده</span>')
@@ -232,7 +146,6 @@ class CustomUserAdmin(UserAdmin):
             type__in=[Transaction.Type.CAMPAIGN_PAYMENT, Transaction.Type.WITHDRAW],
             status=Transaction.Status.SUCCESS
         ).aggregate(total=Sum('amount'))['total'] or 0
-        # اصلاح: استفاده از f-string به جای {:,}
         return format_html('<span style="color: #ff9800;">{} تومان</span>', f"{total:,}")
 
     total_spent_display.short_description = 'کل هزینه‌ها'
@@ -244,7 +157,6 @@ class CustomUserAdmin(UserAdmin):
             type__in=[Transaction.Type.DEPOSIT, Transaction.Type.GATEWAY_PAYMENT],
             status=Transaction.Status.SUCCESS
         ).aggregate(total=Sum('amount'))['total'] or 0
-        # اصلاح: استفاده از f-string به جای {:,}
         return format_html('<span style="color: #4CAF50;">{} تومان</span>', f"{total:,}")
 
     total_deposits_display.short_description = 'کل شارژها'
@@ -350,8 +262,6 @@ class CustomUserAdmin(UserAdmin):
     delete_profiles.short_description = 'حذف پروفایل‌های مرتبط'
 
 
-# ==================== WALLET ADMIN ====================
-
 @admin.register(Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'balance_display', 'formatted_created_at', 'formatted_updated_at')
@@ -361,7 +271,6 @@ class WalletAdmin(admin.ModelAdmin):
 
     def balance_display(self, obj):
         color = '#4CAF50' if obj.balance > 0 else '#f44336'
-        # اصلاح: استفاده از f-string به جای {:,}
         return format_html('<span style="color: {}; font-weight: bold;">{} تومان</span>', color, f"{obj.balance:,}")
 
     balance_display.short_description = 'موجودی'
@@ -376,8 +285,6 @@ class WalletAdmin(admin.ModelAdmin):
 
     formatted_updated_at.short_description = 'آخرین بروزرسانی'
 
-
-# ==================== TRANSACTION ADMIN ====================
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
@@ -423,7 +330,8 @@ class TransactionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('توضیحات', {
-            'fields': ('description',)
+            'fields': ('description',),
+            'classes': ('collapse',)
         }),
         ('تاریخ', {
             'fields': ('formatted_created_at',),

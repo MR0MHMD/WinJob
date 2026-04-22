@@ -135,7 +135,7 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ("nickname", "email", "avatar", 'sheba_code')
+        fields = ("nickname", "email", "avatar", 'sheba_code', "province",)
         labels = {
             "nickname": "نام کامل",
             "email": "پست الکترونیکی",
@@ -159,6 +159,14 @@ class ProfileUpdateForm(forms.ModelForm):
                     "data-bs-binded-element": "#name-value",
                     "data-bs-unset-value": "مشخص نشده است",
                     "id": "name-input",
+                }
+            ),
+            "province": forms.Select(
+                attrs={
+                    "class": "form-select form-select-light mt-3",
+                    "data-bs-binded-element": "#province-value",
+                    "data-bs-unset-value": "مشخص نشده است",
+                    "id": "province-input",
                 }
             ),
             "avatar": forms.FileInput(
@@ -189,6 +197,7 @@ class ProfileUpdateForm(forms.ModelForm):
                 }
             ),
         }
+
 
     def clean_nickname(self):
         nickname = (self.cleaned_data.get("nickname") or "").strip()

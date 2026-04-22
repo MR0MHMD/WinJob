@@ -1,33 +1,18 @@
-# campaigns/models.py
-import os
-
-from django.core.exceptions import ValidationError
-from django.db import models, IntegrityError
-from django.utils import timezone
+from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
-from django_jalali.db import models as jmodels
+from django.core.exceptions import ValidationError
 from influencers.models import InfluencerProfile
 from advertisers.models import AdvertiserProfile
-from .utils import validate_end_date, validate_start_date
-from core.models import Category
 from django.contrib.auth import get_user_model
-import uuid
-from django.db import models
+from django_jalali.db import models as jmodels
+from django.db import models, IntegrityError
 from urllib.parse import urlencode
+from django.utils import timezone
+from core.models import Category
+import uuid
+import os
 
 User = get_user_model()
-
-
-class CampaignStatus(models.TextChoices):
-    DRAFT = 'draft', _('پیش نویس')
-    APPROVED = 'approved', _('تایید شده')
-    REJECTED = 'rejected', _('رد شده')
-    PENDING = 'pending', _('در انتظار تایید')
-
-
-class PaymentStatus(models.TextChoices):
-    PAID = 'paid', _('پرداخت شده')
-    UNPAID = 'unpaid', _('پرداخت نشده')
 
 
 class ContentType(models.Model):
@@ -106,7 +91,7 @@ class AdType(models.Model):
         ordering = ['platform', 'name']
 
     def __str__(self):
-        return f'{self.platform.name} ← {self.name}'
+        return self.name
 
 
 class Campaign(models.Model):
@@ -273,6 +258,11 @@ class Campaign(models.Model):
             tracking_link__campaign_influencer__campaign=self
         ).count()
 
+    def formated_created_at(self):
+        from core.admin_utils import format_datetime
+        return format_datetime(self.created_at)
+
+
 
 class CampaignInfluencer(models.Model):
     class Status(models.TextChoices):
@@ -333,7 +323,7 @@ class CampaignInfluencer(models.Model):
 
     is_paid = models.BooleanField(
         default=False,
-        verbose_name="پرداخت شده به اینفلوئنسر"
+        verbose_name="تسویه شده؟"
     )
 
     paid_at = jmodels.jDateTimeField(
@@ -347,7 +337,7 @@ class CampaignInfluencer(models.Model):
         verbose_name_plural = "رزروهای اینفلوئنسر"
 
     def __str__(self):
-        return f"{self.campaign} - {self.channel}"
+        return f"{self.campaign} - {self.channel.channel_name} - {self.channel.platform}"
 
     def save(self, *args, **kwargs):
 

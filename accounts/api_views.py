@@ -208,5 +208,5 @@ def dashboard_router(request):
     elif request.user.is_team_member:
         return redirect("content_team:dashboard")
     else:
-        return redirect('core:home')
+        return redirect('/admin')
 

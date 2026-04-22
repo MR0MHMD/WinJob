@@ -1,113 +1,19 @@
-# influencers/admin.py
-
-from django.utils.safestring import mark_safe
-from django.contrib import admin
-from django.utils.html import format_html
-from django.urls import reverse
+from core.admin_utils import format_datetime, RegionalFilterAdminMixin
 from django_jalali.admin.filters import JDateFieldListFilter
-from core.admin_utils import format_datetime
-from .models import (
-    InfluencerProfile,
-    InfluencerChannel,
-    InfluencerServiceRate,
-    InfluencerReview,
-    CampaignReport
-)
+from django.utils.safestring import mark_safe
+from accounts.models import CustomUser
+from .models import InfluencerProfile
+from location.models import Province
+from django.urls import reverse
+from .inline_admin import *
 
-
-# =========================
-# Service Rate Inline
-# =========================
-
-class InfluencerServiceRateInline(admin.TabularInline):
-    model = InfluencerServiceRate
-    extra = 0
-
-    fields = (
-        "ad_type",
-        "price",
-        "formatted_price",
-        "is_active",
-        "created_at",
-    )
-
-    readonly_fields = (
-        "formatted_price",
-        "created_at",
-    )
-
-    autocomplete_fields = (
-        "ad_type",
-    )
-
-
-# =========================
-# Channel Inline
-# =========================
-
-class InfluencerChannelInline(admin.TabularInline):
-    model = InfluencerChannel
-    extra = 0
-
-    fields = (
-        "platform",
-        "channel_id",
-        "followers_count",
-        "followers_formatted_display",
-        "is_active",
-        "created_at",
-    )
-
-    readonly_fields = (
-        "followers_formatted_display",
-        "created_at",
-    )
-
-    show_change_link = True
-
-    def followers_formatted_display(self, obj):
-        return obj.followers_formatted()
-
-    followers_formatted_display.short_description = "فالوورها"
-
-
-# =========================
-# review Inline
-# =========================
-
-class InfluencerReviewInline(admin.TabularInline):
-    model = InfluencerReview
-    extra = 0
-
-    fields = (
-        "advertiser",
-        "campaign_booking",
-        "rating",
-        "comment",
-        "created_at",
-    )
-
-    readonly_fields = (
-        "created_at",
-    )
-
-    autocomplete_fields = (
-        "advertiser",
-        "campaign_booking",
-    )
-
-    show_change_link = True
-
-
-# =========================
-# Influencer Profile
-# =========================
 
 @admin.register(InfluencerProfile)
-class InfluencerProfileAdmin(admin.ModelAdmin):
+class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "full_name",
-        "user",
+        "user_phone_display",
+        "user_province",
         "channels_count",
         "is_active",
         "formatted_created_at",
@@ -138,7 +44,6 @@ class InfluencerProfileAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-
         ("اطلاعات اصلی", {
             "fields": (
                 "user",
@@ -146,14 +51,13 @@ class InfluencerProfileAdmin(admin.ModelAdmin):
                 "description",
             )
         }),
-
         ("وضعیت", {
             "fields": (
                 "is_active",
                 "channels_count_display",
-            )
+            ),
+            'classes': ('collapse',)
         }),
-
         ("تاریخ ها", {
             "fields": (
                 "formatted_created_at",
@@ -163,7 +67,17 @@ class InfluencerProfileAdmin(admin.ModelAdmin):
         }),
     )
 
-    # ---------- helpers ----------
+    def user_phone_display(self, obj):
+        return obj.user.phone_number
+
+    user_phone_display.short_description = "شماره تماس"
+    user_phone_display.admin_order_field = "user__phone_number"
+
+    def user_province(self, obj):
+        return obj.user.province.name if obj.user.province else "-"
+
+    user_province.short_description = "استان"
+    user_province.admin_order_field = "user__province__name"
 
     def channels_count(self, obj):
         return obj.channels.count()
@@ -180,59 +94,86 @@ class InfluencerProfileAdmin(admin.ModelAdmin):
     def formatted_created_at(self, obj):
         return format_datetime(obj.created_at)
 
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
     def formatted_updated_at(self, obj):
         return format_datetime(obj.updated_at)
 
-    formatted_created_at.short_description = "تاریخ ایجاد"
     formatted_updated_at.short_description = "آخرین ویرایش"
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            return qs.filter(user__province=request.user.province)
+        return qs
 
-# =========================
-# Channel Admin
-# =========================
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'user' and request.user.is_regional_manager:
+            kwargs['queryset'] = CustomUser.objects.filter(
+                province=request.user.province,
+                influencer_profile__isnull=True
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        if request.user.is_regional_manager and request.user.province:
+            if obj.user.province != request.user.province:
+                from django.core.exceptions import ValidationError
+                raise ValidationError('شما فقط می‌توانید اینفلوئنسرهای استان خودتان را مدیریت کنید.')
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(InfluencerChannel)
-class InfluencerChannelAdmin(admin.ModelAdmin):
+class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "channel_display",
         "influencer",
         "platform",
         "followers_formatted_display",
-        "location",
+        "channel_province",
+        "location_city",
         "rates_count",
         "is_active",
         "formatted_created_at",
     )
-
-    list_filter = (
-        "platform",
-        "is_active",
-        ("created_at", JDateFieldListFilter),
-    )
-
-    search_fields = (
-        "channel_id",
-        "influencer__full_name",
-        "influencer__user__phone_number",
-    )
-
-    autocomplete_fields = (
-        "influencer",
-        "platform",
-        "category",
-        "province",
-        "city",
-    )
-
-    inlines = [
-        InfluencerServiceRateInline
-    ]
-
+    list_filter = ('platform', 'province', "is_active", 'created_at',)
+    search_fields = ("channel_id", "channel_name", "influencer__full_name", "influencer__user__phone_number",)
+    autocomplete_fields = ("influencer", "platform", "category", "province", "city",)
+    ordering = ("created_at", 'followers_count')
+    inlines = [InfluencerServiceRateInline]
     readonly_fields = (
-        "followers_formatted_display",
-        "formatted_created_at",
-        "formatted_updated_at",
-        "rates_count_display",
+        "followers_formatted_display", "formatted_created_at", "formatted_updated_at", "rates_count_display",)
+
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "influencer",
+                "platform",
+                "channel_id",
+                "channel_name",
+                "url",
+            )
+        }),
+        ("موقعیت مکانی کانال", {
+            "fields": ("province", "city"),
+            "classes": ("collapse",)
+        }),
+        ("دسته‌بندی", {
+            "fields": ("category",),
+            "classes": ("collapse",)
+        }),
+        ("آمار و تصویر", {
+            "fields": ("followers_count", "avatar"),
+            "classes": ("collapse",)
+        }),
+        ("وضعیت", {
+            "fields": ("is_active",),
+            "classes": ("collapse",)
+        }),
+        ("تاریخچه", {
+            "fields": ("formatted_created_at", "formatted_updated_at"),
+            "classes": ("collapse",)
+        }),
     )
 
     def channel_display(self, obj):
@@ -240,14 +181,19 @@ class InfluencerChannelAdmin(admin.ModelAdmin):
 
     channel_display.short_description = "آیدی کانال"
 
-    def location(self, obj):
-        if obj.city:
-            return f"{obj.city.name} - {obj.province.name}"
-        if obj.province:
-            return obj.province.name
-        return "-"
+    def channel_province(self, obj):
+        """استان کانال (از فیلد province خود مدل)"""
+        return obj.province.name if obj.province else "-"
 
-    location.short_description = "موقعیت"
+    channel_province.short_description = "استان کانال"
+    channel_province.admin_order_field = "province__name"
+
+    def location_city(self, obj):
+        """نمایش شهر کانال"""
+        return obj.city.name if obj.city else "-"
+
+    location_city.short_description = "شهر"
+    location_city.admin_order_field = "city__name"
 
     def followers_formatted_display(self, obj):
         return obj.followers_formatted()
@@ -269,74 +215,139 @@ class InfluencerChannelAdmin(admin.ModelAdmin):
     def formatted_created_at(self, obj):
         return format_datetime(obj.created_at)
 
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
     def formatted_updated_at(self, obj):
         return format_datetime(obj.updated_at)
 
-    formatted_created_at.short_description = "تاریخ ایجاد"
     formatted_updated_at.short_description = "آخرین ویرایش"
 
+    def get_queryset(self, request):
+        """فقط کانال‌هایی که استانشون با استان مدیر یکی هست"""
+        qs = super().get_queryset(request)
 
-# =========================
-# Service Rate Admin
-# =========================
+        if request.user.is_regional_manager and request.user.province:
+            return qs.filter(province=request.user.province)
+
+        return qs
+
+    def has_change_permission(self, request, obj=None):
+        """بررسی دسترسی ویرایش بر اساس استان کانال"""
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """بررسی دسترسی حذف بر اساس استان کانال"""
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """محدود کردن انتخاب‌ها در فرم"""
+        if db_field.name == 'province' and request.user.is_regional_manager:
+            kwargs['queryset'] = Province.objects.filter(id=request.user.province.id)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        """موقع ذخیره، استان کانال رو خودکار ست کن برای مدیر استانی"""
+        if request.user.is_regional_manager and request.user.province:
+            obj.province = request.user.province
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(InfluencerServiceRate)
-class InfluencerServiceRateAdmin(admin.ModelAdmin):
+class InfluencerServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    list_filter = ("is_active", "ad_type", "channel__platform", "channel__province",)
+    search_fields = ("channel__channel_id", "channel__channel_name", "channel__influencer__full_name", "ad_type__name",)
+    autocomplete_fields = ("channel", "ad_type",)
+    readonly_fields = ("formatted_price", "formatted_created_at", "formatted_updated_at",)
     list_display = (
-        "channel",
-        "influencer",
+        "channel_display",
+        "influencer_name",
         "ad_type",
         "formatted_price",
         "is_active",
         "formatted_created_at",
     )
-
-    list_filter = (
-        "is_active",
-        "ad_type",
-        "channel__platform",
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": ("channel", "ad_type", "price")
+        }),
+        ("وضعیت", {
+            "fields": ("is_active",),
+            "classes": ("collapse",)
+        }),
+        ("تاریخچه", {
+            "fields": ("formatted_created_at", "formatted_updated_at"),
+            "classes": ("collapse",)
+        }),
     )
 
-    search_fields = (
-        "channel__channel_id",
-        "channel__influencer__full_name",
-        "ad_type__name",
-    )
+    def channel_display(self, obj):
+        return f"{obj.channel.channel_name} ({obj.channel.channel_id})"
 
-    autocomplete_fields = (
-        "channel",
-        "ad_type",
-    )
+    channel_display.short_description = "کانال"
 
-    readonly_fields = (
-        "formatted_price",
-        "formatted_created_at",
-        "formatted_updated_at",
-    )
+    def influencer_name(self, obj):
+        return obj.channel.influencer.full_name
 
-    def influencer(self, obj):
-        return obj.channel.influencer
+    influencer_name.short_description = "اینفلوئنسر"
+    influencer_name.admin_order_field = "channel__influencer__full_name"
 
-    influencer.short_description = "اینفلوئنسر"
+    def formatted_price(self, obj):
+        return obj.formatted_price()
+
+    formatted_price.short_description = "قیمت"
 
     def formatted_created_at(self, obj):
         return format_datetime(obj.created_at)
 
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
     def formatted_updated_at(self, obj):
         return format_datetime(obj.updated_at)
 
-    formatted_created_at.short_description = "تاریخ ایجاد"
     formatted_updated_at.short_description = "آخرین ویرایش"
 
+    def get_queryset(self, request):
+        """فقط نرخ‌هایی که کانالش در استان مدیر است"""
+        qs = super().get_queryset(request)
 
-# =========================
-# Influencer Review Admin
-# =========================
+        if request.user.is_regional_manager and request.user.province:
+            return qs.filter(channel__province=request.user.province)
+
+        return qs
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.channel.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.channel.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """محدود کردن انتخاب کانال در فرم"""
+        if db_field.name == 'channel' and request.user.is_regional_manager:
+            kwargs['queryset'] = InfluencerChannel.objects.filter(
+                province=request.user.province
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(InfluencerReview)
-class InfluencerReviewAdmin(admin.ModelAdmin):
+class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "influencer",
+        "influencer_province",
         "advertiser",
         "rating",
         "campaign_booking",
@@ -344,13 +355,11 @@ class InfluencerReviewAdmin(admin.ModelAdmin):
         "formatted_created_at",
     )
 
-    list_filter = (
-        "rating",
-        ("created_at", JDateFieldListFilter),
-    )
+    list_filter = ("rating", ("created_at", JDateFieldListFilter), "influencer__user__province",)
 
     search_fields = (
         "influencer__full_name",
+        "influencer__user__phone_number",
         "advertiser__user__phone_number",
         "advertiser__user__nickname",
         "comment",
@@ -364,101 +373,91 @@ class InfluencerReviewAdmin(admin.ModelAdmin):
 
     readonly_fields = (
         "formatted_created_at",
+        "influencer_province_display",
     )
 
     fieldsets = (
-
         ("اطلاعات اصلی", {
-            "fields": (
-                "influencer",
-                "advertiser",
-                "campaign_booking",
-            )
+            "fields": ("influencer", "advertiser", "campaign_booking",)
         }),
-
+        ("موقعیت اینفلوئنسر", {
+            "fields": ("influencer_province_display",)
+        }),
         ("امتیاز و نظر", {
-            "fields": (
-                "rating",
-                "comment",
-            )
+            "fields": ("rating", "comment",)
         }),
-
         ("تاریخ", {
-            "fields": (
-                "formatted_created_at",
-            ),
+            "fields": ("formatted_created_at",),
             "classes": ("collapse",)
         }),
     )
 
-    # ---------- helpers ----------
+    def influencer_province(self, obj):
+        """نمایش استان اینفلوئنسر در لیست"""
+        province = obj.influencer.user.province
+        return province.name if province else "-"
+
+    influencer_province.short_description = "استان اینفلوئنسر"
+    influencer_province.admin_order_field = "influencer__user__province__name"
+
+    def influencer_province_display(self, obj):
+        """نمایش استان اینفلوئنسر در فرم (فقط خوندنی)"""
+        province = obj.influencer.user.province
+        return province.name if province else "-"
+
+    influencer_province_display.short_description = "استان اینفلوئنسر"
 
     def short_comment(self, obj):
         if not obj.comment:
             return "-"
-        return obj.comment[:40]
+        return obj.comment[:40] + ("..." if len(obj.comment) > 40 else "")
 
     short_comment.short_description = "نظر"
 
     def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ثبت"
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
 
-# =========================
-# Inline برای نمایش در CampaignInfluencer Admin
-# =========================
+        if request.user.is_regional_manager and request.user.province:
+            return qs.filter(influencer__user__province=request.user.province)
 
-class CampaignReportInline(admin.StackedInline):
-    """
-    اینلاین برای نمایش گزارش در صفحه جزئیات CampaignInfluencer
-    """
-    model = CampaignReport
-    extra = 0
-    can_delete = False
-    max_num = 1
-    min_num = 0
+        return qs.select_related(
+            'influencer',
+            'influencer__user',
+            'influencer__user__province',
+            'advertiser',
+            'advertiser__user',
+            'campaign_booking',
+        )
 
-    fields = (
-        "post_link",
-        "screenshot_preview",
-        "screenshot",
-        "link_valid",
-        "hashtag_match_percent",
-        "text_match_percent",
-        "status",
-        "admin_notes",
-        "created_at",
-        "updated_at",
-    )
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.influencer.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
 
-    readonly_fields = (
-        "screenshot_preview",
-        "created_at",
-        "updated_at",
-    )
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.influencer.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
 
-    def screenshot_preview(self, obj):
-        if obj.screenshot:
-            return format_html(
-                '<a href="{}" target="_blank">'
-                '<img src="{}" width="150" height="auto" style="border-radius: 8px;" />'
-                '</a>',
-                obj.screenshot.url,
-                obj.screenshot.url
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """محدود کردن انتخاب اینفلوئنسر در فرم"""
+        if db_field.name == 'influencer' and request.user.is_regional_manager:
+            kwargs['queryset'] = InfluencerProfile.objects.filter(
+                user__province=request.user.province
             )
-        return "-"
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    screenshot_preview.short_description = "پیش‌نمایش اسکرین‌شات"
-
-
-# =========================
-# Report Admin (اصلی)
-# =========================
 
 @admin.register(CampaignReport)
-class CampaignReportAdmin(admin.ModelAdmin):
+class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "campaign_link",
@@ -473,6 +472,7 @@ class CampaignReportAdmin(admin.ModelAdmin):
         "status",
         "link_valid",
         ("created_at", JDateFieldListFilter),
+        "campaign_influencer__channel__province",
     )
 
     search_fields = (
@@ -484,9 +484,7 @@ class CampaignReportAdmin(admin.ModelAdmin):
         "admin_notes",
     )
 
-    autocomplete_fields = (
-        "campaign_influencer",
-    )
+    autocomplete_fields = ("campaign_influencer",)
 
     readonly_fields = (
         "screenshot_preview",
@@ -499,54 +497,29 @@ class CampaignReportAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-
         ("اطلاعات سفارش", {
-            "fields": (
-                "campaign_influencer",
-                "campaign_details",
-                "influencer_details",
-                "advertiser_details",
-            )
+            "fields": ("campaign_influencer", "campaign_details", "influencer_details", "advertiser_details",)
         }),
-
         ("گزارش ارسالی", {
-            "fields": (
-                "post_link_display",
-                "screenshot_preview",
-            )
+            "fields": ("post_link_display", "screenshot_preview",)
         }),
-
         ("بررسی خودکار", {
-            "fields": (
-                "link_valid",
-                "hashtag_match_percent",
-                "text_match_percent",
-            ),
+            "fields": ("link_valid", "hashtag_match_percent", "text_match_percent",),
             "classes": ("collapse",)
         }),
-
         ("بررسی دستی", {
-            "fields": (
-                "status",
-                "admin_notes",
-            )
+            "fields": ("status", "admin_notes",),
+            "classes": ("collapse",)
         }),
-
         ("تاریخ ها", {
-            "fields": (
-                "formatted_created_at",
-                "formatted_updated_at",
-            ),
+            "fields": ("formatted_created_at", "formatted_updated_at",),
             "classes": ("collapse",)
         }),
     )
 
     actions = ["mark_as_approved", "mark_as_rejected", "mark_as_pending"]
 
-    # ========== نمایش‌های سفارشی ==========
-
     def campaign_link(self, obj):
-        """لینک به کمپین"""
         campaign = obj.campaign_influencer.campaign
         url = reverse("admin:campaigns_campaign_change", args=[campaign.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, campaign.name[:40])
@@ -554,7 +527,6 @@ class CampaignReportAdmin(admin.ModelAdmin):
     campaign_link.short_description = "کمپین"
 
     def influencer_link(self, obj):
-        """لینک به اینفلوئنسر"""
         influencer = obj.campaign_influencer.channel.influencer
         url = reverse("admin:influencers_influencerprofile_change", args=[influencer.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, influencer.full_name)
@@ -562,7 +534,6 @@ class CampaignReportAdmin(admin.ModelAdmin):
     influencer_link.short_description = "اینفلوئنسر"
 
     def advertiser_link(self, obj):
-        """لینک به تبلیغ‌دهنده"""
         advertiser = obj.campaign_influencer.campaign.advertiser
         url = reverse("admin:advertisers_advertiserprofile_change", args=[advertiser.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, advertiser.business_name)
@@ -570,32 +541,19 @@ class CampaignReportAdmin(admin.ModelAdmin):
     advertiser_link.short_description = "تبلیغ‌دهنده"
 
     def status_badge(self, obj):
-        """بج وضعیت رنگی"""
-        colors = {
-            'pending': 'warning',
-            'approved': 'success',
-            'rejected': 'danger',
-            'partial': 'info',
-        }
-        color = colors.get(obj.status, 'secondary')
+        colors = {'pending': '#fdbc31', 'approved': '#07c98b', 'rejected': '#f23c49', 'partial': '#17a2b8'}
+        color = colors.get(obj.status, '#6c757d')
         return format_html(
-            '<span style="background-color: var(--fi-{}); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px;">{}</span>',
-            color,
-            obj.get_status_display()
-        )
+            '<span style="background-color: {}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px;">{}</span>',
+            color, obj.get_status_display())
 
     status_badge.short_description = "وضعیت"
 
     def match_percentage(self, obj):
-        """درصد تطابق کلی"""
         if obj.link_valid and obj.text_match_percent > 0:
             total = (obj.text_match_percent + obj.hashtag_match_percent) / 2
             color = "#07c98b" if total >= 70 else "#fdbc31" if total >= 40 else "#f23c49"
-            return format_html(
-                '<span style="color: {}; font-weight: bold;">{}%</span>',
-                color,
-                int(total)
-            )
+            return format_html('<span style="color: {}; font-weight: bold;">{}%</span>', color, int(total))
         elif obj.link_valid:
             return mark_safe('<span style="color: #fdbc31;">لینک OK</span>')
         return mark_safe('<span style="color: #f23c49;">نامعتبر</span>')
@@ -603,86 +561,43 @@ class CampaignReportAdmin(admin.ModelAdmin):
     match_percentage.short_description = "تطابق"
 
     def post_link_display(self, obj):
-        """نمایش لینک پست به صورت قابل کلیک"""
-        return format_html(
-            '<a href="{}" target="_blank" style="word-break: break-all;">{}</a>',
-            obj.post_link,
-            obj.post_link
-        )
+        return format_html('<a href="{}" target="_blank" style="word-break: break-all;">{}</a>', obj.post_link,
+                           obj.post_link)
 
     post_link_display.short_description = "لینک پست"
 
     def screenshot_preview(self, obj):
-        """پیش‌نمایش اسکرین‌شات"""
         if obj.screenshot:
             return format_html(
-                '<div style="background: #1a1a2e; padding: 10px; border-radius: 12px; display: inline-block;">'
-                '<a href="{}" target="_blank">'
-                '<img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid '
-                '#333;" />'
-                '</a>'
-                '<div style="margin-top: 8px;">'
-                '<a href="{}" download class="button" style="background: #fd5631; color: #fff; padding: 4px 12px; '
-                'border-radius: 6px; text-decoration: none; font-size: 12px;">'
-                '📥 دانلود فایل'
-                '</a>'
-                '</div>'
-                '</div>',
-                obj.screenshot.url,
-                obj.screenshot.url,
-                obj.screenshot.url
-            )
+                '<div style="background: #1a1a2e; padding: 10px; border-radius: 12px; display: inline-block;"><a href="{}" target="_blank"><img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #333;" /></a><div style="margin-top: 8px;"><a href="{}" download class="button" style="background: #fd5631; color: #fff; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px;">📥 دانلود فایل</a></div></div>',
+                obj.screenshot.url, obj.screenshot.url, obj.screenshot.url)
         return "-"
 
     screenshot_preview.short_description = "اسکرین‌شات"
 
     def campaign_details(self, obj):
-        """نمایش جزئیات کمپین"""
         campaign = obj.campaign_influencer.campaign
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
-            '<strong>نام:</strong> {}<br>'
-            '<strong>شروع:</strong> {}<br>'
-            '<strong>پایان:</strong> {}<br>'
-            '<strong>وضعیت:</strong> {}'
-            '</div>',
-            campaign.name,
-            obj.campaign_influencer.campaign.start_date.strftime("%Y/%m/%d %H:%M"),
-            obj.campaign_influencer.campaign.end_date.strftime("%Y/%m/%d %H:%M"),
-            campaign.get_status_display()
-        )
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>نام:</strong> {}<br><strong>شروع:</strong> {}<br><strong>پایان:</strong> {}<br><strong>وضعیت:</strong> {}</div>',
+            campaign.name, obj.campaign_influencer.campaign.start_date.strftime("%Y/%m/%d %H:%M"),
+            obj.campaign_influencer.campaign.end_date.strftime("%Y/%m/%d %H:%M"), campaign.get_status_display())
 
     campaign_details.short_description = "جزئیات کمپین"
 
     def influencer_details(self, obj):
-        """نمایش جزئیات اینفلوئنسر"""
         channel = obj.campaign_influencer.channel
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
-            '<strong>کانال:</strong> {}<br>'
-            '<strong>آیدی:</strong> {}<br>'
-            '<strong>پلتفرم:</strong> {}<br>'
-            '<strong>فالوور:</strong> {}'
-            '</div>',
-            channel.channel_name,
-            channel.channel_id,
-            channel.platform.name,
-            channel.followers_formatted()
-        )
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>کانال:</strong> {}<br><strong>آیدی:</strong> {}<br><strong>پلتفرم:</strong> {}<br><strong>فالوور:</strong> {}<br><strong>استان کانال:</strong> {}</div>',
+            channel.channel_name, channel.channel_id, channel.platform.name, channel.followers_formatted(),
+            channel.province.name if channel.province else "-")
 
     influencer_details.short_description = "جزئیات اینفلوئنسر"
 
     def advertiser_details(self, obj):
-        """نمایش جزئیات تبلیغ‌دهنده"""
         advertiser = obj.campaign_influencer.campaign.advertiser
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
-            '<strong>کسب‌وکار:</strong> {}<br>'
-            '<strong>وبسایت:</strong> {}<br>'
-            '</div>',
-            advertiser.business_name,
-            advertiser.website or "-"
-        )
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>کسب‌وکار:</strong> {}<br><strong>وبسایت:</strong> {}</div>',
+            advertiser.business_name, advertiser.website or "-")
 
     advertiser_details.short_description = "جزئیات تبلیغ‌دهنده"
 
@@ -690,32 +605,56 @@ class CampaignReportAdmin(admin.ModelAdmin):
         from core.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
+    formatted_created_at.short_description = "تاریخ ثبت"
+
     def formatted_updated_at(self, obj):
         from core.admin_utils import format_datetime
         return format_datetime(obj.updated_at)
 
-    formatted_created_at.short_description = "تاریخ ثبت"
     formatted_updated_at.short_description = "آخرین بروزرسانی"
 
-    # ========== اکشن‌های گروهی ==========
-
     def mark_as_approved(self, request, queryset):
-        """تغییر وضعیت به تأیید شده"""
         updated = queryset.update(status='approved')
         self.message_user(request, f"{updated} گزارش تأیید شد.")
 
     mark_as_approved.short_description = "تأیید گزارش‌های انتخاب شده"
 
     def mark_as_rejected(self, request, queryset):
-        """تغییر وضعیت به رد شده"""
         updated = queryset.update(status='rejected')
         self.message_user(request, f"{updated} گزارش رد شد.")
 
     mark_as_rejected.short_description = "رد گزارش‌های انتخاب شده"
 
     def mark_as_pending(self, request, queryset):
-        """تغییر وضعیت به در انتظار"""
         updated = queryset.update(status='pending')
         self.message_user(request, f"{updated} گزارش به حالت در انتظار برگشت.")
 
     mark_as_pending.short_description = "برگشت به حالت در انتظار"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(campaign_influencer__channel__province=request.user.province)
+
+        return qs.select_related(
+            'campaign_influencer',
+            'campaign_influencer__campaign',
+            'campaign_influencer__campaign__advertiser',
+            'campaign_influencer__channel',
+            'campaign_influencer__channel__province',
+            'campaign_influencer__channel__platform',
+            'campaign_influencer__channel__influencer',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign_influencer.channel.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign_influencer.channel.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)

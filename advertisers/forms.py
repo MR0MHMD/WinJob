@@ -10,7 +10,6 @@ class AdvertiserProfileForm(forms.ModelForm):
         model = AdvertiserProfile
         fields = (
             "business_name",
-            "province",
             "city",
             "category",
             "description",
@@ -25,14 +24,6 @@ class AdvertiserProfileForm(forms.ModelForm):
                     "data-bs-binded-element": "#business-name-value",
                     "data-bs-unset-value": "مشخص نشده است",
                     "id": "business-name-input",
-                }
-            ),
-            "province": forms.Select(
-                attrs={
-                    "class": "form-select form-select-light mt-3",
-                    "data-bs-binded-element": "#province-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "id": "province-input",
                 }
             ),
 

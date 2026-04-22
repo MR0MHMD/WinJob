@@ -1,58 +1,459 @@
-import os
-
-from django.contrib import admin, messages
-from django.utils.html import format_html
 from django_jalali.admin.filters import JDateFieldListFilter
-
-from influencers.admin import CampaignReportInline
+from influencers.inline_admin import CampaignReportInline
+from core.admin_utils import RegionalFilterAdminMixin
+from influencers.models import InfluencerChannel
+from advertisers.models import AdvertiserProfile
+from core.admin_utils import format_datetime
+from django.utils.html import format_html
+from django.urls import reverse
+from .inline_admin import *
+import os
 from .models import (
     ContentType,
     AdType,
     Campaign,
     CampaignContent,
-    CampaignInfluencer,
     CampaignInvoice,
     Coupon,
-    Payment,
+    Payment, CampaignTrackingLink,
 )
 
 
-# -----------------------------
-# Campaign Influencer Inline
-# -----------------------------
+@admin.register(Campaign)
+class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    inlines = [CampaignInfluencerInline]
 
-class CampaignInfluencerInline(admin.TabularInline):
-    model = CampaignInfluencer
-    extra = 0
-    autocomplete_fields = ("channel", "service_rate")
-    fields = (
-        "channel",
-        "service_rate",
-        "price",
+    list_display = (
+        "name",
+        "advertiser_display",
         "status",
-        "created_at",
+        "influencers_count",  # تعداد اینفلوئنسرهای انتخاب شده
+        "payable_amount",
+        "formatted_created_at",
     )
-    readonly_fields = ("created_at",)
 
+    list_filter = (
+        "status",
+        ("created_at", JDateFieldListFilter),
+        "advertiser__user__province",
+    )
 
-# -----------------------------
-# CampaignInfluencer
-# -----------------------------
+    search_fields = (
+        "name",
+        "advertiser__user__phone_number",
+        "advertiser__business_name",
+    )
+
+    ordering = ("-created_at",)
+
+    autocomplete_fields = ("advertiser", "platform", "content_type", "ad_type")
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "influencers_count_display",
+        "invoice_total",
+        "payable_amount_readonly",
+        "commission_display",
+        "influencer_cost_display",
+        "content_cost_display",
+        "advertiser_province",
+    )
+
+    fieldsets = (
+        ("اطلاعات کمپین", {
+            "fields": (
+                "name",
+                "advertiser",
+                "advertiser_province",
+                "description",
+            )
+        }),
+        ("نوع تبلیغات", {
+            "fields": (
+                "platform",
+                "content_type",
+                "ad_type",
+                "content_service_type",
+            )
+        }),
+        ("زمان‌بندی", {
+            "fields": (
+                "start_date",
+                "end_date",
+                "created_at",
+                "updated_at",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("وضعیت", {
+            "fields": ("status",)
+        }),
+        ("اینفلوئنسرها", {
+            "fields": ("influencers_count_display",),
+            "classes": ("collapse",)
+        }),
+        ("اطلاعات مالی", {
+            "fields": (
+                "influencer_cost_display",
+                "content_cost_display",
+                "commission_display",
+                "invoice_total",
+                "discount_amount",
+                "payable_amount_readonly",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("کدهای تخفیف", {
+            "fields": (
+                "influencer_coupon",
+                "content_team_coupon",
+                "platform_coupon",
+            ),
+            "classes": ("collapse",)
+        }),
+    )
+
+    actions = ["approve_campaign", "reject_campaign"]
+
+    # ========== متدهای نمایش ==========
+
+    def advertiser_display(self, obj):
+        """نمایش نام تبلیغ‌دهنده با لینک به پروفایل"""
+
+        url = reverse("admin:advertisers_advertiserprofile_change", args=[obj.advertiser.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.advertiser.business_name)
+
+    advertiser_display.short_description = "تبلیغ‌دهنده"
+    advertiser_display.admin_order_field = "advertiser__business_name"
+
+    def advertisers_count(self, obj):
+        """تعداد اینفلوئنسرهای انتخاب شده"""
+        return obj.influencer_bookings.count()
+
+    advertisers_count.short_description = "تعداد اینفلوئنسر"
+    advertisers_count.admin_order_field = "influencer_bookings__count"
+
+    def influencers_count(self, obj):
+        """تعداد اینفلوئنسرهای انتخاب شده (برای list_display)"""
+        count = obj.influencer_bookings.count()
+        if count == 0:
+            return "❌ هیچ"
+        else:
+            return count
+
+    influencers_count.short_description = "تعداد ناشران"
+
+    def influencers_count_display(self, obj):
+        """نمایش در فرم (فقط خوندنی)"""
+        count = obj.influencer_bookings.count()
+        active = obj.influencer_bookings.filter(status='accepted').count()
+        completed = obj.influencer_bookings.filter(status='completed').count()
+        return f"جمع: {count} | فعال: {active} | انجام شده: {completed}"
+
+    influencers_count_display.short_description = "وضعیت اینفلوئنسرها"
+
+    def payable_amount(self, obj):
+        """مبلغ قابل پرداخت برای list_display"""
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.payable_amount:,} تومان"
+        return "0 تومان"
+
+    payable_amount.short_description = "مبلغ قابل پرداخت"
+    payable_amount.admin_order_field = "invoice__payable_amount"
+
+    def payable_amount_readonly(self, obj):
+        """مبلغ قابل پرداخت برای فرم (فقط خوندنی)"""
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.payable_amount:,} تومان"
+        return "0 تومان"
+
+    payable_amount_readonly.short_description = "مبلغ قابل پرداخت"
+
+    def invoice_total(self, obj):
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.total_amount:,} تومان"
+        return "-"
+
+    invoice_total.short_description = "مبلغ کل"
+
+    def commission_display(self, obj):
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.commission:,} تومان"
+        return "-"
+
+    commission_display.short_description = "کمیسیون"
+
+    def influencer_cost_display(self, obj):
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.influencer_cost:,} تومان"
+        return "-"
+
+    influencer_cost_display.short_description = "هزینه اینفلوئنسر"
+
+    def content_cost_display(self, obj):
+        if hasattr(obj, "invoice"):
+            return f"{obj.invoice.content_cost:,} تومان"
+        return "-"
+
+    content_cost_display.short_description = "هزینه تولید محتوا"
+
+    def advertiser_province(self, obj):
+        """نمایش استان تبلیغ‌دهنده (فقط خوندنی)"""
+        province = obj.advertiser.user.province
+        return province.name if province else "-"
+
+    advertiser_province.short_description = "استان تبلیغ‌دهنده"
+
+    def formatted_created_at(self, obj):
+        return format_datetime(obj.created_at)
+
+    formatted_created_at.short_description = "تاریخ ایجاد"
+    formatted_created_at.admin_order_field = "created_at"
+
+    # ========== اکشن‌ها ==========
+
+    def approve_campaign(self, request, queryset):
+        updated = queryset.update(status=Campaign.Status.APPROVED)
+        self.message_user(request, f"{updated} کمپین تایید شد.")
+
+    approve_campaign.short_description = "تایید کمپین"
+
+    def reject_campaign(self, request, queryset):
+        updated = queryset.update(status=Campaign.Status.CANCELLED)
+        self.message_user(request, f"{updated} کمپین رد شد.")
+
+    reject_campaign.short_description = "رد کمپین"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(advertiser__user__province=request.user.province)
+
+        return qs.select_related(
+            'advertiser',
+            'advertiser__user',
+            'advertiser__user__province',
+            'invoice',
+        ).prefetch_related('influencer_bookings')
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.advertiser.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.advertiser.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'advertiser' and request.user.is_regional_manager:
+            kwargs['queryset'] = AdvertiserProfile.objects.filter(
+                user__province=request.user.province
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        if request.user.is_regional_manager and request.user.province:
+            if obj.advertiser.user.province != request.user.province:
+                from django.core.exceptions import ValidationError
+                raise ValidationError('شما فقط می‌توانید کمپین‌های تبلیغ‌دهندگان استان خودتان را ایجاد کنید.')
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(CampaignInfluencer)
-class CampaignInfluencerAdmin(admin.ModelAdmin):
+class CampaignInfluencerAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "campaign_link",
+        "channel_link",
+        "price",
+        "status",
+        "is_paid",
+        "has_report_status",
+        "formatted_created_at",
+    )
+
+    list_filter = (
+        "status",
+        "is_paid",
+        ("created_at", JDateFieldListFilter),
+        "channel__province",  # فیلتر بر اساس استان کانال
+    )
+
     search_fields = (
-        "campaign__title",
-        "influencer_channel__channel_id",
+        "campaign__name",
+        "channel__channel_id",
+        "channel__channel_name",
+        "channel__influencer__full_name",
+        "tracking_code",
+    )
+
+    autocomplete_fields = ("campaign", "channel", "service_rate")
+
+    readonly_fields = (
+        "tracking_code",
+        "formatted_created_at",
+        "formatted_paid_at",
+        "uniq_url_display",
+    )
+
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "campaign",
+                "channel",
+                "service_rate",
+                "price",
+            )
+        }),
+        ("وضعیت", {
+            "fields": (
+                "status",
+                "is_seen",
+                "is_paid",
+            )
+        }),
+        ("کد ردیابی", {
+            "fields": (
+                "tracking_code",
+                "uniq_url_display",
+            )
+        }),
+        ("تاریخ‌ها", {
+            "fields": (
+                "formatted_created_at",
+                "formatted_paid_at",
+            ),
+            "classes": ("collapse",)
+        }),
     )
 
     inlines = [CampaignReportInline]
 
+    actions = ["mark_as_accepted", "mark_as_completed", "mark_as_paid"]
 
-# -----------------------------
-# ContentType
-# -----------------------------
+    # ========== متدهای نمایش ==========
+
+    def campaign_link(self, obj):
+        """لینک به کمپین"""
+        url = reverse("admin:campaigns_campaign_change", args=[obj.campaign.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.campaign.name[:40])
+
+    campaign_link.short_description = "کمپین"
+
+    def channel_link(self, obj):
+        """لینک به کانال اینفلوئنسر"""
+        url = reverse("admin:influencers_influencerchannel_change", args=[obj.channel.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.channel.channel_name)
+
+    channel_link.short_description = "کانال"
+
+    def has_report_status(self, obj):
+        """وضعیت گزارش"""
+        if hasattr(obj, 'report'):
+            status = obj.report.status
+            if status == 'approved':
+                return "✅ تأیید شده"
+            elif status == 'pending':
+                return "⏳ در انتظار"
+            elif status == 'rejected':
+                return "❌ رد شده"
+            return "📋 ثبت شده"
+        return "❌ ثبت نشده"
+
+    has_report_status.short_description = "گزارش"
+
+    def uniq_url_display(self, obj):
+        """نمایش لینک یکتا"""
+        return format_html(
+            '<a href="{}" target="_blank" style="direction: ltr; display: block; word-break: break-all;">{}</a>',
+            obj.uniq_url(),
+            obj.uniq_url()
+        )
+
+    uniq_url_display.short_description = "لینک ردیابی"
+
+    def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.created_at)
+
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    def formatted_paid_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.paid_at) if obj.paid_at else "-"
+
+    formatted_paid_at.short_description = "تاریخ پرداخت"
+
+    # ========== اکشن‌ها ==========
+
+    def mark_as_accepted(self, request, queryset):
+        updated = queryset.update(status=CampaignInfluencer.Status.ACCEPTED)
+        self.message_user(request, f"{updated} رزرو پذیرفته شد.")
+
+    mark_as_accepted.short_description = "پذیرفتن رزروهای انتخاب شده"
+
+    def mark_as_completed(self, request, queryset):
+        updated = queryset.update(status=CampaignInfluencer.Status.COMPLETED)
+        self.message_user(request, f"{updated} رزرو انجام شد.")
+
+    mark_as_completed.short_description = "انجام شدن رزروهای انتخاب شده"
+
+    def mark_as_paid(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.update(is_paid=True, paid_at=timezone.now())
+        self.message_user(request, f"{updated} رزرو به عنوان پرداخت شده علامت خورد.")
+
+    mark_as_paid.short_description = "علامت زدن به عنوان پرداخت شده"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            # فیلتر بر اساس استان کانال
+            qs = qs.filter(channel__province=request.user.province)
+
+        return qs.select_related(
+            'campaign',
+            'channel',
+            'channel__province',
+            'service_rate',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.channel.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.channel.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'campaign' and request.user.is_regional_manager:
+            # فقط کمپین‌های استان خودش
+            kwargs['queryset'] = Campaign.objects.filter(
+                advertiser__user__province=request.user.province
+            )
+        if db_field.name == 'channel' and request.user.is_regional_manager:
+            # فقط کانال‌های استان خودش
+            kwargs['queryset'] = InfluencerChannel.objects.filter(
+                province=request.user.province
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ContentType)
 class ContentTypeAdmin(admin.ModelAdmin):
@@ -62,10 +463,6 @@ class ContentTypeAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
-# -----------------------------
-# AdType
-# -----------------------------
-
 @admin.register(AdType)
 class AdTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "platform", "slug", "is_active")
@@ -73,10 +470,6 @@ class AdTypeAdmin(admin.ModelAdmin):
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
 
-
-# -----------------------------
-# Coupon
-# -----------------------------
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
@@ -134,200 +527,36 @@ class CouponAdmin(admin.ModelAdmin):
     )
 
 
-# -----------------------------
-# Campaign Admin
-# -----------------------------
-
-@admin.register(Campaign)
-class CampaignAdmin(admin.ModelAdmin):
-    inlines = [CampaignInfluencerInline]
-
-    list_display = (
-        "name",
-        "advertiser",
-        "status",
-        "influencers_display",
-        "invoice_total",
-        "payable_amount",
-        "created_at",
-    )
-
-    list_filter = (
-        "status",
-        ("created_at", JDateFieldListFilter),
-    )
-
-    search_fields = (
-        "name",
-        "advertiser__user__username",
-    )
-
-    ordering = ("-created_at",)
-
-    readonly_fields = (
-        "created_at",
-        "updated_at",
-        "influencers_display",
-        "invoice_total",
-        "payable_amount",
-        "commission_display",
-        "influencer_cost_display",
-        "content_cost_display",
-    )
-
-    fieldsets = (
-        ("اطلاعات کمپین", {
-            "fields": (
-                "name",
-                "advertiser",
-                "description",
-            )
-        }),
-
-        ("زمان‌بندی", {
-            "fields": (
-                "start_date",
-                "end_date",
-                "created_at",
-                "updated_at",
-            ),
-            "classes": ("collapse",)
-        }),
-
-        ("وضعیت", {
-            "fields": (
-                "status",
-            )
-        }),
-
-        ("اینفلوئنسرها", {
-            "fields": (
-                "influencers_display",
-            ),
-            "classes": ("collapse",)
-        }),
-
-        ("اطلاعات مالی", {
-            "fields": (
-                "influencer_cost_display",
-                "content_cost_display",
-                "commission_display",
-                "invoice_total",
-                "discount_amount",
-                "payable_amount",
-                # "coupon",
-            ),
-            "classes": ("collapse",)
-        }),
-    )
-
-    actions = ["approve_campaign", "reject_campaign"]
-
-    # -------------------------
-    # Influencer display
-    # -------------------------
-
-    def influencers_display(self, obj):
-        bookings = obj.influencer_bookings.all()
-        if not bookings:
-            return "-"
-
-        names = [
-            str(b.channel)
-            for b in bookings
-        ]
-        return ", ".join(names)
-
-    influencers_display.short_description = "اینفلوئنسرها"
-
-    # -------------------------
-    # Invoice helpers
-    # -------------------------
-
-    def invoice_total(self, obj):
-        if hasattr(obj, "invoice"):
-            return obj.invoice.total_amount
-        return "-"
-
-    invoice_total.short_description = "مبلغ کل"
-
-    def payable_amount(self, obj):
-        if hasattr(obj, "invoice"):
-            return obj.invoice.payable_amount
-        return "-"
-
-    payable_amount.short_description = "قابل پرداخت"
-
-    def commission_display(self, obj):
-        if hasattr(obj, "invoice"):
-            return obj.invoice.commission
-        return "-"
-
-    commission_display.short_description = "کمیسیون"
-
-    def influencer_cost_display(self, obj):
-        if hasattr(obj, "invoice"):
-            return obj.invoice.influencer_cost
-        return "-"
-
-    influencer_cost_display.short_description = "هزینه اینفلوئنسر"
-
-    def content_cost_display(self, obj):
-        if hasattr(obj, "invoice"):
-            return obj.invoice.content_cost
-        return "-"
-
-    content_cost_display.short_description = "هزینه تولید محتوا"
-
-    # -------------------------
-    # Actions
-    # -------------------------
-
-    def approve_campaign(self, request, queryset):
-        updated = queryset.update(status=Campaign.Status.APPROVED)
-        self.message_user(request, f"{updated} کمپین تایید شد.")
-
-    approve_campaign.short_description = "تایید کمپین"
-
-    def reject_campaign(self, request, queryset):
-        updated = queryset.update(status=Campaign.Status.CANCELLED)
-        self.message_user(request, f"{updated} کمپین رد شد.")
-
-    reject_campaign.short_description = "رد کمپین"
-
-
-# -----------------------------
-# CampaignContent
-# -----------------------------
-
-
 @admin.register(CampaignContent)
-class CampaignContentAdmin(admin.ModelAdmin):
+class CampaignContentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
-        "campaign",
+        "id",
+        "campaign_link",
+        "advertiser_name",
         "media_preview",
         "utm_enabled",
-        "created_at",
+        "formatted_created_at",
     )
 
     search_fields = (
-        "campaign__title",
+        "campaign__name",
+        "campaign__advertiser__business_name",
         "caption",
     )
 
     list_filter = (
         "utm_enabled",
-        "created_at",
+        ("created_at", JDateFieldListFilter),
+        "campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ‌دهنده
     )
 
     readonly_fields = (
         "media_preview",
-        "created_at",
-        "updated_at",
+        "formatted_created_at",
+        "formatted_updated_at",
     )
 
     fieldsets = (
-
         ("اطلاعات اصلی", {
             "fields": (
                 "campaign",
@@ -338,7 +567,6 @@ class CampaignContentAdmin(admin.ModelAdmin):
                 "notes",
             )
         }),
-
         ("UTM Tracking", {
             "classes": ("collapse",),
             "fields": (
@@ -350,19 +578,33 @@ class CampaignContentAdmin(admin.ModelAdmin):
                 "utm_term",
             )
         }),
-
         ("سیستم", {
             "fields": (
-                "created_at",
-                "updated_at",
+                "formatted_created_at",
+                "formatted_updated_at",
             )
         }),
-
     )
+
+    # ========== متدهای نمایش ==========
+
+    def campaign_link(self, obj):
+        """لینک به کمپین"""
+        url = reverse("admin:campaigns_campaign_change", args=[obj.campaign.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.campaign.name[:40])
+
+    campaign_link.short_description = "کمپین"
+
+    def advertiser_name(self, obj):
+        """نام تبلیغ‌دهنده"""
+        return obj.campaign.advertiser.business_name
+
+    advertiser_name.short_description = "تبلیغ‌دهنده"
+    advertiser_name.admin_order_field = "campaign__advertiser__business_name"
 
     def media_preview(self, obj):
         if not obj.media:
-            return "_"
+            return "-"
 
         url = obj.media.url
         ext = os.path.splitext(url)[1].lower()
@@ -373,102 +615,328 @@ class CampaignContentAdmin(admin.ModelAdmin):
         if ext in image_ext:
             return format_html('<img style="width: 50px; border-radius:6px;" src="{}">', url)
         elif ext in video_ext:
-            return format_html("<a href='{}' target='blank'>مشاهده فایل</a>", url)
+            return format_html("<a href='{}' target='_blank'>🎥 مشاهده ویدیو</a>", url)
         else:
-            return "فایل ناشناخته"
+            return format_html("<a href='{}' target='_blank'>📎 دانلود فایل</a>", url)
 
-
-
-    media_preview.allow_tags = True
     media_preview.short_description = "فایل"
 
+    def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.created_at)
 
-# -----------------------------
-# Campaign Invoice
-# -----------------------------
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    def formatted_updated_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.updated_at)
+
+    formatted_updated_at.short_description = "آخرین ویرایش"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            # فیلتر از طریق: campaign -> advertiser -> user -> province
+            qs = qs.filter(campaign__advertiser__user__province=request.user.province)
+
+        return qs.select_related(
+            'campaign',
+            'campaign__advertiser',
+            'campaign__advertiser__user',
+            'campaign__advertiser__user__province',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'campaign' and request.user.is_regional_manager:
+            # فقط کمپین‌های استان خودش
+            kwargs['queryset'] = Campaign.objects.filter(
+                advertiser__user__province=request.user.province
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(CampaignInvoice)
-class CampaignInvoiceAdmin(admin.ModelAdmin):
+class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
+        'id',
+        "campaign_link",
+        "payable_amount",
+        "is_paid",
+        "formatted_created_at",
+    )
+
+    list_filter = (
+        "is_paid",
+        ("created_at", JDateFieldListFilter),
+        "campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ‌دهنده
+    )
+
+    search_fields = (
+        "campaign__name",
+        "campaign__advertiser__business_name",
+        "campaign__advertiser__user__phone_number",
+    )
+
+    readonly_fields = (
         "campaign",
         "influencer_cost",
         "content_cost",
         "commission",
         "total_amount",
         "payable_amount",
-        "is_paid",
-        "created_at",
+        "discount_amount",
+        "formatted_created_at",
+    )
+
+    fieldsets = (
+        ("اطلاعات کمپین", {
+            "fields": (
+                "campaign",
+            )
+        }),
+        ("هزینه‌ها", {
+            "fields": (
+                "influencer_cost",
+                "content_cost",
+                "commission",
+                "discount_amount",
+                "total_amount",
+                "payable_amount",
+            )
+        }),
+        ("وضعیت", {
+            "fields": ("is_paid",)
+        }),
+        ("تاریخچه", {
+            "fields": ("formatted_created_at",),
+            "classes": ("collapse",)
+        }),
+    )
+
+    # ========== متدهای نمایش ==========
+
+    def campaign_link(self, obj):
+        """لینک به کمپین"""
+        url = reverse("admin:campaigns_campaign_change", args=[obj.campaign.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.campaign.name[:40])
+
+    campaign_link.short_description = "کمپین"
+    campaign_link.admin_order_field = "campaign__name"
+
+    def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.created_at)
+
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(campaign__advertiser__user__province=request.user.province)
+
+        return qs.select_related(
+            'campaign',
+            'campaign__advertiser',
+            'campaign__advertiser__user',
+            'campaign__advertiser__user__province',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+
+@admin.register(Payment)
+class PaymentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "id",
+        "invoice_link",
+        "campaign_name",
+        "user_display",
+        "amount_display",
+        "status_badge",
+        "formatted_created_at",
     )
 
     list_filter = (
-        "is_paid",
+        "status",
         ("created_at", JDateFieldListFilter),
+        "invoice__campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ‌دهنده
     )
 
     search_fields = (
-        "campaign__name",
+        "user__phone_number",
+        "user__nickname",
+        "ref_id",
+        "invoice__campaign__name",
     )
 
-
-# -----------------------------
-# Payment
-# -----------------------------
-
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = (
+    readonly_fields = (
         "user",
         "invoice",
         "amount",
-        "status",
+        "authority",
         "ref_id",
-        "created_at",
-    )
-
-    list_filter = (
         "status",
-        ("created_at", JDateFieldListFilter),
+        "formatted_created_at",
+        "campaign_link_display",
     )
 
-    search_fields = (
-        "user__username",
-        "ref_id",
+    fieldsets = (
+        ("اطلاعات پرداخت", {
+            "fields": (
+                "user",
+                "invoice",
+                "campaign_link_display",
+                "amount",
+            )
+        }),
+        ("درگاه پرداخت", {
+            "fields": (
+                "authority",
+                "ref_id",
+                "status",
+            )
+        }),
+        ("تاریخچه", {
+            "fields": ("formatted_created_at",),
+            "classes": ("collapse",)
+        }),
     )
 
+    # ========== متدهای نمایش ==========
 
-from .models import CampaignTrackingLink, CampaignClick
+    def user_display(self, obj):
+        """نمایش کاربر با لینک"""
+        url = reverse("admin:accounts_customuser_change", args=[obj.user.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.user.nickname or obj.user.phone_number)
 
+    user_display.short_description = "کاربر"
+    user_display.admin_order_field = "user__phone_number"
 
-# -----------------------------
-# CampaignClick Inline
-# -----------------------------
+    def invoice_link(self, obj):
+        """لینک به فاکتور"""
+        url = reverse("admin:campaigns_campaigninvoice_change", args=[obj.invoice.id])
+        return format_html('<a href="{}" target="_blank">فاکتور #{}</a>', url, obj.invoice.id)
 
-class CampaignClickInline(admin.TabularInline):
-    model = CampaignClick
-    extra = 0
-    readonly_fields = (
-        "ip_address",
-        "user_agent",
-        "created_at",
-    )
-    can_delete = False
-    ordering = ("-created_at",)
+    invoice_link.short_description = "فاکتور"
 
+    def campaign_name(self, obj):
+        """نام کمپین"""
+        return obj.invoice.campaign.name
 
-# -----------------------------
-# CampaignTrackingLink
-# -----------------------------
+    campaign_name.short_description = "کمپین"
+    campaign_name.admin_order_field = "invoice__campaign__name"
+
+    def campaign_link_display(self, obj):
+        """لینک به کمپین"""
+        url = reverse("admin:campaigns_campaign_change", args=[obj.invoice.campaign.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.invoice.campaign.name)
+
+    campaign_link_display.short_description = "کمپین"
+
+    def amount_display(self, obj):
+        """نمایش مبلغ فرمت شده"""
+        return f"{obj.amount:,} تومان"
+
+    amount_display.short_description = "مبلغ"
+
+    def status_badge(self, obj):
+        """بج وضعیت رنگی"""
+        colors = {
+            'pending': '#fdbc31',
+            'success': '#07c98b',
+            'failed': '#f23c49',
+        }
+        color = colors.get(obj.status, '#6c757d')
+        texts = {
+            'pending': 'در انتظار',
+            'success': 'موفق',
+            'failed': 'ناموفق',
+        }
+        text = texts.get(obj.status, obj.status)
+        return format_html(
+            '<span style="background-color: {}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px;">{}</span>',
+            color, text
+        )
+
+    status_badge.short_description = "وضعیت"
+
+    def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.created_at)
+
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            # مسیر: payment -> invoice -> campaign -> advertiser -> user -> province
+            qs = qs.filter(
+                invoice__campaign__advertiser__user__province=request.user.province
+            )
+
+        return qs.select_related(
+            'user',
+            'user__province',
+            'invoice',
+            'invoice__campaign',
+            'invoice__campaign__advertiser',
+            'invoice__campaign__advertiser__user',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.invoice.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.invoice.campaign.advertiser.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
 
 @admin.register(CampaignTrackingLink)
-class CampaignTrackingLinkAdmin(admin.ModelAdmin):
-
+class CampaignTrackingLinkAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
-        "campaign",
+        "id",
+        "campaign_name",
         "influencer_channel",
         "tracking_code",
         "clicks",
         "unique_clicks",
-        "created_at",
+        "formatted_created_at",
     )
 
     search_fields = (
@@ -478,43 +946,99 @@ class CampaignTrackingLinkAdmin(admin.ModelAdmin):
     )
 
     list_filter = (
-        "created_at",
+        ("created_at", JDateFieldListFilter),
+        "campaign_influencer__channel__province",  # فیلتر بر اساس استان کانال
     )
 
     readonly_fields = (
         "campaign_influencer",
         "clicks",
         "unique_clicks",
-        "created_at",
+        "formatted_created_at",
     )
 
-    inlines = [
-        CampaignClickInline
-    ]
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "campaign_influencer",
+            )
+        }),
+        ("آمار کلیک", {
+            "fields": (
+                "clicks",
+                "unique_clicks",
+            )
+        }),
+        ("تاریخچه", {
+            "fields": ("formatted_created_at",),
+            "classes": ("collapse",)
+        }),
+    )
 
-    def campaign(self, obj):
-        return obj.campaign_influencer.campaign
+    inlines = [CampaignClickInline]
 
-    campaign.short_description = "کمپین"
+    # ========== متدهای نمایش ==========
+
+    def campaign_name(self, obj):
+        """نام کمپین با لینک"""
+        campaign = obj.campaign_influencer.campaign
+        url = reverse("admin:campaigns_campaign_change", args=[campaign.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, campaign.name[:40])
+
+    campaign_name.short_description = "کمپین"
+    campaign_name.admin_order_field = "campaign_influencer__campaign__name"
 
     def influencer_channel(self, obj):
-        return obj.campaign_influencer.channel
+        """کانال اینفلوئنسر با لینک"""
+        channel = obj.campaign_influencer.channel
+        url = reverse("admin:influencers_influencerchannel_change", args=[channel.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, channel.channel_name)
 
     influencer_channel.short_description = "کانال"
+    influencer_channel.admin_order_field = "campaign_influencer__channel__channel_name"
 
     def tracking_code(self, obj):
+        """کد ردیابی"""
         return obj.campaign_influencer.tracking_code
 
     tracking_code.short_description = "کد ردیابی"
 
+    def formatted_created_at(self, obj):
+        from core.admin_utils import format_datetime
+        return format_datetime(obj.created_at)
 
-# -----------------------------
-# CampaignClick
-# -----------------------------
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(campaign_influencer__channel__province=request.user.province)
+
+        return qs.select_related(
+            'campaign_influencer',
+            'campaign_influencer__campaign',
+            'campaign_influencer__channel',
+            'campaign_influencer__channel__province',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign_influencer.channel.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.campaign_influencer.channel.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
 
 @admin.register(CampaignClick)
 class CampaignClickAdmin(admin.ModelAdmin):
-
     list_display = (
         "tracking_code",
         "ip_address",

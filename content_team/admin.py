@@ -1,151 +1,20 @@
-from django.contrib import admin
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from django.utils.html import format_html
+from core.admin_utils import RegionalFilterAdminMixin
+from accounts.models import CustomUser
 from core.admin_utils import format_datetime
-from .models import *
+from .utils import get_team_province
+from .inline_admin import *
 
-
-# =========================
-# Inline ها
-# =========================
-
-class ContentServiceRateInline(admin.TabularInline):
-    model = ContentServiceRate
-    extra = 0
-    fields = (
-        "service_type",
-        "price_per_unit",
-        "estimated_delivery_days",
-        "is_available",
-        "created_at",
-    )
-    readonly_fields = ("created_at",)
-
-
-class TeamReviewInline(admin.TabularInline):
-    model = TeamReview
-    extra = 0
-    readonly_fields = (
-        "advertiser",
-        "rating",
-        "comment",
-        "created_at",
-    )
-    can_delete = False
-
-
-class ContentTeamMemberInline(admin.TabularInline):
-    model = ContentTeamMember
-    extra = 0
-    fields = [
-        'user',
-        'role',
-        'is_active',
-        'revenue_share_percent'
-    ]
-
-
-class ContentOrderDescriptionInline(admin.StackedInline):
-    """
-    بریف سفارش - به صورت Stacked نمایش داده می‌شه
-    چون فیلدهای زیادی داره و TabularInline خوانا نیست
-    """
-    model = ContentOrderDescription
-    extra = 0
-    can_delete = False
-    max_num = 1
-
-    fieldsets = (
-        ("هدف و لحن", {
-            "fields": (
-                "goal",
-                "goal_description",
-                "tone",
-            )
-        }),
-        ("اطلاعات برند", {
-            "fields": (
-                "brand_name",
-                "hashtags",
-            )
-        }),
-        ("محتوا", {
-            "fields": (
-                "target_audience",
-                "description",
-                "do_not_include",
-            )
-        }),
-        ("مراجع", {
-            "fields": (
-                "reference_links",
-            ),
-            "classes": ("collapse",)
-        }),
-    )
-
-    readonly_fields = (
-        "created_at",
-        "updated_at",
-    )
-
-
-class ContentOrderFileInline(admin.TabularInline):
-    """
-    فایل‌های پیوست سفارش
-    """
-    model = ContentOrderFile
-    extra = 0
-    can_delete = True
-
-    fields = (
-        "file",
-        "file_type",
-        "original_name",
-        "description",
-        "file_size_display",
-        "uploaded_at",
-    )
-
-    readonly_fields = (
-        "original_name",
-        "file_size_display",
-        "uploaded_at",
-    )
-
-
-class ContentPortfolioInline(admin.TabularInline):
-    model = ContentPortfolio
-    extra = 0
-    fields = (
-        "title",
-        "media_preview",
-        "service_type",
-        "display_order",
-        "is_active",
-    )
-    readonly_fields = ("media_preview",)
-
-    def media_preview(self, obj):
-        if obj.media:
-            return format_html('<img src="{}" style="width: 40px; height: 40px; object-fit: cover;" />', obj.media.url)
-        return "-"
-
-    media_preview.short_description = _("پیش‌نمایش")
-
-
-# =========================
-# Content Team
-# =========================
 
 @admin.register(ContentTeam)
-class ContentTeamAdmin(admin.ModelAdmin):
+class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "name",
         "is_active",
         "avg_rating_display",
+        "members_count_display",
         "completed_orders_display",
         "created_at",
     )
@@ -187,54 +56,84 @@ class ContentTeamAdmin(admin.ModelAdmin):
                 "logo",
             )
         }),
-
         ("وضعیت", {
-            "fields": (
-                "is_active",
-            )
+            "fields": ("is_active",),
+            'classes': ('collapse',)
         }),
-
         ("آمار تیم", {
             "fields": (
                 "avg_rating_display",
                 "completed_orders_display",
                 'members_count_display'
             ),
-            "classes": ("collapse",)
+            'classes': ('collapse',)
         }),
-
         ("تاریخ‌ها", {
-            "fields": (
-                "created_at",
-                "updated_at",
-            ),
+            "fields": ("created_at", "updated_at",),
             "classes": ("collapse",)
         }),
     )
 
+    @staticmethod
+    def get_team_manager_province(obj):
+        """دریافت استان مدیر تیم"""
+        try:
+            manager = obj.members.filter(role='manager', is_active=True).first()
+            if manager and manager.user and manager.user.province:
+                return manager.user.province
+        except:
+            pass
+        return None
+
     def avg_rating_display(self, obj):
         return obj.avg_rating or "-"
+
+    avg_rating_display.short_description = "میانگین امتیاز"
 
     def completed_orders_display(self, obj):
         return obj.completed_orders_count
 
+    completed_orders_display.short_description = "سفارشات تکمیل شده"
+
     def members_count_display(self, obj):
         return obj.members_count
 
-    completed_orders_display.short_description = _("سفارشات تکمیل شده")
-    avg_rating_display.short_description = _("میانگین امتیاز")
-    members_count_display.short_description = _("تعداد اعضای تیم")
+    members_count_display.short_description = "تعداد اعضای تیم"
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
 
-# =========================
-# Team Member
-# =========================
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for team in qs:
+                province = self.get_team_manager_province(team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(team.id)
+            return qs.filter(id__in=team_ids)
+
+        return qs
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            province = self.get_team_manager_province(obj)
+            if province and province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            province = self.get_team_manager_province(obj)
+            if province and province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
 
 @admin.register(ContentTeamMember)
-class ContentTeamMemberAdmin(admin.ModelAdmin):
+class ContentTeamMemberAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = [
-        'user',
-        'team',
+        "id",
+        'user_display',
+        'team_link',
         'role',
         'is_active',
         'created_at'
@@ -242,19 +141,101 @@ class ContentTeamMemberAdmin(admin.ModelAdmin):
 
     list_filter = [
         'role',
-        'team',
-        'is_active'
+        'is_active',
+        'user__province',
     ]
 
     search_fields = [
-        'user',
+        'user__phone_number',
+        'user__nickname',
         'team__name'
     ]
 
+    autocomplete_fields = ['user', 'team']
 
-# =========================
-# Service Type
-# =========================
+    readonly_fields = [
+        'created_at',
+    ]
+
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "user",
+                "team",
+                "role",
+            )
+        }),
+        ("مالی", {
+            "fields": ("revenue_share_percent",)
+        }),
+        ("سایر", {
+            "fields": ("bio", "is_active")
+        }),
+        ("تاریخچه", {
+            "fields": ("created_at",),
+            "classes": ("collapse",)
+        }),
+    )
+
+    def user_display(self, obj):
+        """نمایش کاربر با لینک"""
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse("admin:accounts_customuser_change", args=[obj.user.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.user.nickname or obj.user.phone_number)
+
+    user_display.short_description = "کاربر"
+    user_display.admin_order_field = "user__phone_number"
+
+    def team_link(self, obj):
+        """لینک به تیم"""
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse("admin:content_team_contentteam_change", args=[obj.team.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.team.name)
+
+    team_link.short_description = "تیم"
+    team_link.admin_order_field = "team__name"
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(user__province=request.user.province)
+
+        return qs.select_related('user', 'user__province', 'team')
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'user' and request.user.is_regional_manager:
+            kwargs['queryset'] = CustomUser.objects.filter(
+                province=request.user.province,
+                team_member__isnull=True
+            )
+        if db_field.name == 'team' and request.user.is_regional_manager:
+            team_ids = []
+            all_teams = ContentTeam.objects.all()
+            for team in all_teams:
+                try:
+                    manager = team.members.filter(role='manager', is_active=True).first()
+                    if manager and manager.user and manager.user.province == request.user.province:
+                        team_ids.append(team.id)
+                except:
+                    pass
+            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ContentServiceType)
 class ContentServiceTypeAdmin(admin.ModelAdmin):
@@ -285,12 +266,8 @@ class ContentServiceTypeAdmin(admin.ModelAdmin):
     }
 
 
-# =========================
-# Service Rate
-# =========================
-
 @admin.register(ContentServiceRate)
-class ContentServiceRateAdmin(admin.ModelAdmin):
+class ContentServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "team",
         "service_type",
@@ -316,13 +293,30 @@ class ContentServiceRateAdmin(admin.ModelAdmin):
         "service_type",
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for rate in qs:
+                province = get_team_province(rate.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(rate.team_id)
+            return qs.filter(team_id__in=team_ids)
+        return qs
 
-# =========================
-# Content Order
-# =========================
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'team' and request.user.is_regional_manager:
+            team_ids = []
+            for team in ContentTeam.objects.all():
+                province = get_team_province(team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(team.id)
+            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ContentOrder)
-class ContentOrderAdmin(admin.ModelAdmin):
+class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "campaign",
         "team",
@@ -356,7 +350,6 @@ class ContentOrderAdmin(admin.ModelAdmin):
         "files_count_display",
     )
 
-    # اضافه کردن Inline های بریف و فایل
     inlines = [
         ContentOrderDescriptionInline,
         ContentOrderFileInline,
@@ -418,13 +411,30 @@ class ContentOrderAdmin(admin.ModelAdmin):
     has_brief_display.short_description = _("بریف ثبت شده؟")
     files_count_display.short_description = _("فایل‌های پیوست")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for order in qs:
+                province = get_team_province(order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(order.team_id)
+            return qs.filter(team_id__in=team_ids)
+        return qs
 
-# =========================
-# Content Order Description
-# =========================
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'team' and request.user.is_regional_manager:
+            team_ids = []
+            for team in ContentTeam.objects.all():
+                province = get_team_province(team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(team.id)
+            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ContentOrderDescription)
-class ContentOrderDescriptionAdmin(admin.ModelAdmin):
+class ContentOrderDescriptionAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "order",
         "goal",
@@ -500,13 +510,20 @@ class ContentOrderDescriptionAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for desc in qs:
+                province = get_team_province(desc.order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(desc.order.team_id)
+            return qs.filter(order__team_id__in=team_ids)
+        return qs
 
-# =========================
-# Content Order File
-# =========================
 
 @admin.register(ContentOrderFile)
-class ContentOrderFileAdmin(admin.ModelAdmin):
+class ContentOrderFileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "original_name",
         "order",
@@ -593,7 +610,6 @@ class ContentOrderFileAdmin(admin.ModelAdmin):
                 obj.file.url
             )
 
-        # برای سایر فایل‌ها لینک دانلود
         return format_html(
             '<a href="{}" target="_blank" '
             'style="color: #007bff;">⬇️ دانلود فایل</a>',
@@ -602,13 +618,20 @@ class ContentOrderFileAdmin(admin.ModelAdmin):
 
     file_preview.short_description = _("پیش‌نمایش")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for file_obj in qs:
+                province = get_team_province(file_obj.order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(file_obj.order.team_id)
+            return qs.filter(order__team_id__in=team_ids)
+        return qs
 
-# =========================
-# Team Review
-# =========================
 
 @admin.register(TeamReview)
-class TeamReviewAdmin(admin.ModelAdmin):
+class TeamReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "team",
         "advertiser",
@@ -637,9 +660,20 @@ class TeamReviewAdmin(admin.ModelAdmin):
         "advertiser",
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for review in qs:
+                province = get_team_province(review.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(review.team_id)
+            return qs.filter(team_id__in=team_ids)
+        return qs
+
 
 @admin.register(TeamJoinRequest)
-class TeamJoinRequestAdmin(admin.ModelAdmin):
+class TeamJoinRequestAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     """
     ادمین مدیریت درخواست‌های عضویت در تیم
     """
@@ -730,7 +764,8 @@ class TeamJoinRequestAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-    def approve_request(self, request, request_id):
+    @staticmethod
+    def approve_request(request, request_id):
         """تایید یک درخواست خاص"""
         from django.shortcuts import get_object_or_404, redirect
         from django.contrib import messages
@@ -743,7 +778,8 @@ class TeamJoinRequestAdmin(admin.ModelAdmin):
                          f'درخواست {join_request.user.nickname} برای عضویت در تیم {join_request.team.name} با موفقیت تایید شد.')
         return redirect('admin:content_team_teamjoinrequest_changelist')
 
-    def reject_request(self, request, request_id):
+    @staticmethod
+    def reject_request(request, request_id):
         """رد یک درخواست خاص"""
         from django.shortcuts import get_object_or_404, redirect
         from django.contrib import messages
@@ -756,10 +792,20 @@ class TeamJoinRequestAdmin(admin.ModelAdmin):
                          f'درخواست {join_request.user.nickname} برای عضویت در تیم {join_request.team.name} رد شد.')
         return redirect('admin:content_team_teamjoinrequest_changelist')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for req in qs:
+                province = get_team_province(req.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(req.team_id)
+            return qs.filter(team_id__in=team_ids)
+        return qs
 
 
 @admin.register(ContentDelivery)
-class ContentDeliveryAdmin(admin.ModelAdmin):
+class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     """
     ادمین تحویل سفارشات - نسخه ساده شده با فایل مستقیم
     """
@@ -942,9 +988,20 @@ class ContentDeliveryAdmin(admin.ModelAdmin):
 
     file_size_display.short_description = _("حجم فایل")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for rev in qs:
+                province = get_team_province(rev.order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(rev.order.team_id)
+            return qs.filter(order__team_id__in=team_ids)
+        return qs
+
 
 @admin.register(ContentOrderRevision)
-class ContentOrderRevisionAdmin(admin.ModelAdmin):
+class ContentOrderRevisionAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     """
     ادمین درخواست‌های ویرایش سفارش - نسخه ساده شده با فایل مستقیم
     """
@@ -1109,9 +1166,20 @@ class ContentOrderRevisionAdmin(admin.ModelAdmin):
 
     file_size_display.short_description = _("حجم فایل")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for delivery in qs:
+                province = get_team_province(delivery.order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(delivery.order.team_id)
+            return qs.filter(order__team_id__in=team_ids)
+        return qs
+
 
 @admin.register(ContentPortfolio)
-class ContentPortfolioAdmin(admin.ModelAdmin):
+class ContentPortfolioAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     """
     ادمین نمونه کارهای تیم‌ها
     """
@@ -1230,7 +1298,6 @@ class ContentPortfolioAdmin(admin.ModelAdmin):
                 obj.media.url
             )
         elif obj.video_url:
-            # تلاش برای نمایش ویدیو از آپارات/یوتیوب
             video_html = f'''
             <div style="margin-top: 10px;">
                 <strong>لینک ویدیو:</strong> 
@@ -1241,3 +1308,24 @@ class ContentPortfolioAdmin(admin.ModelAdmin):
         return "-"
 
     media_preview_large.short_description = _("پیش‌نمایش")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for portfolio in qs:
+                province = get_team_province(portfolio.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(portfolio.team_id)
+            return qs.filter(team_id__in=team_ids)
+        return qs
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'team' and request.user.is_regional_manager:
+            team_ids = []
+            for team in ContentTeam.objects.all():
+                province = get_team_province(team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(team.id)
+            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

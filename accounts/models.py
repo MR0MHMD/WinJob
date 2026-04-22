@@ -52,6 +52,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default=False
     )
 
+    province = models.ForeignKey('location.Province', on_delete=models.CASCADE,
+                                 related_name='accounts', verbose_name=_('استان'), null=True, blank=True)
+
+
+    is_regional_manager = models.BooleanField(
+        'مدیر استانی',
+        default=False,
+        help_text='اگر فعال باشد، کاربر فقط دسترسی به استان خودش را دارد'
+    )
+
     date_joined = jmodels.jDateTimeField(
         _('تاریخ عضویت'),
         default=timezone.now

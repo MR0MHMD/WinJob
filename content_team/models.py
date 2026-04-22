@@ -1,31 +1,14 @@
-from django.core.exceptions import ValidationError
-from django.db import models
-from django.db.models import Sum
-from django.utils.translation import gettext_lazy as _
-from django_jalali.db import models as jmodels
 from django.core.validators import MinValueValidator, MaxValueValidator
-from decimal import Decimal
+from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from django_jalali.db import models as jmodels
 from django_resized import ResizedImageField
-import mimetypes
-
 from core.utils import generate_random_slug
-
-
-# core/utils.py
-
-def content_order_file_path(instance, filename):
-    """
-    مسیر ذخیره فایل‌های سفارش
-    پشتیبانی از ContentOrderFile و ContentDeliveryFile
-    """
-    if hasattr(instance, 'order') and instance.order:
-        return f'content_orders/{instance.order.campaign.id}/{instance.order.id}/{filename}'
-
-    elif hasattr(instance, 'delivery') and instance.delivery:
-        return f'content_orders/{instance.delivery.order.campaign.id}/{instance.delivery.order.id}/delivery/{filename}'
-
-    # fallback
-    return f'content_orders/unknown/{filename}'
+from .utils import content_order_file_path
+from django.db.models import Sum
+from django.db import models
+from decimal import Decimal
+import mimetypes
 
 
 class ContentTeam(models.Model):
@@ -90,7 +73,6 @@ class ContentTeam(models.Model):
         super().clean()
         total_percent = self.get_total_revenue_percent()
 
-        # فقط اگه تیم عضو فعال داره و مجموع درصدشون ۱۰۰ نیست، خطا بده
         if self.members.filter(is_active=True).exists() and total_percent != 100:
             raise ValidationError(
                 f'مجموع درصد سهام اعضای فعال تیم باید دقیقاً ۱۰۰ باشد (در حال حاضر: {total_percent}%)'
@@ -435,14 +417,12 @@ class ContentOrderDescription(models.Model):
         help_text=_('مثلاً: #برند_من #تخفیف')
     )
 
-    # لینک‌های مرجع
     reference_links = models.TextField(
         _('لینک‌های مرجع'),
         blank=True,
         help_text=_('لینک نمونه‌کارهای مشابه که دوست دارید')
     )
 
-    # مخاطب هدف
     target_audience = models.CharField(
         _('مخاطب هدف'),
         max_length=300,
@@ -450,13 +430,11 @@ class ContentOrderDescription(models.Model):
         help_text=_('مثلاً: زنان ۲۵-۳۵ ساله علاقه‌مند به مد')
     )
 
-    # توضیحات اصلی
     description = models.TextField(
         _('توضیحات کامل'),
         help_text=_('هر اطلاعات دیگری که تیم باید بداند')
     )
 
-    # نکات ممنوع
     do_not_include = models.TextField(
         _('چه چیزهایی نباشد؟'),
         blank=True,
@@ -545,10 +523,8 @@ class ContentOrderFile(models.Model):
         return f"فایل {self.original_name} - سفارش {self.order.id}"
 
     def save(self, *args, **kwargs):
-        # ذخیره نام اصلی فایل
         if self.file and not self.original_name:
             self.original_name = self.file.name.split('/')[-1]
-        # ذخیره حجم فایل
         if self.file and not self.file_size:
             try:
                 self.file_size = self.file.size
@@ -705,7 +681,6 @@ class ContentOrderRevision(models.Model):
         db_index=True
     )
 
-    # ========== تغییر: حذف ManyToMany و اضافه کردن فایل مستقیم ==========
     file = models.FileField(
         _('فایل مرجع'),
         upload_to='revision_files/',
@@ -746,7 +721,6 @@ class ContentOrderRevision(models.Model):
         return f"ویرایش سفارش {self.order.id} - {self.get_status_display()}"
 
     def save(self, *args, **kwargs):
-        # ذخیره نام اصلی فایل
         if self.file and not self.file_name:
             self.file_name = self.file.name.split('/')[-1]
         if self.file and not self.file_size:
@@ -795,7 +769,6 @@ class ContentDelivery(models.Model):
         db_index=True
     )
 
-    # ========== فیلد فایل مستقیم ==========
     file = models.FileField(
         _('فایل تحویلی'),
         upload_to=content_order_file_path,
@@ -870,7 +843,6 @@ class ContentDelivery(models.Model):
         return f"تحویل سفارش {self.order.id} - نسخه {self.version} - {self.get_status_display()}"
 
     def save(self, *args, **kwargs):
-        # ذخیره نام اصلی فایل
         if self.file and not self.file_name:
             self.file_name = self.file.name.split('/')[-1]
         if self.file and not self.file_size:
