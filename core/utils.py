@@ -7,8 +7,6 @@ from jdatetime import datetime as jdatetime
 import jdatetime
 
 
-
-
 def generate_english_slug(text):
     try:
         translated = GoogleTranslator(source='fa', target='en').translate(text)

@@ -1,15 +1,16 @@
-from core.utils import convert_to_jalali
-from .models import TeamJoinRequest, ContentOrder, ContentServiceRate, ContentTeam, ContentTeamMember, \
-    ContentOrderRevision
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.db.models.functions import TruncMonth, TruncDate
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, DetailView
 from accounts.models import Transaction, CustomUser
-from django.db.models.functions import TruncMonth, TruncDate
-from django.db.models import Sum, Count, Avg
+from django.db.models import Q, Sum, Count, Avg
+from django.core.paginator import Paginator
+from core.utils import convert_to_jalali
+from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from .models import *
 import jdatetime
 import json
 
@@ -412,18 +413,6 @@ def team_members_manage(request, team_slug):
 
     return render(request, 'content_team/forms/team_members.html', context)
 
-# content_team/views.py
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q, Sum, Count, Avg
-from django.contrib import messages
-from django.utils.translation import gettext as _
-from django.utils import timezone
-from django.db import models
-from .models import ContentOrder, ContentTeamMember, ContentDelivery
-
 
 @login_required
 def team_orders_list(request):
@@ -525,17 +514,6 @@ def team_orders_list(request):
     }
 
     return render(request, 'content_team/pages/team_order_list.html', context)
-
-
-# content_team/views.py
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Count, Sum
-from django.http import JsonResponse
-from django.utils import timezone
-from .models import ContentOrder, ContentTeamMember, ContentDelivery
 
 
 @login_required

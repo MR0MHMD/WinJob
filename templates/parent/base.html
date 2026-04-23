@@ -116,15 +116,11 @@
             </div>
         </div>
         
-        {% include 'accounts/forms/login.html' %}
-        {% include 'accounts/forms/register.html' %}
-        
         <header class="navbar navbar-expand-lg navbar-dark header fixed-top" data-scroll-header>
             {% include 'partials/header.html' %}
         </header>
         
         <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem" >
-            <!-- نمایش پیام‌های Django Messages -->
             {% if messages %}
                 {% for message in messages %}
                     <div class="container mt-3">
@@ -135,8 +131,7 @@
                     </div>
                 {% endfor %}
             {% endif %}
-            
-            {% block content %}{% endblock %}
+            {% block content %} {% endblock %}
         </main>
         
         <footer class="footer bg-faded-light mt-3">
@@ -263,12 +258,5 @@
         
         <!-- Main theme script-->
         <script src="{% static 'finder/js/theme.min.js' %}"></script>
-        
-        <script>
-            window.userIsAuthenticated = {{ user.is_authenticated|lower }};
-        </script>
-        
-        <script src="{% static 'parent/auth_model.js' %}"></script>
-    
     </body>
 </html>

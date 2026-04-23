@@ -8,4 +8,3 @@ def create_user_wallet(sender, instance, created, **kwargs):
 
     if created:
         Wallet.objects.get_or_create(user=instance)
-

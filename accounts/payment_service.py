@@ -1,5 +1,3 @@
-# accounts/payment_service.py
-
 from django.utils import timezone
 from .models import Transaction
 

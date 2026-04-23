@@ -40,4 +40,3 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_('سوپرکاربر باید is_superuser=True داشته باشد'))
 
         return self._create_user(phone_number, password, **extra_fields)
-

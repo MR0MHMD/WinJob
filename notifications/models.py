@@ -7,25 +7,18 @@ from django_jalali.db import models as jmodels
 
 class Notification(models.Model):
     class Type(models.TextChoices):
-        # تبلیغ‌دهنده
         CAMPAIGN_PENDING = 'campaign_pending', 'کمپین در انتظار تایید'
         CAMPAIGN_APPROVED = 'campaign_approved', 'کمپین تایید شد'
         CAMPAIGN_REJECTED = 'campaign_rejected', 'کمپین رد شد'
         CAMPAIGN_COMPLETED = 'campaign_completed', 'کمپین تمام شد'
-
         INFLUENCER_ACCEPTED = 'influencer_accepted', 'اینفلوئنسر سفارش را قبول کرد'
         INFLUENCER_REPORT_APPROVED = 'influencer_report_approved', 'گزارش اینفلوئنسر تایید شد'
-
         TICKET_ANSWERED = 'ticket_answered', 'تیکت پاسخ داده شد'
-
-        # اینفلوئنسر
         NEW_ORDER = 'new_order', 'سفارش جدید'
         PENALTY = 'penalty', 'جریمه'
         REPORT_APPROVED = 'report_approved', 'گزارش تایید شد'
         WALLET_DEPOSIT = 'wallet_deposit', 'واریز به کیف پول'
         WITHDRAWAL_SUCCESS = 'withdrawal_success', 'برداشت موفق'
-
-        # تیم محتوا
         NEW_CONTENT_ORDER = 'new_content_order', 'سفارش محتوا جدید'
         REVISION_REQUESTED = 'revision_requested', 'درخواست ویرایش'
         FINAL_ACCEPTED = 'final_accepted', 'تایید نهایی سفارش'

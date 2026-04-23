@@ -1,8 +1,6 @@
 from django import forms
 from django.utils.safestring import mark_safe
-
-from influencers.models import InfluencerProfile, InfluencerChannel, InfluencerServiceRate
-from campaigns.models import AdType
+from influencers.models import InfluencerProfile, InfluencerChannel
 
 
 class InfluencerProfileForm(forms.ModelForm):

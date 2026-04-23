@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import Sum
 
 
-
 @login_required
 def team_member_edit(request, team_slug, member_id):
     """

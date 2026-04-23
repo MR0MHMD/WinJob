@@ -1,4 +1,3 @@
-# campaigns/api_views.py
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_POST

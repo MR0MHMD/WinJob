@@ -1,14 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from django.apps import apps  # ← این رو اضافه کن
+from django.apps import apps
 
 
 class Command(BaseCommand):
     help = 'تنظیم گروه و دسترسی‌های مدیران استانی'
 
     def handle(self, *args, **options):
-        # ایجاد گروه مدیران استانی
         group, created = Group.objects.get_or_create(name='مدیران استانی')
 
         if created:
@@ -17,30 +16,36 @@ class Command(BaseCommand):
             self.stdout.write('📋 گروه مدیران استانی از قبل وجود داشت')
 
         models_list = [
-            # اینفلوئنسرها
+            ('advertisers', 'AdvertiserProfile'),
             ('influencers', 'InfluencerChannel'),
             ('influencers', 'InfluencerProfile'),
             ('influencers', 'InfluencerServiceRate'),
-
-            # تبلیغ‌دهندگان
-            ('advertisers', 'AdvertiserProfile'),
-
-            # کمپین‌ها
+            ('influencers', 'CampaignReport'),
+            ('influencers', 'InfluencerReview'),
             ('campaigns', 'Campaign'),
+            ('campaigns', 'CampaignInfluencer'),
+            ('campaigns', 'CampaignContent'),
+            ('campaigns', 'CampaignTrackingLink'),
+            ('campaigns', 'CampaignClick'),
             ('campaigns', 'CampaignInvoice'),
             ('campaigns', 'Payment'),
-
-            # تیم محتوا (اختیاری)
-            # ('content_team', 'ContentTeam'),
-            # ('content_team', 'ContentTeamMember'),
-            # ('content_team', 'ContentOrder'),
+            ('content_team', 'ContentTeam'),
+            ('content_team', 'ContentTeamMember'),
+            ('content_team', 'ContentOrder'),
+            ('content_team', 'ContentServiceRate'),
+            ('content_team', 'ContentOrderDescription'),
+            ('content_team', 'ContentOrderFile'),
+            ('content_team', 'TeamReview'),
+            ('content_team', 'TeamJoinRequest'),
+            ('content_team', 'ContentOrderRevision'),
+            ('content_team', 'ContentDelivery'),
+            ('content_team', 'ContentPortfolio'),
         ]
 
         total_permissions = 0
 
         for app_label, model_name in models_list:
             try:
-                # دریافت مدل به صورت داینامیک
                 model = apps.get_model(app_label, model_name)
                 content_type = ContentType.objects.get_for_model(model)
                 permissions = Permission.objects.filter(content_type=content_type)

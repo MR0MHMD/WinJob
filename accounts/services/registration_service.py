@@ -1,10 +1,8 @@
-# services/registration_service.py
 from django.db import transaction
 from accounts.models import CustomUser
 from advertisers.models import AdvertiserProfile
 from influencers.models import InfluencerProfile
 from content_team.models import ContentTeamMember
-from core.utils import generate_random_slug  # ایمپورت از core.utils
 
 
 class RegistrationService:
@@ -62,24 +60,20 @@ class RegistrationService:
             team: تیم مورد نظر
             is_manager: آیا کاربر مدیر تیم است؟ (در ساخت تیم جدید True است)
         """
-        # بررسی وجود شماره
         if CustomUser.objects.filter(phone_number=phone_number).exists():
             raise ValueError("این شماره تلفن قبلاً ثبت شده است")
 
-        # ساخت کاربر (بدون فیلد role)
         user = CustomUser.objects.create_user(
             phone_number=phone_number,
             password=password,
             nickname=nickname
         )
 
-        # تعیین نقش در تیم
         if is_manager:
             team_role = ContentTeamMember.Role.MANAGER
         else:
             team_role = ContentTeamMember.Role.OTHER
 
-        # ساخت پروفایل عضو تیم
         team_member = ContentTeamMember.objects.create(
             user=user,
             team=team,

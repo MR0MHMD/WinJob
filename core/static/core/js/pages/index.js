@@ -320,113 +320,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ========== اسلایدر بی‌نهایت برندها (آروم و روان) ==========
-document.addEventListener('DOMContentLoaded', function() {
-    const track = document.getElementById('brandsTrack');
-
-    if (!track) {
-        console.error('اسلایدر برندها پیدا نشد!');
-        return;
-    }
-
-    // تشخیص RTL
-    const isRTL = document.documentElement.getAttribute('dir') === 'rtl' ||
-                  document.body.style.direction === 'rtl';
-
-    // تنظیمات
-    let speed = 0.3; // سرعت آروم (پیکسل بر فریم) - عدد کمتر = آروم‌تر
-    let animationId = null;
-    let position = 0;
-    let trackWidth = 0;
-
-    // محاسبه عرض ترک
-    function updateWidths() {
-        trackWidth = track.scrollWidth / 2; // نصف می‌کنیم چون دو گروه داریم
-    }
-
-    // انیمیشن بی‌نهایت
-    function animate() {
-        // حرکت آروم
-        if (isRTL) {
-            // در RTL به سمت راست حرکت کن
-            position += speed;
-            if (position >= trackWidth) {
-                position = 0;
-            }
-        } else {
-            // در LTR به سمت چپ حرکت کن
-            position -= speed;
-            if (position <= -trackWidth) {
-                position = 0;
-            }
-        }
-
-        // اعمال حرکت
-        track.style.transform = `translateX(${position}px)`;
-
-        // ادامه انیمیشن
-        animationId = requestAnimationFrame(animate);
-    }
-
-    // استارت انیمیشن
-    function startAnimation() {
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-        }
-
-        updateWidths();
-
-        // تنظیم موقعیت اولیه
-        if (isRTL) {
-            position = 0;
-        } else {
-            position = 0;
-        }
-
-        track.style.transform = `translateX(${position}px)`;
-        animationId = requestAnimationFrame(animate);
-    }
-
-    // توقف انیمیشن (اگه بخوای)
-    function stopAnimation() {
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
-    }
-
-    // ریسپانسیو
-    let resizeTimeout;
-    function handleResize() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            const wasPlaying = animationId !== null;
-            stopAnimation();
-            updateWidths();
-            position = 0;
-            if (wasPlaying) {
-                startAnimation();
-            }
-        }, 250);
-    }
-
-    // هاور روی اسلایدر - آرومتر شدن (اختیاری)
-    const container = document.querySelector('.brands-ticker-container');
-    let originalSpeed = speed;
-
-    if (container) {
-        container.addEventListener('mouseenter', () => {
-            // با هاور، سرعت رو کم‌تر کن (آروم‌تر)
-            speed = originalSpeed * 0.3;
-        });
-
-        container.addEventListener('mouseleave', () => {
-            // برگشت به سرعت اصلی
-            speed = originalSpeed;
-        });
-    }
-});
-
 const platforms = [
     { name: "تلگرام", class: "platform-telegram" },
     { name: "بله", class: "platform-bale" },
@@ -457,3 +350,153 @@ textElement.classList.add(platforms[0].class);
 textElement.textContent = platforms[0].name;
 
 setInterval(changeText, 4000);
+
+
+// ========== اسلایدر بی‌نهایت برندها (آروم و روان) ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const track = document.getElementById('brandsTrack');
+
+    if (!track) {
+        console.error('اسلایدر برندها پیدا نشد!');
+        return;
+    }
+
+    // تشخیص RTL
+    const isRTL = document.documentElement.getAttribute('dir') === 'rtl' ||
+                  document.body.style.direction === 'rtl' ||
+                  window.getComputedStyle(document.body).direction === 'rtl';
+
+    // تنظیمات سرعت - عدد کمتر = آروم‌تر
+    let speed = 0.2;        // سرعت عادی (خیلی آروم)
+    let hoverSpeed = 0.05;   // سرعت هنگام هاور (تقریبا ایستاده)
+    let currentSpeed = speed;
+    let animationId = null;
+    let position = 0;
+    let trackWidth = 0;
+    let isHovered = false;
+
+    // محاسبه عرض واقعی ترک
+    function updateWidths() {
+        const fullWidth = track.scrollWidth;
+        trackWidth = fullWidth / 2;
+
+        // اطمینان از اینکه موقعیت در محدوده درسته
+        if (isRTL) {
+            if (position >= trackWidth) {
+                position = 0;
+            } else if (position < 0) {
+                position = trackWidth - Math.abs(position);
+            }
+        } else {
+            if (position <= -trackWidth) {
+                position = 0;
+            } else if (position > 0) {
+                position = -trackWidth + position;
+            }
+        }
+
+        track.style.transform = `translateX(${position}px)`;
+    }
+
+    // انیمیشن بی‌نهایت
+    function animate() {
+        // حرکت با سرعت فعلی
+        if (isRTL) {
+            position += currentSpeed;
+            if (position >= trackWidth) {
+                position = 0;
+            }
+        } else {
+            position -= currentSpeed;
+            if (position <= -trackWidth) {
+                position = 0;
+            }
+        }
+
+        track.style.transform = `translateX(${position}px)`;
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // استارت انیمیشن
+    function startAnimation() {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+
+        updateWidths();
+        position = 0;
+        track.style.transform = `translateX(0px)`;
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // هاور روی اسلایدر
+    const container = document.querySelector('.brands-ticker-container');
+
+    if (container) {
+        container.addEventListener('mouseenter', () => {
+            isHovered = true;
+            currentSpeed = hoverSpeed;  // خیلی آروم میشه
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isHovered = false;
+            currentSpeed = speed;  // برمیگرده به سرعت عادی (که بازم آرومه)
+        });
+    }
+
+    // ریسپانسیو
+    let resizeTimeout;
+    function handleResize() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const wasPlaying = animationId !== null;
+            if (animationId) cancelAnimationFrame(animationId);
+            updateWidths();
+            position = 0;
+            track.style.transform = `translateX(0px)`;
+            if (wasPlaying) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }, 250);
+    }
+
+    // اطمینان از لود کامل تصاویر
+    function waitForImages() {
+        const images = track.querySelectorAll('img');
+        let loadedImages = 0;
+
+        if (images.length === 0) {
+            startAnimation();
+            return;
+        }
+
+        images.forEach(img => {
+            if (img.complete) {
+                loadedImages++;
+            } else {
+                img.addEventListener('load', () => {
+                    loadedImages++;
+                    if (loadedImages === images.length) {
+                        updateWidths();
+                        startAnimation();
+                    }
+                });
+                img.addEventListener('error', () => {
+                    loadedImages++;
+                    if (loadedImages === images.length) {
+                        updateWidths();
+                        startAnimation();
+                    }
+                });
+            }
+        });
+
+        if (loadedImages === images.length) {
+            updateWidths();
+            startAnimation();
+        }
+    }
+
+    waitForImages();
+    window.addEventListener('resize', handleResize);
+});
