@@ -40,5 +40,5 @@ def pay_influencer_on_completed(sender, instance, created, **kwargs):
 
     # اگه وضعیت جدید COMPLETED هست و قبلاً پرداخت نشده
     if instance.status == CampaignInfluencer.Status.COMPLETED and not instance._was_paid:
-        from accounts.payment_service import pay_influencer
+        from accounts.services.payment_service import pay_influencer
         pay_influencer(instance)

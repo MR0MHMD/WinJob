@@ -1,17 +1,9 @@
-from .forms import ProfileUpdateForm
-from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
+from accounts.forms import ProfileUpdateForm
 from django.http import JsonResponse
 from django.contrib import messages
-
-
-def logout_view(request):
-    """خروج از حساب کاربری"""
-    logout(request)
-    messages.success(request, 'با موفقیت از حساب خود خارج شدید. 👋')
-    return redirect('core:home')
 
 
 @login_required
@@ -49,4 +41,3 @@ def dashboard_router(request):
         return redirect("content_team:dashboard")
     else:
         return redirect('/admin')
-

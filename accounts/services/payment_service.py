@@ -1,5 +1,5 @@
 from django.utils import timezone
-from .models import Transaction
+from accounts.models import Transaction
 
 
 def pay_influencer(campaign_influencer):
