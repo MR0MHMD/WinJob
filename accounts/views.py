@@ -1,187 +1,629 @@
-from content_team.models import ContentTeam, ContentTeamMember, TeamJoinRequest
+from django.views.decorators.http import require_GET, require_http_methods
 from .services.registration_service import RegistrationService
+from content_team.models import ContentTeam, TeamJoinRequest
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from .services.otp_service import OTPGhasedakService
 from influencers.forms import InfluencerProfileForm
 from advertisers.forms import AdvertiserProfileForm
 from django.contrib.auth import authenticate, login
 from .forms import LoginForm, RegistrationForm
 from django.shortcuts import render, redirect
 from core.utils import generate_random_slug
-from accounts.models import CustomUser
+from .models import OTPRequest, CustomUser
 from .forms import ProfileUpdateForm
 from django.http import JsonResponse
 from django.contrib import messages
+from django.utils import timezone
 from django.db import transaction
 from .models import Transaction
 
 
-def login_view(request):
-    """
-    صفحه ورود و پردازش فرم ورود - یک ویو برای همه چیز!
-    """
-    # اگه کاربر لاگین کرده ببرش خونه
-    if request.user.is_authenticated:
-        return redirect('core:home')
-
-    # درخواست GET - نمایش فرم
-    if request.method != 'POST':
-        form = LoginForm()
-        return render(request, 'accounts/forms/login.html', {'login_form': form})
-
-    # درخواست POST - پردازش فرم
-    form = LoginForm(request.POST)
-
-    if not form.is_valid():
-        return render(request, 'accounts/forms/login.html', {
-            'login_form': form,
-            'error': 'لطفاً اطلاعات را به درستی وارد کنید'
-        })
-
-    phone_number = form.cleaned_data['phone_number']
-    password = form.cleaned_data['password']
-    user = authenticate(request, phone_number=phone_number, password=password)
-
-    if user is None:
-        return render(request, 'accounts/forms/login.html', {
-            'login_form': form,
-            'error': 'نام کاربری یا رمز عبور اشتباه است'
-        })
-
-    # لاگین موفق
-    login(request, user)
-    next_url = request.session.pop('next_url', None) or '/'
-
-    # اگه درخواست AJAX بود
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({"success": True, "redirect_url": next_url})
-
-    messages.success(request, f'خوش آمدید {user.nickname} 🙌')
-    return redirect(next_url)
-
-
 def register_view(request):
     """
-    صفحه ثبت‌نام و پردازش فرم ثبت‌نام - یک ویو برای همه چیز!
+    صفحه ثبت‌نام - ابتدا اطلاعات رو گرفتن، بعد ریدایرکت به OTP
     """
-    # اگه کاربر لاگین کرده ببرش خونه
     if request.user.is_authenticated:
         return redirect('core:home')
 
-    # درخواست GET - نمایش فرم
     if request.method != 'POST':
         form = RegistrationForm()
         return render(request, 'accounts/forms/register.html', {'register_form': form})
 
-    # درخواست POST - پردازش فرم
     form = RegistrationForm(request.POST)
 
     if not form.is_valid():
-        # نمایش خطاهای فرم
         for field, errors in form.errors.items():
             for error in errors:
                 messages.error(request, f"{field}: {error}")
         return render(request, 'accounts/forms/register.html', {'register_form': form})
 
-    # گرفتن اطلاعات از فرم
-    phone = form.cleaned_data["phone_number"]
+    phone_number = form.cleaned_data["phone_number"]
     nickname = form.cleaned_data["nickname"]
-    password = form.cleaned_data["password"]
-    role = form.cleaned_data["role"]
+
+    # ذخیره اطلاعات فرم در session
+    request.session['register_data'] = {
+        'phone_number': phone_number,
+        'nickname': nickname,
+        'password': form.cleaned_data["password"],
+        'role': form.cleaned_data["role"],
+        'create_new_team': form.cleaned_data.get("create_new_team"),
+        'team_name': form.cleaned_data.get("team_name"),
+        'team_slug': form.cleaned_data.get("team_slug"),
+    }
+
+    # ارسال کد OTP با نام مستعار
+    service = OTPGhasedakService()
+    otp_obj, success, message, remaining_time = service.send_otp(
+        phone_number=phone_number,
+        otp_type=OTPRequest.OTPType.REGISTER,
+        nickname=nickname
+    )
+
+    if not success:
+        messages.error(request, message)
+        return render(request, 'accounts/forms/register.html', {'register_form': form})
+
+    # ذخیره زمان در session برای مواقعی که رفرش میشه
+    request.session['otp_sent_at'] = timezone.now().isoformat()
+    request.session['otp_remaining'] = remaining_time
+
+    return redirect('accounts:verify_otp')
+
+
+def login_view(request):
+    """
+    صفحه ورود با دو روش:
+    1. شماره موبایل + رمز عبور (POST معمولی)
+    2. شماره موبایل + کد OTP (AJAX)
+    """
+    global json
+    if request.user.is_authenticated:
+        return redirect('core:home')
+
+    # درخواست GET - نمایش فرم
+    if request.method == 'GET':
+        form = LoginForm()
+        return render(request, 'accounts/forms/login.html', {'login_form': form})
+
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if not is_ajax:
+        print("رمز عبور با موفقیت داره اجزا میشه")
+        form = LoginForm(request.POST)
+
+        if not form.is_valid():
+            return render(request, 'accounts/forms/login.html', {
+                'login_form': form,
+                'error': 'لطفاً اطلاعات را به درستی وارد کنید'
+            })
+
+        phone_number = form.cleaned_data['phone_number']
+        password = form.cleaned_data.get('password', '')
+
+        if not password:
+            return render(request, 'accounts/forms/login.html', {
+                'login_form': form,
+                'error': 'رمز عبور را وارد کنید'
+            })
+
+        user = authenticate(request, phone_number=phone_number, password=password)
+
+        if user is not None:
+            login(request, user)
+            next_url = request.session.pop('next_url', None) or '/'
+            messages.success(request, f'خوش آمدید {user.nickname} 🙌')
+            return redirect(next_url)
+        else:
+            return render(request, 'accounts/forms/login.html', {
+                'login_form': form,
+                'error': 'شماره تلفن یا رمز عبور اشتباه است'
+            })
+
+    # ====== درخواست AJAX (ورود با OTP) ======
+    try:
+        if not request.body:
+            return JsonResponse({'success': False, 'error': 'داده ارسالی خالی است'}, status=400)
+
+        import json
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'داده ارسالی نامعتبر است'}, status=400)
+
+    login_type = data.get('login_type', 'otp')
+    phone_number = data.get('phone_number')
+
+    if not phone_number:
+        return JsonResponse({'success': False, 'error': 'شماره تلفن الزامی است'}, status=400)
+
+    # ====== ورود با OTP ======
+    if login_type == 'otp':
+        try:
+            user = CustomUser.objects.get(phone_number=phone_number)
+            print(f"🔥 کاربر پیدا شد: {phone_number} | nickname: '{user.nickname}'")
+
+            nickname_to_send = user.nickname if user.nickname else f"کاربر {phone_number[-4:]}"
+            print(f"📤 nickname ارسالی: '{nickname_to_send}'")
+
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'کاربری با این شماره یافت نشد. لطفاً ثبت‌نام کنید.'},
+                                status=400)
+
+        service = OTPGhasedakService()
+        otp_obj, success, message, remaining_time = service.send_otp(
+            phone_number=phone_number,
+            otp_type=OTPRequest.OTPType.LOGIN,
+            nickname=nickname_to_send
+        )
+
+        print(f"✅ نتیجه ارسال: success={success}, message={message}")
+
+        if success:
+            request.session['login_otp_data'] = {
+                'phone_number': phone_number,
+                'user_id': user.id,
+            }
+            return JsonResponse({
+                'success': True,
+                'message': 'کد تایید برای شما ارسال شد',
+                'need_verify': True,
+                'remaining_time': remaining_time
+            })
+        else:
+            return JsonResponse({'success': False, 'error': message}, status=400)
+
+    return JsonResponse({'success': False, 'error': 'درخواست نامعتبر'}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def login_otp_request_api(request):
+    """API درخواست OTP برای لاگین"""
+    import json
 
     try:
-        with transaction.atomic():
-            user = None
+        data = json.loads(request.body)
+        phone_number = data.get('phone_number')
 
-            if role == "advertiser":
-                user, profile = RegistrationService.register_advertiser(
-                    phone_number=phone,
-                    password=password,
-                    nickname=nickname
-                )
+        if not phone_number:
+            return JsonResponse({'success': False, 'error': 'شماره تلفن الزامی است'}, status=400)
 
-            elif role == "influencer":
-                user, profile = RegistrationService.register_influencer(
-                    phone_number=phone,
-                    password=password,
-                    nickname=nickname
-                )
+        # بررسی وجود کاربر
+        try:
+            user = CustomUser.objects.get(phone_number=phone_number)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'کاربری با این شماره یافت نشد. لطفاً ثبت‌نام کنید.'
+            }, status=400)
 
-            elif role == "team_member":
-                create_new_team = form.cleaned_data.get("create_new_team")
+        # ارسال OTP
+        nickname_to_send = user.nickname if user.nickname else f"کاربر {phone_number[-4:]}"
+        service = OTPGhasedakService()
+        otp_obj, success, message, remaining_time = service.send_otp(
+            phone_number=phone_number,
+            otp_type=OTPRequest.OTPType.LOGIN,
+            nickname=nickname_to_send
+        )
 
-                if create_new_team:
-                    team_name = form.cleaned_data.get("team_name")
-                    if not team_name:
-                        messages.error(request, "لطفاً نام تیم را وارد کنید")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
+        if success:
+            request.session['login_otp_data'] = {
+                'phone_number': phone_number,
+                'user_id': user.id,
+            }
+            return JsonResponse({
+                'success': True,
+                'message': 'کد تایید برای شما ارسال شد',
+                'need_verify': True,
+                'remaining_time': remaining_time
+            })
+        else:
+            return JsonResponse({'success': False, 'error': message}, status=400)
 
-                    new_team = ContentTeam.objects.create(
-                        name=team_name,
-                        slug=generate_random_slug(),
-                        is_active=True
-                    )
-                    user, team_member = RegistrationService.register_team_member(
-                        phone_number=phone,
-                        password=password,
-                        nickname=nickname,
-                        team=new_team,
-                        is_manager=True
-                    )
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'داده ارسالی نامعتبر است'}, status=400)
+    except Exception as e:
+        print(f"خطا در login_otp_request_api: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'خطای داخلی سرور'}, status=500)
 
-                else:
-                    team_slug = form.cleaned_data.get("team_slug")
-                    if not team_slug:
-                        messages.error(request, "لطفاً شناسه تیم را وارد کنید")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
 
-                    # بررسی وجود تیم
-                    try:
-                        team = ContentTeam.objects.get(slug=team_slug, is_active=True)
-                    except ContentTeam.DoesNotExist:
-                        messages.error(request, "تیم مورد نظر یافت نشد. لطفاً شناسه تیم را بررسی کنید.")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
+@require_http_methods(["POST"])
+@csrf_exempt
+def check_user_exists_api(request):
+    """API بررسی وجود کاربر با شماره تلفن"""
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
 
-                    user = CustomUser.objects.create_user(
+    if not phone_number:
+        return JsonResponse({'exists': False, 'error': 'شماره تلفن الزامی است'}, status=400)
+
+    exists = CustomUser.objects.filter(phone_number=phone_number).exists()
+    return JsonResponse({'exists': exists})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def set_login_phone_api(request):
+    """API ذخیره شماره تلفن برای لاگین با OTP"""
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+
+    if not phone_number:
+        return JsonResponse({'success': False, 'error': 'شماره تلفن الزامی است'}, status=400)
+
+    # بررسی وجود کاربر
+    try:
+        user = CustomUser.objects.get(phone_number=phone_number)
+        request.session['login_otp_data'] = {
+            'phone_number': phone_number,
+            'user_id': user.id,
+        }
+        return JsonResponse({'success': True})
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'کاربری با این شماره یافت نشد'}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def verify_login_otp_api(request):
+    """API تایید کد OTP برای ورود"""
+    import json
+    data = json.loads(request.body)
+    code = data.get('code')
+
+    login_data = request.session.get('login_otp_data')
+    if not login_data:
+        return JsonResponse({'success': False, 'error': 'اطلاعات ورود یافت نشد'}, status=400)
+
+    phone_number = login_data.get('phone_number')
+    user_id = login_data.get('user_id')
+
+    service = OTPGhasedakService()
+    otp_obj, success, message = service.verify_otp(phone_number, code)
+
+    if not success:
+        return JsonResponse({'success': False, 'error': message})
+
+    try:
+        user = CustomUser.objects.get(id=user_id, phone_number=phone_number)
+        login(request, user)
+
+        del request.session['login_otp_data']
+        if 'verified_phone' in request.session:
+            del request.session['verified_phone']
+
+        next_url = request.session.pop('next_url', None) or '/'
+        return JsonResponse({
+            'success': True,
+            'message': f'خوش آمدید {user.nickname} 🙌',
+            'redirect_url': next_url
+        })
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'کاربر یافت نشد'}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def resend_login_otp_api(request):
+    """API ارسال مجدد کد OTP برای ورود"""
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+
+    if not phone_number:
+        return JsonResponse({'success': False, 'error': 'شماره تلفن الزامی است'}, status=400)
+
+    service = OTPGhasedakService()
+
+    # بررسی زمان باقیمانده
+    remaining_time = service.get_remaining_time(phone_number)
+    if remaining_time > 0:
+        return JsonResponse({
+            'success': False,
+            'error': f'لطفاً {remaining_time} ثانیه صبر کنید',
+            'remaining_time': remaining_time
+        }, status=400)
+
+    try:
+        user = CustomUser.objects.get(phone_number=phone_number)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'کاربری با این شماره یافت نشد'}, status=400)
+
+    otp_obj, success, message, new_remaining = service.send_otp(
+        phone_number=phone_number,
+        otp_type=OTPRequest.OTPType.LOGIN,
+        nickname=user.nickname
+    )
+
+    if success:
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'remaining_time': new_remaining
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': message,
+            'remaining_time': 0
+        }, status=400)
+
+
+def send_otp_api(request):
+    """API ارسال کد OTP"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+    otp_type = data.get('type', OTPRequest.OTPType.VERIFY)
+
+    if not phone_number:
+        return JsonResponse({'error': 'شماره تلفن الزامی است'}, status=400)
+
+    service = OTPGhasedakService()
+    otp_obj, success, message, remaining_time = service.send_otp(phone_number, otp_type)
+
+    return JsonResponse({
+        'success': success,
+        'message': message,
+        'remaining_time': remaining_time if success else None
+    })
+
+
+def verify_otp_api(request):
+    """API تایید کد OTP"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+    code = data.get('code')
+
+    service = OTPGhasedakService()
+    otp_obj, success, message = service.verify_otp(phone_number, code)
+
+    if success:
+        # ذخیره در session که شماره تایید شده
+        request.session['verified_phone'] = phone_number
+        request.session['verified_at'] = str(timezone.now())
+
+    return JsonResponse({
+        'success': success,
+        'message': message
+    })
+
+
+# accounts/views.py - اصلاح verify_otp_view
+
+def verify_otp_view(request):
+    """
+    صفحه تایید کد OTP - هم برای ثبت‌نامه و هم برای ورود
+    """
+    if request.user.is_authenticated:
+        return redirect('core:home')
+
+    # اول چک کن برای لاگین است
+    login_data = request.session.get('login_otp_data')
+    register_data = request.session.get('register_data')
+
+    if not login_data and not register_data:
+        messages.error(request, 'لطفاً ابتدا فرم مورد نظر را پر کنید')
+        return redirect('accounts:login')
+
+    # اگر برای لاگین است
+    if login_data:
+        phone_number = login_data.get('phone_number')
+    else:
+        phone_number = register_data.get('phone_number')
+
+    service = OTPGhasedakService()
+    remaining_time = service.get_remaining_time(phone_number)
+    has_active = service.has_active_otp(phone_number)
+
+    return render(request, 'accounts/forms/verify_otp.html', {
+        'phone_number': phone_number,
+        'remaining_time': remaining_time,
+        'has_active_otp': has_active
+    })
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def resend_otp_api(request):
+    """API ارسال مجدد کد OTP"""
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+
+    if not phone_number:
+        return JsonResponse({'success': False, 'error': 'شماره تلفن الزامی است'}, status=400)
+
+    service = OTPGhasedakService()
+
+    # بررسی زمان باقیمانده از دیتابیس
+    remaining_time = service.get_remaining_time(phone_number)
+    if remaining_time > 0:
+        return JsonResponse({
+            'success': False,
+            'error': f'لطفاً {remaining_time} ثانیه صبر کنید',
+            'remaining_time': remaining_time
+        }, status=400)
+
+    # دریافت نام مستعار از session برای ارسال مجدد
+    register_data = request.session.get('register_data', {})
+    nickname = register_data.get('nickname')
+
+    otp_obj, success, message, new_remaining = service.send_otp(
+        phone_number=phone_number,
+        otp_type=OTPRequest.OTPType.REGISTER,
+        nickname=nickname
+    )
+
+    if success:
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'remaining_time': new_remaining
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': message,
+            'remaining_time': 0
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def get_otp_status_api(request):
+    """API دریافت وضعیت OTP (زمان باقیمانده)"""
+    import json
+    data = json.loads(request.body)
+    phone_number = data.get('phone_number')
+
+    if not phone_number:
+        return JsonResponse({'error': 'شماره تلفن الزامی است'}, status=400)
+
+    service = OTPGhasedakService()
+    remaining_time = service.get_remaining_time(phone_number)
+
+    return JsonResponse({
+        'remaining_time': remaining_time,
+        'has_active': remaining_time > 0
+    })
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def complete_registration_api(request):
+    """API تکمیل ثبت‌نامه بعد از تایید OTP"""
+    import json
+    data = json.loads(request.body)
+    code = data.get('code')
+
+    login_data = request.session.get('login_otp_data')
+    register_data = request.session.get('register_data')
+
+    if not login_data and not register_data:
+        return JsonResponse({'success': False, 'error': 'اطلاعات یافت نشد'}, status=400)
+
+    if login_data:
+        phone = login_data.get('phone_number')
+        user_id = login_data.get('user_id')
+
+        service = OTPGhasedakService()
+        otp_obj, success, message = service.verify_otp(phone, code)
+
+        if not success:
+            return JsonResponse({'success': False, 'error': message})
+
+        try:
+            user = CustomUser.objects.get(id=user_id, phone_number=phone)
+            login(request, user)
+
+            del request.session['login_otp_data']
+
+            next_url = request.session.pop('next_url', None) or '/'
+            return JsonResponse({
+                'success': True,
+                'message': f'خوش آمدید {user.nickname} 🙌',
+                'redirect_url': next_url
+            })
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'کاربر یافت نشد'}, status=400)
+    else:
+        register_data = request.session.get('register_data')
+        if not register_data:
+            return JsonResponse({'success': False, 'error': 'اطلاعات ثبت‌نامه یافت نشد'}, status=400)
+
+        phone = register_data.get('phone_number')
+
+        service = OTPGhasedakService()
+        otp_obj, success, message = service.verify_otp(phone, code)
+
+        if not success:
+            return JsonResponse({'success': False, 'error': message})
+
+        try:
+            with transaction.atomic():
+                nickname = register_data.get('nickname')
+                password = register_data.get('password')
+                role = register_data.get('role')
+
+                user = None
+
+                if role == "advertiser":
+                    user, profile = RegistrationService.register_advertiser(
                         phone_number=phone,
                         password=password,
                         nickname=nickname
                     )
 
-                    if ContentTeamMember.objects.filter(team=team, user=user).exists():
-                        messages.error(request, "شما قبلاً عضو این تیم هستید.")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
-
-                    existing_request = TeamJoinRequest.objects.filter(team=team, user=user).first()
-
-                    if existing_request and existing_request.status == TeamJoinRequest.Status.PENDING:
-                        messages.error(request, "شما قبلاً درخواست عضویت ثبت کرده‌اید. در انتظار تایید مدیر.")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
-
-                    if existing_request and existing_request.status == TeamJoinRequest.Status.APPROVED:
-                        messages.error(request, "شما قبلاً عضو این تیم شده‌اید.")
-                        return render(request, 'accounts/forms/register.html', {'register_form': form})
-
-                    TeamJoinRequest.objects.create(
-                        team=team,
-                        user=user,
-                        status=TeamJoinRequest.Status.PENDING
+                elif role == "influencer":
+                    user, profile = RegistrationService.register_influencer(
+                        phone_number=phone,
+                        password=password,
+                        nickname=nickname
                     )
 
-                    messages.success(request,
-                                     f"درخواست عضویت شما برای تیم {team.name} ثبت شد. پس از تایید مدیر می‌توانید وارد شوید.")
+                elif role == "team_member":
+                    create_new_team = register_data.get('create_new_team')
 
-            # لاگین کاربر
-            login(request, user)
+                    if create_new_team:
+                        team_name = register_data.get('team_name')
+                        new_team = ContentTeam.objects.create(
+                            name=team_name,
+                            slug=generate_random_slug(),
+                            is_active=True
+                        )
+                        user, team_member = RegistrationService.register_team_member(
+                            phone_number=phone,
+                            password=password,
+                            nickname=nickname,
+                            team=new_team,
+                            is_manager=True
+                        )
+                    else:
+                        team_slug = register_data.get('team_slug')
+                        team = ContentTeam.objects.get(slug=team_slug, is_active=True)
 
-            messages.success(request, f'خوش آمدید {user.nickname}! ثبت‌نام شما با موفقیت انجام شد. 🙌')
-            return redirect('core:home')
+                        user = CustomUser.objects.create_user(
+                            phone_number=phone,
+                            password=password,
+                            nickname=nickname
+                        )
 
-    except Exception as e:
-        messages.error(request, f"خطایی رخ داده است: {str(e)}")
-        return render(request, 'accounts/forms/register.html', {'register_form': form})
+                        existing_request = TeamJoinRequest.objects.filter(team=team, user=user).first()
 
+                        if not existing_request or existing_request.status != TeamJoinRequest.Status.PENDING:
+                            TeamJoinRequest.objects.create(
+                                team=team,
+                                user=user,
+                                status=TeamJoinRequest.Status.PENDING
+                            )
+
+                login(request, user)
+
+                # پاک کردن session
+                del request.session['register_data']
+                if 'otp_sent_at' in request.session:
+                    del request.session['otp_sent_at']
+                if 'otp_remaining' in request.session:
+                    del request.session['otp_remaining']
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'ثبت‌نام با موفقیت انجام شد',
+                    'redirect_url': '/'
+                })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def advertiser_profile_edit_view(request):

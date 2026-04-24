@@ -6,6 +6,11 @@ from django.utils import timezone
 from django_jalali.db import models as jmodels
 from .managers import CustomUserManager
 from django_resized import ResizedImageField
+import random
+from django.db import models
+from django.utils import timezone
+from django.conf import settings
+from datetime import timedelta
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -119,6 +124,76 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_team_member(self):
         return hasattr(self, "team_member")
+
+
+class OTPRequest(models.Model):
+    class OTPType(models.TextChoices):
+        LOGIN = 'login', 'ورود'
+        REGISTER = 'register', 'ثبت‌نام'
+        VERIFY = 'verify', 'تایید عمومی'
+
+    class OTPStatus(models.TextChoices):
+        PENDING = 'pending', 'در انتظار'
+        VERIFIED = 'verified', 'تایید شده'
+        EXPIRED = 'expired', 'منقضی شده'
+
+    phone_number = models.CharField(max_length=11, db_index=True)
+    code = models.CharField(max_length=6)
+    type = models.CharField(max_length=10, choices=OTPType.choices, default=OTPType.VERIFY)
+    status = models.CharField(max_length=10, choices=OTPStatus.choices, default=OTPStatus.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    request_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = jmodels.jDateTimeField(auto_now_add=True)
+    expires_at = jmodels.jDateTimeField()
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    # لاگ کامل برای API
+    api_response = models.JSONField(default=dict, blank=True)
+    api_status_code = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['phone_number', 'status']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(minutes=2)  # ۲ دقیقه اعتبار
+        super().save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def is_verified(self):
+        return self.status == self.OTPStatus.VERIFIED
+
+    def can_resend(self):
+        # بعد از ۲ دقیقه از ایجاد قبلی
+        return timezone.now() > self.created_at + timedelta(minutes=2)
+
+    @classmethod
+    def generate_code(cls):
+        return f"{random.randint(100000, 999999)}"
+
+    @classmethod
+    def get_active_otp(cls, phone_number):
+        """دریافت OTP فعال برای شماره تلفن"""
+        return cls.objects.filter(
+            phone_number=phone_number,
+            status=cls.OTPStatus.PENDING,
+            expires_at__gt=timezone.now()
+        ).first()
+
+    def get_remaining_seconds(self):
+        """دریافت ثانیه‌های باقیمانده تا انقضا"""
+        if self.expires_at > timezone.now():
+            return int((self.expires_at - timezone.now()).total_seconds())
+        return 0
+
+    def __str__(self):
+        return f"{self.phone_number} - {self.code} - {self.get_type_display()}"
 
 
 class Wallet(models.Model):

@@ -1,0 +1,831 @@
+<!-- accounts/templates/accounts/verify_otp.html -->
+
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}تایید شماره موبایل{% endblock %}
+
+{% block extra_style %}
+<style>
+    .otp-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+    
+    .otp-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 2rem;
+        padding: 2.5rem;
+        max-width: 500px;
+        width: 100%;
+        animation: fadeInUp 0.6s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .otp-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .otp-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+    }
+    
+    .phone-number {
+        color: #fd5631;
+        font-weight: 600;
+        direction: ltr;
+        display: inline-block;
+    }
+    
+    .otp-input-group {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        margin: 2rem 0;
+        flex-wrap: nowrap;
+    }
+    
+    .otp-input {
+        width: 55px;
+        height: 70px;
+        text-align: center;
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        color: #fff;
+        transition: all 0.3s ease;
+        direction: ltr;
+        flex-shrink: 0;
+    }
+    
+    .otp-input:focus {
+        outline: none;
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.1);
+        box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.2);
+    }
+    
+    .otp-input.error {
+        border-color: #f23c49;
+        animation: shake 0.5s ease;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .timer-container {
+        text-align: center;
+        margin: 1.5rem 0;
+        min-height: 70px;
+    }
+    
+    .timer-wrapper {
+        transition: all 0.3s ease;
+    }
+    
+    .timer-wrapper.hide {
+        display: none;
+    }
+    
+    .timer {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fdbc31;
+        direction: ltr;
+        display: inline-block;
+        font-family: monospace;
+        background: rgba(253, 188, 49, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+    }
+    
+    .resend-wrapper {
+        transition: all 0.3s ease;
+    }
+    
+    .resend-wrapper.hide {
+        display: none;
+    }
+    
+    .resend-btn {
+        background: linear-gradient(135deg, #fd5631, #fd3509);
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 0.5rem 1.5rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+    }
+    
+    .resend-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(253, 86, 49, 0.3);
+    }
+    
+    .resend-btn:active {
+        transform: scale(0.96);
+    }
+    
+    .resend-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .verify-btn {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #fd5631, #fd3509);
+        border: none;
+        border-radius: 1rem;
+        color: #fff;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .verify-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(253, 86, 49, 0.3);
+    }
+    
+    .verify-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .verify-btn.loading {
+        pointer-events: none;
+    }
+    
+    .verify-btn.loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        top: 50%;
+        left: 20px;
+        margin-top: -10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .back-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+    
+    .back-link a {
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+    
+    .back-link a:hover {
+        color: #fd5631;
+    }
+    
+    /* ============================================
+       ریسپانسیو
+    ============================================ */
+    
+    @media (max-width: 380px) {
+        .otp-container {
+            padding: 1rem;
+        }
+        
+        .otp-card {
+            padding: 1.25rem;
+            border-radius: 1.25rem;
+        }
+        
+        .otp-title {
+            font-size: 1.25rem;
+        }
+        
+        .otp-subtitle {
+            font-size: 0.7rem;
+            margin-bottom: 1rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.25rem;
+            margin: 1rem 0;
+        }
+        
+        .otp-input {
+            width: 38px;
+            height: 48px;
+            font-size: 1.125rem;
+            border-radius: 0.625rem;
+        }
+        
+        .timer {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .verify-btn {
+            padding: 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .resend-btn {
+            padding: 0.375rem 1rem;
+            font-size: 0.75rem;
+        }
+        
+        .back-link a {
+            font-size: 0.75rem;
+        }
+    }
+    
+    @media (min-width: 381px) and (max-width: 480px) {
+        .otp-container {
+            padding: 1rem;
+        }
+        
+        .otp-card {
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+        }
+        
+        .otp-title {
+            font-size: 1.375rem;
+        }
+        
+        .otp-subtitle {
+            font-size: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.375rem;
+            margin: 1.25rem 0;
+        }
+        
+        .otp-input {
+            width: 42px;
+            height: 52px;
+            font-size: 1.25rem;
+            border-radius: 0.75rem;
+        }
+    }
+    
+    @media (min-width: 481px) and (max-width: 576px) {
+        .otp-card {
+            padding: 2rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.5rem;
+        }
+        
+        .otp-input {
+            width: 46px;
+            height: 58px;
+            font-size: 1.375rem;
+        }
+    }
+    
+    @media (min-width: 577px) and (max-width: 768px) {
+        .otp-card {
+            max-width: 450px;
+            padding: 2rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.625rem;
+        }
+        
+        .otp-input {
+            width: 50px;
+            height: 62px;
+            font-size: 1.5rem;
+        }
+    }
+    
+    @media (min-width: 769px) and (max-width: 992px) {
+        .otp-card {
+            max-width: 480px;
+        }
+        
+        .otp-input-group {
+            gap: 0.6875rem;
+        }
+        
+        .otp-input {
+            width: 52px;
+            height: 66px;
+            font-size: 1.625rem;
+        }
+    }
+    
+    @media (min-width: 993px) {
+        .otp-container {
+            padding: 2rem;
+        }
+        
+        .otp-card {
+            max-width: 500px;
+            padding: 2.5rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.75rem;
+        }
+        
+        .otp-input {
+            width: 55px;
+            height: 70px;
+            font-size: 1.75rem;
+        }
+    }
+    
+    @media (min-width: 1400px) {
+        .otp-card {
+            max-width: 550px;
+            padding: 3rem;
+        }
+        
+        .otp-title {
+            font-size: 2rem;
+        }
+        
+        .otp-subtitle {
+            font-size: 1rem;
+        }
+        
+        .otp-input-group {
+            gap: 1rem;
+            margin: 2.5rem 0;
+        }
+        
+        .otp-input {
+            width: 65px;
+            height: 80px;
+            font-size: 2rem;
+            border-radius: 1.25rem;
+        }
+        
+        .timer {
+            font-size: 1.25rem;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .verify-btn {
+            padding: 1.25rem;
+            font-size: 1.125rem;
+        }
+    }
+    
+    .otp-input {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    @media (max-width: 768px) and (orientation: landscape) {
+        .otp-container {
+            min-height: auto;
+            padding: 0.75rem;
+        }
+        
+        .otp-card {
+            padding: 1rem;
+        }
+        
+        .otp-title {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .otp-subtitle {
+            font-size: 0.65rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .otp-input-group {
+            gap: 0.375rem;
+            margin: 0.75rem 0;
+        }
+        
+        .otp-input {
+            width: 40px;
+            height: 46px;
+            font-size: 1.125rem;
+        }
+        
+        .timer-container {
+            margin: 0.5rem 0;
+            min-height: 50px;
+        }
+        
+        .timer {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+        }
+        
+        .verify-btn {
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .resend-btn {
+            padding: 0.25rem 1rem;
+            font-size: 0.7rem;
+        }
+        
+        .back-link {
+            margin-top: 0.75rem;
+        }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+        .otp-card {
+            animation: none;
+        }
+        
+        .otp-input {
+            transition: none;
+        }
+        
+        .verify-btn {
+            transition: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="otp-container">
+    <div class="otp-card">
+        <div class="text-center">
+            <i class="fi-mail" style="font-size: 3rem; color: #fd5631; margin-bottom: 1rem;"></i>
+            <h1 class="otp-title">تایید شماره موبایل</h1>
+            <p class="otp-subtitle">
+                کد ۶ رقمی به شماره 
+                <span class="phone-number" id="phone-number">{{ phone_number }}</span>
+                ارسال شد
+            </p>
+        </div>
+        
+        <div class="otp-input-group" id="otp-group" dir="ltr">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-1" autofocus>
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-2">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-3">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-4">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-5">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-6">
+        </div>
+        
+        <div class="timer-container">
+            <div class="timer-wrapper" id="timerWrapper">
+                <div class="timer" id="timer">--:--</div>
+            </div>
+            <div class="resend-wrapper hide" id="resendWrapper">
+                <button class="resend-btn" id="resend-btn">
+                    <i class="fi-arrow-repeat me-1"></i>
+                    ارسال مجدد کد
+                </button>
+            </div>
+        </div>
+        
+        <button class="verify-btn" id="verify-btn">
+            <i class="fi-check-circle me-2"></i>
+            تایید و ثبت‌نام
+        </button>
+        
+        <div class="back-link">
+            <a href="{% url 'accounts:register' %}">
+                <i class="fi-arrow-right me-1"></i>
+                بازگشت به فرم ثبت‌نام
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    const phoneNumber = document.getElementById('phone-number').innerText;
+    let timeLeft = 0;
+    let timerInterval = null;
+    let canResend = false;
+    let isResending = false;
+    
+    // المان‌ها
+    const timerWrapper = document.getElementById('timerWrapper');
+    const resendWrapper = document.getElementById('resendWrapper');
+    const timerElement = document.getElementById('timer');
+    const resendBtn = document.getElementById('resend-btn');
+    const verifyBtn = document.getElementById('verify-btn');
+    
+    // مدیریت ورودی OTP
+    const inputs = ['otp-1', 'otp-2', 'otp-3', 'otp-4', 'otp-5', 'otp-6'];
+    const otpInputs = inputs.map(id => document.getElementById(id));
+    
+    function moveToNext(currentIndex) {
+        if (currentIndex < 5) {
+            otpInputs[currentIndex + 1].focus();
+        }
+    }
+    
+    function moveToPrev(currentIndex) {
+        if (currentIndex > 0) {
+            otpInputs[currentIndex - 1].focus();
+        }
+    }
+    
+    function clearError() {
+        otpInputs.forEach(input => input.classList.remove('error'));
+    }
+    
+    // نمایش/مخفی کردن اجزا
+    function showTimer() {
+        timerWrapper.classList.remove('hide');
+        resendWrapper.classList.add('hide');
+    }
+    
+    function showResendButton() {
+        timerWrapper.classList.add('hide');
+        resendWrapper.classList.remove('hide');
+    }
+    
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            clearError();
+            if (e.target.value.length === 1 && index < 5) {
+                moveToNext(index);
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                moveToPrev(index);
+            }
+        });
+        
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            clearError();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = paste.replace(/\D/g, '').split('').slice(0, 6);
+            
+            digits.forEach((digit, i) => {
+                if (otpInputs[i]) {
+                    otpInputs[i].value = digit;
+                }
+            });
+            
+            if (digits.length === 6) {
+                verifyBtn.focus();
+            } else if (digits.length > 0) {
+                otpInputs[Math.min(digits.length, 5)].focus();
+            }
+        });
+    });
+    
+    // دریافت زمان از سرور
+    async function fetchRemainingTime() {
+        try {
+            const response = await fetch('/accounts/api/get-otp-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ phone_number: phoneNumber })
+            });
+            
+            const data = await response.json();
+            return data.remaining_time || 0;
+        } catch (error) {
+            console.error('Error fetching time:', error);
+            return 0;
+        }
+    }
+    
+    // به‌روزرسانی نمایش تایمر
+    function updateTimerDisplay() {
+        if (timeLeft <= 0) {
+            timerElement.innerHTML = '00:00';
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            canResend = true;
+            showResendButton();
+        } else {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.innerHTML = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    }
+    
+    // شروع تایمر
+    function startTimer(initialTime) {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+        
+        timeLeft = initialTime;
+        
+        if (timeLeft > 0) {
+            showTimer();
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    canResend = true;
+                    showResendButton();
+                }
+            }, 1000);
+        } else {
+            canResend = true;
+            showResendButton();
+        }
+    }
+    
+    // بارگذاری اولیه
+    async function loadInitialTime() {
+        const remaining = await fetchRemainingTime();
+        if (remaining > 0) {
+            startTimer(remaining);
+            canResend = false;
+        } else {
+            startTimer(0);
+            canResend = true;
+        }
+    }
+    
+    loadInitialTime();
+    
+    // ارسال مجدد کد
+    resendBtn.addEventListener('click', async () => {
+        if (!canResend || isResending) {
+            if (!canResend) {
+                showNotificationModal('توجه', 'لطفاً صبر کنید تا زمان ارسال مجدد کامل شود', 'warning');
+            }
+            return;
+        }
+        
+        isResending = true;
+        const originalText = resendBtn.innerHTML;
+        resendBtn.innerHTML = '<i class="fi-arrow-repeat me-1 spinner"></i> در حال ارسال...';
+        resendBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/accounts/api/resend-otp/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ phone_number: phoneNumber })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotificationModal('کد جدید', 'کد تایید مجدداً برای شما ارسال شد', 'success');
+                
+                // شروع تایمر جدید
+                startTimer(data.remaining_time || 120);
+                canResend = false;
+                
+                // پاک کردن inputs
+                otpInputs.forEach(input => input.value = '');
+                otpInputs[0].focus();
+            } else {
+                showNotificationModal('خطا', data.error || 'امکان ارسال مجدد وجود ندارد', 'error');
+                
+                if (data.remaining_time && data.remaining_time > 0) {
+                    startTimer(data.remaining_time);
+                    canResend = false;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotificationModal('خطا', 'مشکلی در ارسال مجدد پیش آمد', 'error');
+        } finally {
+            isResending = false;
+            resendBtn.innerHTML = originalText;
+            if (!canResend) {
+                resendBtn.disabled = false;
+            }
+        }
+    });
+    
+    // تایید OTP و تکمیل ثبت‌نامه
+    verifyBtn.addEventListener('click', async () => {
+        const code = otpInputs.map(input => input.value).join('');
+        
+        if (code.length !== 6) {
+            showNotificationModal('خطا', 'لطفاً کد ۶ رقمی را کامل وارد کنید', 'warning');
+            otpInputs.forEach(input => input.classList.add('error'));
+            setTimeout(clearError, 1000);
+            return;
+        }
+        
+        verifyBtn.classList.add('loading');
+        verifyBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/accounts/api/complete-registration/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ code: code })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                showNotificationModal('تبریک!', data.message, 'success', () => {
+                    window.location.href = data.redirect_url;
+                });
+            } else {
+                showNotificationModal('خطا', data.error, 'error');
+                verifyBtn.classList.remove('loading');
+                verifyBtn.disabled = false;
+                
+                otpInputs.forEach(input => {
+                    input.value = '';
+                    input.classList.add('error');
+                });
+                otpInputs[0].focus();
+                setTimeout(clearError, 1000);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotificationModal('خطا', 'مشکلی در ارتباط با سرور پیش آمد', 'error');
+            verifyBtn.classList.remove('loading');
+            verifyBtn.disabled = false;
+        }
+    });
+    
+    // گرفتن CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

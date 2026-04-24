@@ -8,6 +8,7 @@ from .models import CustomUser, Wallet
 from django.contrib import messages
 from django.db.models import Sum
 from django.urls import reverse
+from .models import OTPRequest
 from .inline_admin import *
 
 
@@ -260,6 +261,54 @@ class CustomUserAdmin(UserAdmin):
         self.message_user(request, f'✅ {deleted_count} پروفایل مرتبط حذف شدند.', messages.SUCCESS)
 
     delete_profiles.short_description = 'حذف پروفایل‌های مرتبط'
+
+
+@admin.register(OTPRequest)
+class OTPRequestAdmin(admin.ModelAdmin):
+    list_display = ['phone_number', 'code', 'get_type', 'status', 'created_at', 'expires_at', 'api_status_badge']
+    list_filter = ['status', 'type', 'api_status_code', 'created_at']
+    search_fields = ['phone_number', 'code', 'request_id']
+    readonly_fields = ['api_response_pretty', 'created_at', 'expires_at', 'verified_at']
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('phone_number', 'code', 'type', 'status')
+        }),
+        ('جزئیات', {
+            'fields': ('attempts', 'request_id', 'created_at', 'expires_at', 'verified_at')
+        }),
+        ('لاگ API', {
+            'fields': ('api_status_code', 'api_response_pretty'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_type(self, obj):
+        return obj.get_type_display()
+
+    get_type.short_description = 'نوع'
+
+    def api_status_badge(self, obj):
+        if obj.api_status_code == 200:
+            color = 'green'
+            text = '✓ موفق'
+        elif obj.api_status_code:
+            color = 'red'
+            text = '✗ خطا'
+        else:
+            color = 'gray'
+            text = '—'
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, text)
+
+    api_status_badge.short_description = 'وضعیت API'
+
+    def api_response_pretty(self, obj):
+        import json
+        if not obj.api_response:
+            return '-'
+        return format_html('<pre style="white-space: pre-wrap;">{}</pre>',
+                           json.dumps(obj.api_response, indent=2, ensure_ascii=False))
+
+    api_response_pretty.short_description = 'پاسخ API'
 
 
 @admin.register(Wallet)
