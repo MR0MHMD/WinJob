@@ -1,10 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncMonth, TruncDate
 from django.contrib.auth.decorators import login_required
-from django.views.generic import ListView, DetailView
 from accounts.models import Transaction, CustomUser
-from django.db.models import Q, Sum, Count, Avg
-from django.core.paginator import Paginator
+from django.db.models import Q, Count, Avg, Prefetch
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from core.utils import convert_to_jalali
 from django.http import JsonResponse
 from django.contrib import messages
@@ -13,35 +12,202 @@ from datetime import timedelta
 from .models import *
 import jdatetime
 import json
+from .models import (
+    ContentTeam,
+    ContentServiceType,
+    ContentServiceRate,
+    TeamReview,
+    ContentTeamMember,
+    ContentOrder,
+)
 
 
-class TeamListView(ListView):
-    model = ContentTeam
-    template_name = 'content_team/pages/team_list.html'
-    context_object_name = 'teams'
+def team_list_view(request):
+    """
+    ویو لیست تیم‌های تولید محتوا
+    """
+    search_query = request.GET.get('search', '')
+    service_type_filter = request.GET.getlist('service_type')
+    ordering = request.GET.get('ordering', '-annotated_avg_rating')
 
-    def get_queryset(self):
-        return ContentTeam.objects.filter(is_active=True)
+    allowed_ordering = [
+        '-annotated_avg_rating', 'annotated_avg_rating',
+        '-annotated_review_count', 'annotated_review_count',
+        '-annotated_completed_orders', 'annotated_completed_orders',
+        '-created_at', 'created_at',
+        'name', '-name'
+    ]
+    if ordering not in allowed_ordering:
+        ordering = '-annotated_avg_rating'
+
+    teams = ContentTeam.objects.filter(is_active=True)
+
+    if search_query:
+        teams = teams.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    if service_type_filter:
+        for slug in service_type_filter:
+            teams = teams.filter(
+                service_rates__service_type__slug=slug,
+                service_rates__is_available=True
+            )
+
+    # Prefetch بدون اسلایس
+    teams = teams.prefetch_related(
+        'service_rates__service_type',
+        'portfolio_items',
+        Prefetch('reviews', queryset=TeamReview.objects.order_by('-created_at')),  # اسلایس رو برداشتم
+        Prefetch('members', queryset=ContentTeamMember.objects.filter(is_active=True))
+    ).annotate(
+        annotated_avg_rating=Avg('reviews__rating'),
+        annotated_review_count=Count('reviews'),
+        annotated_completed_orders=Count('orders', filter=Q(orders__status='completed')),
+        annotated_active_members_count=Count('members', filter=Q(members__is_active=True))
+    ).order_by(ordering)
+
+    paginator = Paginator(teams, 12)
+    page = request.GET.get('page', 1)
+
+    try:
+        teams_page = paginator.page(page)
+    except PageNotAnInteger:
+        teams_page = paginator.page(1)
+    except EmptyPage:
+        teams_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'teams': teams_page,
+        'search_query': search_query,
+        'selected_service_types': service_type_filter,
+        'current_ordering': ordering,
+        'service_types': ContentServiceType.objects.filter(is_active=True),
+        'selected_service_type': service_type_filter[0] if len(service_type_filter) == 1 else '',
+        'total_teams': teams.count(),
+        'is_paginated': teams_page.has_other_pages(),
+        'page_obj': teams_page,
+        'paginator': paginator,
+    }
+
+    return render(request, 'content_team/pages/team_list.html', context)
 
 
-class TeamDetailView(DetailView):
-    model = ContentTeam
-    template_name = 'content_team/pages/team_detail.html'
-    context_object_name = 'team'
+def team_detail_view(request, slug):
+    """
+    ویو جزئیات تیم تولید محتوا
+    """
+    team = get_object_or_404(
+        ContentTeam.objects.filter(is_active=True).prefetch_related(
+            'members',
+            'service_rates__service_type',
+            'portfolio_items',
+            Prefetch(
+                'reviews',
+                queryset=TeamReview.objects.select_related(
+                    'advertiser__user', 'order'
+                ).order_by('-created_at')  # اسلایس رو برداشتم
+            ),
+            Prefetch(
+                'orders',
+                queryset=ContentOrder.objects.select_related(
+                    'campaign__advertiser__user'
+                ).order_by('-created_at')  # اسلایس رو برداشتم
+            )
+        ).annotate(
+            annotated_avg_rating=Avg('reviews__rating'),
+            annotated_review_count=Count('reviews'),
+            annotated_completed_orders=Count('orders', filter=Q(orders__status='completed')),
+            annotated_active_members_count=Count('members', filter=Q(members__is_active=True))
+        ),
+        slug=slug
+    )
 
-    def get_queryset(self):
-        return ContentTeam.objects.filter(is_active=True)
+    managers = team.members.filter(is_active=True, role='manager')
+    editors = team.members.filter(is_active=True, role='editor')
+    writers = team.members.filter(is_active=True, role='writer')
+    designers = team.members.filter(is_active=True, role='designer')
+    videographers = team.members.filter(is_active=True, role='videographer')
+    other_members = team.members.filter(is_active=True, role='other')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        team = self.object
+    # ساختار نقش‌ها برای حلقه در تمپلیت
+    member_roles = [
+        {
+            'id': 'managers',
+            'title': 'مدیران',
+            'icon': 'fi-star-filled',
+            'members': managers,
+        },
+        {
+            'id': 'editors',
+            'title': 'ادیتورها',
+            'icon': 'fi-edit',
+            'members': editors,
+        },
+        {
+            'id': 'writers',
+            'title': 'نویسندگان',
+            'icon': 'fi-pencil',
+            'members': writers,
+        },
+        {
+            'id': 'designers',
+            'title': 'طراحان',
+            'icon': 'fi-image',
+            'members': designers,
+        },
+        {
+            'id': 'videographers',
+            'title': 'فیلم‌برداران',
+            'icon': 'fi-video',
+            'members': videographers,
+        },
+        {
+            'id': 'other',
+            'title': 'سایر اعضا',
+            'icon': 'fi-layers',
+            'members': other_members,
+        },
+    ]
 
-        context['members'] = team.members.select_related('user').all()
-        context['reviews'] = team.reviews.select_related('advertiser').all()
-        context['avg_rating'] = team.avg_rating
-        context['completed_orders'] = team.completed_orders_count
+    available_services = team.service_rates.filter(
+        is_available=True
+    ).select_related('service_type')
 
-        return context
+    portfolio_items = team.portfolio_items.filter(
+        is_active=True
+    ).order_by('display_order', '-created_at')[:3]
+
+    stats = {
+        'avg_rating': team.annotated_avg_rating,
+        'review_count': team.annotated_review_count,
+        'completed_orders': team.annotated_completed_orders,
+        'active_members': team.annotated_active_members_count,
+        'revenue_share_valid': team.is_revenue_share_valid(),
+        'total_revenue_percent': team.get_total_revenue_percent(),
+    }
+
+    reviews = team.reviews.all()[:3]
+    recent_completed_orders = team.orders.filter(status='completed')[:5]
+
+    context = {
+        'team': team,
+        'managers': managers,
+        'editors': editors,
+        'writers': writers,
+        'designers': designers,
+        'member_roles': member_roles,
+        'videographers': videographers,
+        'other_members': other_members,
+        'available_services': available_services,
+        'portfolio_items': portfolio_items,
+        'stats': stats,
+        'reviews': reviews,
+        'recent_completed_orders': recent_completed_orders,
+    }
+
+    return render(request, 'content_team/pages/team_detail.html', context)
 
 
 @login_required
@@ -439,8 +605,6 @@ def team_orders_list(request):
     sort_by = request.GET.get('sort', '-created_at')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
 
     # کوئری اصلی با بهینه‌سازی
     orders = ContentOrder.objects.filter(
@@ -617,7 +781,6 @@ def reject_order(request, order_id):
         if order.status != 'pending':
             return JsonResponse({'error': 'این سفارش قابل رد نیست'}, status=400)
 
-        reason = request.POST.get('reason', '')
 
         order.status = 'cancelled'
         order.save()
@@ -682,8 +845,6 @@ def deliver_order(request, order_id):
 
         order.status = 'completed'
         order.save()
-
-
 
         return JsonResponse({
             'success': True,

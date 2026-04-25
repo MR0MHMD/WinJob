@@ -4,7 +4,7 @@
 {% block title %}خانه{% endblock %}
 
 {% block extra_style %}
-<link rel="stylesheet" href="{% static 'core/css/pages/index.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -492,16 +492,18 @@
         <div class="teams-grid">
             {% for team in content_teams %}
                 <div class="influencer-card-circle scroll-reveal">
-                    <div class="influencer-avatar-wrapper" data-id="{{ team.id }}">
-                        {% if team.logo %}
-                            <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="influencer-avatar">
-                        {% else %}
-                            <div class="influencer-avatar bg-gradient d-flex align-items-center justify-content-center">
-                                <i class="fi-users text-white fs-1"></i>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="influencer-name">{{ team.name|truncatechars:15 }}</div>
+                    <a class="text-decoration-none" href="{% url 'content_team:team_detail' team.slug %}">
+                        <div class="influencer-avatar-wrapper" data-id="{{ team.id }}">
+                            {% if team.logo %}
+                                <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="influencer-avatar">
+                            {% else %}
+                                <div class="influencer-avatar bg-gradient d-flex align-items-center justify-content-center">
+                                    <i class="fi-users text-white fs-1"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="influencer-name">{{ team.name|truncatechars:15 }}</div>
+                    </a>
                     <div class="small text-muted mb-1">{{ team.members_count|default:"۰" }} عضو حرفه‌ای</div>
                     <div class="mb-2">
                         {% if team.avg_rating %}
@@ -523,7 +525,7 @@
         </div>
         
         <div class="text-center mt-5">
-            <a href="#" class="btn btn-outline-gradient rounded-pill px-5">
+            <a href="{% url 'content_team:team_list' %}" class="btn btn-outline-gradient rounded-pill px-5">
                 مشاهده همه تیم‌ها <i class="fi-arrow-left ms-1"></i>
             </a>
         </div>

@@ -6,8 +6,8 @@ app_name = 'content_team'
 
 urlpatterns = [
     path('dashboard/', views.content_team_dashboard, name='dashboard'),
-    path('', views.TeamListView.as_view(), name='team_list'),
-    path('<slug:slug>/', views.TeamDetailView.as_view(), name='team_detail'),
+    path('', views.team_list_view, name='team_list'),
+    path('<slug:slug>/', views.team_detail_view, name='team_detail'),
     path('team/<slug:team_slug>/members/manage/', views.team_members_manage, name='team_members_manage'),
     path('team/<slug:team_slug>/members/<int:member_id>/edit/', api_views.team_member_edit, name='team_member_edit'),
     path('team/<slug:team_slug>/requests/<int:request_id>/handle/', api_views.team_join_request_handle, name='team_join_request_handle'),

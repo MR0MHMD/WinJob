@@ -1,167 +1,600 @@
 {% extends 'parent/base.html' %}
 {% load static %}
-{% block title %}{{ team.name }}{% endblock %}
+
+{% block title %}پروفایل تیم {{ team.name }}{% endblock %}
+
 {% block extra_style %}
-    <link rel="stylesheet"
-          href="{% static 'content_team/css/pages/team_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/forms/auth_forms.css' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="container py-5" dir="rtl">
-        {# ======== هدر پروفایل ======== #}
-        <div class="team-profile-header card border-0 shadow-sm bg-dark p-4 mb-4">
-            <div class="d-flex align-items-center gap-4 flex-wrap">
-                {% if team.logo %}
-                    <img src="{{ team.logo.url }}"
-                         alt="{{ team.name }}"
-                         class="team-profile-avatar">
-                {% else %}
-                    <div class="team-profile-avatar-placeholder">🎬</div>
-                {% endif %}
-                <div class="flex-grow-1">
-                    <h2 class="text-light fw-bold mb-1">{{ team.name }}</h2>
-                    <small class="text-secondary" style="direction:ltr;">@{{ team.slug }}</small>
-                    {# امتیاز #}
-                    <div class="d-flex align-items-center gap-2 mt-2">
-                        <div class="star-rating">
-                            {% for i in "12345" %}
-                                <i class="star-rating-icon fi-star{% if forloop.counter <= avg_rating %} active{% endif %}"></i>
-                            {% endfor %}
-                        </div>
-                        <span class="text-secondary small">
-                            {{ avg_rating|floatformat:1 }} از ۵
-                            &nbsp;|&nbsp;
-                            {{ completed_orders }} سفارش تکمیل‌شده
-                        </span>
-                    </div>
-                </div>
-                {# قیمت و دکمه #}
-                <div class="text-center">
-                    <div class="team-price-label mb-1">قیمت پایه</div>
-                    <div class="team-price-value mb-3">
-                        {{ team.base_price|floatformat:0 }}
-                        <span class="team-price-unit">تومان</span>
-                    </div>
-                </div>
-            </div>
-            {% if team.description %}
-                <hr class="border-secondary mt-3 mb-3">
-                <p class="text-secondary mb-0" style="line-height:1.8;">{{ team.description }}</p>
-            {% endif %}
+    <div class="profile-cover" style="padding-top: 5rem">
+        <div class="profile-cover-bg">
+            <div class="profile-cover-overlay"></div>
         </div>
-        <div class="row g-4">
-            {# ======== ستون چپ: اعضا + پورتفولیو ======== #}
-            <div class="col-lg-8">
-                {# ---- اعضای تیم ---- #}
-                {% if members %}
-                    <div class="card border-0 shadow-sm bg-dark p-4 mb-4">
-                        <h5 class="text-light fw-bold mb-4">اعضای تیم</h5>
-                        <div class="row g-3">
-                            {% for member in members %}
-                                <div class="col-sm-6">
-                                    <div class="member-card p-3 d-flex align-items-center gap-3">
-                                        {% if member.avatar %}
-                                            <img src="{{ member.avatar.url }}"
-                                                 alt="{{ member.user.get_full_name }}"
-                                                 class="member-avatar">
-                                        {% else %}
-                                            <div class="member-avatar-placeholder">👤</div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="text-light fw-bold small">{{ member.user.get_full_name }}</div>
-                                            <div class="text-secondary" style="font-size:0.78rem;">{{ member.role }}</div>
-                                            {% if member.bio %}
-                                                <div class="text-secondary mt-1"
-                                                     style="font-size:0.78rem;
-                                                            line-height:1.5">{{ member.bio|truncatechars:60 }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-                {# ---- نمونه کارها ---- #}
-                {% if portfolios %}
-                    <div class="card border-0 shadow-sm bg-dark p-4 mb-4">
-                        <h5 class="text-light fw-bold mb-4">نمونه کارها</h5>
-                        <div class="row g-3">
-                            {% for item in portfolios %}
-                                <div class="col-sm-6">
-                                    <div class="portfolio-card h-100">
-                                        {% if item.thumbnail %}
-                                            <img src="{{ item.thumbnail.url }}"
-                                                 alt="{{ item.title }}"
-                                                 class="portfolio-thumb">
-                                        {% endif %}
-                                        <div class="p-3">
-                                            <h6 class="text-light fw-bold mb-1 small">{{ item.title }}</h6>
-                                            {% if item.description %}
-                                                <p class="text-secondary mb-2" style="font-size:0.8rem;line-height:1.6;">{{ item.description|truncatechars:80 }}</p>
-                                            {% endif %}
-                                            {% if item.link %}
-                                                <a href="{{ item.link }}"
-                                                   target="_blank"
-                                                   class="btn btn-outline-primary btn-sm">مشاهده نمونه کار</a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-            {# ======== ستون راست: نظرات ======== #}
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm bg-dark p-4">
-                    <h5 class="text-light fw-bold mb-4">نظرات و امتیازات</h5>
-                    {% for review in reviews %}
-                        <div class="{% if not forloop.last %}border-bottom border-secondary pb-4 mb-4{% endif %}">
-                            {# هدر نظر: آواتار + نام + امتیاز + تاریخ #}
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="d-flex align-items-center pe-2">
-                                    {% if review.advertiser.avatar %}
-                                        <img class="rounded-circle me-1"
-                                             src="{{ review.advertiser.avatar.url }}"
-                                             width="48"
-                                             height="48"
-                                             style="object-fit:cover"
-                                             alt="{{ review.advertiser.get_full_name }}">
-                                    {% else %}
-                                        <div class="rounded-circle me-1 bg-secondary d-flex align-items-center justify-content-center"
-                                             style="width:48px;
-                                                    height:48px;
-                                                    font-size:1.2rem">👤</div>
-                                    {% endif %}
-                                    <div class="ps-2">
-                                        <h6 class="fs-base text-light mb-0">{{ review.advertiser.get_full_name }}</h6>
-                                        <div class="text-light">
-                                            <div class="star-rating">
-                                                {% for i in "12345" %}
-                                                    <i class="star-rating-icon fi-star{% if forloop.counter <= review.rating %}-filled active{% else %}{% endif %}"></i>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <span class="text-light opacity-50 fs-sm">{{ review.created_at|date:"Y/m/d" }}</span>
+
+        <div class="container position-relative" style="z-index: 5;">
+            <div class="row align-items-end g-4">
+                <div class="col-md-auto text-center text-md-start">
+                    <div class="avatar-hologram">
+                        <div class="avatar-hologram-glow"></div>
+                        <div class="avatar-hologram-ring"></div>
+                        {% if team.logo %}
+                            <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="profile-avatar">
+                        {% else %}
+                            <div class="profile-avatar avatar-placeholder">
+                                <i class="fi-users fs-1 text-accent"></i>
                             </div>
-                            {# متن نظر #}
-                            {% if review.comment %}
-                                <p class="text-light opacity-75 mb-0"
-                                   style="font-size:0.85rem;
-                                          line-height:1.8">{{ review.comment }}</p>
+                        {% endif %}
+                        <div class="avatar-status online"></div>
+                    </div>
+                </div>
+
+                <div class="col-md">
+                    <div class="text-center text-md-start">
+                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center justify-content-md-start mb-2">
+                            <h1 class="profile-name mb-0">{{ team.name }}</h1>
+                            {% if team.is_verified %}
+                                <div class="verified-badge">
+                                    <i class="fi-check-circle"></i>
+                                    <span>تایید شده</span>
+                                </div>
                             {% endif %}
                         </div>
-                    {% empty %}
-                        <div class="text-center py-4">
-                            <div style="font-size:2rem;">💬</div>
-                            <p class="text-secondary small mt-2">هنوز نظری ثبت نشده</p>
+
+                        <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-3">
+                            <span class="info-pill">
+                                <i class="fi-user-check"></i> {{ stats.active_members|default:0 }} عضو
+                            </span>
+                                <span class="info-pill info-pill-accent">
+                                <i class="fi-briefcase"></i>
+                                تیم حرفه‌ای
+                            </span>
+                            {% if team.is_revenue_share_valid %}
+                                <span class="info-pill info-pill-success">
+                                <i class="fi-check-circle"></i>
+                                اشتراک درآمد فعال
+                            </span>
+                            {% endif %}
                         </div>
-                    {% endfor %}
+
+                        <div class="rating-advanced">
+                            <div class="rating-stars-large">
+                                {% with avg=stats.avg_rating|default:0 %}
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= avg %}
+                                            <i class="fi-star-filled"></i>
+                                        {% elif forloop.counter <= avg|add:0.5 %}
+                                            <i class="fi-star-half"></i>
+                                        {% else %}
+                                            <i class="fi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                                <span class="rating-value">{{ stats.avg_rating|default:"0"|floatformat:1 }}</span>
+                            </div>
+                        
+                            <div class="rating-progress">
+                                {% with avg=stats.avg_rating|default:0 %}
+                                    <div class="rating-progress-bar" style="width: {% widthratio avg 5 100 %}%"></div>
+                                {% endwith %}
+                            </div>
+                        
+                            <div class="rating-count-large">
+                                <i class="fi-chat-circle"></i> {{ stats.review_count|default:0 }} نظر ثبت شده
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-auto">
+                    <button class="cta-button pulse-animation" id="orderBtn">
+                        <span class="cta-button-text">
+                            <i class="fi-send me-2"></i> درخواست همکاری
+                        </span>
+                        
+                        <span class="cta-button-icon">
+                            <i class="fi-arrow-left"></i>
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                {% if team.description %}
+                    <div class="glass-card p-4 mb-4" data-aos="fade-up">
+                        <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#aboutCollapse" role="button" aria-expanded="true">
+                            <div class="section-icon">
+                                <i class="fi-file-clean"></i>
+                            </div>
+                            
+                            <h3 class="section-title">درباره {{ team.name }}</h3>
+                            <div class="section-line"></div>
+                            
+                            <div class="collapse-arrow">
+                                <i class="fi-chevron-down"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="collapse show" id="aboutCollapse">
+                            <div class="about-text">
+                                <p>{{ team.description|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#membersCollapse" role="button" aria-expanded="false">
+                        <div class="section-icon">
+                            <i class="fi-users"></i>
+                        </div>
+                    
+                        <h3 class="section-title">اعضای تیم</h3>
+                        <div class="section-line"></div>
+                    
+                        {% if stats.active_members > 0 %}
+                            <span class="reviews-count-badge me-2">{{ stats.active_members }}</span>
+                        {% endif %}
+                    
+                        <div class="collapse-arrow">
+                            <i class="fi-chevron-down"></i>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="membersCollapse">
+                        {% if not managers and not editors and not writers and not designers and not videographers and not other_members %}
+                            <div class="text-center py-3">
+                                <p class="text-muted">هنوز عضوی به تیم اضافه نشده است.</p>
+                            </div>
+                        {% else %}
+                            {% for role_group in member_roles %}
+                                {% if role_group.members %}
+                                    <div class="members-section">
+                                        <div class="members-role-header collapse-header" data-bs-toggle="collapse" data-bs-target="#roleCollapse{{ role_group.id }}" role="button" aria-expanded="false">
+                                            <h6 class="members-role-title mb-0">
+                                                <i class="{{ role_group.icon }} text-accent me-2"></i>
+                                                {{ role_group.title }}
+                                            </h6>
+                                            
+                                            <span class="role-count-badge me-2">{{ role_group.members|length }}</span>
+                                            
+                                            <div class="collapse-arrow collapse-arrow-sm">
+                                                <i class="fi-chevron-down"></i>
+                                            </div>
+                                        </div>
+
+                                        <div class="collapse" id="roleCollapse{{ role_group.id }}">
+                                            <div class="members-grid pt-2">
+                                                {% for member in role_group.members %}
+                                                    <div class="member-card">
+                                                        {% if member.user.avatar %}
+                                                            <img src="{{ member.user.avatar.url }}" alt="{{ member.user.get_full_name }}" class="member-avatar">
+                                                        {% else %}
+                                                            <div class="member-avatar member-avatar-placeholder">
+                                                                <i class="fi-user text-accent"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                        <div class="member-name">{{ member.user.get_full_name|default:member.user.nickname }}</div>
+                                                        <div class="member-role">{{ member.get_role_display }}</div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if portfolio_items %}
+                    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                        <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#portfolioCollapse" role="button" aria-expanded="false">
+                            <div class="section-icon">
+                                <i class="fi-image"></i>
+                            </div>
+                            
+                            <h3 class="section-title">نمونه کارها</h3>
+                            <div class="section-line"></div>
+                            <span class="reviews-count-badge me-2">{{ portfolio_items|length }}</span>
+                            
+                            <div class="collapse-arrow">
+                                <i class="fi-chevron-down"></i>
+                            </div>
+                        </div>
+
+                        <div class="collapse" id="portfolioCollapse">
+                            <div class="portfolio-grid">
+                                {% for item in portfolio_items %}
+                                    <div class="portfolio-item-wrapper">
+                                        {% if item.external_link %}
+                                            <a href="{{ item.external_link }}" target="_blank" rel="noopener noreferrer" class="portfolio-item has-link">
+                                        {% elif item.video_url %}
+                                            <a href="{{ item.video_url }}" target="_blank" rel="noopener noreferrer" class="portfolio-item has-link">
+                                        {% elif item.media %}
+                                            <a href="{{ item.media.url }}" data-fancybox="portfolio" data-caption="{{ item.title }}" class="portfolio-item has-link">
+                                        {% endif %}
+
+                                        {% if item.media %}
+                                            <img src="{{ item.media.url }}" alt="{{ item.title }}" class="portfolio-thumb">
+                                        {% else %}
+                                            <div class="portfolio-thumb portfolio-thumb-placeholder">
+                                                {% if item.video_url %}
+                                                    <i class="fi-video text-accent fs-2"></i>
+                                                {% elif item.external_link %}
+                                                    <i class="fi-external-link text-accent fs-2"></i>
+                                                {% else %}
+                                                    <i class="fi-image text-muted fs-2"></i>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="portfolio-overlay">
+                                            {% if item.video_url %}
+                                                <div class="portfolio-overlay-icon">
+                                                    <i class="fi-play-filled"></i>
+                                                </div>
+                                                <span class="portfolio-overlay-text">مشاهده ویدیو</span>
+                                            {% elif item.external_link %}
+                                                <div class="portfolio-overlay-icon">
+                                                    <i class="fi-external-link"></i>
+                                                </div>
+                                                <span class="portfolio-overlay-text">مشاهده نمونه</span>
+                                            {% elif item.media %}
+                                                <div class="portfolio-overlay-icon">
+                                                    <i class="fi-zoom-in"></i>
+                                                </div>
+                                                <span class="portfolio-overlay-text">بزرگنمایی</span>
+                                            {% else %}
+                                                <span class="portfolio-overlay-text text-muted">بدون پیش‌نمایش</span>
+                                            {% endif %}
+
+                                            {% if item.service_type %}
+                                                <span class="portfolio-service-badge">{{ item.service_type.name }}</span>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="portfolio-info">
+                                            {% if item.title %}
+                                                <div class="portfolio-title">{{ item.title }}</div>
+                                            {% endif %}
+                                            {% if item.description %}
+                                                <div class="portfolio-desc">{{ item.description|truncatechars:60 }}</div>
+                                            {% endif %}
+                                            <div class="portfolio-meta">
+                                                {% if item.video_url %}
+                                                    <span class="portfolio-meta-item">
+                                                        <i class="fi-video"></i> ویدیو
+                                                    </span>
+                                                {% elif item.media %}
+                                                    <span class="portfolio-meta-item">
+                                                        <i class="fi-image"></i> تصویر
+                                                    </span>
+                                                {% endif %}
+                                            
+                                                {% if item.external_link %}
+                                                    <span class="portfolio-meta-item"><i class="fi-external-link"></i> لینک خارجی</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        {% if item.external_link or item.video_url or item.media %}
+                                            </a>
+                                        {% endif %}
+
+                                    </div>
+
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if available_services %}
+                    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
+                        <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#servicesCollapse" role="button" aria-expanded="false">
+                            <div class="section-icon">
+                                <i class="fi-cash"></i>
+                            </div>
+                            
+                            <h3 class="section-title">خدمات و قیمت‌ها</h3>
+                            <div class="section-line"></div>
+                            <span class="reviews-count-badge me-2">{{ available_services|length }}</span>
+                            
+                            <div class="collapse-arrow">
+                                <i class="fi-chevron-down"></i>
+                            </div>
+                        </div>
+
+                        <div class="collapse" id="servicesCollapse">
+                            <div class="pricing-grid">
+                                {% for rate in available_services %}
+                                    <div class="pricing-card">
+                                        <div class="pricing-card-icon">
+                                            {% if rate.service_type.icon %}
+                                                <i class="{{ rate.service_type.icon }}"></i>
+                                            {% else %}
+                                                <i class="fi-check-circle"></i>
+                                            {% endif %}
+                                        </div>
+                                    
+                                        <div class="pricing-card-title">{{ rate.service_type.name }}</div>
+                                    
+                                        <div class="pricing-card-price">
+                                            <span class="price-number">{{ rate.price_per_unit|floatformat:0 }}</span>
+                                            <span class="price-currency">تومان</span>
+                                        </div>
+                                    
+                                        <div class="pricing-card-feature">
+                                            <i class="fi-check-circle"></i>
+                                            <span>{{ rate.estimated_delivery_days }} روز</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="250">
+                    <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#reviewsCollapse" role="button" aria-expanded="false">
+                        <div class="section-icon">
+                            <i class="fi-chat-circle"></i>
+                        </div>
+                    
+                        <h3 class="section-title">نظرات مشتریان</h3>
+                        <div class="section-line"></div>
+                    
+                        {% if reviews %}
+                            <span class="reviews-count-badge me-2">{{ reviews|length }}</span>
+                        {% endif %}
+                    
+                        <div class="collapse-arrow">
+                            <i class="fi-chevron-down"></i>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="reviewsCollapse">
+                        {% if reviews %}
+                            <div class="reviews-container-scroll">
+                                {% for review in reviews %}
+                                    <div class="review-card-modern">
+                                        <div class="review-header">
+                                            <div class="reviewer-info">
+                                                <div class="reviewer-avatar">
+                                                    {% if review.advertiser.user.avatar %}
+                                                        <img src="{{ review.advertiser.user.avatar.url }}" alt="">
+                                                    {% else %}
+                                                        <i class="fi-user"></i>
+                                                    {% endif %}
+                                                </div>
+                                            
+                                                <div>
+                                                    <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
+                                                    <div class="reviewer-date">
+                                                        <i class="fi-calendar"></i> {{ review.created_at|date:"Y/m/d" }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        
+                                            <div class="review-rating-stars">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= review.rating %}
+                                                        <i class="fi-star-filled"></i>
+                                                    {% else %}
+                                                        <i class="fi-star"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    
+                                        {% if review.comment %}
+                                            <p class="review-body">{{ review.comment }}</p>
+                                        {% endif %}
+                                    
+                                        <div class="review-footer">
+                                            <i class="fi-check-circle"></i>
+                                            <span>سفارش تکمیل شده</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-reviews">
+                                <div class="empty-reviews-icon">
+                                    <i class="fi-chat-circle text-accent"></i>
+                                </div>
+                                
+                                <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
+                                
+                                <p class="text-muted small">
+                                    اولین نفری باشید که تجربه همکاری با این تیم را به اشتراک می‌گذارید!
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="50">
+                    <div class="section-header small">
+                        <div class="section-icon small">
+                            <i class="fi-dashboard"></i>
+                        </div>
+                        <h3 class="section-title small">آمار کلیدی</h3>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fi-star-filled"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <div class="stat-card-value">{{ stats.avg_rating|default:0|floatformat:1 }}</div>
+                                <div class="stat-card-label">میانگین امتیاز</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fi-briefcase"></i>
+                            </div>
+                            
+                            <div class="stat-card-content">
+                                <div class="stat-card-value">{{ stats.completed_orders|default:0 }}</div>
+                                <div class="stat-card-label">سفارش موفق</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fi-users"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <div class="stat-card-value">{{ stats.active_members|default:0 }}</div>
+                                <div class="stat-card-label">اعضای فعال</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-card-icon">
+                                <i class="fi-calendar"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <div class="stat-card-value">{{ team.created_at|date:"Y/m/d" }}</div>
+                                <div class="stat-card-label">تاریخ ایجاد تیم</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
+                    <div class="section-header small">
+                        <div class="section-icon small">
+                            <i class="fi-link"></i>
+                        </div>
+                        <h3 class="section-title small">ارتباط و پشتیبانی</h3>
+                    </div>
+
+                    <div class="social-links">
+                        <button class="social-link-item" onclick="shareProfile()">
+                            <i class="fi-share"></i>
+                            <span>اشتراک‌گذاری پروفایل</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="report-section">
+                        <i class="fi-flag"></i>
+                        <div>
+                            <h6 class="text-light mb-1">مشاهده تخلف؟</h6>
+                            <p class="text-muted small mb-2">در صورت مشاهده هرگونه تخلف، به ما گزارش دهید.</p>
+                            <button class="btn-report">
+                                گزارش تخلف
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade modal-glass" id="orderModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <div class="modal-icon">
+                        <i class="fi-send"></i>
+                    </div>
+                    
+                    <h5 class="modal-title text-light">درخواست همکاری</h5>
+                    
+                    <button type="button" class="btn-close-modal" data-bs-dismiss="modal">
+                        <i class="fi-x"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body text-center">
+                    <p class="modal-text">
+                        برای شروع همکاری با 
+                        <strong class="text-accent">{{ team.name }}</strong>،
+                        یکی از روش‌های زیر را انتخاب کنید:
+                    </p>
+
+                    <div class="modal-options">
+                        <a href="#" class="modal-option-card">
+                            <div class="modal-option-icon">
+                                <i class="fi-plus-circle"></i>
+                            </div>
+                            
+                            <div class="modal-option-content">
+                                <div class="modal-option-title">ایجاد سفارش جدید</div>
+                                <div class="modal-option-desc">یک سفارش تولید محتوا ثبت کنید</div>
+                            </div>
+                            
+                            <div class="modal-option-arrow">
+                                <i class="fi-arrow-left"></i>
+                            </div>
+                        </a>
+
+                        <div class="modal-option-card" onclick="contactSupport()">
+                            <div class="modal-option-icon">
+                                <i class="fi-headset"></i>
+                            </div>
+                            
+                            <div class="modal-option-content">
+                                <div class="modal-option-title">مشاوره با پشتیبانی</div>
+                                <div class="modal-option-desc">برای دریافت مشاوره رایگان تماس بگیرید</div>
+                            </div>
+                            
+                            <div class="modal-option-arrow">
+                                <i class="fi-arrow-left"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade modal-glass" id="shareModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <div class="modal-icon">
+                        <i class="fi-share"></i>
+                    </div>
+                    
+                    <h5 class="modal-title">اشتراک‌گذاری</h5>
+                    
+                    <button type="button" class="btn-close-modal" data-bs-dismiss="modal">
+                        <i class="fi-x"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body text-center">
+                    <div class="share-url-container">
+                        <label for="shareUrl"></label>
+                        <input type="text" class="share-url-input" id="shareUrl" readonly value="{{ request.build_absolute_uri }}">
+                        <button class="share-copy-btn" onclick="copyToClipboard()">
+                            <i class="fi-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-muted small mt-3">لینک پروفایل کپی شد! می‌توانید آن را برای دیگران ارسال کنید.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'content_team/js/pages/team_detail.js' %}"></script>
 {% endblock %}

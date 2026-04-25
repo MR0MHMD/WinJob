@@ -1,71 +1,332 @@
 {% extends 'parent/base.html' %}
 {% load static %}
-{% block title %}تیم‌های تولید محتوا{% endblock %}
+
+{% block title %}تیم های تولید محتوا{% endblock %}
+
 {% block extra_style %}
-    <link rel="stylesheet"
-          href="{% static 'content_team/css/pages/team_list.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_list.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/forms/auth_forms.css' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="container py-5" dir="rtl">
-        {# ---- هدر صفحه ---- #}
-        <div class="text-center mb-5">
-            <h1 class="text-light fw-bold mb-2">تیم‌های تولید محتوا</h1>
-            <p class="text-secondary">بهترین تیم‌ها برای تولید محتوای کمپین خود را انتخاب کنید</p>
-        </div>
-        {# ---- لیست تیم‌ها ---- #}
-        <div class="row g-4">
-            {% for team in teams %}
-                <div class="col-md-6 col-lg-4">
-                    <a href="{% url 'content_team:team_detail' team.slug %}"
-                       class="text-decoration-none">
-                        <div class="team-list-card h-100 p-4">
-                            {# لوگو و نام #}
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                {% if team.logo %}
-                                    <img src="{{ team.logo.url }}"
-                                         alt="{{ team.name }}"
-                                         class="team-list-avatar">
-                                {% else %}
-                                    <div class="team-list-avatar-placeholder">🎬</div>
-                                {% endif %}
-                                <div>
-                                    <h6 class="text-light fw-bold mb-0">{{ team.name }}</h6>
-                                    <small class="text-secondary" style="direction:ltr;">@{{ team.slug }}</small>
-                                </div>
-                            </div>
-                            {# توضیحات #}
-                            {% if team.description %}
-                                <p class="text-secondary small mb-3" style="line-height:1.7;">{{ team.description|truncatechars:100 }}</p>
+
+    <div class="hero-header py-5 mb-4" style="padding-top:5rem !important;">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-7">
+                    <h1 class="display-5 fw-bold text-light mb-3">
+                        <i class="fi-users text-accent me-2"></i>
+                        تیم‌های تولید محتوا
+                    </h1>
+                
+                    <p class="text-muted fs-lg mb-4">
+                        بهترین تیم‌های حرفه‌ای برای تولید محتوای با کیفیت در شبکه‌های اجتماعی
+                    </p>
+                    
+                    <div class="d-flex gap-3">
+                        <div class="flex-grow-1 search-input-wrapper">
+                            <i class="fi-search"></i>
+                            <label for="searchInput" style="display: none"></label>
+                            <input type="text" id="searchInput" placeholder="جستجوی نام تیم یا توضیحات..." value="{{ search_query|default:'' }}">
+                        </div>
+                    
+                        <button class="filter-toggle-btn" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+                            <i class="fi-filter me-2"></i>
+                            فیلتر
+                            {% if selected_service_types or search_query %}
+                                <span class="badge bg-faded-accent text-accent px-2 py-1">
+                                    <i class="fi-filter me-1"></i> فیلتر فعال
+                                </span>
                             {% endif %}
-                            {# امتیاز و سفارش‌ها #}
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <div class="star-rating">
-                                    {% with avg=team.avg_rating|default:0 %}
-                                        {% for i in "12345" %}
-                                            <i class="star-rating-icon fi-star{% if forloop.counter <= avg %} active{% endif %}"></i>
-                                        {% endfor %}
-                                        <small class="text-secondary ms-1">({{ team.avg_rating|floatformat:1|default:"—" }})</small>
-                                    {% endwith %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container pb-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-light fw-bold fs-5">{{ total_teams }}</span>
+                <span class="text-muted">تیم تولید محتوا</span>
+                {% if selected_service_type or search_query %}
+                    <span class="badge bg-faded-accent text-accent px-2 py-1">
+                        <i class="fi-filter me-1"></i> فیلتر فعال
+                    </span>
+                {% endif %}
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small"><i class="fi-arrows-sort me-1"></i> مرتب‌سازی:</span>
+                <label for="sortSelect"></label>
+                <select class="form-select form-select-light" id="sortSelect">
+                    <option value="-annotated_avg_rating" {% if current_ordering == '-annotated_avg_rating' %}selected{% endif %}>
+                        بالاترین امتیاز
+                    </option>
+                
+                    <option value="annotated_avg_rating" {% if current_ordering == 'annotated_avg_rating' %}selected{% endif %}>
+                        پایین‌ترین امتیاز
+                    </option>
+                
+                    <option value="-annotated_review_count" {% if current_ordering == '-annotated_review_count' %}selected{% endif %}>
+                        بیشترین نظرات
+                    </option>
+                
+                    <option value="-annotated_completed_orders" {% if current_ordering == '-annotated_completed_orders' %}selected{% endif %}>
+                        بیشترین سفارشات
+                    </option>
+                
+                    <option value="-created_at" {% if current_ordering == '-created_at' %}selected{% endif %}>
+                        جدیدترین
+                    </option>
+                
+                    <option value="name" {% if current_ordering == 'name' %}selected{% endif %}>
+                        الفبایی (الف-ی)
+                    </option>
+                </select>
+            </div>
+        </div>
+        
+        {% if teams %}
+            <div class="row g-4">
+                {% for team in teams %}
+                    <div class="col-md-6 col-xl-4" style="--i: {{ forloop.counter0 }}">
+                        <div class="card card-light team-card h-100 border-0">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="team-card-header">
+                                    <div class="d-flex gap-3">
+                                        {% if team.logo %}
+                                            <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="team-logo-avatar flex-shrink-0">
+                                        {% else %}
+                                            <div class="team-logo-avatar flex-shrink-0 d-flex align-items-center justify-content-center">
+                                                <i class="fi-users fs-1 text-accent opacity-50"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="flex-grow-1 min-width-0">
+                                            <h5 class="text-light mb-1 text-truncate">
+                                                {{ team.name }}
+                                            </h5>
+                                            
+                                            <div class="team-members-count d-inline-flex mb-1">
+                                                <i class="fi-user-check"></i>
+                                                <span>{{ team.annotated_active_members_count|default:0 }} عضو فعال</span>
+                                            </div>
+                                            
+                                            <div class="rating-stars mt-1">
+                                                {% with avg=team.annotated_avg_rating|default:0 %}
+                                                    {% for i in "12345"|make_list %}
+                                                        {% if forloop.counter <= avg %}
+                                                            <i class="fi-star-filled"></i>
+                                                        {% elif forloop.counter <= avg|add:0.5 %}
+                                                            <i class="fi-star-half"></i>
+                                                        {% else %}
+                                                            <i class="fi-star inactive"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endwith %}
+                                            
+                                                {% if team.annotated_avg_rating > 0 %}
+                                                    <span class="rating-count">({{ team.annotated_review_count }} نظر)</span>
+                                                {% else %}
+                                                    <span class="rating-count">بدون نظر</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="badge bg-faded-secondary text-light">{{ team.completed_orders_count }} سفارش تکمیل‌شده</span>
-                            </div>
-                            {# قیمت پایه #}
-                            <div class="team-list-price-box text-center mt-auto">
-                                <div class="team-price-label">قیمت پایه</div>
-                                <div class="team-price-value">
-                                    {{ team.base_price|floatformat:0 }}
-                                    <span class="team-price-unit">تومان</span>
+                                
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    {% for rate in team.service_rates.all %}
+                                        {% if rate.is_available %}
+                                            <span class="service-tag-accent">
+                                                {% if rate.service_type.icon %}
+                                                    <i class="fi-{{ rate.service_type.icon }}"></i>
+                                                {% else %}
+                                                    <i class="fi-check-circle"></i>
+                                                {% endif %}
+                                                {{ rate.service_type.name }}
+                                            </span>
+                                        {% endif %}
+                                    {% empty %}
+                                        <span class="service-tag-accent opacity-50">
+                                            <i class="fi-info-circle"></i>
+                                            بدون سرویس فعال
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% if team.description %}
+                                    <p class="text-muted small mb-2" style="line-height: 1.65;">
+                                        {{ team.description|truncatewords:18 }}
+                                    </p>
+                                {% endif %}
+                                
+                                <div class="flex-grow-1"></div>
+                                
+                                <div class="d-flex flex-wrap gap-2 mb-3 mt-auto">
+                                    <div class="stat-badge-accent flex-grow-1 justify-content-center">
+                                        <i class="fi-star-filled"></i>
+                                        <strong>{{ team.annotated_avg_rating|default:0|floatformat:1 }}</strong>
+                                        <span>امتیاز</span>
+                                    </div>
+                                    
+                                    <div class="stat-badge-accent flex-grow-1 justify-content-center">
+                                        <i class="fi-briefcase"></i>
+                                        <strong>{{ team.annotated_completed_orders|default:0 }}</strong>
+                                        <span>سفارش موفق</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <a href="{% url 'content_team:team_detail' team.slug %}" class="btn-view-accent w-100 justify-content-center">
+                                        <span>مشاهده پروفایل تیم</span>
+                                        <i class="fi-arrow-left"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {% if is_paginated %}
+                <div class="d-flex justify-content-center mt-5">
+                    <nav>
+                        <ul class="pagination pagination-custom-accent">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fi-chevron-right"></i></span>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fi-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fi-chevron-left"></i></span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
                 </div>
-            {% empty %}
-                <div class="col-12 text-center py-5">
-                    <div style="font-size:3rem;">😕</div>
-                    <p class="text-secondary mt-3">در حال حاضر هیچ تیم فعالی وجود ندارد.</p>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fi-search fs-1 text-muted"></i>
                 </div>
-            {% endfor %}
-        </div>
+                
+                <h4 class="text-light mb-2">نتیجه‌ای یافت نشد!</h4>
+                <p class="text-muted">هیچ تیمی با فیلترهای انتخاب شده پیدا نشد.</p>
+                
+                <a href="{% url 'content_team:team_list' %}" class="btn btn-outline-accent rounded-pill mt-2">
+                    <i class="fi-refresh me-2"></i> حذف همه فیلترها
+                </a>
+            </div>
+        {% endif %}
     </div>
+    
+    <div class="offcanvas offcanvas-end bg-dark" tabindex="-1" id="filterOffcanvas" data-bs-backdrop="false" style="border-right: 1px solid rgba(255, 255, 255, 0.08);">
+        <div class="offcanvas-header border-bottom border-light">
+            <h5 class="offcanvas-title text-light">
+                <i class="fi-filter text-accent me-2"></i>
+                فیلترهای جستجو
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        
+        <form method="get" id="filterForm">
+            <div class="offcanvas-body">
+                <div class="filter-group">
+                    <label for="service_type"><i class="fi-briefcase"></i> نوع سرویس</label>
+                    <div class="service-types-grid">
+                        {% for service_type in service_types %}
+                            <label class="service-type-checkbox">
+                                <input type="checkbox" name="service_type" value="{{ service_type.slug }}" {% if service_type.slug in selected_service_types %}checked{% endif %} class="form-check-input-dark">
+                                <span class="checkbox-label">
+                                    {{ service_type.name }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="search_offcanvas"><i class="fi-search"></i> جستجو</label>
+                    <input type="text" id="search_offcanvas" name="search" class="form-control form-control-light" placeholder="نام تیم یا توضیحات..." value="{{ search_query|default:'' }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="ordering"><i class="fi-arrows-sort"></i> مرتب‌سازی</label>
+                    <select id="ordering" name="ordering" class="form-select form-select-light">
+                        <option value="-annotated_avg_rating" {% if current_ordering == '-annotated_avg_rating' %}selected{% endif %}>
+                            بالاترین امتیاز
+                        </option>
+                    
+                        <option value="annotated_avg_rating" {% if current_ordering == 'annotated_avg_rating' %}selected{% endif %}>
+                            پایین‌ترین امتیاز
+                        </option>
+                    
+                        <option value="-annotated_review_count" {% if current_ordering == '-annotated_review_count' %}selected{% endif %}>
+                            بیشترین نظرات
+                        </option>
+                    
+                        <option value="-annotated_completed_orders" {% if current_ordering == '-annotated_completed_orders' %}selected{% endif %}>
+                            بیشترین سفارشات
+                        </option>
+                    
+                        <option value="-created_at" {% if current_ordering == '-created_at' %}selected{% endif %}>
+                            جدیدترین
+                        </option>
+                    
+                        <option value="name" {% if current_ordering == 'name' %}selected{% endif %}>
+                            الفبایی (الف-ی)
+                        </option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="offcanvas-footer p-3 border-top border-light">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-light w-100 rounded-pill" onclick="resetFilters()">
+                            <i class="fi-refresh me-2"></i> بازنشانی
+                        </button>
+                    </div>
+                    
+                    <div class="col-6">
+                        <button type="submit" class="btn btn-accent w-100 rounded-pill">
+                            <i class="fi-check me-2"></i> اعمال فیلتر
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'content_team/js/pages/team_list.js' %}"></script>
 {% endblock %}

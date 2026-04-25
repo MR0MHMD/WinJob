@@ -1,16 +1,12 @@
-# accounts/models.py
-from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 from django_jalali.db import models as jmodels
-from .managers import CustomUserManager
 from django_resized import ResizedImageField
-import random
-from django.db import models
+from .managers import CustomUserManager
 from django.utils import timezone
-from django.conf import settings
 from datetime import timedelta
+from django.db import models
+import random
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -99,18 +95,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         if not self.sheba_code:
             return "-"
 
-        # حذف IR از اول اگه باشه
         raw = self.sheba_code.replace("IR", "").strip()
 
-        # ۲ رقم اول رو جدا کن
         first_two = raw[:2]
-        # باقی اعداد رو از رقم ۳ به بعد
         rest = raw[2:]
 
-        # بقیه اعداد رو هر ۴ رقم یه فاصله بنداز
         formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
 
-        # برگردون: IR + فاصله + ۲ رقم اول + فاصله + بقیه فرمت شده
         return f"IR - {first_two} {formatted_rest}"
 
     @property
@@ -350,7 +341,7 @@ class Transaction(models.Model):
         """آیا این تراکنش خروجی است؟"""
         if not self.type:
             return True
-        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT ]
+        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT]
 
     @property
     def sign_display(self):
