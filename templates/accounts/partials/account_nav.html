@@ -48,18 +48,26 @@
         </a>
         <div class="collapse d-md-block mt-3" id="account-nav">
             <div class="card-nav">
+                <a class="card-nav-link"
+                   href="{% url 'accounts:dashboard_router' %}">
+                    <i class="fi-home me-2"></i>داشبورد
+                </a>
                 <a class="card-nav-link {% if personal_info %}active{% endif %}"
                    href="{% url 'accounts:edit' %}">
                     <i class="fi-user me-2"></i>اطلاعات فردی
                 </a>
                 {% if request.user.is_influencer %}
-                    <a class="card-nav-link {% if channels %}active{% endif %}"
+                    <a class="card-nav-link {% if channels_layout %}active{% endif %}"
                        href="{% url 'influencers:influencer_channels' %}">
                         <i class="fi-lock me-2"></i>مدیریت کانال ها
                     </a>
                     <a class="card-nav-link {% if rates %}active{% endif %}"
                        href="{% url 'influencers:service_rates' %}">
                         <i class="fi-lock me-2"></i>مدیریت تعرفه ها
+                    </a>
+                    <a class="card-nav-link {% if coupons %}active{% endif %}"
+                       href="{% url 'influencers:coupon_list' %}">
+                        <i class="fi-lock me-2"></i>مدیریت کد های تخفیف
                     </a>
                 {% endif %}
                 <a class="card-nav-link {% if security %}active{% endif %}" href="#">

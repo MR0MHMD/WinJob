@@ -1,4 +1,4 @@
-from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink
+from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
 from django.db.models import Sum, Q, Avg, Count, Value, IntegerField, FloatField
 from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel
 from django.shortcuts import render, get_object_or_404, redirect
@@ -385,6 +385,12 @@ def influencer_dashboard(request):
     wallet = request.user.wallet
     wallet_balance = wallet.balance
 
+    # گرفتن ۳ کد تخفیف آخر اینفلوئنسر
+    latest_coupons = Coupon.objects.filter(
+        channel__influencer=influencer,
+        is_active=True
+    ).order_by('-id')[:3]
+
     tracking_links = CampaignTrackingLink.objects.filter(
         campaign_influencer_id__in=booking_ids
     )
@@ -497,6 +503,7 @@ def influencer_dashboard(request):
         'total_earned': total_earned,
         'pending_earnings': pending_earnings,
         'wallet_balance': wallet_balance,
+        'latest_coupons': latest_coupons,
         'total_clicks': total_clicks,
         'total_unique_clicks': total_unique_clicks,
         'avg_ctr': avg_ctr,
@@ -721,3 +728,275 @@ def channel_detail(request, channel_id):
     }
 
     return render(request, 'influencers/pages/channel_detail.html', context)
+
+
+@login_required
+def influencer_coupons(request):
+    """نمایش و مدیریت کدهای تخفیف ناشر"""
+    if not hasattr(request.user, 'influencer_profile'):
+        messages.error(request, "شما دسترسی به این صفحه ندارید.")
+        return redirect('core:home')
+
+    influencer = request.user.influencer_profile
+
+    # گرفتن کانال‌های فعال ناشر
+    channels = InfluencerChannel.objects.filter(
+        influencer=influencer,
+        is_active=True
+    )
+
+    # گرفتن همه کدهای تخفیف این ناشر (از طریق کانال‌هاش)
+    coupons = Coupon.objects.filter(
+        channel__influencer=influencer
+    ).select_related('channel', 'channel__platform').order_by('-id')
+
+    # آمار
+    total_coupons = coupons.count()
+    active_coupons = coupons.filter(is_active=True).count()
+    total_used = coupons.aggregate(total=models.Sum('used_count'))['total'] or 0
+
+    # فیلتر پیشرفته
+    channel_id = request.GET.get('channel')
+    status = request.GET.get('status')
+    used_min = request.GET.get('used_min')
+    used_max = request.GET.get('used_max')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if channel_id:
+        coupons = coupons.filter(channel_id=channel_id)
+
+    if status == 'active':
+        coupons = coupons.filter(is_active=True)
+    elif status == 'inactive':
+        coupons = coupons.filter(is_active=False)
+
+    if used_min:
+        coupons = coupons.filter(used_count__gte=int(used_min))
+
+    if used_max:
+        coupons = coupons.filter(used_count__lte=int(used_max))
+
+    if date_from:
+        try:
+            parts = date_from.split('/')
+            jd = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+            gd = jd.togregorian()
+            coupons = coupons.filter(expires_at__gte=gd)
+        except:
+            pass
+
+    if date_to:
+        try:
+            parts = date_to.split('/')
+            jd = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+            gd = jd.togregorian()
+            coupons = coupons.filter(expires_at__lte=gd)
+        except:
+            pass
+
+    context = {
+        'coupons': coupons,
+        'channels': channels,
+        'total_coupons': total_coupons,
+        'active_coupons': active_coupons,
+        'total_used': total_used,
+        'influencer': influencer,
+    }
+
+    return render(request, 'influencers/forms/coupons.html', context)
+
+
+@login_required
+def coupon_create(request):
+    """ساخت کد تخفیف جدید"""
+    if request.method != 'POST':
+        return redirect('influencers:coupon_list')
+
+    if not hasattr(request.user, 'influencer_profile'):
+        messages.error(request, "شما دسترسی به این صفحه ندارید.")
+        return redirect('core:home')
+
+    code = request.POST.get('code', '').strip().upper()
+    scope = 'influencer'
+    discount_type = request.POST.get('discount_type')
+    value = request.POST.get('value', '0')
+    value = value.replace(',', '')
+    channel_id = request.POST.get('channel')
+    max_uses = request.POST.get('max_uses')
+    expires_at = request.POST.get('expires_at')
+
+    # اعتبارسنجی
+    if not all([code, scope, discount_type, value, channel_id]):
+        messages.error(request, "لطفاً تمام فیلدهای ضروری را پر کنید.")
+        return redirect('influencers:coupon_list')
+
+    # چک کردن تکراری نبودن کد
+    if Coupon.objects.filter(code=code).exists():
+        messages.error(request, "این کد تخفیف قبلاً استفاده شده است.")
+        return redirect('influencers:coupon_list')
+
+    # چک کردن مالکیت کانال
+    try:
+        channel = InfluencerChannel.objects.get(
+            id=channel_id,
+            influencer=request.user.influencer_profile,
+            is_active=True
+        )
+    except InfluencerChannel.DoesNotExist:
+        messages.error(request, "کانال انتخاب شده معتبر نیست.")
+        return redirect('influencers:coupon_list')
+
+    # ساخت کد تخفیف
+    coupon = Coupon(
+        code=code,
+        scope=scope,
+        channel=channel,
+        discount_type=discount_type,
+        value=value,
+        max_uses=int(max_uses) if max_uses else None,
+        is_active=True
+    )
+
+    # تاریخ انقضا
+    # تاریخ انقضا
+    expires_date = request.POST.get('expires_date', '').strip()
+    expires_time = request.POST.get('expires_time', '00:00').strip()
+
+    if expires_date:
+        try:
+            import jdatetime
+            from datetime import datetime as dt
+
+            # پارس تاریخ شمسی: 1405/02/06
+            date_parts = expires_date.split('/')
+            time_parts = expires_time.split(':') if expires_time else ['00', '00']
+
+            jyear = int(date_parts[0])
+            jmonth = int(date_parts[1])
+            jday = int(date_parts[2])
+            hour = int(time_parts[0]) if time_parts else 0
+            minute = int(time_parts[1]) if len(time_parts) > 1 else 0
+
+            # تبدیل به میلادی با jdatetime
+            jalali_date = jdatetime.date(jyear, jmonth, jday)
+            gregorian_date = jalali_date.togregorian()
+
+            expires_at = dt.combine(gregorian_date, dt.min.time())
+            expires_at = expires_at.replace(hour=hour, minute=minute)
+
+            coupon.expires_at = expires_at
+
+        except (ValueError, IndexError, Exception) as e:
+            messages.error(request, "فرمت تاریخ نامعتبر است. لطفاً به صورت ۱۴۰۵/۰۲/۰۶ وارد کنید.")
+            return redirect('influencers:coupon_list')
+
+    coupon.save()
+
+    messages.success(request, f"کد تخفیف {code} با موفقیت ساخته شد! 🎉")
+    return redirect('influencers:coupon_list')
+
+
+@login_required
+def coupon_edit(request, coupon_id):
+    """ویرایش کد تخفیف"""
+    if request.method != 'POST':
+        return redirect('influencers:coupon_list')
+
+    if not hasattr(request.user, 'influencer_profile'):
+        messages.error(request, "شما دسترسی ندارید.")
+        return redirect('core:home')
+
+    influencer = request.user.influencer_profile
+
+    # پیدا کردن کد تخفیف
+    coupon = get_object_or_404(Coupon, id=coupon_id, channel__influencer=influencer)
+
+    # دریافت داده‌ها
+    code = request.POST.get('code', '').strip().upper()
+    discount_type = request.POST.get('discount_type')
+    value = request.POST.get('value', '0')
+    value = value.replace(',', '')
+    channel_id = request.POST.get('channel')
+    max_uses = request.POST.get('max_uses')
+    is_active = request.POST.get('is_active') == 'on'
+    expires_date = request.POST.get('expires_date', '').strip()
+    expires_time = request.POST.get('expires_time', '00:00').strip()
+
+    # اعتبارسنجی
+    if not all([code, discount_type, value, channel_id]):
+        messages.error(request, "لطفاً تمام فیلدهای ضروری را پر کنید.")
+        return redirect('influencers:coupon_list')
+
+    # چک کردن تکراری نبودن کد (به جز خودش)
+    if Coupon.objects.filter(code=code).exclude(id=coupon_id).exists():
+        messages.error(request, "این کد تخفیف قبلاً استفاده شده است.")
+        return redirect('influencers:coupon_list')
+
+    # چک کردن مالکیت کانال
+    try:
+        channel = InfluencerChannel.objects.get(
+            id=channel_id,
+            influencer=influencer,
+            is_active=True
+        )
+    except InfluencerChannel.DoesNotExist:
+        messages.error(request, "کانال انتخاب شده معتبر نیست.")
+        return redirect('influencers:coupon_list')
+
+    # آپدیت فیلدها
+    coupon.code = code
+    coupon.discount_type = discount_type
+    coupon.value = value
+    coupon.channel = channel
+    coupon.max_uses = int(max_uses) if max_uses else None
+    coupon.is_active = is_active
+
+    # مدیریت تاریخ
+    if expires_date:
+        try:
+            import jdatetime
+            from datetime import datetime as dt
+
+            date_parts = expires_date.split('/')
+            time_parts = expires_time.split(':') if expires_time else ['00', '00']
+
+            jyear, jmonth, jday = int(date_parts[0]), int(date_parts[1]), int(date_parts[2])
+            hour = int(time_parts[0]) if time_parts else 0
+            minute = int(time_parts[1]) if len(time_parts) > 1 else 0
+
+            jalali_date = jdatetime.date(jyear, jmonth, jday)
+            gregorian_date = jalali_date.togregorian()
+
+            expires_at = dt.combine(gregorian_date, dt.min.time())
+            expires_at = expires_at.replace(hour=hour, minute=minute)
+
+            coupon.expires_at = expires_at
+        except:
+            messages.error(request, "فرمت تاریخ نامعتبر است.")
+            return redirect('influencers:coupon_list')
+    else:
+        coupon.expires_at = None
+
+    coupon.save()
+    messages.success(request, f"کد تخفیف {code} با موفقیت ویرایش شد! ✏️")
+    return redirect('influencers:coupon_list')
+
+
+@login_required
+def coupon_delete(request, coupon_id):
+    """حذف کد تخفیف"""
+    if request.method != 'POST':
+        return redirect('influencers:coupon_list')
+
+    if not hasattr(request.user, 'influencer_profile'):
+        messages.error(request, "شما دسترسی ندارید.")
+        return redirect('core:home')
+
+    coupon = get_object_or_404(Coupon, id=coupon_id, channel__influencer=request.user.influencer_profile)
+
+    code = coupon.code
+    coupon.delete()
+
+    messages.success(request, f"کد تخفیف {code} با موفقیت حذف شد! 🗑️")
+    return redirect('influencers:coupon_list')

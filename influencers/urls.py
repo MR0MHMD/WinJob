@@ -18,4 +18,8 @@ urlpatterns = [
     path('order_detail/<int:order_id>/report/', views.submit_report, name='submit_report'),
     path('channels/', views.channel_list, name='channel_list'),
     path('channels/<int:channel_id>/', views.channel_detail, name='channel_detail'),
+    path('coupons/', views.influencer_coupons, name='coupon_list'),
+    path('coupons/create/', views.coupon_create, name='coupon_create'),
+    path('coupons/<int:coupon_id>/edit/', views.coupon_edit, name='coupon_edit'),
+    path('coupons/<int:coupon_id>/delete/', views.coupon_delete, name='coupon_delete'),
 ]

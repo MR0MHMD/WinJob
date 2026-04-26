@@ -304,6 +304,121 @@
                         {% endif %}
                     </div>
                 </div>
+                <!-- ردیف جدید: آخرین تراکنش‌ها و کدهای تخفیف -->
+        <div class="row g-4 mt-4">
+            <div class="col-lg-6">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-list text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
+                        </div>
+                        
+                        <a href="#" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                
+                    <div class="card-body p-0">
+                        {% if recent_transactions %}
+                            {% for transaction in recent_transactions %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
+                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
+                                            </div>
+                                        
+                                            <div>
+                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
+                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                                                {% if transaction.description %}
+                                                    <div class="small text-muted mt-1">{{ transaction.description|truncatechars:30 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
+                                            {{ transaction.sign_display }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
+                                <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-primary">
+                                    <i class="fi-plus ms-1"></i> شارژ کیف پول
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-ticket text-primary"></i>
+                            <h5 class="text-white mb-0">کدهای تخفیف من</h5>
+                        </div>
+                        
+                        <a href="{% url 'influencers:coupon_list' %}" class="small text-primary text-decoration-none">
+                            مدیریت <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+
+                    <div class="card-body p-0">
+                        {% if latest_coupons %}
+                            {% for coupon in latest_coupons %}
+                                <div class="coupon-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="coupon-icon">
+                                                {% if coupon.channel.avatar %}
+                                                    <img class="rounded-circle" src="{{ coupon.channel.avatar.url }}" alt="{{ coupon.channel.channel_name }}">
+                                                {% else %}
+                                                    <i class="fi-ticket text-primary fs-5"></i>
+                                                {% endif %} 
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="text-white fw-bold small">{{ coupon.code }}</div>
+                                                <div class="small text-muted">
+                                                    {% if coupon.discount_type == 'percentage' %}
+                                                        {{ coupon.value }}% تخفیف
+                                                    {% else %}
+                                                        {{ coupon.value|floatformat:0 }} تومان
+                                                    {% endif %}
+                                                    <span class="mx-1">•</span>
+                                                    {{ coupon.used_count }}/{{ coupon.max_uses|default:"∞" }} استفاده
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <span class="badge {% if coupon.is_valid %}bg-success{% else %}bg-danger{% endif %} px-2 py-1">
+                                                {% if coupon.is_valid %}فعال{% else %}منقضی{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fi-ticket fs-1 text-muted mb-2 d-block"></i>
+                                <p class="text-muted small mb-2">هنوز کد تخفیفی ثبت نشده است</p>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    ساخت کد تخفیف <i class="fi-plus ms-1"></i>
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
             </div>
 
             <div class="col-lg-4">
@@ -359,7 +474,7 @@
                     </div>
                 </div>
 
-                <div class="dashboard-card mb-4">
+                <div class="dashboard-card">
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-ticket text-primary"></i>
@@ -410,55 +525,6 @@
                                 <p class="text-muted small mb-0">هیچ کانالی ثبت نشده است</p>
                                 <a href="{% url 'influencers:influencer_channels' %}" class="btn btn-sm btn-outline-primary mt-3">
                                     افزودن کانال <i class="fi-plus ms-1"></i>
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="dashboard-card">
-                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fi-list text-primary"></i>
-                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
-                        </div>
-                        
-                        <a href="#" class="small text-primary text-decoration-none">
-                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
-                        </a>
-                    </div>
-                
-                    <div class="card-body p-0">
-                        {% if recent_transactions %}
-                            {% for transaction in recent_transactions %}
-                                <div class="transaction-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
-                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
-                                            </div>
-                                        
-                                            <div>
-                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
-                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
-                                                {% if transaction.description %}
-                                                    <div class="small text-muted mt-1">{{ transaction.description|truncatechars:30 }}</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    
-                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
-                                            {{ transaction.sign_display }}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-5">
-                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
-                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
-                                <a href="{% url 'accounts:wallet_deposit' %}" class="btn btn-primary">
-                                    <i class="fi-plus ms-1"></i> شارژ کیف پول
                                 </a>
                             </div>
                         {% endif %}
