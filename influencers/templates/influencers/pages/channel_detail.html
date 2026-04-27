@@ -180,8 +180,7 @@
                 
                 {% with reviews=channel.influencer.reviews.all %}
                     {% if reviews %}
-                        <div class="reviews-carousel">
-                            <div class="reviews-container" id="reviewsContainer">
+                            <div class="reviews-container-scroll">
                                 {% for review in reviews %}
                                     <div class="review-card-modern">
                                         <div class="review-header">
@@ -193,6 +192,7 @@
                                                         <i class="fi-user"></i>
                                                     {% endif %}
                                                 </div>
+                                            
                                                 <div>
                                                     <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
                                                     <div class="reviewer-date">
@@ -200,6 +200,7 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        
                                             <div class="review-rating-stars">
                                                 {% for i in "12345"|make_list %}
                                                     {% if forloop.counter <= review.rating %}
@@ -210,41 +211,31 @@
                                                 {% endfor %}
                                             </div>
                                         </div>
+                                    
                                         {% if review.comment %}
                                             <p class="review-body">{{ review.comment }}</p>
                                         {% endif %}
+                                    
                                         <div class="review-footer">
                                             <i class="fi-check-circle"></i>
-                                            <span>خرید تایید شده</span>
+                                            <span>سفارش تکمیل شده</span>
                                         </div>
                                     </div>
                                 {% endfor %}
                             </div>
-                            
-                            {% if reviews.count > 3 %}
-                                <div class="reviews-nav">
-                                    <button class="review-nav-btn" id="prevReview"><i class="fi-chevron-right"></i></button>
-                                    <button class="review-nav-btn" id="nextReview"><i class="fi-chevron-left"></i></button>
+                        {% else %}
+                            <div class="empty-reviews">
+                                <div class="empty-reviews-icon">
+                                    <i class="fi-chat-circle text-accent"></i>
                                 </div>
-                            {% endif %}
-                        </div>
-                        
-                        {% if reviews.count > 6 %}
-                            <div class="text-center mt-4">
-                                <button class="btn-outline-glow" id="viewAllReviews">
-                                    <i class="fi-chevron-left me-2"></i> مشاهده همه {{ reviews.count }} نظر
-                                </button>
+                                
+                                <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
+                                
+                                <p class="text-muted small">
+                                    اولین نفری باشید که تجربه همکاری با این تیم را به اشتراک می‌گذارید!
+                                </p>
                             </div>
                         {% endif %}
-                    {% else %}
-                        <div class="empty-reviews">
-                            <div class="empty-reviews-icon">
-                                <i class="fi-chat-circle"></i>
-                            </div>
-                            <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
-                            <p class="text-muted small">اولین نفری باشید که تجربه خود را به اشتراک می‌گذارید!</p>
-                        </div>
-                    {% endif %}
                 {% endwith %}
             </div>
             

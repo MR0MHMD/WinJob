@@ -18,4 +18,8 @@ urlpatterns = [
     path('team/orders/<int:order_id>/deliver/', views.deliver_order, name='deliver_order'),
     path('team/orders/<int:order_id>/revision/<int:revision_id>/accept/', views.accept_revision, name='accept_revision'),
     path('team/orders/<int:order_id>/revision/<int:revision_id>/reject/', views.reject_revision, name='reject_revision'),
+    path('team/coupons/', views.team_coupons, name='team_coupons'),
+    path('team/coupons/create/', views.team_coupon_create, name='team_coupon_create'),
+    path('team/coupons/<int:coupon_id>/edit/', views.team_coupon_edit, name='team_coupon_edit'),
+    path('team/coupons/<int:coupon_id>/delete/', views.team_coupon_delete, name='team_coupon_delete'),
 ]
