@@ -1,11 +1,12 @@
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
+from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerReview
 from django.db.models import Sum, Q, Avg, Count, Value, IntegerField, FloatField
-from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db.models import Avg, Count, Prefetch
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from django.views.generic import ListView
@@ -148,7 +149,8 @@ class order_list(LoginRequiredMixin, ListView):
             "campaign__advertiser",
         ).filter(
             channel__influencer=influencer,
-            campaign__status=Campaign.Status.APPROVED
+        ).exclude(
+            campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
         ).order_by("-created_at")
 
         return queryset
@@ -216,6 +218,8 @@ def order_detail(request, order_id):
     ).select_related(
         'campaign'
     )[:5]
+
+    print(campaign.start_date)
 
     context = {
         "order": order,
@@ -285,11 +289,6 @@ def influencer_respond(request, order_id):
 
 @login_required
 def submit_report(request, order_id):
-    """
-    ویو یکپارچه برای ثبت گزارش:
-    - GET: نمایش فرم
-    - POST: پردازش و ذخیره
-    """
     order = get_object_or_404(
         CampaignInfluencer.objects.select_related(
             'campaign',
@@ -310,21 +309,25 @@ def submit_report(request, order_id):
         messages.error(request, "شما قبلاً گزارش خود را ثبت کرده‌اید.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    from django.utils import timezone
+    campaign = order.campaign
     now = timezone.now()
 
+    if campaign.status == Campaign.Status.COMPLETED:
+        messages.error(request, "این کمپین به پایان رسیده و دیگر قابلیت ثبت گزارش ندارد.")
+        return redirect('influencers:order_detail', order_id=order.id)
+
     if request.method == 'POST':
-        if now < order.campaign.start_date:
-            messages.error(request, f"زمان ثبت گزارش از {order.campaign.start_date | date:'Y/m-d H:i'} شروع می‌شود.")
+        if now < campaign.start_date:
+            messages.error(request, f"زمان ثبت گزارش از {campaign.start_date|date:'Y/m/d H:i'} شروع می‌شود.")
             return redirect('influencers:order_detail', order_id=order.id)
 
         post_link = request.POST.get('post_link')
         screenshot = request.FILES.get('screenshot')
-
         if not post_link or not screenshot:
             messages.error(request, "لطفاً تمام فیلدها را پر کنید.")
             return redirect('influencers:submit_report', order_id=order.id)
 
+        # ثبت گزارش
         CampaignReport.objects.create(
             campaign_influencer=order,
             post_link=post_link,
@@ -332,20 +335,46 @@ def submit_report(request, order_id):
             status='pending'
         )
 
-        if order.status != CampaignInfluencer.Status.RUNNING:
-            order.status = CampaignInfluencer.Status.RUNNING
-            order.save(update_fields=['status'])
+        # تغییر وضعیت سفارش به COMPLETED (انجام شده)
+        order.status = CampaignInfluencer.Status.COMPLETED
+        order.save(update_fields=['status'])
+
+        # =======================================================
+        # بروزرسانی وضعیت کمپین
+        # =======================================================
+
+        # 1. اگر اولین گزارش است، کمپین به RUNNING می‌رود (اگر قبلاً RUNNING نبوده)
+        total_reports = CampaignReport.objects.filter(
+            campaign_influencer__campaign=campaign
+        ).count()
+        if total_reports == 1 and campaign.status != Campaign.Status.RUNNING:
+            campaign.status = Campaign.Status.RUNNING
+            campaign.save(update_fields=['status'])
+
+        # 2. بررسی اتمام کمپین:
+        #    آیا هیچ سفارش PENDING یا ACCEPTED بدون گزارشی باقی نمانده است؟
+        pending_or_accepted_without_report = CampaignInfluencer.objects.filter(
+            campaign=campaign
+        ).filter(
+            models.Q(status=CampaignInfluencer.Status.PENDING) |
+            models.Q(status=CampaignInfluencer.Status.ACCEPTED, report__isnull=True)
+        ).count()
+
+        if pending_or_accepted_without_report == 0:
+            # هیچ سفارشی در وضعیت PENDING یا ACCEPTED بدون گزارش وجود ندارد
+            if campaign.status != Campaign.Status.COMPLETED:
+                campaign.status = Campaign.Status.COMPLETED
+                campaign.save(update_fields=['status'])
 
         messages.success(request, "گزارش شما با موفقیت ثبت شد. پس از بررسی، نتیجه به شما اطلاع داده می‌شود.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    else:
-        can_submit = now >= order.campaign.start_date
-
+    else:  # GET
+        can_submit = now >= campaign.start_date
         context = {
             'order': order,
-            'campaign': order.campaign,
-            'advertiser': order.campaign.advertiser,
+            'campaign': campaign,
+            'advertiser': campaign.advertiser,
             'channel': order.channel,
             'can_submit': can_submit,
         }
@@ -446,7 +475,7 @@ def influencer_dashboard(request):
 
     recent_bookings = campaign_bookings.select_related(
         'campaign', 'channel'
-    ).order_by('-created_at')[:5]
+    ).filter(campaign__status="approved").order_by('-created_at')[:5]
 
     active_orders = campaign_bookings.filter(
         status='accepted'
@@ -525,6 +554,7 @@ def influencer_dashboard(request):
     return render(request, "influencers/pages/dashboard.html", context)
 
 
+
 def channel_list(request):
     """
     صفحه لیست کانال‌های اینفلوئنسرها با فیلتر حرفه‌ای
@@ -543,16 +573,15 @@ def channel_list(request):
     ).prefetch_related(
         'service_rates',
         'service_rates__ad_type',
-        'influencer__reviews'
     ).annotate(
-        # برای میانگین امتیاز - خروجی FloatField
-        avg_rating=Coalesce(
-            Avg('influencer__reviews__rating', output_field=FloatField()),
+        # میانگین امتیاز - از reviews خود channel (نه influencer)
+        _avg_rating=Coalesce(
+            Avg('reviews__rating', output_field=FloatField()),
             Value(0.0, output_field=FloatField())
         ),
-        # برای تعداد نظرات
-        total_reviews=Count('influencer__reviews'),
-        # برای حداقل قیمت - خروجی IntegerField
+        # تعداد نظرات
+        total_reviews=Count('reviews'),
+        # حداقل قیمت
         min_price=Coalesce(
             models.Min('service_rates__price', output_field=IntegerField()),
             Value(0, output_field=IntegerField())
@@ -692,39 +721,39 @@ def channel_list(request):
     return render(request, 'influencers/pages/channel_list.html', context)
 
 
-def channel_detail(request, channel_id):
-    """
-    صفحه جزئیات کانال اینفلوئنسر
-    """
-    from django.db.models import Avg
 
+def channel_detail(request, channel_id):
     channel = get_object_or_404(
         InfluencerChannel.objects.select_related(
             'platform', 'province', 'city', 'category', 'influencer'
         ).prefetch_related(
             'service_rates__ad_type',
-            'influencer__reviews__advertiser__user'
+            Prefetch(
+                'reviews',
+                queryset=InfluencerReview.objects.select_related(
+                    'advertiser__user'
+                ).order_by('-created_at')
+            )
+        ).annotate(
+            _avg_rating=Avg('reviews__rating'),
+            _total_reviews=Count('reviews'),
+            _completed_campaigns=Count(
+                'campaign_bookings',
+                filter=Q(campaign_bookings__status='completed')
+            )
         ),
         id=channel_id,
         is_active=True,
         influencer__is_active=True
     )
 
-    # محاسبه میانگین امتیاز
-    avg_rating = channel.influencer.reviews.aggregate(
-        avg=Avg('rating', output_field=FloatField())
-    )['avg']
-    total_reviews = channel.influencer.reviews.count()
-
-    # کمپین‌های انجام شده
-    completed_campaigns = channel.campaign_bookings.filter(status='completed').count()
-
     context = {
         'channel': channel,
-        'avg_rating': round(avg_rating, 1) if avg_rating else None,
-        'total_reviews': total_reviews,
-        'completed_campaigns': completed_campaigns,
+        'avg_rating': channel.avg_rating,
+        'total_reviews': channel._total_reviews,
+        'completed_campaigns': channel._completed_campaigns,
         'service_rates': channel.service_rates.filter(is_active=True),
+        'reviews': channel.reviews.all(),
     }
 
     return render(request, 'influencers/pages/channel_detail.html', context)

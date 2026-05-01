@@ -1,0 +1,296 @@
+/* ===== انیمیشن‌های سفارشی ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes glowPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(253, 86, 49, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(253, 86, 49, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* ===== گلس‌مورفیسم پیشرفته ===== */
+.glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.glass-header {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.15) 0%, rgba(93, 60, 242, 0.15) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===== استپر (مراحل) ===== */
+.step-indicator {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.step-indicator::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 0;
+}
+
+.step-item {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    flex: 1;
+}
+
+.step-circle {
+    width: 2rem;
+    height: 2rem;
+    background: #2a2737;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.step-item.active .step-circle {
+    background: #fd5631;
+    box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.3);
+    animation: glowPulse 1.5s infinite;
+}
+
+.step-item.completed .step-circle {
+    background: #07c98b;
+}
+
+.step-label {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    color: #9691a4;
+}
+
+.step-item.active .step-label {
+    color: #fd5631;
+    font-weight: bold;
+}
+
+/* ===== آپلودر خفن ===== */
+.upload-zone {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-zone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transition: left 0.5s;
+}
+
+.upload-zone:hover::before {
+    left: 100%;
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+    border-color: #fd5631;
+    background: rgba(253, 86, 49, 0.05);
+    transform: scale(1.02);
+}
+
+.preview-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-top: 1rem;
+}
+
+.preview-img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.2s;
+}
+
+.preview-img:hover {
+    transform: scale(1.02);
+}
+
+.remove-file {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 28px;
+    height: 28px;
+    background: #f23c49;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.remove-file:hover {
+    background: #fd5631;
+    transform: scale(1.1);
+}
+
+/* ===== فیلدهای فرم با افکت ===== */
+.form-control-glow {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s;
+}
+
+.form-control-glow:focus {
+    border-color: #fd5631 !important;
+    box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.2) !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* ===== تایمر معکوس ===== */
+.countdown-box {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 2rem;
+    padding: 0.5rem 1rem;
+    display: inline-flex;
+    gap: 0.5rem;
+    font-family: monospace;
+    font-size: 1.25rem;
+    font-weight: bold;
+    backdrop-filter: blur(4px);
+}
+
+.countdown-box span {
+    background: #1f1b2d;
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.75rem;
+    color: #fd5631;
+    min-width: 50px;
+    display: inline-block;
+    text-align: center;
+}
+
+/* ===== دکمه ثبت با انیمیشن ===== */
+.btn-submit-ultimate {
+    background: linear-gradient(45deg, #fd5631, #fd3509);
+    border: none;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.btn-submit-ultimate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(253, 86, 49, 0.3);
+}
+
+.btn-submit-ultimate.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(0);
+    animation: rippleAnim 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes rippleAnim {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* ===== کارت اطلاعات ===== */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.info-card-item {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem;
+    border-radius: 1rem;
+    border-right: 3px solid #fd5631;
+    transition: all 0.2s;
+}
+
+.info-card-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(-4px);
+}
+
+/* ===== انیمیشن ورود کارت‌ها ===== */
+.animate-card {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+.card-1 {
+    animation-delay: 0.1s;
+}
+
+.card-2 {
+    animation-delay: 0.2s;
+}
+
+.card-3 {
+    animation-delay: 0.3s;
+}
+
+/* ===== اسکرول نرم ===== */
+html {
+    scroll-behavior: smooth;
+}

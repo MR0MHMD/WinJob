@@ -140,35 +140,26 @@
 }
 
 /* رنگ‌های هر پلتفرم */
-.platform-telegram {
-    color: #02d1ff;
-}
-
+.platform-telegram { color: #02d1ff; }
 .platform-bale {
     background: linear-gradient(-135deg, #4df1b6, #2d2b73);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
-
-.platform-eitaa {
-    color: #ff6a00;
-}
-
+.platform-eitaa { color: #ff6a00; }
 .platform-rubika {
     background: linear-gradient(135deg, #7a4587, #5bd5bd, #b8cd06, #f4a926, #e54d52);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
-
 .platform-instagram {
     background: radial-gradient(circle at 30% 110%, #ffdb7e, #f9ce34, #ee2a7b, #6228d7);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
-
 .platform-soroush {
     background: linear-gradient(180deg, #3991ac, #155c72);
     -webkit-background-clip: text;
@@ -367,21 +358,6 @@
     flex-shrink: 0;
 }
 
-/* دسکتاپ: 3 کارت */
-@media (min-width: 1200px) {
-    .simple-slide { width: calc(33.333% - 17px); }
-}
-/* تبلت: 2 کارت */
-@media (min-width: 768px) and (max-width: 1199px) {
-    .simple-slide { width: calc(50% - 12.5px); }
-}
-/* موبایل: 1 کارت */
-@media (max-width: 767px) {
-    .simple-slide { width: 100%; }
-    .simple-slider { gap: 10px; }
-    .simple-slider-btn { width: 35px; height: 35px; }
-}
-
 .simple-slider-dots {
     display: flex;
     justify-content: center;
@@ -480,30 +456,49 @@
     color: white;
 }
 
-/* ========== اینفلوئنسرها و تیم‌ها (لایوت کارتی) ========== */
+/* ========== اسلایدر کانال‌های برتر (با قابلیت درگ) ========== */
 .channels-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 2rem;
+    padding: 1rem 0.5rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    cursor: grab;
+    user-select: none;
 }
 
+.channels-grid::-webkit-scrollbar {
+    display: none;
+}
+
+.channels-grid:active {
+    cursor: grabbing;
+}
+
+.influencer-card-circle {
+    flex: 0 0 calc(20% - 1.6rem);
+    min-width: 150px;
+    text-align: center;
+    position: relative;
+}
+
+/* ========== تیم‌ها (گرید ۶ تایی) ========== */
 .teams-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 1.5rem;
 }
 
-.influencer-card-circle {
-    text-align: center;
-    position: relative;
-}
-
+/* ========== استایل‌های مشترک اینفلوئنسرها ========== */
 .influencer-avatar-wrapper {
     position: relative;
     width: 130px;
     height: 130px;
     margin: 0 auto 1rem;
     cursor: pointer;
+    padding: 0; /* حذف padding اضافی */
 }
 
 .influencer-avatar-wrapper::before {
@@ -812,17 +807,39 @@
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
 }
 
-/* ========== ریسپانسیو ========== */
+/* ========== اسلایدر ساده ریسپانسیو ========== */
+@media (min-width: 1200px) {
+    .simple-slide { width: calc(33.333% - 17px); }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+    .simple-slide { width: calc(50% - 12.5px); }
+}
+
+@media (max-width: 767px) {
+    .simple-slide { width: 100%; }
+    .simple-slider { gap: 10px; }
+    .simple-slider-btn { width: 35px; height: 35px; }
+}
+
+/* ========== ریسپانسیو کلی ========== */
 @media (max-width: 1200px) {
     .teams-grid { grid-template-columns: repeat(4, 1fr); }
+
+    /* کانال‌های برتر - ۴ کارت */
+    .channels-grid { gap: 1.5rem; }
+    .influencer-card-circle { flex: 0 0 calc(25% - 1.125rem); }
 }
 
 @media (max-width: 992px) {
     .hero-title { font-size: 3rem; }
-    .influencers-grid { grid-template-columns: repeat(2, 1fr); }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .blog-grid { grid-template-columns: repeat(2, 1fr); }
     .teams-grid { grid-template-columns: repeat(3, 1fr); }
+
+    /* کانال‌های برتر - ۳ کارت */
+    .channels-grid { gap: 1.2rem; }
+    .influencer-card-circle { flex: 0 0 calc(33.333% - 0.8rem); }
 }
 
 @media (max-width: 768px) {
@@ -837,15 +854,49 @@
     .blog-grid { grid-template-columns: 1fr; }
     .teams-grid { grid-template-columns: repeat(2, 1fr); }
     .cta-section { padding: 2rem; }
+
+    /* کانال‌های برتر - ۲ کارت */
+    .channels-grid {
+        gap: 1rem;
+        padding: 1rem 0.25rem;
+    }
+    .influencer-card-circle { flex: 0 0 calc(50% - 0.5rem); }
+
+    /* آواتار کوچکتر توی موبایل */
+    .influencer-avatar-wrapper {
+        width: 100px;
+        height: 100px;
+    }
 }
 
 @media (max-width: 576px) {
-    .influencers-grid { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: 1fr; }
     .teams-grid { grid-template-columns: 1fr; }
-    .influencer-avatar-wrapper { width: 100px; height: 100px; }
 }
 
-.page-wrapper{
-    padding: 0!important;
+@media (max-width: 480px) {
+    /* کانال‌های برتر - ۱.۵ کارت */
+    .channels-grid {
+        gap: 0.75rem;
+        padding: 1rem 0.5rem;
+    }
+    .influencer-card-circle {
+        flex: 0 0 70%;
+        min-width: 100px;
+        max-width: 150px;
+    }
+    .influencer-name{
+        font-size: .75rem;
+    }
+
+    /* آواتار کوچکتر */
+    .influencer-avatar-wrapper {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+/* ========== یوتیلیتی ========== */
+.page-wrapper {
+    padding: 0 !important;
 }

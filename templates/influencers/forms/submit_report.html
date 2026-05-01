@@ -1,0 +1,336 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}ثبت گزارش {{ campaign.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'influencers/css/forms/submit_report.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- بریدکرامب شیک -->
+            <nav aria-label="breadcrumb" class="mb-4 animate-card card-1">
+                <ol class="breadcrumb bg-transparent p-0">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-muted text-decoration-none">خانه</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'influencers:order_detail' order.id %}" class="text-muted text-decoration-none">جزئیات سفارش</a></li>
+                    <li class="breadcrumb-item active text-primary fw-bold">ثبت گزارش حرفه‌ای</li>
+                </ol>
+            </nav>
+            
+            <!-- استپر (مراحل) -->
+            <div class="step-indicator mb-4 animate-card card-1" style="animation-delay: 0.15s;">
+                <div class="step-item active" id="step1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">اطلاعات سفارش</div>
+                </div>
+                <div class="step-item" id="step2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">ارسال مدرک</div>
+                </div>
+                <div class="step-item" id="step3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">ثبت نهایی</div>
+                </div>
+            </div>
+            
+            <!-- کارت اصلی با شیشه‌ای -->
+            <div class="glass-card animate-card card-2">
+                <div class="glass-header p-4 rounded-top-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-box-media bg-primary text-white rounded-3 shadow-lg">
+                            <i class="fi-upload fs-3"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white mb-0">ثبت گزارش انجام تبلیغ</h3>
+                            <p class="text-muted mb-0">اطلاعات دقیق و با کیفیت ارسال کنید</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4 p-lg-5">
+                    
+                    <!-- هشدار زمان با تایمر پیشرفته -->
+                    {% if not can_submit %}
+                    <div class="alert alert-warning bg-faded-warning border-0 rounded-4 mb-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fi-clock fs-1 text-warning"></i>
+                                <div>
+                                    <strong class="text-warning fs-6">زمان ثبت گزارش فرا نرسیده است</strong><br>
+                                    <small class="text-muted">شروع کمپین: <span dir="ltr">{{ campaign.start_date|date:"Y/m/d H:i" }}</span></small>
+                                </div>
+                            </div>
+                            <div id="countdown" class="countdown-box">
+                                <span id="days">00</span> : 
+                                <span id="hours">00</span> : 
+                                <span id="minutes">00</span> : 
+                                <span id="seconds">00</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- اطلاعات سفارش به صورت گرید -->
+                    <div class="info-grid mb-5">
+                        <div class="info-card-item">
+                            <div class="text-muted small mb-1"><i class="fi-home text-primary ms-1"></i> کمپین</div>
+                            <div class="text-white fw-semibold">{{ campaign.name }}</div>
+                        </div>
+                        <div class="info-card-item">
+                            <div class="text-muted small mb-1"><i class="fi-device-mobile text-primary ms-1"></i> کانال</div>
+                            <div class="text-white fw-semibold">{{ channel.channel_name }}</div>
+                        </div>
+                        <div class="info-card-item">
+                            <div class="text-muted small mb-1"><i class="fi-building text-primary ms-1"></i> تبلیغ‌دهنده</div>
+                            <div class="text-white fw-semibold">{{ advertiser.business_name }}</div>
+                        </div>
+                        <div class="info-card-item">
+                            <div class="text-muted small mb-1"><i class="fi-file text-primary ms-1"></i> نوع تبلیغ</div>
+                            <div class="text-white fw-semibold">{{ order.service_rate.ad_type.name }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- فرم اصلی -->
+                    <form method="post" enctype="multipart/form-data" id="reportForm" action="{% url 'influencers:submit_report' order.id %}">
+                        {% csrf_token %}
+                        
+                        <!-- لینک پست -->
+                        <div class="mb-4">
+                            <label for="postLink" class="form-label text-white fw-semibold">
+                                <i class="fi-link text-primary ms-1"></i> لینک پست منتشر شده
+                            </label>
+                            <input type="url" name="post_link" id="postLink" 
+                                   class="form-control form-control-glow text-white" 
+                                   placeholder="https://instagram.com/p/... یا https://t.me/..."
+                                   {% if not can_submit %}disabled{% endif %}
+                                   required>
+                            <div class="form-text text-muted mt-2">
+                                <i class="fi-info-circle"></i> لینک مستقیم پستی که در کانال خود منتشر کرده‌اید را وارد کنید.
+                            </div>
+                        </div>
+                        
+                        <!-- آپلودر حرفه‌ای -->
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-semibold">
+                                <i class="fi-image text-primary ms-1"></i> اسکرین‌شات پست
+                            </label>
+                            <div id="dropZone" class="upload-zone" onclick="document.getElementById('screenshotFile').click()">
+                                <i class="fi-camera-plus fs-1 text-muted mb-3 d-block"></i>
+                                <span class="text-muted"> کلیک کنید یا فایل را بکشید و رها کنید</span>
+                                <div id="previewContainer" class="mt-3"></div>
+                            </div>
+                            <input type="file" name="screenshot" id="screenshotFile" class="d-none" accept="image/jpeg,image/png,image/jpg" 
+                                   {% if not can_submit %}disabled{% endif %} required>
+                            <div class="form-text text-muted mt-2">
+                                <i class="fi-info-circle"></i> فرمت‌های JPG, PNG - حداکثر 5 مگابایت
+                            </div>
+                        </div>
+                        
+                        <!-- دکمه‌های اقدام -->
+                        <div class="d-flex gap-3 mt-5">
+                            <a href="{% url 'influencers:order_detail' order.id %}" class="btn btn-outline-light flex-grow-1 py-2 rounded-pill">
+                                <i class="fi-x ms-1"></i> انصراف
+                            </a>
+                            <button type="submit" id="submitReportBtn" class="btn btn-submit-ultimate flex-grow-1 py-2 rounded-pill text-white fw-bold" 
+                                    {% if not can_submit %}disabled{% endif %}>
+                                <i class="fi-check-circle ms-1"></i> ثبت گزارش
+                                <span class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- کارت راهنما با افکت زیبا -->
+            <div class="card bg-faded-light border-0 mt-4 card-hover-effect">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="icon-box-media bg-primary text-white rounded-circle" style="width: 2.5rem; height: 2.5rem; line-height: 2.5rem;">
+                            <i class="fi-help fs-6"></i>
+                        </div>
+                        <h5 class="text-white mb-0">راهنمای ثبت گزارش</h5>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="text-muted small mb-0 list-unstyled">
+                                <li class="mb-2"><i class="fi-check-circle text-success ms-2"></i> پست خود را دقیقاً مطابق محتوای تعیین شده منتشر کنید.</li>
+                                <li class="mb-2"><i class="fi-check-circle text-success ms-2"></i> لینک مستقیم پست را از مرورگر کپی کنید.</li>
+                                <li class="mb-2"><i class="fi-check-circle text-success ms-2"></i> اسکرین‌شات با کیفیت و واضح بگیرید.</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="text-muted small mb-0 list-unstyled">
+                                <li class="mb-2"><i class="fi-star-filled text-warning ms-2"></i> پس از تأیید، مبلغ به کیف پول شما اضافه می‌شود.</li>
+                                <li class="mb-2"><i class="fi-star-filled text-warning ms-2"></i> در صورت وجود مشکل، با پشتیبانی تماس بگیرید.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+    <script>
+    (function() {
+        // ===== 1. تایمر معکوس پیشرفته (با روز، ساعت، دقیقه، ثانیه) =====
+        {% if not can_submit and campaign.start_date %}
+        function startCountdown() {
+            const targetDate = new Date("{{ campaign.start_date|date:'Y-m-d H:i:s' }}").getTime();
+            const countdownInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+                if (distance <= 0) {
+                    clearInterval(countdownInterval);
+                    location.reload();
+                    return;
+                }
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (86400000)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (3600000)) / (1000 * 60));
+                const seconds = Math.floor((distance % (60000)) / 1000);
+                document.getElementById('days').innerText = days.toString().padStart(2,'0');
+                document.getElementById('hours').innerText = hours.toString().padStart(2,'0');
+                document.getElementById('minutes').innerText = minutes.toString().padStart(2,'0');
+                document.getElementById('seconds').innerText = seconds.toString().padStart(2,'0');
+            }, 1000);
+        }
+        startCountdown();
+        {% endif %}
+        
+        // ===== 2. آپلودر درگ اند دراپ با پیش‌نمایش و حذف =====
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('screenshotFile');
+        const previewContainer = document.getElementById('previewContainer');
+        
+        if (dropZone) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+                dropZone.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            ['dragenter', 'dragover'].forEach(ev => {
+                dropZone.addEventListener(ev, () => dropZone.classList.add('drag-over'));
+            });
+            ['dragleave', 'drop'].forEach(ev => {
+                dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over'));
+            });
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length) {
+                    fileInput.files = files;
+                    handleFilePreview(files[0]);
+                }
+            });
+            fileInput.addEventListener('change', function() {
+                if (this.files.length) handleFilePreview(this.files[0]);
+                else clearPreview();
+            });
+        }
+        
+        function handleFilePreview(file) {
+            if (!file.type.match('image.*')) {
+                alert('❌ لطفاً فقط فایل تصویری انتخاب کنید.');
+                clearPreview();
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('❌ حجم فایل بیشتر از ۵ مگابایت است.');
+                clearPreview();
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewContainer.innerHTML = `
+                    <div class="preview-wrapper">
+                        <img src="${e.target.result}" class="preview-img" alt="پیش‌نمایش">
+                        <button type="button" class="remove-file" id="removeFileBtn">&times;</button>
+                    </div>
+                `;
+                document.getElementById('removeFileBtn')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    clearPreview();
+                    fileInput.value = '';
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function clearPreview() {
+            previewContainer.innerHTML = '';
+        }
+        
+        // ===== 3. افکت ریپل روی دکمه =====
+        const submitBtn = document.getElementById('submitReportBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = e.clientX - rect.left - size/2 + 'px';
+                ripple.style.top = e.clientY - rect.top - size/2 + 'px';
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        }
+        
+        // ===== 4. اعتبارسنجی و نمایش لودینگ هنگام ارسال فرم =====
+        const form = document.getElementById('reportForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const link = document.getElementById('postLink');
+                if (!link.value.trim()) {
+                    e.preventDefault();
+                    alert('🔗 لطفاً لینک پست را وارد کنید.');
+                    link.focus();
+                    return;
+                }
+                if (!fileInput.files.length && !previewContainer.innerHTML) {
+                    e.preventDefault();
+                    alert('🖼️ لطفاً تصویر اسکرین‌شات را آپلود کنید.');
+                    return;
+                }
+                // فعال کردن لودینگ
+                submitBtn.classList.add('loading');
+                const spinner = submitBtn.querySelector('.spinner-border');
+                if (spinner) spinner.classList.remove('d-none');
+                submitBtn.disabled = true;
+                // تغییر متن دکمه (اختیاری)
+                const icon = submitBtn.querySelector('.fi-check-circle');
+                if (icon) icon.classList.add('d-none');
+                submitBtn.innerHTML = 'در حال ثبت گزارش ... <span class="spinner-border spinner-border-sm ms-2" role="status"></span>';
+            });
+        }
+        
+        // ===== 5. اسکرول به استپر هنگام کلیک (اختیاری) =====
+        // فقط برای جلوه، مرحله فعلی رو هایلایت می‌کنیم (مرحله 1 فعاله)
+        // بنا به منطق، همیشه مرحله 1 فعال است. کاربر با پر کردن فرم به مرحله 2 و 3 میره.
+        // می‌تونیم با اسکرول کردن به بخش‌های مختلف همراه باشیم.
+        const linkField = document.getElementById('postLink');
+        if (linkField) {
+            linkField.addEventListener('focus', () => {
+                document.getElementById('step2').classList.add('active');
+                document.getElementById('step1').classList.remove('active');
+            });
+        }
+        const fileUploadZone = document.getElementById('dropZone');
+        if (fileUploadZone) {
+            fileUploadZone.addEventListener('click', () => {
+                document.getElementById('step3').classList.add('active');
+                document.getElementById('step2').classList.remove('active');
+            });
+        }
+    })();
+    </script>
+{% endblock %}

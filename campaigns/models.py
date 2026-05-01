@@ -149,11 +149,11 @@ class Campaign(models.Model):
         verbose_name="توضیحات"
     )
 
-    start_date = jmodels.jDateTimeField(
+    start_date = jmodels.jDateField(
         verbose_name="زمان شروع"
     )
 
-    end_date = jmodels.jDateTimeField(
+    end_date = jmodels.jDateField(
         verbose_name="زمان پایان"
     )
 
@@ -269,7 +269,6 @@ class CampaignInfluencer(models.Model):
         PENDING = "pending", "در انتظار"
         ACCEPTED = "accepted", "پذیرفته شد"
         REJECTED = "rejected", "رد شد"
-        RUNNING = "running", "در حال اجرا"
         COMPLETED = "completed", "انجام شد"
 
     campaign = models.ForeignKey(

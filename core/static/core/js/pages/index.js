@@ -500,3 +500,72 @@ document.addEventListener('DOMContentLoaded', function() {
     waitForImages();
     window.addEventListener('resize', handleResize);
 });
+
+// ========== اسکرول با درگ موس و تاچ ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.channels-grid');
+    if (!container) return;
+
+    let isDragging = false;
+    let startX, startScrollLeft;
+
+    // ===== درگ با موس (کلیک + کشیدن) =====
+    container.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        container.classList.add('active');
+        startX = e.pageX - container.offsetLeft;
+        startScrollLeft = container.scrollLeft;
+    });
+
+    container.addEventListener('mouseleave', () => {
+        isDragging = false;
+        container.classList.remove('active');
+    });
+
+    container.addEventListener('mouseup', () => {
+        isDragging = false;
+        container.classList.remove('active');
+    });
+
+    container.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const x = e.pageX - container.offsetLeft;
+        const walk = (x - startX) * 2; // حساسیت درگ (2 یعنی دو برابر حرکت موس)
+        container.scrollLeft = startScrollLeft - walk;
+    });
+
+    // ===== درگ با تاچ (انگشت روی موبایل) =====
+    container.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].pageX - container.offsetLeft;
+        startScrollLeft = container.scrollLeft;
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        const x = e.touches[0].pageX - container.offsetLeft;
+        const walk = (x - startX) * 2;
+        container.scrollLeft = startScrollLeft - walk;
+    }, { passive: true });
+
+    // ===== جلوگیری از کلیک موقع درگ =====
+    const links = container.querySelectorAll('a');
+    let mouseMoved = false;
+
+    container.addEventListener('mousedown', () => {
+        mouseMoved = false;
+    });
+
+    container.addEventListener('mousemove', () => {
+        if (isDragging) mouseMoved = true;
+    });
+
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            if (mouseMoved) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    });
+});

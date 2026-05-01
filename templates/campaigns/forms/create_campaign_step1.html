@@ -1,0 +1,240 @@
+{% extends 'parent/base.html' %}
+{% load i18n static %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'finder/vendor/persain-date/persian-datepicker.min.css' %}">
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_1/create_step_1.css' %}">
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_1/datepicker.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4" dir="rtl">
+
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+
+        <div class="card border-0 shadow-sm">
+        
+
+            <div class="card-body p-4 bg-dark">
+
+                <form method="POST" id="step1-form" novalidate>
+
+                    {% csrf_token %}
+
+                    <!-- پلتفرم -->
+                    <div class="mb-4">
+
+                        <label for="id_platform" class="form-label fw-bold text-light">
+                            پلتفرم
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+                        {{ form.platform }}
+
+                        <div class="row g-3 mt-2 option-cards" id="platform-cards">
+                        </div>
+
+                        {% if form.platform.errors %}
+                            <div class="text-danger mt-1 small">
+                                {{ form.platform.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+                    
+                    <!-- نوع تبلیغ -->
+                    <div class="mb-4">
+
+                        <label for="id_ad_type" class="form-label fw-bold text-light">
+                            نوع تبلیغ
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        {{ form.ad_type }}
+
+                        <div class="row g-3 mt-2 option-cards" id="ad-type-cards">
+                        </div>
+
+                        <div id="ad-type-hint" class="form-text mt-1" style="color:#adb5bd;">
+                            ابتدا پلتفرم را انتخاب کنید
+                        </div>
+
+                        {% if form.ad_type.errors %}
+                            <div class="text-danger mt-1 small">
+                                {{ form.ad_type.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- نوع محتوا -->
+                    <div class="mb-4">
+
+                        <label for="id_content_type" class="form-label fw-bold text-light">
+                            نوع محتوا
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        {{ form.content_type }}
+
+                        <div class="row g-3 mt-2 option-cards" id="content-type-cards">
+                        </div>
+
+                        <div id="content-type-hint" class="form-text mt-1" style="color:#adb5bd;">
+                            ابتدا نوع تبلیغ را انتخاب کنید
+                            
+                        </div>
+
+                        {% if form.content_type.errors %}
+                            <div class="text-danger mt-1 small">
+                                {{ form.content_type.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- خدمات تولید محتوا -->
+                    <div class="mb-4" id="service-type-wrapper" style="display:none;">
+
+                        <label class="form-label fw-bold text-light">
+                            خدمات تولید محتوا
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        {{ form.content_service_type }}
+
+                        <div class="row g-3 mt-2 option-cards" id="service-type-cards">
+                        </div>
+
+                        {% if form.content_service_type.errors %}
+                            <div class="text-danger mt-1 small">
+                                {{ form.content_service_type.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- مدت -->
+                    <div class="mb-4" id="minutes-wrapper" style="display:none;">
+
+                        <label class="form-label fw-bold text-light">
+                            مدت (دقیقه)
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        {{ form.minutes }}
+
+                        {% if form.minutes.errors %}
+                            <div class="text-danger mt-1 small">
+                                {{ form.minutes.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- بازه زمانی کمپین -->
+                    <div class="mb-4">
+
+                        <label class="form-label text-light fw-bold">
+                            بازه زمانی کمپین
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-dark">
+                                <i class="fi-calendar">
+                                </i>
+                            </span>
+
+                            <input class="form-control form-control-light range-from {% if form.start_date.errors %}is-invalid{% endif %}" type="text" placeholder="از تاریخ" autocomplete="off" readonly>
+
+                            <input type="hidden" id="id_start_date" name="start_date" value="{{ form.start_date.value|default:'' }}">
+
+                            <input class="form-control form-control-light range-to {% if form.end_date.errors %}is-invalid{% endif %}" type="text" placeholder="تا تاریخ" autocomplete="off" readonly>
+
+                            <input type="hidden" id="id_end_date" name="end_date" value="{{ form.end_date.value|default:'' }}">
+
+                        </div>
+
+                        {% if form.start_date.errors %}
+                            <div class="text-danger small mt-1">
+                                <strong>
+                                    تاریخ شروع:
+                                </strong>
+                                {{ form.start_date.errors.0 }}
+                            </div>
+                        {% endif %}
+
+                        {% if form.end_date.errors %}
+                            <div class="text-danger small mt-1">
+                                <strong>
+                                    تاریخ پایان:
+                                </strong>
+                                {{ form.end_date.errors.0 }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+                
+                    <!-- نام کمپین -->
+                    <div class="mb-4">
+
+                        <label class="form-label text-light fw-bold" for="id_name">
+                            نام کمپین
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        {{ form.name }}
+
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.name.errors.0 }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+
+                        <button type="submit" class="btn btn-primary px-5">
+                            مرحله بعد ←
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script src="{% static 'finder/vendor/jquery-3.6.0.js' %}"></script>
+    <script src="{% static 'finder/vendor/persain-date/persian-date.js' %}"></script>
+    <script src="{% static 'finder/vendor/persain-date/persian-datepicker.min.js' %}"></script>
+    <script>
+        window.CONTENT_TYPES = {{ form.get_content_types_json|safe }};
+        window.AD_TYPES = {{ form.get_ad_types_json|safe }};
+        window.PREV_CONTENT_TYPE = "{{ form.data.content_type|default:'' }}";
+        window.PREV_AD_TYPE = "{{ form.data.ad_type|default:'' }}";
+        window.SERVICE_TYPES = {{ form.get_service_types_json|safe }};
+        window.PLATFORM_META = {{ form.get_platforms_meta_json|safe }};
+        window.CONTENT_TYPE_META = {{ form.get_content_types_meta_json|safe }};
+        window.AD_TYPE_META = {{ form.get_ad_types_meta_json|safe }};
+        window.SERVICE_TYPE_META = {{ form.get_service_types_meta_json|safe }};
+    </script>
+    <script src="{% static 'campaigns/js/create_step_1/data.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/dom.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/card-builder.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/reset.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/update.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/listeners.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/datepicker.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_1/init.js' %}"></script>
+{% endblock %}

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Avg
 from django.utils.translation import gettext_lazy as _
 from django_resized import ResizedImageField
 import django_jalali.db.models as jmodels
@@ -24,14 +25,6 @@ class InfluencerProfile(models.Model):
         return self.channels.filter(
             campaign_bookings__status='completed'
         ).count()
-
-    @property
-    def avg_rating(self):
-        from django.db.models import Avg, FloatField
-        result = self.reviews.aggregate(
-            avg=Avg('rating', output_field=FloatField())
-        )
-        return round(result['avg'], 1) if result['avg'] else None
 
     def __str__(self):
         return self.full_name
@@ -97,6 +90,17 @@ class InfluencerChannel(models.Model):
         return f"{self.province}، {self.city}"
 
     followers_formatted.short_description = _('فالوورها')
+
+    @property
+    def avg_rating(self):
+        if hasattr(self, '_avg_rating') and self._avg_rating is not None:
+            return round(self._avg_rating, 1)
+        avg = self.reviews.aggregate(avg=Avg('rating'))['avg']
+        return round(avg, 1) if avg is not None else None
+
+    @property
+    def reviews_count(self):
+        return self.reviews.count()
 
 
 class InfluencerServiceRate(models.Model):
@@ -182,11 +186,11 @@ class InfluencerReview(models.Model):
     نظرات و امتیاز تبلیغ‌دهندگان درباره اینفلوئنسرها
     """
 
-    influencer = models.ForeignKey(
-        InfluencerProfile,
+    channel = models.ForeignKey(
+        'influencers.InfluencerChannel',
         on_delete=models.CASCADE,
         related_name='reviews',
-        verbose_name=_('اینفلوئنسر')
+        verbose_name=_('کانال اینفلوئنسر'),
     )
 
     campaign_booking = models.OneToOneField(
@@ -226,7 +230,8 @@ class InfluencerReview(models.Model):
         indexes = [
             models.Index(fields=['rating']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['channel', '-created_at']),
         ]
 
     def __str__(self):
-        return f"نظر {self.advertiser.user.nickname} برای {self.influencer.full_name} - {self.rating}/5"
+        return f"نظر {self.advertiser.user.nickname} برای {self.channel.channel_name} - {self.rating}/5"

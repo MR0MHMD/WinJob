@@ -1,0 +1,185 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    سفارشات من
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        .order-cover {
+            background-size: cover;
+            background-position: center;
+        }
+        .video-card .img-overlay {
+            display: none;
+            pointer-events: none;
+        }
+
+
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="container mt-5 pt-5 pb-5">
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 text-light">سفارشات تبلیغاتی من</h1>
+        </div>
+
+        <div class="row g-4">
+            {% for order in orders %}
+                <div class="col-12 col-md-6 d-flex">
+                    <div class="card card-light card-hover card-horizontal h-100 w-100">
+
+                        <div class="card-img-top card-img-hover order-cover {% if order.campaign.content.is_video %}video-card{% endif %}">
+                            {% if order.campaign.content.is_video %}
+                                <video class="w-100 h-100 object-fit-cover" controls preload="none" playsinline>
+                                    <source src="{{ order.campaign.content.media.url }}">
+                                </video>
+                            {% else %}
+                                <div style="background-image:url({{ order.campaign.content.media.url }});width:100%;height:100%;background-size:cover;background-position:center;"></div>
+                            {% endif %}
+                    
+                            <a href="{{ order.campaign.content.media.url }}" target="blank" class="img-overlay"></a>
+                    
+                            <div class="position-absolute start-0 top-0 pt-3 ps-3">
+                                {% if not order.is_seen %}
+                                    <span class="badge bg-info">جدید</span>
+                                {% elif order.status == "pending" %}
+                                    <span class="badge" style="background-color: #e49b04;">در انتظار</span>
+                                {% elif order.status == "accepted" %}
+                                    <span class="badge bg-success">تایید شده</span>
+                                {% elif order.status == "completed" %}
+                                    <span class="badge bg-accent">تمام شده</span>
+                                {% elif order.status == "rejected" %}
+                                    <span class="badge bg-danger">رد شده</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    
+                        <a href="{% url 'influencers:order_detail' order.id %}" class="text-decoration-none text-light d-block w-100">
+                            <div class="card-body">
+                                <h3 class="h5 text-center text-light mb-3">
+                                    {{ order.campaign.name }}
+                                </h3>
+                    
+                                <div class="row text-light mb-3">
+                                    <div class="col-6">
+                                        <div class="opacity-50" style="font-size:10px">
+                                            شروع کمپین
+                                        </div>
+                    
+                                        <div class="fs-sm">
+                                            {{ order.campaign.start_date|date:"Y/m/d" }}
+                                        </div>
+                                    </div>
+                    
+                                    <div class="col-6 text-end">
+                                        <div class="opacity-50" style="font-size:10px">
+                                            پایان کمپین
+                                        </div>
+                    
+                                        <div class="fs-sm">
+                                            {{ order.campaign.end_date|date:"Y/m/d" }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row fs-sm text-light opacity-75 mb-3">
+                                    <div class="col-6">
+                                        <img width="20" class="me-1" src="{{ order.campaign.platform.logo.url }}" alt="{{ order.campaign.platform.name }}">
+                                        {{ order.campaign.platform.name }}
+                                    </div>
+                    
+                                    <div class="col-6 text-end">
+                                        <i class="fi-grid me-1"></i>
+                                        {{ order.campaign.advertiser.category.name }}
+                                    </div>
+                                </div>
+                    
+                                <div class="text-center mb-3">
+                                    <span class="text-primary fw-bold" style="font-size:18px">
+                                        {{ order.price }} تومان
+                                    </span>
+                                </div>
+                    
+                                <div class="border-top border-light pt-3">
+                                    <div class="row g-2">
+                                        <div class="col">
+                                            <div class="bg-dark rounded text-center p-2 h-100">
+                                                <i class="fi-calendar d-block text-light mb-1"></i>
+                    
+                                                <span class="fs-xs text-light"> {{ order.campaign.duration_days }} روز </span>
+                                            </div>
+                                        </div>
+                    
+                                        <div class="col">
+                                            <div class="bg-dark rounded text-center p-2 h-100">
+                                                <img width="20" src="{% static 'influencers/icons/channel.svg' %}" alt="کانال">
+                    
+                                                <div class="fs-xs text-light mt-1">
+                                                    {{ order.channel.channel_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col">
+                                            <div class="bg-dark rounded text-center p-2 h-100">
+                                                <i class="fi-user text-light d-block mb-1"></i>
+                    
+                                                <span class="fs-xs text-light">
+                                                    {{ order.campaign.advertiser.business_name }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+            {% empty %}
+                <div class="col-12 text-center mt-5">
+                    <h4 class="text-light opacity-70">
+                        هنوز سفارشی برای شما ثبت نشده است
+                    </h4>
+                </div>
+            {% endfor %}
+        </div>
+    
+        {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-5">
+                <nav>
+                    <ul class="pagination pagination-light">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                    قبلی
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                {{ page_obj.number }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}"> بعدی </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block script %}
+    
+{% endblock %}

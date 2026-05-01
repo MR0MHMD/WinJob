@@ -35,7 +35,7 @@ class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "user",
     )
 
-    inlines = [InfluencerChannelInline, InfluencerReviewInline]
+    inlines = [InfluencerChannelInline,]
 
     readonly_fields = (
         "formatted_created_at",
@@ -140,7 +140,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     search_fields = ("channel_id", "channel_name", "influencer__full_name", "influencer__user__phone_number",)
     autocomplete_fields = ("influencer", "platform", "category", "province", "city",)
     ordering = ("created_at", 'followers_count')
-    inlines = [InfluencerServiceRateInline]
+    inlines = [InfluencerServiceRateInline, InfluencerReviewInline]
     readonly_fields = (
         "followers_formatted_display", "formatted_created_at", "formatted_updated_at", "rates_count_display",)
 
@@ -346,8 +346,7 @@ class InfluencerServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 @admin.register(InfluencerReview)
 class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
-        "influencer",
-        "influencer_province",
+        "channel",
         "advertiser",
         "rating",
         "campaign_booking",
@@ -355,33 +354,30 @@ class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "formatted_created_at",
     )
 
-    list_filter = ("rating", ("created_at", JDateFieldListFilter), "influencer__user__province",)
+    list_filter = ("rating", ("created_at", JDateFieldListFilter), "channel__influencer__user__province",)
 
     search_fields = (
-        "influencer__full_name",
-        "influencer__user__phone_number",
+        "channel__channel_name",
+        "channel__influencer__full_name",
+        "channel__influencer__user__phone_number",
         "advertiser__user__phone_number",
         "advertiser__user__nickname",
         "comment",
     )
 
     autocomplete_fields = (
-        "influencer",
+        "channel",
         "advertiser",
         "campaign_booking",
     )
 
     readonly_fields = (
         "formatted_created_at",
-        "influencer_province_display",
     )
 
     fieldsets = (
         ("اطلاعات اصلی", {
-            "fields": ("influencer", "advertiser", "campaign_booking",)
-        }),
-        ("موقعیت اینفلوئنسر", {
-            "fields": ("influencer_province_display",)
+            "fields": ("channel", "advertiser", "campaign_booking",)
         }),
         ("امتیاز و نظر", {
             "fields": ("rating", "comment",)
@@ -391,14 +387,6 @@ class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             "classes": ("collapse",)
         }),
     )
-
-    def influencer_province(self, obj):
-        """نمایش استان اینفلوئنسر در لیست"""
-        province = obj.influencer.user.province
-        return province.name if province else "-"
-
-    influencer_province.short_description = "استان اینفلوئنسر"
-    influencer_province.admin_order_field = "influencer__user__province__name"
 
     def influencer_province_display(self, obj):
         """نمایش استان اینفلوئنسر در فرم (فقط خوندنی)"""
@@ -424,12 +412,13 @@ class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         qs = super().get_queryset(request)
 
         if request.user.is_regional_manager and request.user.province:
-            return qs.filter(influencer__user__province=request.user.province)
+            return qs.filter(channel__influencer__user__province=request.user.province)
 
         return qs.select_related(
-            'influencer',
-            'influencer__user',
-            'influencer__user__province',
+            'channel',
+            'channel__influencer',
+            'channel__influencer__user',
+            'channel__influencer__user__province',
             'advertiser',
             'advertiser__user',
             'campaign_booking',
@@ -449,7 +438,7 @@ class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """محدود کردن انتخاب اینفلوئنسر در فرم"""
-        if db_field.name == 'influencer' and request.user.is_regional_manager:
+        if db_field.name == 'channel' and request.user.is_regional_manager:
             kwargs['queryset'] = InfluencerProfile.objects.filter(
                 user__province=request.user.province
             )
@@ -614,8 +603,13 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     formatted_updated_at.short_description = "آخرین بروزرسانی"
 
     def mark_as_approved(self, request, queryset):
-        updated = queryset.update(status='approved')
-        self.message_user(request, f"{updated} گزارش تأیید شد.")
+        updated = 0
+        for report in queryset:
+            if report.status != 'approved':
+                report.status = 'approved'
+                report.save()
+                updated += 1
+        self.message_user(request, f"{updated} گزارش تأیید و پرداخت انجام شد.")
 
     mark_as_approved.short_description = "تأیید گزارش‌های انتخاب شده"
 

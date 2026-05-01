@@ -1,3 +1,5 @@
+from django.core.exceptions import ValidationError
+
 from content_team.models import ContentServiceType, ContentServiceRate, ContentOrderDescription
 from .utils import jalali_str_to_datetime, validate_start_date, validate_end_date
 from .models import ContentType, AdType, CampaignContent
@@ -113,34 +115,35 @@ class CampaignStep1Form(forms.Form):
                     is_active=True
                 )
 
+
     def clean_start_date(self):
-        """✅ تبدیل و اعتبارسنجی تاریخ شروع"""
+        """تبدیل و اعتبارسنجی تاریخ شروع"""
         start_date_str = self.cleaned_data.get('start_date')
 
         if not start_date_str:
             raise forms.ValidationError('تاریخ شروع الزامی است.')
 
         try:
-            start_date = jalali_str_to_datetime(start_date_str)
-        except (ValueError, Exception):
+            start_date = jalali_str_to_datetime(start_date_str)  # jdatetime.date
+        except (ValueError, Exception) as e:
             raise forms.ValidationError('فرمت تاریخ شروع صحیح نیست.')
 
         try:
             validate_start_date(start_date)
-        except ValueError as e:
+        except ValidationError as e:
             raise forms.ValidationError(str(e))
 
         return start_date
 
     def clean_end_date(self):
-        """✅ تبدیل تاریخ پایان (اعتبارسنجی رنج در clean کل فرم)"""
+        """تبدیل تاریخ پایان"""
         end_date_str = self.cleaned_data.get('end_date')
 
         if not end_date_str:
             raise forms.ValidationError('تاریخ پایان الزامی است.')
 
         try:
-            end_date = jalali_str_to_datetime(end_date_str)
+            end_date = jalali_str_to_datetime(end_date_str)  # jdatetime.date
         except (ValueError, Exception):
             raise forms.ValidationError('فرمت تاریخ پایان صحیح نیست.')
 

@@ -1,44 +1,52 @@
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 import jdatetime
-
+from datetime import timedelta
 from content_team.models import ContentOrderFile
 
 
 def validate_start_date(start_date):
     """
-    اعتبارسنجی تاریخ شروع. تاریخ شروع نباید قبل از تاریخ و زمان فعلی باشد.
+    تاریخ شروع نباید قبل از تاریخ فعلی باشد.
+    start_date: jdatetime.date یا jdatetime.datetime
     """
-    # تبدیل تاریخ جلالی به میلادی
-    if isinstance(start_date, jdatetime.datetime):  # چک کردن اینکه تاریخ جلالی است
-        start_date = start_date.togregorian()  # تبدیل به تاریخ میلادی
+    # تبدیل timezone.now() به jdatetime.date
+    now_jalali = jdatetime.datetime.fromgregorian(datetime=timezone.now()).date()
 
-    # مقایسه تاریخ‌ها
-    if start_date < timezone.now():
-        raise ValueError("تاریخ شروع نمی‌تواند قبل از تاریخ و زمان فعلی باشد.")
+    # اگر start_date از نوع jdatetime.datetime بود به date تبدیل کن
+    if isinstance(start_date, jdatetime.datetime):
+        start_date = start_date.date()
+
+    if start_date < now_jalali:
+        raise ValidationError("تاریخ شروع نمی‌تواند قبل از تاریخ امروز باشد.")
 
 
 def validate_end_date(start_date, end_date):
     """
-    اعتبارسنجی تاریخ پایان که باید بعد از تاریخ شروع باشد
+    تاریخ پایان باید بین 2 تا 14 روز بعد از تاریخ شروع باشد.
+    start_date, end_date: jdatetime.date یا jdatetime.datetime
     """
-    # تبدیل تاریخ جلالی به میلادی اگر تاریخ جلالی باشه
-    if isinstance(start_date, jdatetime.datetime):  # چک کردن تاریخ جلالی بودن
-        start_date = start_date.togregorian()
+    # تبدیل به jdatetime.date اگر datetime بودند
+    if isinstance(start_date, jdatetime.datetime):
+        start_date = start_date.date()
+    if isinstance(end_date, jdatetime.datetime):
+        end_date = end_date.date()
 
-    if isinstance(end_date, jdatetime.datetime):  # چک کردن تاریخ جلالی بودن
-        end_date = end_date.togregorian()
+    delta = (end_date - start_date).days
 
-    # مقایسه تاریخ‌ها
-    if end_date <= start_date:
-        raise ValidationError('تاریخ پایان باید بعد از تاریخ شروع باشد.')
+    if delta < 2:
+        raise ValidationError('تاریخ پایان باید حداقل ۲ روز بعد از تاریخ شروع باشد.')
+    if delta > 14:
+        raise ValidationError('تاریخ پایان نباید بیشتر از ۱۴ روز بعد از تاریخ شروع باشد.')
 
 
 def jalali_str_to_datetime(jalali_str):
     """
-    رشته شمسی (ممکنه اعداد فارسی باشه) رو به datetime میلادی تبدیل میکنه
-    فرمت ورودی: 'YYYY/MM/DD HH:MM' یا 'YYYY/MM/DD'
+    رشته شمسی به jdatetime.date تبدیل می‌کند (نه datetime میلادی)
+    فرمت ورودی: 'YYYY/MM/DD' یا 'YYYY/MM/DD HH:MM'
+    خروجی: jdatetime.date (بدون ساعت)
     """
+    # تبدیل اعداد فارسی و عربی به انگلیسی
     persian_nums = '۰۱۲۳۴۵۶۷۸۹'
     arabic_nums = '٠١٢٣٤٥٦٧٨٩'
     for i, (p, a) in enumerate(zip(persian_nums, arabic_nums)):
@@ -46,13 +54,21 @@ def jalali_str_to_datetime(jalali_str):
 
     jalali_str = jalali_str.strip()
 
+    # فقط قسمت تاریخ رو میگیریم (ساعت رو نادیده میگیریم)
     if ' ' in jalali_str:
-        jdt = jdatetime.datetime.strptime(jalali_str, '%Y/%m/%d %H:%M')
+        date_part = jalali_str.split(' ')[0]
     else:
-        jdt = jdatetime.datetime.strptime(jalali_str, '%Y/%m/%d')
+        date_part = jalali_str
 
-    gregorian_dt = jdt.togregorian()
-    return timezone.make_aware(gregorian_dt)
+    # تبدیل به jdatetime.date
+    try:
+        parts = date_part.split('/')
+        year = int(parts[0])
+        month = int(parts[1])
+        day = int(parts[2])
+        return jdatetime.date(year, month, day)
+    except (ValueError, IndexError):
+        raise ValueError("فرمت تاریخ صحیح نیست. فرمت مورد انتظار: YYYY/MM/DD")
 
 
 def _detect_file_type(file):

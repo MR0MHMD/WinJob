@@ -1,0 +1,477 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}جزئیات سفارش | {{ campaign.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/order_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container pt-4 pb-2">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'core:home' %}" class="text-muted">خانه</a>
+                </li>
+                
+                <li class="breadcrumb-item">
+                    <a href="#" class="text-muted">پنل اینفلوئنسر</a>
+                </li>
+                
+                <li class="breadcrumb-item active text-primary" aria-current="page">
+                    {{ campaign.name|truncatechars:30 }}
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="container pb-5 mb-5">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                    <div class="w-100 w-sm-auto">
+                        <h1 class="h3 text-center text-white mb-2">{{ campaign.name }}</h1>
+                    
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="badge bg-faded-primary px-3 py-2 rounded-pill d-inline-flex align-items-center gap-1">
+                                {% if channel.platform.logo %}
+                                    <img width="14" src="{{ channel.platform.logo.url }}" alt="{{ channel.platform.name }}">
+                                {% endif %}
+                                {{ channel.platform.name }}
+                            </span>
+                        
+                            <span class="badge bg-faded-accent px-3 py-2 rounded-pill d-inline-flex align-items-center gap-1">
+                                {% if service_rate.ad_type.icon %}
+                                    <i class="{{ service_rate.ad_type.icon }}"></i>
+                                {% endif %}
+                                    {{ service_rate.ad_type.name }}
+                            </span>
+
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="text-muted small">از</span>
+                                
+                                <span class="date-simple">
+                                    <i class="fi-calendar-alt text-primary"></i>
+                                    <span>{{ start_date|date:"Y/m/d" }}</span>
+                                    <span class="text-muted mx-1">|</span>
+                                    <i class="fi-clock text-primary"></i>
+                                    <span>{{ start_date|date:"H:i" }}</span>
+                                </span>
+                                
+                                <span class="text-muted small">تا</span>
+                                
+                                <span class="date-simple">
+                                    <i class="fi-calendar text-accent"></i>
+                                    <span>{{ end_date|date:"Y/m/d" }}</span>
+                                    <span class="text-muted mx-1">|</span>
+                                    <i class="fi-clock text-accent"></i>
+                                    <span>{{ end_date|date:"H:i" }}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div>
+                        <span class="status-badge status-{{ status }}">
+                            <i class="fi-{% if status == 'pending' %}alert-circle{% elif status == 'accepted' %}check-circle{% elif status == 'rejected' %}x-circle{% else %}star-filled{% endif %}"></i>
+                            {{ order.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if content %}
+                    <div class="card bg-faded-light border-0 mb-4">
+                        {% if content.media %}
+                            <div class="campaign-media">
+                                {% if content.is_video %}
+                                    <video controls>
+                                        <source  src="{{ content.media.url }}" type="video/mp4">
+                                        مرورگر شما از ویدیو پشتیبانی نمی‌کند.
+                                    </video>
+                                {% else %}
+                                    <img src="{{ content.media.url }}" alt="تصویر تبلیغ" loading="lazy">
+                                {% endif %}
+                            
+                                <div class="download-btn-overlay">
+                                    <a href="{{ content.media.url }}" download class="btn btn-sm btn-dark download-btn">
+                                        <i class="fi-download ms-1"></i>
+                                        دانلود
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="card-body">
+                            <div class="caption-box">
+                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fi-chat-right text-primary"></i>
+                                        <span class="text-white fw-bold">متن تبلیغ</span>
+                                    </div>
+                                    
+                                    <button class="btn btn-sm btn-outline-light copy-btn" onclick="copyToClipboard('captionText', this)">
+                                        <i class="fi-copy ms-1"></i>
+                                        کپی متن
+                                    </button>
+                                </div>
+                                <p id="captionText" class="text-white-50 mb-0 line-h18 text-justify">
+                                    {{ content.caption|linebreaksbr }}
+                                </p>
+                            </div>
+
+                            {% if content.link %}
+                                <div class="mt-4">
+                                    <div class="destination-link-card p-3">
+                                        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                                            <i class="fi-link text-primary"></i>
+                                            <span class="text-white small fw-bold">لینک مقصد تبلیغ</span>
+                                        </div>
+                                        
+                                        <div class="link-preview mb-3">
+                                            <code id="destinationLink">{{ order.uniq_url }}</code>
+                                        </div>
+                                        
+                                        <div class="link-actions">
+                                            <button class="btn btn-sm btn-outline-primary copy-btn" onclick="copyToClipboard('destinationLink', this)">
+                                                <i class="fi-copy ms-1"></i>
+                                                کپی لینک
+                                            </button>
+                                            
+                                            <a href="{{ content.link }}" target="_blank" class="btn btn-sm btn-primary">
+                                                <i class="fi-external-link ms-1"></i>
+                                                باز کردن
+                                            </a>
+                                            
+                                            <button class="btn btn-sm btn-accent"
+                                                    onclick="shareLink('{{ content.link }}')">
+                                                <i class="fi-share ms-1"></i>
+                                                اشتراک گذاری
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if content.notes %}
+                                <div class="mt-3 p-3 rounded content-note">
+                                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                        <i class="fi-info-circle text-accent"></i>
+                                        
+                                        <span class="text-white small fw-bold">یادداشت برای اینفلوئنسر</span>
+                                    </div>
+                                    
+                                    <p class="text-muted small mb-0">{{ content.notes }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                {% else %}
+                    <div class="card bg-faded-light border-0 mb-4">
+                        <div class="card-body text-center py-5">
+                            <i class="fi-file fs-1 text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">هنوز محتوایی برای این کمپین ثبت نشده است.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card bg-faded-light border-0 mb-4">
+                    <div class="card-header bg-transparent border-light py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-settings text-primary"></i>
+                            <h5 class="text-white mb-0">جزئیات سفارش</h5>
+                        </div>
+                    </div>
+                
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-3 mb-4 flex-sm-row flex-column text-sm-start text-center">
+                            {% if channel.avatar %}
+                                <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}" class="rounded-circle avatar-image" width="60" height="60">
+                            {% else %}
+                                <div class="rounded-circle bg-faded-primary d-flex align-items-center justify-content-center mx-sm-0 mx-auto default-avatar">
+                                    <i class="fi-user fs-2 text-primary"></i>
+                                </div>
+                            {% endif %}
+                            <div class="text-sm-start text-center">
+                                <h6 class="text-white mb-1">{{ channel.channel_name }}</h6>
+                                
+                                <div class="small text-muted">{{ channel.channel_id }}</div>
+                                
+                                <div class="small text-primary mt-1">
+                                    <i class="fi-star-filled ms-1 followers-count"></i>
+                                    {{ channel.followers_count|default:"۰" }} دنبال‌کننده
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">نوع تبلیغ</span>
+                            <span class="info-value">{{ service_rate.ad_type.name }}</span>
+                        </div>
+                    
+                        <div class="info-row">
+                            <span class="info-label">قیمت نهایی</span>
+                            <span class="info-value text-success fs-5 fw-bold">{{ order.price|floatformat:0|default:"۰" }} تومان</span>
+                        </div>
+                    
+                        {% if campaign.discount_amount > 0 %}
+                            <div class="info-row">
+                                <span class="info-label">تخفیف اعمال‌شده</span>
+                                <span class="info-value text-danger">{{ campaign.discount_amount|floatformat:0 }} تومان</span>
+                            </div>
+                            
+                            <hr class="border-light opacity-25 my-3">
+                        {% endif %}
+
+                        <div class="info-row">
+                            <span class="info-label">تبلیغ‌دهنده</span>
+                            <span class="info-value">{{ advertiser.business_name }}</span>
+                        </div>
+                    
+                        {% if advertiser_location %}
+                            <div class="info-row">
+                                <span class="info-label">موقعیت مکانی</span>
+                                <span class="info-value">{{ advertiser_location }}</span>
+                            </div>
+                        {% endif %}
+                    
+                        {% if advertiser.website %}
+                            <div class="info-row">
+                                <span class="info-label">وبسایت</span>
+                                <span class="info-value">
+                                    <a href="{{ advertiser.website }}" target="_blank" class="text-primary text-decoration-none small">
+                                        {{ advertiser.website|truncatechars:25 }}
+                                    </a>
+                                </span>
+                            </div>
+                        {% endif %}
+
+                        <hr class="border-light opacity-25 my-3">
+
+                        {% if status == 'pending' %}
+                            <div class="d-flex gap-3 mt-3 flex-column flex-sm-row">
+                                <form method="post" action="{% url 'influencers:influencer_respond' order.id %}" class="w-100" id="acceptForm">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="accept">
+                                    <button type="submit" class="btn btn-success w-100" id="acceptBtn">
+                                        <i class="fi-check-circle ms-2"></i>
+                                        قبول سفارش
+                                    </button>
+                                </form>
+
+                                <form method="post" action="{% url 'influencers:influencer_respond' order.id %}" class="w-100" id="rejectForm">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                        <i class="fi-x-circle ms-2"></i>
+                                        رد سفارش
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3 mb-0 py-2 small">
+                                <i class="fi-info-circle ms-1"></i>
+                                پس از قبول سفارش، لینک ردیابی برای شما فعال می‌شود.
+                            </div>
+                            
+                        {% elif status == 'accepted' %}
+                                <div class="alert alert-success mt-3 mb-0">
+                                    <i class="fi-check-circle ms-2"></i>
+                                    شما این سفارش را پذیرفته‌اید.
+                                </div>
+                            
+                            
+                            <div class="card bg-faded-light border-0 mt-4">
+                                <div class="card-header bg-transparent border-light py-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fi-upload text-primary"></i>
+                                        <h5 class="text-white mb-0">گزارش انجام کار</h5>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        <i class="fi-info-circle ms-1"></i>
+                                        پس از انتشار تبلیغ، می‌توانید گزارش خود را ثبت کنید.
+                                    </p> 
+                                    
+                                    {% if not order.report %}
+                                        {% if start_date <= now %}
+                                            <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary w-100">
+                                                <i class="fi-send ms-2"></i>
+                                                ثبت گزارش انجام کار
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-secondary w-100" disabled>
+                                                <i class="fi-clock ms-2"></i>
+                                                از تاریخ {{ start_date|date:"Y/m/d" }} قابل ثبت است
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="info-row">
+                                            <span class="info-label">لینک پست</span>
+                                            <span class="info-value">
+                                                <a href="{{ order.report.post_link }}" target="_blank" class="text-primary">{{ order.report.post_link|truncatechars:40 }}</a>
+                                            </span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="info-label">وضعیت بررسی</span>
+                                            <span class="info-value">
+                                                {% if order.report.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">در انتظار بررسی</span>
+                                                {% elif order.report.status == 'approved' %}
+                                                <span class="badge bg-success">تأیید شده ✓</span>
+                                                {% elif order.report.status == 'rejected' %}
+                                                <span class="badge bg-danger">رد شده ✗</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% elif status == 'completed' %}
+                            <div class="alert alert-accent mt-3 mb-0">
+                                <i class="fi-star-filled ms-2"></i>
+                                تبریک! این سفارش با موفقیت تکمیل شده است.
+                            </div>
+                        {% elif status == 'rejected' %}
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <i class="fi-x-circle ms-2"></i>
+                                شما این سفارش را رد کرده‌اید.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card bg-faded-light border-0 mb-4">
+                    <div class="card-header bg-transparent border-light py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-link text-primary"></i>
+                            <h5 class="text-white mb-0">لینک ردیابی شما</h5>
+                        </div>
+                    </div>
+                
+                    <div class="card-body">
+                        {% if order.tracking_code %}
+                            <div class="tracking-input-group">
+                                <div class="input-group">
+                                    <label for="trackingLink"></label>
+                                    <input type="text" class="form-control bg-dark border-light text-white" id="trackingLink" value="{{ order.tracking_code }}" readonly dir="ltr">
+                                    <button class="btn btn-primary copy-link-btn" onclick="copyToClipboard('trackingLink', this)" type="button">
+                                        <i class="fi-copy"></i> کپی
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 small text-muted">
+                                <i class="fi-info-circle"></i>این کد یکتا فقط برای همین سفارش و همین کانال هست
+                            </div>
+                            
+                        {% else %}
+                            <p class="text-muted mb-0">لینک ردیابی برای این سفارش فعال نشده است.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card bg-faded-light border-0">
+                    <div class="card-header bg-transparent border-light py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-stats text-primary"></i>
+                            <h5 class="text-white mb-0">آمار کلیک‌ها</h5>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="stats-row">
+                            <div class="stats-col">
+                                <div class="stats-card w-100">
+                                    <div class="stats-icon text-accent">
+                                        <i class="fi-users"></i>
+                                    </div>
+                                    
+                                    <div class="stats-number">{{ clicks|default:"-" }}</div>
+                                    
+                                    <div class="text-muted small">تعداد کلیک‌ها</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-col">
+                                <div class="stats-card w-100">
+                                    <div class="stats-icon text-accent">
+                                        <i class="fi-user"></i>
+                                    </div>
+                                    
+                                    <div class="stats-number">{{ unique_clicks|default:"-" }}</div>
+                                    
+                                    <div class="text-muted small">کلیک‌های یکتا</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="copyToast" class="toast-notification">
+        <div class="bg-success text-white px-4 py-2 rounded-pill shadow-lg d-flex align-items-center gap-2">
+            <i class="fi-check-circle"></i>
+            <span>کپی شد!</span>
+        </div>
+    </div>
+    
+    <!-- مودال تأیید رد سفارش -->
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-light">
+                <div class="modal-header border-light">
+                    <h5 class="modal-title text-white" id="rejectModalLabel">
+                        <i class="fi-alert-triange text-danger ms-2"></i>
+                        تأیید رد سفارش
+                    </h5>
+                    
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="fi-x-circle text-danger" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <p class="text-white text-center mb-3">
+                        آیا از رد کردن این سفارش مطمئن هستید؟
+                    </p>
+                    
+                    <div class="alert alert-danger py-2 small text-center">
+                        <i class="fi-alert-circle ms-1"></i>
+                        توجه: رد کردن هر سفارش <strong>۱ امتیاز منفی</strong> برای شما به همراه خواهد داشت.
+                        <br>
+                        پس از ۳ امتیاز منفی، سطح حساب شما کاهش می‌یابد.
+                    </div>
+                    
+                    <p class="text-muted small text-center mb-0">
+                        کمپین: <strong class="text-white">{{ campaign.name }}</strong>
+                    </p>
+                </div>
+                
+                <div class="modal-footer border-light">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
+                        <i class="fi-x ms-1"></i>
+                        انصراف
+                    </button>
+                    
+                    <button type="button" class="btn btn-danger" id="confirmRejectBtn">
+                        <i class="fi-check-circle ms-1"></i>
+                        بله، رد می‌کنم
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'influencers/js/pages/order-detail.js' %}"></script>
+{% endblock %}

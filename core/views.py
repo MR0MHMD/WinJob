@@ -38,10 +38,10 @@ def home(request):
     # ========== برترین کانال‌ها (جایگزین اینفلوئنسرهای برتر) ==========
     top_channels_raw = InfluencerChannel.objects.filter(
         is_active=True,
-        influencer__is_active=True  # اینفلوئنسر مربوطه هم فعال باشه
+        influencer__is_active=True
     ).annotate(
         total_bookings=Count('campaign_bookings', filter=Q(campaign_bookings__status='completed')),
-        avg_channel_rating=Avg('influencer__reviews__rating')
+        avg_channel_rating=Avg('reviews__rating')
     ).filter(total_bookings__gt=0).order_by('-total_bookings')[:5]
 
     top_channels = sorted(top_channels_raw, key=lambda x: x.avg_channel_rating or 0, reverse=True)[:8]
@@ -50,7 +50,7 @@ def home(request):
     content_teams = sorted(content_teams_raw, key=lambda x: x.avg_rating or 0, reverse=True)[:5]
 
     recent_reviews = InfluencerReview.objects.select_related(
-        'influencer', 'advertiser__user'
+        'channel', 'advertiser__user'
     ).order_by('-created_at')[:10]
 
     blog_posts = Post.published.order_by('-created_at')[:4]

@@ -242,8 +242,8 @@ def advertiser_dashboard(request):
         campaign_bookings__status='completed'
     ).annotate(
         total_bookings=Count('campaign_bookings'),
-        avg_rating=Avg('influencer__reviews__rating')
-    ).order_by('-total_bookings', '-avg_rating')[:3]
+        _avg_rating=Avg('reviews__rating')
+    ).order_by('-total_bookings', '-_avg_rating')[:3]
 
     expiring_soon = campaigns.filter(
         status='running',
