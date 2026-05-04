@@ -1,0 +1,569 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load jformat %}
+
+{% block title %}تیکت #{{ ticket.pk }}{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ==================== استایل‌های صفحه جزئیات تیکت ==================== */
+    
+    .ticket-detail-card {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(165deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.01) 100%);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* هدر تیکت */
+    .ticket-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .ticket-status-badge {
+        padding: 6px 16px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-open { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+    .status-waiting-user { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+    .status-waiting-admin { background: rgba(93, 60, 242, 0.15); color: #5d3cf2; }
+    .status-in-progress { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+    .status-closed { background: rgba(150, 145, 164, 0.15); color: #9691a4; }
+    
+    /* پیام‌ها */
+    .message-bubble {
+        margin-bottom: 1rem;
+        animation: fadeSlideUp 0.4s ease;
+    }
+    
+    .message-bubble.user-message .message-content {
+        background: rgba(93, 60, 242, 0.1);
+        border: 1px solid rgba(93, 60, 242, 0.2);
+    }
+    
+    .message-bubble.admin-message .message-content {
+        background: rgba(253, 86, 49, 0.08);
+        border: 1px solid rgba(253, 86, 49, 0.15);
+    }
+    
+    .message-content {
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        position: relative;
+    }
+    
+    .message-header {
+        margin-bottom: 0.5rem;
+    }
+    
+    .message-text {
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.8;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        color: #9691a4;
+    }
+    
+    /* فایل‌های پیوست */
+    .attachment-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        margin: 4px;
+    }
+    
+    .attachment-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(253, 86, 49, 0.3);
+    }
+    
+    .attachment-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+    
+    .attachment-icon.image { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+    .attachment-icon.pdf { background: rgba(242, 60, 73, 0.15); color: #f23c49; }
+    .attachment-icon.archive { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+    .attachment-icon.doc { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+    .attachment-icon.other { background: rgba(150, 145, 164, 0.15); color: #9691a4; }
+    
+    /* فرم ارسال پیام */
+    .reply-section {
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .reply-textarea {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-radius: 0.875rem;
+        padding: 0.875rem 1rem;
+        resize: none;
+        transition: all 0.3s ease;
+        line-height: 1.7;
+        font-size: 0.875rem;
+    }
+    
+    .reply-textarea:focus {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(253, 86, 49, 0.35);
+        box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.06);
+        outline: none;
+    }
+    
+    .closed-banner {
+        background: rgba(150, 145, 164, 0.1);
+        border: 1px solid rgba(150, 145, 164, 0.2);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    /* Scroll area */
+    .messages-scroll {
+        max-height: 55vh;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+    }
+    
+    .messages-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    .messages-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .messages-scroll::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+    
+    /* سایدبار */
+    .ticket-info-sidebar {
+        position: sticky;
+        top: 90px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(165deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%);
+        border-radius: 1rem;
+    }
+    
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+    }
+    .btn-loading .btn-text { opacity: 0; }
+    .btn-loading .spinner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    {# ==================== هدر ==================== #}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-1 text-light">
+                <i class="fi-ticket text-primary me-2"></i>
+                تیکت #{{ ticket.pk }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-light mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'tickets:ticket_list' %}">تیکت‌ها</a></li>
+                    <li class="breadcrumb-item active">#{{ ticket.pk }}</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'tickets:ticket_list' %}" class="btn btn-outline-light rounded-pill px-3">
+            <i class="fi-arrow-right me-2"></i>
+            بازگشت
+        </a>
+    </div>
+
+    {# ==================== لایوت دو ستونه ==================== #}
+    <div class="row g-4">
+        
+        {# ========== ستون اصلی - پیام‌ها ========== #}
+        <div class="col-lg-8">
+            <div class="ticket-detail-card rounded-3">
+                
+                {# هدر تیکت #}
+                <div class="ticket-header p-3 p-md-4">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="ticket-status-badge 
+                            {% if ticket.status == 'open' %}status-open
+                            {% elif ticket.status == 'waiting_user' %}status-waiting-user
+                            {% elif ticket.status == 'waiting_admin' %}status-waiting-admin
+                            {% elif ticket.status == 'in_progress' %}status-in-progress
+                            {% elif ticket.status == 'closed' %}status-closed
+                            {% endif %}" id="ticketStatusBadge">
+                            {{ ticket.get_status_display }}
+                        </span>
+                        {% if ticket.category %}
+                            <span class="badge bg-faded-accent text-accent fs-xs">
+                                <i class="{{ ticket.category.icon }} ms-1"></i>
+                                {{ ticket.category.name }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <h5 class="text-light mb-0">{{ ticket.get_display_title }}</h5>
+                </div>
+                
+                {# لیست پیام‌ها #}
+                <div class="messages-scroll p-3 p-md-4" id="messagesContainer">
+                    {% for message in ticket.messages.all %}
+                        <div class="message-bubble {% if message.is_admin_reply %}admin-message{% else %}user-message{% endif %}">
+                            <div class="message-content">
+                                <div class="message-header d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold fs-sm">
+                                        {% if message.is_admin_reply %}
+                                            <i class="fi-user-check text-primary me-1"></i>
+                                            پشتیبانی
+                                        {% else %}
+                                            <i class="fi-user text-muted me-1"></i>
+                                            شما
+                                        {% endif %}
+                                    </span>
+                                    <span class="message-time">{{ message.created_at|jformat:"%Y/%m/%d - %H:%M" }}</span>
+                                </div>
+                                <div class="message-text">{{ message.message }}</div>
+                                
+                                {% if message.attachments.all %}
+                                    <div class="mt-2 pt-2 border-top border-light">
+                                        {% for attachment in message.attachments.all %}
+                                            <a href="{{ attachment.file.url }}" 
+                                               class="attachment-item" 
+                                               target="_blank"
+                                               download>
+                                                <span class="attachment-icon 
+                                                    {% if attachment.file_extension in 'jpg,jpeg,png,gif' %}image
+                                                    {% elif attachment.file_extension == 'pdf' %}pdf
+                                                    {% elif attachment.file_extension in 'zip,rar' %}archive
+                                                    {% elif attachment.file_extension in 'doc,docx' %}doc
+                                                    {% else %}other{% endif %}">
+                                                    <i class="fi-file"></i>
+                                                </span>
+                                                <div>
+                                                    <span class="text-light fs-xs d-block">{{ attachment.file_name|truncatechars:25 }}</span>
+                                                    <small class="text-muted fs-xxs">{{ attachment.file_size_display }}</small>
+                                                </div>
+                                                <i class="fi-download text-muted fs-xs"></i>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fi-message" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-2">هنوز پیامی ثبت نشده.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                {# فرم ارسال پیام #}
+                {% if ticket.status != 'closed' %}
+                    <div class="reply-section p-3 p-md-4">
+                        <form id="replyForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <textarea name="message" 
+                                      id="replyMessage"
+                                      class="reply-textarea form-control" 
+                                      rows="3"
+                                      placeholder="پیام خود را بنویسید... (Enter برای ارسال)"
+                                      onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitReply(); }"></textarea>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-light rounded-circle" 
+                                            onclick="document.getElementById('replyFileInput').click()"
+                                            title="پیوست فایل">
+                                        <i class="fi-paperclip"></i>
+                                    </button>
+                                    <input type="file" id="replyFileInput" name="attachments" multiple 
+                                           accept="{{ allowed_file_types }}"
+                                           style="display: none;"
+                                           onchange="handleReplyFiles(this.files)">
+                                    <span class="text-muted fs-xs" id="replyFileCount" style="display: none;"></span>
+                                </div>
+                                <button type="button" class="btn btn-primary rounded-pill px-4" id="replyBtn" onclick="submitReply()">
+                                    <span class="btn-text">
+                                        <i class="fi-send me-2"></i>
+                                        ارسال پیام
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="p-3 p-md-4">
+                        <div class="closed-banner">
+                            <i class="fi-check-circle text-muted fs-2 mb-2 d-block"></i>
+                            <p class="text-muted mb-0">این تیکت بسته شده است.</p>
+                        </div>
+                    </div>
+                {% endif %}
+                
+            </div>
+        </div>
+        
+        {# ========== سایدبار - اطلاعات تیکت ========== #}
+        <div class="col-lg-4">
+            <div class="ticket-info-sidebar p-3 p-md-4">
+                <h6 class="text-light mb-3">
+                    <i class="fi-info-circle text-primary me-2"></i>
+                    اطلاعات تیکت
+                </h6>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">شماره تیکت</small>
+                    <span class="text-light fw-bold">#{{ ticket.pk }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">موضوع</small>
+                    <span class="text-light">{{ ticket.category.name|default:"-" }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">عنوان</small>
+                    <span class="text-light">{{ ticket.get_display_title }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">وضعیت</small>
+                    <span class="text-light" id="sidebarStatus">{{ ticket.get_status_display }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">تاریخ ایجاد</small>
+                    <span class="text-light fs-sm">{{ ticket.created_at|jformat:"%Y/%m/%d - %H:%M" }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">آخرین بروزرسانی</small>
+                    <span class="text-light fs-sm">{{ ticket.updated_at|jformat:"%Y/%m/%d - %H:%M" }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">تعداد پیام‌ها</small>
+                    <span class="text-light">{{ ticket.messages_count }}</span>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    let replyFiles = [];
+    
+    // ==================== مدیریت فایل‌های پاسخ ====================
+    function handleReplyFiles(files) {
+        const maxSize = 10 * 1024 * 1024;
+        let totalSize = replyFiles.reduce((a, f) => a + f.size, 0);
+        
+        const newFiles = Array.from(files).filter(file => {
+            if (file.size > maxSize) {
+                showNotification('خطا', `حجم "${file.name}" بیش از ۱۰ مگابایت است.`, 'error');
+                return false;
+            }
+            if (totalSize + file.size > maxSize) {
+                showNotification('خطا', 'حجم کل فایل‌ها بیش از ۱۰ مگابایت!', 'error');
+                return false;
+            }
+            totalSize += file.size;
+            return true;
+        });
+        
+        replyFiles = [...replyFiles, ...newFiles];
+        
+        const countEl = document.getElementById('replyFileCount');
+        if (replyFiles.length > 0) {
+            countEl.style.display = 'inline';
+            countEl.textContent = `${replyFiles.length} فایل انتخاب شد`;
+        } else {
+            countEl.style.display = 'none';
+        }
+    }
+    
+    // ==================== ارسال پاسخ ====================
+    function submitReply() {
+        const textarea = document.getElementById('replyMessage');
+        const message = textarea.value.trim();
+        const btn = document.getElementById('replyBtn');
+        
+        if (!message || message.length < 2) {
+            showNotification('خطا', 'متن پیام حداقل ۲ کاراکتر باشد.', 'error');
+            return;
+        }
+        
+        btn.classList.add('btn-loading');
+        btn.innerHTML = '<span class="btn-text">...</span><span class="spinner"><div class="spinner-border spinner-border-sm"></div></span>';
+        
+        const fd = new FormData();
+        fd.append('message', message);
+        fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        replyFiles.forEach(f => fd.append('attachments', f));
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.classList.remove('btn-loading');
+            btn.innerHTML = '<span class="btn-text"><i class="fi-send me-2"></i>ارسال پیام</span>';
+            
+            if (data.success) {
+                // اضافه کردن پیام به صفحه
+                appendMessage(data);
+                
+                // پاک کردن فرم
+                textarea.value = '';
+                replyFiles = [];
+                document.getElementById('replyFileCount').style.display = 'none';
+                document.getElementById('replyFileInput').value = '';
+                
+                // آپدیت وضعیت
+                updateTicketStatus(data.new_status, data.new_status_class);
+                
+                // اسکرول به پایین
+                scrollToBottom();
+            } else {
+                if (data.errors) data.errors.forEach(e => showNotification('خطا', e, 'error'));
+            }
+        })
+        .catch(() => {
+            btn.classList.remove('btn-loading');
+            btn.innerHTML = '<span class="btn-text"><i class="fi-send me-2"></i>ارسال پیام</span>';
+            showNotification('خطا', 'خطا در ارتباط با سرور.', 'error');
+        });
+    }
+    
+    // ==================== اضافه کردن پیام به DOM ====================
+    function appendMessage(data) {
+        const container = document.getElementById('messagesContainer');
+        
+        // حذف پیام "خالی"
+        const emptyMsg = container.querySelector('.text-center.py-5');
+        if (emptyMsg) emptyMsg.remove();
+        
+        const isUser = data.sender_name.includes('شما');
+        
+        const attachmentsHtml = data.files && data.files.length > 0 ? `
+            <div class="mt-2 pt-2 border-top border-light">
+                ${data.files.map(file => `
+                    <a href="${file.url}" class="attachment-item" target="_blank" download>
+                        <span class="attachment-icon ${getFileIconClass(file.extension)}">
+                            <i class="fi-file"></i>
+                        </span>
+                        <div>
+                            <span class="text-light fs-xs d-block">${file.name.substring(0, 25)}</span>
+                            <small class="text-muted fs-xxs">${file.size}</small>
+                        </div>
+                        <i class="fi-download text-muted fs-xs"></i>
+                    </a>
+                `).join('')}
+            </div>
+        ` : '';
+        
+        const messageHtml = `
+            <div class="message-bubble ${isUser ? 'user-message' : 'admin-message'}" style="animation: fadeSlideUp 0.4s ease;">
+                <div class="message-content">
+                    <div class="message-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-sm">
+                            ${isUser ? '<i class="fi-user text-muted me-1"></i> شما' : '<i class="fi-user-check text-primary me-1"></i> پشتیبانی'}
+                        </span>
+                        <span class="message-time">${data.created_at}</span>
+                    </div>
+                    <div class="message-text">${escapeHtml(data.message_text)}</div>
+                    ${attachmentsHtml}
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', messageHtml);
+    }
+    
+    function getFileIconClass(ext) {
+        if (['jpg','jpeg','png','gif'].includes(ext)) return 'image';
+        if (ext === 'pdf') return 'pdf';
+        if (['zip','rar'].includes(ext)) return 'archive';
+        if (['doc','docx'].includes(ext)) return 'doc';
+        return 'other';
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function updateTicketStatus(statusText, statusClass) {
+        // آپدیت badge در هدر
+        const badge = document.getElementById('ticketStatusBadge');
+        if (badge) {
+            badge.textContent = statusText;
+            badge.className = `ticket-status-badge status-${statusClass}`;
+        }
+        
+        // آپدیت سایدبار
+        const sidebar = document.getElementById('sidebarStatus');
+        if (sidebar) sidebar.textContent = statusText;
+    }
+    
+    function scrollToBottom() {
+        const container = document.getElementById('messagesContainer');
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
+    }
+    
+    // اسکرول خودکار به پایین در لود اولیه
+    document.addEventListener('DOMContentLoaded', () => {
+        scrollToBottom();
+    });
+    
+    function showNotification(title, message, type, cb) {
+        if (typeof showNotificationModal === 'function') {
+            showNotificationModal(title, message, type, cb);
+        } else {
+            alert(message);
+            if (cb) cb();
+        }
+    }
+</script>
+{% endblock %}

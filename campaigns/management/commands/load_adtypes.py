@@ -30,18 +30,21 @@ class Command(BaseCommand):
                 {
                     "name": f"استوری {name}",
                     "slug": f"{slug}-story",
+                    "icon": "bi-plus-circle",
                     "description": f"تبلیغ استوری در {name} روشی سریع و تاثیرگذار برای دیده شدن برند شماست. "
                                    f"این نوع تبلیغ در قالب استوری منتشر می‌شود و برای معرفی سریع خدمات یا جذب مخاطب بسیار مناسب است."
                 },
                 {
                     "name": f"پست {name}",
                     "slug": f"{slug}-post",
+                    "icon": "bi-postcard",
                     "description": f"تبلیغ پستی در {name} به صورت انتشار یک پست در کانال یا صفحه انجام می‌شود "
                                    f"و یکی از رایج‌ترین روش‌های تبلیغات برای رساندن پیام برند به مخاطبان هدف است."
                 },
                 {
                     "name": f"پست شبانه {name}",
                     "slug": f"{slug}-night-post",
+                    "icon": "bi-moon-stars-fill",
                     "description": f"پست شبانه در {name} در بازه زمانی ۱۲ شب تا ۱۲ ظهر منتشر می‌شود. "
                                    f"این زمان معمولاً رقابت تبلیغاتی کمتری دارد و می‌تواند باعث دیده شدن بهتر تبلیغ شما شود."
                 },
@@ -52,6 +55,7 @@ class Command(BaseCommand):
                 ad_types.append({
                     "name": f"پین در لیست پیام های {name}",
                     "slug": f"{slug}-pin",
+                    "icon": "bi-pin-angle-fill",
                     "description": f"در این نوع تبلیغ، پیام شما در بالای لیست پیام‌های {name} پین می‌شود "
                                    f"و برای مدت مشخصی در معرض دید کاربران قرار می‌گیرد که باعث افزایش بازدید و تعامل می‌شود."
                 })
@@ -62,6 +66,7 @@ class Command(BaseCommand):
                     slug=item["slug"],
                     defaults={
                         "name": item["name"],
+                        "icon": item["icon"],
                         "description": item["description"],
                         "is_active": True,
                     }

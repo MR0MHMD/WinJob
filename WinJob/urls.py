@@ -12,6 +12,7 @@ urlpatterns = [
     path('influencers/', include("influencers.urls", namespace="influencers")),
     path('content_team/', include("content_team.urls", namespace="content_team")),
     path('campaigns/', include("campaigns.urls", namespace="campaigns")),
+    path('tickets/', include("tickets.urls", namespace="tickets")),
     path('blog/', include("blog.urls", namespace="blog")),
     path('', include("core.urls", namespace="core")),
 ]

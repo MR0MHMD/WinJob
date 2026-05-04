@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     "location.apps.LocationConfig",
     "plat_form.apps.PlatFormConfig",
     "content_team.apps.ContentTeamConfig",
-    "notifications.apps.NotificationsConfig"
+    "notifications.apps.NotificationsConfig",
+    "tickets.apps.TicketsConfig"
 ]
 
 DAISY_SETTINGS = {

@@ -74,11 +74,15 @@ window.updateServiceTypes = function (adTypeId) {
 
     var dom = CampaignDOM;
 
-    if (dom.contentTypeSelect.value !== "1") {
+    // گرفتن اسلاگ کانتنت تایپ انتخاب شده
+    var selectedContentValue = dom.contentTypeSelect.value;
+    var contentMeta = CampaignData.CONTENT_TYPE_META[selectedContentValue];
+    var contentSlug = contentMeta ? contentMeta.slug : null;
 
+    // فقط اگه اسلاگ برابر content-production-team باشه، سرویس‌ها لود بشن
+    if (contentSlug !== "content-production-team") {
         resetServiceType();
         return;
-
     }
 
     resetServiceType();

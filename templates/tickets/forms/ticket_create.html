@@ -1,0 +1,970 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}ایجاد تیکت جدید{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ==================== استایل‌های صفحه ایجاد تیکت ==================== */
+    
+    .create-ticket-card {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0.01) 100%);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* سایدبار */
+    .faq-sidebar {
+        position: sticky;
+        top: 90px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%);
+        border-radius: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .faq-sidebar.has-content {
+        border-color: rgba(93, 60, 242, 0.2);
+    }
+    
+    /* استپ‌ها */
+    .step-circle {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+        border: 2px solid rgba(255, 255, 255, 0.12);
+        color: #9691a4;
+        background: rgba(255, 255, 255, 0.02);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .step-circle.active {
+        background: linear-gradient(135deg, #5d3cf2 0%, #fd5631 100%);
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(253, 86, 49, 0.25);
+    }
+    
+    .step-circle.done {
+        background: #07c98b;
+        border-color: #07c98b;
+        color: #fff;
+    }
+    
+    /* کارت انتخاب موضوع */
+    .category-card {
+        border: 2px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        padding: 1.25rem 0.75rem;
+        cursor: pointer;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(255, 255, 255, 0.015);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .category-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, rgba(253, 86, 49, 0.08) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+    
+    .category-card:hover {
+        border-color: rgba(253, 86, 49, 0.35);
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+    
+    .category-card:hover::after {
+        opacity: 1;
+    }
+    
+    .category-card.selected {
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.1);
+        box-shadow: 0 0 0 5px rgba(253, 86, 49, 0.08);
+    }
+    
+    .category-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        background: rgba(253, 86, 49, 0.1);
+        color: #fd5631;
+        margin-bottom: 0.75rem;
+        transition: all 0.35s ease;
+    }
+    
+    .category-card.selected .category-icon,
+    .category-card:hover .category-icon {
+        background: #fd5631;
+        color: #fff;
+        box-shadow: 0 8px 25px rgba(253, 86, 49, 0.4);
+        transform: scale(1.08);
+    }
+    
+    /* عنوان‌ها - دو ستونه */
+    .title-item {
+        border: 2px solid rgba(255, 255, 255, 0.07);
+        border-radius: 0.875rem;
+        padding: 0.875rem 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.015);
+        height: 100%;
+    }
+    
+    .title-item:hover {
+        border-color: rgba(253, 86, 49, 0.3);
+        background: rgba(253, 86, 49, 0.04);
+    }
+    
+    .title-item.selected {
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.08);
+    }
+    
+    /* FAQ در سایدبار */
+    .faq-item {
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.015);
+    }
+    
+    .faq-item:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .faq-question {
+        padding: 0.875rem 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        transition: all 0.3s ease;
+        user-select: none;
+    }
+    
+    .faq-question:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease;
+        border-top: 1px solid transparent;
+    }
+    
+    .faq-item.open .faq-answer {
+        max-height: 500px;
+        border-top-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    .faq-answer-inner {
+        padding: 0 1rem 1rem 1rem;
+        color: #9691a4;
+        font-size: 0.8125rem;
+        line-height: 1.75;
+    }
+    
+    .faq-chevron {
+        transition: transform 0.35s ease;
+        font-size: 0.7rem;
+        color: #9691a4;
+        flex-shrink: 0;
+    }
+    
+    .faq-item.open .faq-chevron {
+        transform: rotate(180deg);
+        color: #fd5631;
+    }
+    
+    /* آپلود */
+    .upload-zone {
+        border: 2px dashed rgba(255, 255, 255, 0.12);
+        border-radius: 1rem;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.015);
+    }
+    
+    .upload-zone:hover {
+        border-color: rgba(253, 86, 49, 0.4);
+        background: rgba(253, 86, 49, 0.03);
+    }
+    
+    .upload-zone.dragover {
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.08);
+        box-shadow: 0 0 0 12px rgba(253, 86, 49, 0.04);
+    }
+    
+    .upload-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.6rem;
+        color: #9691a4;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-zone:hover .upload-icon {
+        background: rgba(253, 86, 49, 0.1);
+        color: #fd5631;
+    }
+    
+    /* پیش‌نمایش فایل */
+    .file-preview-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.025);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .file-preview-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .file-preview-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: rgba(93, 60, 242, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5d3cf2;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    /* انیمیشن */
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-in {
+        animation: fadeSlideUp 0.45s ease forwards;
+    }
+    
+    /* textarea */
+    .message-textarea {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-radius: 0.875rem;
+        padding: 1rem;
+        resize: vertical;
+        min-height: 160px;
+        transition: all 0.3s ease;
+        line-height: 1.8;
+        font-size: 0.875rem;
+    }
+    
+    .message-textarea:focus {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(253, 86, 49, 0.35);
+        box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.08);
+        outline: none;
+    }
+    
+    /* لودینگ */
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+    }
+    .btn-loading .btn-text { opacity: 0; }
+    .btn-loading .spinner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    /* priority labels */
+    .priority-label {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .priority-label:has(input:checked) {
+        border-color: #fd5631 !important;
+        background: rgba(253, 86, 49, 0.1) !important;
+    }
+    
+    /* empty faq state */
+    .faq-empty {
+        text-align: center;
+        padding: 2rem 0;
+    }
+    
+    /* حذف کن کلاس‌های responsive قدیمی رو */
+
+/* کارت‌های موضوع - ریسپانسیو */
+.category-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+/* دسکتاپ بزرگ: ۴ کارت در هر ردیف */
+@media (min-width: 1200px) {
+    .category-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* تبلت: ۳ کارت */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .category-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* موبایل بزرگ: ۲ کارت */
+@media (min-width: 500px) and (max-width: 767px) {
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* موبایل کوچک: ۱ کارت */
+@media (max-width: 499px) {
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* عنوان‌ها - ریسپانسیو */
+.titles-grid {
+    display: grid;
+    gap: 0.5rem;
+}
+
+/* دسکتاپ: ۲ کارت */
+@media (min-width: 992px) {
+    .titles-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* تبلت: ۲ کارت */
+@media (min-width: 576px) and (max-width: 991px) {
+    .titles-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* موبایل: ۱ کارت */
+@media (max-width: 575px) {
+    .titles-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    {# ==================== هدر ==================== #}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-1 text-light">
+                <i class="fi-plus-circle text-primary me-2"></i>
+                ایجاد تیکت جدید
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-light mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'tickets:ticket_list' %}">تیکت‌ها</a></li>
+                    <li class="breadcrumb-item active">ایجاد تیکت</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'tickets:ticket_list' %}" class="btn btn-outline-light rounded-pill px-3">
+            <i class="fi-arrow-right me-2"></i>
+            بازگشت
+        </a>
+    </div>
+
+    {# ==================== لایوت دو ستونه ==================== #}
+    <div class="row g-4">
+        
+        {# ========== ستون اصلی (فرم) ========== #}
+        <div class="col-lg-8">
+            
+            <form id="ticketForm" method="post" enctype="multipart/form-data" class="create-ticket-card rounded-3 p-4">
+                {% csrf_token %}
+                
+                {# ===== بخش ۱: انتخاب موضوع ===== #}
+                <div class="mb-4 animate-in">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="step-circle active">1</span>
+                        <h5 class="text-light mb-0">انتخاب موضوع</h5>
+                    </div>
+                    <p class="text-muted fs-sm mb-3">موضوع مناسب را انتخاب کنید تا سریع‌تر رسیدگی شود.</p>
+                    
+                    <div class="category-grid">
+                        {% for category in categories %}
+                            <div class="category-card text-center" 
+                                 data-category-id="{{ category.id }}"
+                                 onclick="selectCategory(this, {{ category.id }})">
+                                <div class="category-icon mx-auto">
+                                    <i class="{{ category.icon }}"></i>
+                                </div>
+                                <h6 class="text-light mb-1 fs-sm">{{ category.name }}</h6>
+                                <small class="text-muted fs-xs">{{ category.active_titles_count }} عنوان</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="category" id="selectedCategory">
+                </div>
+                
+                {# ===== بخش ۲: انتخاب عنوان ===== #}
+                <div id="titleSection" style="display: none;">
+                    <div class="mb-3 animate-in">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="step-circle" id="step2">2</span>
+                            <h5 class="text-light mb-0">انتخاب عنوان</h5>
+                        </div>
+                        <p class="text-muted fs-sm mb-3">عنوان متناسب با مشکل خود را انتخاب کنید.</p>
+                        
+                        {# عنوان‌ها - دو ستونه #}
+                        <div class="titles-grid" id="titlesContainer"></div>
+                        
+                        {# عنوان سفارشی (فقط برای "سایر") #}
+                        <div class="mt-3" id="customTitleSection" style="display: none;">
+                            <div class="animate-in">
+                                <label for="customTitleInput" class="form-label text-light fs-sm fw-medium">
+                                    <i class="fi-edit me-1 text-primary"></i>
+                                    عنوان خود را وارد کنید:
+                                </label>
+                                <input type="text" 
+                                       name="custom_title" 
+                                       id="customTitleInput"
+                                       class="form-control bg-dark text-light border-light rounded-3" 
+                                       placeholder="عنوان دقیق مشکل خود را بنویسید...">
+                            </div>
+                        </div>
+                        <input type="hidden" name="title" id="selectedTitle">
+                    </div>
+                
+                    {# ===== بخش ۳ + ادامه فرم ===== #}
+                    <div id="restOfForm" style="display: none;">
+                        
+                        {# متن پیام #}
+                        <div class="mb-4 animate-in">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="step-circle" id="step3">3</span>
+                                <h5 class="text-light mb-0">توضیح مشکل</h5>
+                            </div>
+                            <p class="text-muted fs-sm mb-3">مشکل خود را با جزئیات کامل توضیح دهید.</p>
+                            <textarea name="message" 
+                                      rows="7"
+                                      class="message-textarea form-control form-control-light" 
+                                      id="messageInput"
+                                      placeholder="لطفاً مشکل یا سوال خود را با ذکر جزئیات کامل بنویسید...&#10;&#10;مثلاً:&#10;- چه اتفاقی افتاده؟&#10;- از کی شروع شده؟&#10;- چه خطایی می‌بینید؟"
+                                      oninput="updateCharCount()"></textarea>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-muted fs-xs" id="charCount">۰ کاراکتر</small>
+                                <small class="text-muted fs-xs">حداقل ۱۰ کاراکتر</small>
+                            </div>
+                        </div>
+                        
+                        {# آپلود فایل #}
+                        <div class="mb-4 animate-in">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="step-circle" id="step4">4</span>
+                                <h5 class="text-light mb-0">پیوست فایل <small class="text-muted fs-xs">(اختیاری)</small></h5>
+                            </div>
+                            
+                            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                                <div class="upload-icon">
+                                    <i class="fi-upload-file"></i>
+                                </div>
+                                <p class="text-light mb-1 fs-sm">فایل‌های خود را اینجا رها کنید</p>
+                                <p class="text-muted fs-xs mb-0">یا کلیک کنید | حداکثر ۱۰ مگابایت</p>
+                                <input type="file" id="fileInput" name="attachments" multiple 
+                                       accept=".jpg,.jpeg,.png,.gif,.pdf,.zip,.rar,.doc,.docx"
+                                       style="display: none;"
+                                       onchange="handleFiles(this.files)">
+                            </div>
+                            
+                            <div class="mt-3" id="filePreview"></div>
+                        </div>
+                        
+                        {# دکمه ثبت #}
+                        <div class="d-flex justify-content-end gap-2 animate-in">
+                            <a href="{% url 'tickets:ticket_list' %}" class="btn btn-outline-light rounded-pill px-4">
+                                انصراف
+                            </a>
+                            <button type="button" class="btn btn-primary rounded-pill px-4" id="submitBtn" onclick="submitTicket()">
+                                <span class="btn-text">
+                                    <i class="fi-send me-2"></i>
+                                    ثبت تیکت
+                                </span>
+                            </button>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            </form>
+            
+        </div>
+        
+        {# ========== سایدبار (FAQ) ========== #}
+        <div class="col-lg-4">
+            <div class="faq-sidebar p-3 p-md-4" id="faqSidebar">
+                <div class="text-center py-4" id="faqPlaceholder">
+                    <div class="mb-3" style="font-size: 3rem; opacity: 0.3;">
+                        <i class="fi-help"></i>
+                    </div>
+                    <p class="text-muted fs-sm mb-0">
+                        پس از انتخاب عنوان،
+                        <br>
+                        سوالات متداول مرتبط اینجا نمایش داده می‌شود.
+                    </p>
+                </div>
+                
+                <div id="faqContent" style="display: none;">
+                    <h6 class="text-light mb-3 d-flex align-items-center gap-2">
+                        <i class="fi-help text-primary"></i>
+                        سوالات متداول
+                    </h6>
+                    <div id="faqList"></div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // ==================== اسکریپت‌های صفحه ایجاد تیکت ====================
+    
+    let selectedFiles = [];
+    let currentTitleData = null;
+    
+    // ==================== انتخاب موضوع ====================
+    function selectCategory(element, categoryId) {
+        document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('selectedCategory').value = categoryId;
+        
+        // سبز کردن استپ ۱
+        const step1 = document.querySelector('#ticketForm .step-circle.active');
+        if (step1) step1.classList.add('done');
+        
+        // ریست
+        document.getElementById('titleSection').style.display = 'none';
+        document.getElementById('restOfForm').style.display = 'none';
+        document.getElementById('customTitleSection').style.display = 'none';
+        document.getElementById('selectedTitle').value = '';
+        document.getElementById('customTitleInput').value = '';
+        ['step2','step3','step4'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active', 'done');
+        });
+        
+        // نمایش بخش عنوان
+        document.getElementById('titleSection').style.display = 'block';
+        document.getElementById('step2').classList.add('active');
+        
+        loadTitles(categoryId);
+        
+        setTimeout(() => {
+            document.getElementById('titleSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    }
+    
+    // ==================== لود عنوان‌ها ====================
+    function loadTitles(categoryId) {
+    const container = document.getElementById('titlesContainer');
+    container.innerHTML = `
+        <div class="text-center py-4" style="grid-column: 1 / -1;">
+            <div class="spinner-border text-primary spinner-border-sm"></div>
+            <span class="text-muted ms-2 fs-sm">در حال بارگذاری...</span>
+        </div>
+    `;
+    
+    // ریست FAQ
+    resetFAQ();
+    
+    fetch(`{% url 'tickets:api_titles' 0 %}`.replace('0', categoryId))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.titles.length) {
+                container.innerHTML = '<p class="text-muted text-center py-3 fs-sm" style="grid-column: 1 / -1;">عنوانی یافت نشد.</p>';
+                return;
+            }
+            
+            container.innerHTML = data.titles.map(title => {
+                const escapedData = JSON.stringify(title).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+                return `
+                    <div class="title-item animate-in" 
+                         onclick="selectTitle(this, ${title.id}, '${title.slug}')"
+                         data-title-data='${escapedData}'>
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-start gap-2 min-w-0">
+                                <i class="fi-chevron-left text-muted fs-xs mt-1 flex-shrink-0"></i>
+                                <div class="min-w-0">
+                                    <span class="text-light fs-sm d-block">${title.name}</span>
+                                    ${title.description ? `<small class="text-muted fs-xs d-block mt-0.5">${title.description}</small>` : ''}
+                                </div>
+                            </div>
+                            ${title.faqs_count > 0 ? `<span class="badge bg-faded-info text-info fs-xxs flex-shrink-0 ms-2">${title.faqs_count} سوال</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(() => {
+            container.innerHTML = '<p class="text-danger text-center py-3 fs-sm" style="grid-column: 1 / -1;">خطا در بارگذاری</p>';
+        });
+}
+    
+    // ==================== انتخاب عنوان ====================
+    function selectTitle(element, titleId, titleSlug) {
+        document.querySelectorAll('.title-item').forEach(item => {
+            item.classList.remove('selected');
+            item.style.borderColor = 'rgba(255,255,255,0.07)';
+            item.style.background = 'rgba(255,255,255,0.015)';
+        });
+        
+        element.classList.add('selected');
+        element.style.borderColor = '#fd5631';
+        element.style.background = 'rgba(253,86,49,0.08)';
+        
+        document.getElementById('selectedTitle').value = titleId;
+        
+        // گرفتن دیتای عنوان - مستقیم از attribute خود element
+        try {
+            const rawData = element.getAttribute('data-title-data');
+            if (rawData) {
+                currentTitleData = JSON.parse(rawData);
+            } else {
+                currentTitleData = null;
+            }
+        } catch(e) {
+            console.error('Error parsing title data:', e);
+            currentTitleData = null;
+        }
+        
+        // چک کردن "سایر"
+        const isOther = (titleSlug === 'other' || titleSlug.includes('other') || 
+                         element.querySelector('span').textContent.trim() === 'سایر');
+        
+        const customTitleSection = document.getElementById('customTitleSection');
+        const customTitleInput = document.getElementById('customTitleInput');
+        
+        if (isOther) {
+            customTitleSection.style.display = 'block';
+            customTitleInput.value = '';
+        } else {
+            customTitleSection.style.display = 'none';
+            customTitleInput.value = '';
+        }
+        
+        // نمایش ادامه فرم
+        showFullForm();
+        
+        // آپدیت FAQ
+        updateFAQ(currentTitleData);
+        
+        // فعال کردن استپ ۲
+        document.getElementById('step2').classList.add('done');
+    }
+    
+    // ==================== نمایش ادامه فرم ====================
+    function showFullForm() {
+        const restOfForm = document.getElementById('restOfForm');
+        restOfForm.style.display = 'block';
+        
+        ['step3','step4'].forEach((id, i) => {
+            setTimeout(() => {
+                document.getElementById(id).classList.add('active');
+            }, i * 100);
+        });
+        
+        setTimeout(() => {
+            restOfForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+    }
+    
+    // ==================== FAQ ====================
+    function resetFAQ() {
+        currentTitleData = null;
+        document.getElementById('faqPlaceholder').style.display = 'block';
+        document.getElementById('faqContent').style.display = 'none';
+        document.getElementById('faqList').innerHTML = '';
+        document.getElementById('faqSidebar').classList.remove('has-content');
+    }
+    
+    function updateFAQ(titleData) {
+        const placeholder = document.getElementById('faqPlaceholder');
+        const content = document.getElementById('faqContent');
+        const list = document.getElementById('faqList');
+        const sidebar = document.getElementById('faqSidebar');
+        
+        if (!titleData || !titleData.faqs || titleData.faqs.length === 0) {
+            placeholder.style.display = 'block';
+            content.style.display = 'none';
+            list.innerHTML = '';
+            sidebar.classList.remove('has-content');
+            
+            // متن جایگزین
+            placeholder.innerHTML = `
+                <div class="faq-empty">
+                    <div class="mb-3" style="font-size: 2.5rem; opacity: 0.2;">
+                        <i class="fi-info-circle"></i>
+                    </div>
+                    <p class="text-muted fs-sm mb-0">
+                        برای این عنوان
+                        <br>
+                        سوال متداولی ثبت نشده است.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        placeholder.style.display = 'none';
+        content.style.display = 'block';
+        sidebar.classList.add('has-content');
+        
+        list.innerHTML = titleData.faqs.map((faq, index) => `
+            <div class="faq-item mb-2" id="faqItem${faq.id}">
+                <div class="faq-question" onclick="toggleFAQ(${faq.id})">
+                    <span class="text-light fs-sm">${faq.question}</span>
+                    <i class="fi-chevron-down faq-chevron"></i>
+                </div>
+                <div class="faq-answer" id="faqAnswer${faq.id}">
+                    <div class="faq-answer-inner">${faq.answer}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function toggleFAQ(faqId) {
+        const item = document.getElementById('faqItem' + faqId);
+        const answer = document.getElementById('faqAnswer' + faqId);
+        const isOpen = item.classList.contains('open');
+        
+        // بستن همه
+        document.querySelectorAll('.faq-item.open').forEach(el => {
+            el.classList.remove('open');
+            el.querySelector('.faq-answer').style.maxHeight = '0';
+        });
+        
+        // باز کردن مورد کلیک شده (اگر بسته بود)
+        if (!isOpen) {
+            item.classList.add('open');
+            answer.style.maxHeight = answer.scrollHeight + 'px';
+            
+            // اسکرول به این FAQ
+            setTimeout(() => {
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+    }
+    
+    // ==================== شمارش کاراکتر ====================
+    function updateCharCount() {
+        const count = document.getElementById('messageInput').value.length;
+        const el = document.getElementById('charCount');
+        el.textContent = `${count.toLocaleString('fa-IR')} کاراکتر`;
+        el.style.color = count === 0 ? '#9691a4' : count < 10 ? '#fdbc31' : '#07c98b';
+        
+        // سبز کردن استپ ۳ (توضیح مشکل) اگر متن کافی نوشته
+        const step3 = document.getElementById('step3');
+        if (step3) {
+            if (count >= 10) {
+                step3.classList.add('done');
+                step3.classList.remove('active');
+            } else {
+                step3.classList.remove('done');
+                step3.classList.add('active');
+            }
+        }
+    }
+    
+    // ==================== آپلود فایل ====================
+    const uploadZone = document.getElementById('uploadZone');
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => {
+        uploadZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+    ['dragenter','dragover'].forEach(ev => {
+        uploadZone.addEventListener(ev, () => uploadZone.classList.add('dragover'));
+    });
+    ['dragleave','drop'].forEach(ev => {
+        uploadZone.addEventListener(ev, () => uploadZone.classList.remove('dragover'));
+    });
+    uploadZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+    
+    function handleFiles(files) {
+        const validTypes = ['image/jpeg','image/png','image/gif','application/pdf',
+                           'application/zip','application/x-rar-compressed',
+                           'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        const maxSize = 10 * 1024 * 1024;
+        let totalSize = selectedFiles.reduce((a, f) => a + f.size, 0);
+        
+        const newFiles = Array.from(files).filter(file => {
+            if (!validTypes.includes(file.type)) {
+                showNotification('خطا', `فرمت "${file.name}" پشتیبانی نمی‌شود.`, 'error');
+                return false;
+            }
+            if (file.size > maxSize) {
+                showNotification('خطا', `حجم "${file.name}" بیش از ۱۰ مگابایت است.`, 'error');
+                return false;
+            }
+            if (totalSize + file.size > maxSize) {
+                showNotification('خطا', 'حجم کل فایل‌ها بیش از ۱۰ مگابایت!', 'error');
+                return false;
+            }
+            totalSize += file.size;
+            return true;
+        });
+        
+        selectedFiles = [...selectedFiles, ...newFiles];
+        renderFilePreviews();
+        
+        // سبز کردن استپ ۴ (آپلود) اگه فایلی انتخاب شده
+        const step4 = document.getElementById('step4');
+        if (step4 && selectedFiles.length > 0) {
+            step4.classList.add('done');
+            step4.classList.remove('active');
+        }
+    }
+    
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderFilePreviews();
+        
+        // اگه همه فایلا حذف شدن، استپ ۴ رو برگردون به active
+        const step4 = document.getElementById('step4');
+        if (step4 && selectedFiles.length === 0) {
+            step4.classList.remove('done');
+            step4.classList.add('active');
+        }
+    }
+    
+    function renderFilePreviews() {
+        const container = document.getElementById('filePreview');
+        if (!selectedFiles.length) { 
+            container.innerHTML = ''; 
+            const step4 = document.getElementById('step4');
+            if (step4) {
+                step4.classList.remove('done');
+                step4.classList.add('active');
+            }
+            return; 
+        }
+        
+        container.innerHTML = selectedFiles.map((file, i) => `
+            <div class="file-preview-item mb-2">
+                <div class="file-preview-icon"><i class="fi-file"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="text-light fs-sm text-truncate">${file.name}</div>
+                    <small class="text-muted fs-xs">${formatFileSize(file.size)}</small>
+                </div>
+                <button type="button" class="btn btn-icon btn-xs btn-outline-danger rounded-circle" 
+                        onclick="removeFile(${i})"><i class="fi-x"></i></button>
+            </div>
+        `).join('');
+    }
+    
+    function formatFileSize(bytes) {
+        if (!bytes) return '0 B';
+        const u = ['B','KB','MB','GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + u[i];
+    }
+    
+    // ==================== ثبت ====================
+    function submitTicket() {
+        const btn = document.getElementById('submitBtn');
+        const category = document.getElementById('selectedCategory').value;
+        const title = document.getElementById('selectedTitle').value;
+        const customTitle = document.getElementById('customTitleInput').value.trim();
+        const message = document.getElementById('messageInput').value.trim();
+        
+        if (!category) return showNotification('خطا', 'موضوع را انتخاب کنید.', 'error');
+        if (!title && !customTitle) return showNotification('خطا', 'عنوان را انتخاب یا وارد کنید.', 'error');
+        if (!message || message.length < 10) return showNotification('خطا', 'متن پیام حداقل ۱۰ کاراکتر باشد.', 'error');
+        
+        btn.classList.add('btn-loading');
+        btn.innerHTML = '<span class="btn-text">...</span><span class="spinner"><div class="spinner-border spinner-border-sm"></div></span>';
+        
+        const fd = new FormData(document.getElementById('ticketForm'));
+        fd.set('custom_title', customTitle);
+        fd.delete('attachments');
+        selectedFiles.forEach(f => fd.append('attachments', f));
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: fd,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('موفق', '✅ تیکت با موفقیت ایجاد شد!', 'success', 
+                    () => window.location.href = data.redirect_url);
+            } else {
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '<span class="btn-text"><i class="fi-send me-2"></i>ثبت تیکت</span>';
+                if (data.errors) data.errors.forEach(e => showNotification('خطا', e, 'error'));
+            }
+        })
+        .catch(() => {
+            btn.classList.remove('btn-loading');
+            btn.innerHTML = '<span class="btn-text"><i class="fi-send me-2"></i>ثبت تیکت</span>';
+            showNotification('خطا', 'خطا در ارتباط با سرور.', 'error');
+        });
+    }
+    
+    function showNotification(title, message, type, cb) {
+        if (typeof showNotificationModal === 'function') {
+            showNotificationModal(title, message, type, cb);
+        } else {
+            alert(message);
+            if (cb) cb();
+        }
+    }
+</script>
+{% endblock %}
