@@ -1,0 +1,343 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}در حال توسعه | WinJob{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* حذف padding پیش‌فرض main برای این صفحه */
+    main.page-wrapper {
+        padding: 0 !important;
+        overflow: hidden;
+    }
+
+    /* پس‌زمینه تمام‌صفحه با گرادیانت‌های متحرک */
+    .construction-wrapper {
+        min-height: calc(100vh - 72px - 56px); /* ارتفاع هدر رو کم می‌کنم تا دقیقاً بین هدر و فوتر قرار بگیره */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        padding: 7rem 1rem;
+    }
+    
+    .construction-wrapper::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 70%, rgba(93, 60, 242, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 30%, rgba(253, 86, 49, 0.25) 0%, transparent 50%),
+                    radial-gradient(circle at 50% 50%, rgba(251, 188, 49, 0.12) 0%, transparent 50%),
+                    radial-gradient(circle at 20% 80%, rgba(7, 201, 139, 0.1) 0%, transparent 40%);
+        animation: bgPulse 8s ease-in-out infinite alternate;
+        pointer-events: none;
+    }
+
+    /* ذرات شناور پس‌زمینه */
+    .particles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(253, 86, 49, 0.6);
+        border-radius: 50%;
+        animation: floatUp 8s infinite ease-in;
+    }
+    
+    .particle:nth-child(odd) {
+        background: rgba(147, 112, 219, 0.4);
+        width: 3px;
+        height: 3px;
+    }
+    
+    .particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 7s; }
+    .particle:nth-child(2) { left: 25%; animation-delay: 2s; animation-duration: 9s; }
+    .particle:nth-child(3) { left: 40%; animation-delay: 4s; animation-duration: 6s; }
+    .particle:nth-child(4) { left: 55%; animation-delay: 1s; animation-duration: 10s; }
+    .particle:nth-child(5) { left: 70%; animation-delay: 3s; animation-duration: 8s; }
+    .particle:nth-child(6) { left: 85%; animation-delay: 5s; animation-duration: 7s; }
+    .particle:nth-child(7) { left: 15%; animation-delay: 6s; animation-duration: 11s; }
+    .particle:nth-child(8) { left: 60%; animation-delay: 2.5s; animation-duration: 9s; }
+    
+    @keyframes floatUp {
+        0% { transform: translateY(100vh) scale(0); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+    }
+    
+    @keyframes bgPulse {
+        0% { opacity: 0.5; transform: scale(1); }
+        100% { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* کارت شیشه‌ای */
+    .glass-card {
+        background: rgba(31, 27, 45, 0.7);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 2.5rem;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 
+                    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        padding: 3.5rem 3rem;
+        max-width: 600px;
+        width: 100%;
+        position: relative;
+        z-index: 5;
+        transition: transform 0.2s ease-out, box-shadow 0.3s ease;
+        transform-style: preserve-3d;
+        perspective: 1000px;
+    }
+    
+    .glass-card:hover {
+        box-shadow: 0 35px 80px rgba(0, 0, 0, 0.7), 
+                    0 0 0 1px rgba(253, 86, 49, 0.1) inset;
+    }
+
+    /* آیکون چرخ‌دنده */
+    .gear-glow {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 2.5rem;
+        background: rgba(253, 86, 49, 0.06);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        animation: softPulse 3s infinite ease-in-out;
+    }
+    
+    .gear-glow i {
+        font-size: 3.8rem;
+        color: #fd5631;
+        filter: drop-shadow(0 0 15px rgba(253, 86, 49, 0.6));
+        animation: spin 10s linear infinite;
+    }
+    
+    @keyframes softPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.5); transform: scale(1); }
+        50% { box-shadow: 0 0 0 35px rgba(253, 86, 49, 0); transform: scale(1.08); }
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* نوار پیشرفت */
+    .progress {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50rem;
+        overflow: hidden;
+    }
+
+    /* فرم ایمیل */
+    .subscribe-input {
+        background-color: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #fff !important;
+        backdrop-filter: blur(10px);
+        transition: all 0.35s ease;
+    }
+    .subscribe-input:focus {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: #fd5631 !important;
+        box-shadow: 0 0 25px rgba(253, 86, 49, 0.5) !important;
+    }
+    .subscribe-input::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    /* دکمه بازگشت با استایل ویژه */
+    .btn-back {
+        background: linear-gradient(135deg, rgb(93, 60, 242), rgb(253, 86, 49));
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #fff !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+    }
+    .btn-back:hover {
+        background: linear-gradient(135deg, rgb(93, 60, 242), rgba(253, 86, 49, 0.87));
+        border-color: rgba(253, 86, 49, 0.5);
+        box-shadow: 0 15px 35px rgba(93, 60, 242, 0.4), 0 0 0 1px rgba(253, 86, 49, 0.2) inset;
+        transform: translateY(-3px);
+        color: #fff;
+    }
+
+    /* شبکه‌های اجتماعی */
+    .social-dots a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.03);
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 1.3rem;
+        margin: 0 6px;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .social-dots a:hover {
+        background: #fd5631;
+        color: #fff;
+        transform: translateY(-6px);
+        box-shadow: 0 15px 25px rgba(253, 86, 49, 0.5);
+        border-color: #fd5631;
+    }
+
+    /* نشانگر مرحله */
+    .stage-badge {
+        display: inline-block;
+        padding: 0.35rem 1.2rem;
+        background: rgba(253, 86, 49, 0.1);
+        border: 1px solid rgba(253, 86, 49, 0.3);
+        border-radius: 50rem;
+        color: #fd5631;
+        font-size: 0.85rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="construction-wrapper">
+    <!-- ذرات شناور پس‌زمینه -->
+    <div class="particles">
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+        <span class="particle"></span>
+    </div>
+
+    <div class="glass-card text-center" id="tiltCard">
+        <!-- نشانگر وضعیت -->
+        <span class="stage-badge">نسخه بتا</span>
+
+        <!-- آیکون چرخ‌دنده -->
+        <div class="gear-glow">
+            <i class="fi-settings"></i>
+        </div>
+
+        <h2 class="text-light mb-3" style="font-weight: 700; letter-spacing: -0.5px; font-family: var(--fi-font-vazir-bold);">
+            در دست توسعه
+        </h2>
+        <p class="text-muted mb-4 px-2" style="font-size: 1.05rem; line-height: 1.9;">
+            ما در حال بازسازی سکوی پرتاب شغلی شما هستیم. به‌زودی با قدرتی بی‌نظیر
+            و امکانات هوش مصنوعی بازخواهیم گشت. از شکیبایی شما سپاسگزاریم.
+        </p>
+
+        <!-- نوار پیشرفت -->
+        <div class="progress mb-3 mx-3" style="height: 6px;">
+            <div class="progress-bar bg-accent progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 68%" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        <p class="text-muted fs-sm mb-5">۶۸٪ پیشرفت فنی</p>
+
+        <!-- دکمه بازگشت به صفحه قبل -->
+        <button class="btn btn-back rounded-pill px-5 py-2" onclick="goBackSmart()">
+            <i class="fi-arrow-right ms-2"></i>بازگشت به صفحه قبل
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+    // افکت سه‌بعدی Tilt
+    const card = document.getElementById('tiltCard');
+    
+    card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const rotateX = ((y - centerY) / centerY) * -8;
+        const rotateY = ((x - centerX) / centerX) * 8;
+        
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+    });
+
+    // دکمه بازگشت هوشمند
+    function goBackSmart() {
+        // بررسی می‌کنیم که آیا تاریخچه‌ای وجود داره
+        if (document.referrer && document.referrer !== window.location.href) {
+            // از همون دامنه باشه بهتره
+            const referrerDomain = new URL(document.referrer).hostname;
+            const currentDomain = window.location.hostname;
+            
+            if (referrerDomain === currentDomain) {
+                window.history.back();
+                return;
+            }
+        }
+        
+        // اگه تاریخچه معتبر نبود یا از دامنه دیگه‌ای اومده بود
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            // اگه هیچی نبود، بره خونه
+            window.location.href = '/';
+        }
+    }
+
+    // فرم خبرنامه
+    const form = document.querySelector('.subscribe-form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = this.querySelector('input[type="email"]').value;
+        if (email) {
+            window.showNotificationModal(
+                'تبریک 🎉', 
+                'ایمیل شما با موفقیت ثبت شد. به محض راه‌اندازی به شما اطلاع خواهیم داد.', 
+                'success'
+            );
+            this.reset();
+        }
+    });
+
+    // تنظیم داینامیک ارتفاع wrapper نسبت به هدر و فوتر
+    function adjustHeight() {
+        const header = document.querySelector('header.navbar');
+        const footer = document.querySelector('footer.footer');
+        const wrapper = document.querySelector('.construction-wrapper');
+        
+        const headerHeight = header ? header.offsetHeight : 72;
+        const footerHeight = footer ? footer.offsetHeight : 56;
+        
+        wrapper.style.minHeight = `calc(100vh - ${headerHeight}px - ${footerHeight}px)`;
+    }
+    
+    window.addEventListener('load', adjustHeight);
+    window.addEventListener('resize', adjustHeight);
+</script>
+{% endblock %}

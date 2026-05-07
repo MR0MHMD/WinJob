@@ -1,6 +1,6 @@
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
 from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerReview
-from django.db.models import Sum, Q, Avg, Count, Value, IntegerField, FloatField
+from django.db.models import Sum, Q, Value, IntegerField, FloatField
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required

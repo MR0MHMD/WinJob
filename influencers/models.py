@@ -31,6 +31,12 @@ class InfluencerProfile(models.Model):
 
 
 class InfluencerChannel(models.Model):
+    STATUS_CHOICES = (
+        ('pending', _('در انتظار تایید')),
+        ('approved', _('تایید شده')),
+        ('rejected', _('رد شده')),
+    )
+
     influencer = models.ForeignKey(InfluencerProfile, on_delete=models.CASCADE,
                                    related_name='channels', verbose_name=_('اینفلوئنسر'))
     platform = models.ForeignKey('plat_form.Platform', on_delete=models.CASCADE,
@@ -59,6 +65,7 @@ class InfluencerChannel(models.Model):
     )
     url = models.URLField(_('آدرس کانال'), blank=True, null=True)
     followers_count = models.PositiveIntegerField(_('تعداد فالوور/مشترک'), default=0)
+    status = models.CharField(_('وضعیت'), max_length=20, choices=STATUS_CHOICES, default='pending', )
     is_active = models.BooleanField(_('فعال'), default=True)
     created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)

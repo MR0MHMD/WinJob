@@ -111,18 +111,8 @@ class InfluencerChannelForm(forms.ModelForm):
 
             "avatar": forms.FileInput(
                 attrs={
-                    "class": "file-uploader border-light bg-faded-light",
-                    "name": "image",
                     "accept": "image/png, image/jpeg",
-                    "data-label-idle": mark_safe(
-                        "<i class='d-inline-block fi-camera-plus fs-2 text-light text-muted mb-2'></i>"
-                        "<br><span class='text-light opacity-70'>تغییر تصویر</span>"
-                    ),
-                    "data-style-panel-layout": "compact",
-                    "data-image-preview-height": "160",
-                    "data-image-crop-aspect-ratio": "1:1",
-                    "data-image-resize-target-width": "200",
-                    "data-image-resize-target-height": "200",
+                    "style": "display: none;",
                 }
             ),
         }

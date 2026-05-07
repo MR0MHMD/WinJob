@@ -1,34 +1,36 @@
 {% extends "parent/base.html" %}
 {% load static %}
+
 {% block title %}مدیریت کانال‌ها{% endblock %}
+
 {% block extra_style %}
-    <link rel="stylesheet"
-          href="{% static 'influencers/css/pages/channels.css' %}">
-    <link rel="stylesheet"
-          media="screen"
-          href="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css' %}">
-    <link rel="stylesheet"
-          media="screen"
-          href="{% static 'finder/vendor/filepond/dist/filepond.min.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channels/channels.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channels/file-uploader.css' %}">
 {% endblock %}
+
 {% block content %}
     <div class="container py-5">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
-                     role="alert">
-                    {{ message }}
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert"
-                            aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        <div class="row">
-            {% include 'accounts/partials/account_nav.html' with channels_layout=True %}
-            <div class="col-lg-8">
-                <h3 class="text-light mb-4">مدیریت کانال‌های من</h3>
+        {% if edit_mode %}
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'influencers:influencer_channels' %}">مدیریت کانال‌ها</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ instance.channel_name }}</li>
+        </ol>
+    {% else %}
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">مدیریت کانال‌ها</li>
+        </ol>
+    {% endif %}
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <h3 class="text-light text-center mb-4">مدیریت کانال‌های من</h3>
                 <div class="card bg-dark border-light mb-4">
                     <div class="card-body">
                         <h5 class="text-light mb-3">
@@ -46,10 +48,42 @@
                                 <div class="col-12 d-flex justify-content-center">
                                     <div style="width: 250px;">
                                         <label class="form-label text-light">تصویر پروفایل کانال</label>
-                                        {{ form.avatar }}
-                                        {% if instance.avatar %}
-                                            <div class="mt-2 text-center text-muted" style="font-size: 0.8rem;">تصویر فعلی بالا نمایش داده شده است</div>
-                                        {% endif %}
+
+                                        <!-- آپلودر حرفه‌ای -->
+                                        <div id="avatar-upload-wrapper"
+                                             class="avatar-uploader bg-dark border-light position-relative overflow-hidden">
+
+                                            <!-- input فایل مخفی -->
+                                            {{ form.avatar }}
+
+                                            <!-- بخش placeholder (زمانی که عکسی انتخاب نشده) -->
+                                            <div id="avatar-placeholder"
+                                                 class="d-flex flex-column align-items-center justify-content-center h-100">
+                                                <i class="fi-camera-plus fs-2 text-muted mb-2"></i>
+                                                <span class="text-light opacity-70">تغییر تصویر</span>
+                                            </div>
+
+                                            <!-- پیش‌نمایش عکس (مخفی در ابتدا) -->
+                                            <img id="avatar-preview-img"
+                                                 class="position-absolute top-0 start-0 w-100 h-100"
+                                                 style="object-fit: cover; display: none;"
+                                                 src="{% if instance.avatar %}{{ instance.avatar.url }}{% endif %}"
+                                                 alt="پیش‌نمایش">
+
+                                            <!-- دکمه حذف (مخفی) -->
+                                            <button type="button" id="avatar-remove-btn"
+                                                    class="btn btn-icon btn-xs btn-danger position-absolute top-0 end-0 m-2"
+                                                    style="display: none; z-index: 10;"
+                                                    title="حذف تصویر">
+                                                <i class="fi-x"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- اطلاعات فایل (نام و ...) -->
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <small id="avatar-file-name" class="text-muted"
+                                                   style="font-size: 0.8rem;"></small>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -105,37 +139,55 @@
                 <div class="card bg-dark border-light">
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-dark align-middle">
+                            <table class="table table-dark align-middle text-center">
                                 <thead>
                                     <tr>
-                                        <th>تصویر</th>
-                                        <th>پلتفرم</th>
-                                        <th>نام</th>
-                                        <th>فالوور</th>
-                                        <th>عملیات</th>
+                                        <th class="text-center">تصویر</th>
+                                        <th class="text-center">پلتفرم</th>
+                                        <th class="text-center">نام</th>
+                                        <th class="text-center">فالوور</th>
+                                        <th class="text-center">وضعیت</th>
+                                        <th class="text-center">عملیات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for channel in channels %}
                                         <tr>
-                                            <td>
+                                            <td class="text-center">
                                                 {% if channel.avatar %}
                                                     <img src="{{ channel.avatar.url }}" class="channel-avatar" alt="avatar">
                                                 {% else %}
-                                                    <div class="channel-avatar placeholder-avatar">
+                                                    <div class="channel-avatar placeholder-avatar mx-auto">
                                                         <i class="fi-user text-secondary"></i>
                                                     </div>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ channel.platform.name }}</td>
-                                            <td>{{ channel.channel_name }}</td>
-                                            <td>{{ channel.followers_formatted }}</td>
-                                            <td>
+                                            <td class="text-center">{{ channel.platform.name }}</td>
+                                            <td class="text-center">{{ channel.channel_name }}</td>
+                                            <td class="text-center">{{ channel.followers_formatted }}</td>
+                                            <td class="text-center">
+                                                {% if channel.status == 'pending' %}
+                                                    <span class="badge bg-warning text-dark">در انتظار تایید</span>
+                                                {% elif channel.status == 'approved' %}
+                                                    <span class="badge bg-success">تایید شده</span>
+                                                {% elif channel.status == 'rejected' %}
+                                                    <span class="badge bg-danger">رد شده</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ channel.get_status_display }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
                                                 <a href="{% url 'influencers:edit_channel' channel.pk %}"
-                                                   class="btn btn-sm btn-outline-info me-2">ویرایش</a>
-                                                <button class="btn btn-sm btn-outline-danger delete-btn"
+                                                   class="btn btn-icon btn-xs btn-outline-info me-1"
+                                                   data-bs-toggle="tooltip" title="ویرایش">
+                                                    <i class="fi-edit"></i>
+                                                </a>
+                                                <button class="btn btn-icon btn-xs btn-outline-danger delete-btn"
                                                         data-id="{{ channel.id }}"
-                                                        data-name="{{ channel.channel_name }}">حذف</button>
+                                                        data-name="{{ channel.channel_name }}"
+                                                        data-bs-toggle="tooltip" title="حذف">
+                                                    <i class="fi-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -159,15 +211,27 @@
         </div>
     </div>
 {% endblock %}
+
 {% block script %}
-    <script src="{% static 'influencers/js/pages/channels.js' %}"></script>
-    <script src="{% static 'finder/vendor/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.min.js' %}"></script>
-    <script src="{% static 'finder/vendor/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.js' %}"></script>
-    <script src="{% static 'finder/vendor/filepond-plugin-image-crop/dist/filepond-plugin-image-crop.min.js' %}"></script>
-    <script src="{% static 'finder/vendor/filepond-plugin-image-transform/dist/filepond-plugin-image-transform.min.js' %}"></script>
-    <script src="{% static 'finder/vendor/filepond/dist/filepond.min.js' %}"></script>
     <script>
-        FilePond.setOptions({ storeAsFile: true });
-        FilePond.parse(document.body);
+        (function () {
+            const placeholder = document.getElementById('avatar-placeholder');
+            const previewImg = document.getElementById('avatar-preview-img');
+            const removeBtn = document.getElementById('avatar-remove-btn');
+            const fileNameSpan = document.getElementById('avatar-file-name');
+            const wrapper = document.getElementById('avatar-upload-wrapper');
+
+            {% if instance.avatar %}
+                if (placeholder) placeholder.style.display = 'none';
+                if (previewImg) {
+                    previewImg.style.display = 'block';
+                }
+                if (removeBtn) removeBtn.style.display = 'flex';
+                if (wrapper) wrapper.classList.add('has-image');
+                if (fileNameSpan) fileNameSpan.textContent = 'تصویر فعلی';
+            {% endif %}
+        })();
     </script>
+    <script src="{% static 'influencers/js/pages/channels/channels.js' %}"></script>
+    <script src="{% static 'influencers/js/pages/channels/file-uploader.js' %}"></script>
 {% endblock %}

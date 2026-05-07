@@ -206,6 +206,7 @@ const hiddenFooterPaths = [
     '/accounts/login',
     '/accounts/register',
     '/accounts/verify-otp/',
+    '/pending'
 ];
 
 function checkAndHideFooter() {

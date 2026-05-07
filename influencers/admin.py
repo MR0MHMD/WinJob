@@ -167,7 +167,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             "classes": ("collapse",)
         }),
         ("وضعیت", {
-            "fields": ("is_active",),
+            "fields": ("is_active", "status"),
             "classes": ("collapse",)
         }),
         ("تاریخچه", {

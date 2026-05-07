@@ -93,3 +93,7 @@ def landing_page(request, platform):
         raise Http404("صفحه مورد نظر یافت نشد")
 
     return render(request, template_name)
+
+
+def pending(request):
+    return render(request, "core/pages/pending.html")

@@ -11,6 +11,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -140,7 +141,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'accounts.context_processors.auth_forms',
+                'plat_form.context_processors.platform_info',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
             ],

@@ -1,0 +1,678 @@
+/*
+ * ===================================================================
+ * WinJob - Header Styles
+ * ===================================================================
+ *
+ * استایل‌های اختصاصی هدر سایت WinJob
+ *
+ * بخش‌ها:
+ * 1. هدر اصلی
+ * 2. لوگو
+ * 3. دکمه همبرگر (موبایل)
+ * 4. منوی نوبار (دسکتاپ)
+ * 5. مگا منو
+ * 6. دراپ‌داون‌ها
+ * 7. دکمه‌ها
+ * 8. پروفایل کاربر
+ * 9. آف‌کَنوس (منوی موبایل)
+ * 10. ریسپانسیو
+ * ===================================================================
+ */
+
+/* ===================================================================
+ * 1. هدر اصلی
+ * =================================================================== */
+.navbar {
+    background: #1f1b2d !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1030;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    height: 4.35rem;
+}
+
+.navbar.navbar-stuck {
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* کانتینر داخلی هدر - عدم اجازه به شکستن خط */
+.navbar > .container {
+    flex-wrap: nowrap !important;
+}
+
+.navbar .container.px-4 {
+    padding-right: 1rem !important;
+    padding-left: 1rem !important;
+}
+
+
+/* ===================================================================
+ * 2. لوگو
+ * =================================================================== */
+.logo-wrapper {
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.logo-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.logo-img {
+    filter: drop-shadow(0 0 10px rgba(253, 86, 49, 0.3));
+    transition: filter 0.3s ease;
+}
+
+.logo-wrapper:hover .logo-img {
+    filter: drop-shadow(0 0 20px rgba(253, 86, 49, 0.5));
+}
+
+
+/* ===================================================================
+ * 3. دکمه همبرگر (موبایل)
+ * =================================================================== */
+.hamburger-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.3s ease;
+}
+
+.hamburger-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hamburger-icon {
+    width: 22px;
+    height: 16px;
+    position: relative;
+}
+
+.hamburger-icon span {
+    display: block;
+    position: absolute;
+    height: 2px;
+    width: 100%;
+    background: #fff;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.hamburger-icon span:nth-child(1) {
+    top: 0;
+}
+
+.hamburger-icon span:nth-child(2) {
+    top: 7px;
+    width: 65%;
+    right: 0;
+}
+
+.hamburger-icon span:nth-child(3) {
+    top: 14px;
+    width: 85%;
+    right: 0;
+}
+
+.hamburger-btn:hover .hamburger-icon span {
+    width: 100%;
+}
+
+
+/* ===================================================================
+ * 4. منوی نوبار (دسکتاپ)
+ * =================================================================== */
+
+/* ریست کردن استایل‌های پیش‌فرض نوبار */
+.navbar-nav {
+    display: flex;
+    flex-direction: row;
+    gap: 0.25rem;
+}
+
+/* کلاس کمکی برای منوی دسکتاپ - عدم شکستن خط */
+.navbar-desktop-menu {
+    flex-wrap: nowrap !important;
+}
+
+.navbar-nav .nav-item {
+    border: none !important;
+}
+
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-weight: 500;
+    padding: 0.5rem 0.7rem !important;
+    border-radius: 0.5rem;
+    transition: color 0.3s ease, background 0.3s ease;
+    position: relative;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* خط زیر لینک در حالت هاور */
+.navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 20px;
+    height: 2px;
+    background: linear-gradient(90deg, #fd5631, #5d3cf2);
+    border-radius: 2px;
+    transition: transform 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+
+/* ===================================================================
+ * 5. مگا منو
+ * =================================================================== */
+
+/* کانتینر مگا منو - موقعیت نسبی برای ساب‌منو */
+.mega-dropdown-wrapper {
+    position: static !important;
+}
+
+/* خود منوی کشویی مگا */
+.mega-dropdown-menu {
+    position: fixed !important;
+    top: 4.35rem !important;
+    left: 0 !important;
+    width: 100vw !important;
+    background: #1f1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 2px solid #fd5631;
+    border-radius: 0 0 1rem 1rem;
+    padding: 2rem;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    transition-delay: 0.1s;
+}
+
+.mega-dropdown-wrapper:hover .mega-dropdown-menu,
+.mega-dropdown-menu:hover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.mega-dropdown-wrapper:hover .mega-dropdown-menu {
+    transition-delay: 0s;
+}
+
+/* پل شفاف برای جلوگیری از بسته شدن منو */
+.mega-dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: transparent;
+}
+
+/* محتوای داخلی مگا منو */
+.mega-dropdown-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.mega-category-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.mega-category-card:hover .mega-category-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.mega-link {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: color 0.2s ease,
+    background 0.2s ease,
+    padding 0.2s ease;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+}
+
+.mega-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+    padding-right: 0.8rem;
+}
+
+.mega-footer {
+    text-align: left;
+}
+
+
+/* ===================================================================
+ * 6. دراپ‌داون‌ها
+ * =================================================================== */
+
+/* موقعیت‌دهی دراپ‌داون داخل نوبار */
+.navbar-nav .dropdown {
+    position: relative;
+}
+
+.navbar-nav .dropdown-menu {
+    position: absolute !important;
+    top: 100%;
+    left: auto !important;
+    right: 0 !important;
+    z-index: 1000;
+    display: none;
+    min-width: 200px !important;
+    margin-top: 0.5rem;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.navbar-nav .dropdown-menu.show {
+    display: block;
+}
+
+/* استایل دراپ‌داون دارک */
+.dropdown-menu-dark {
+    background: #1f1b2d !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dropdown-menu-dark .dropdown-item {
+    color: rgba(255, 255, 255, 0.7) !important;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+
+.dropdown-menu-dark .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #fff !important;
+}
+
+.dropdown-menu-dark .dropdown-header {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dropdown-menu-dark .dropdown-divider {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* انیمیشن نمایش دراپ‌داون */
+.dropdown-menu.show {
+    animation: headerSlideDown 0.3s ease;
+}
+
+.dropdown-menu-end{
+    left: 0 !important;
+    right: auto !important;
+}
+
+/* چرخش نرم پیکان در منوی ناوبری */
+.nav-item.dropdown .dropdown-arrow {
+    transition: transform 0.25s ease-in-out;
+    font-size: 0.75rem;  /* اندازه کوچک‌تر برای هماهنگی */
+}
+
+/* وقتی ماوس روی لینک یا داخل منو هست، پیکان بچرخد */
+.nav-item.dropdown:hover .dropdown-arrow,
+.nav-item.dropdown .dropdown-toggle[aria-expanded="true"] + .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* تنظیمات بیشتر برای منوی دارک */
+.dropdown-menu-dark .dropdown-item {
+    transition: all 0.2s ease;
+}
+.dropdown-menu-dark .dropdown-item:hover {
+    padding-right: 1.25rem;  /* حرکت نرم به راست روی هاور */
+    background-color: rgba(255,255,255,0.08);
+}
+
+
+
+@keyframes headerSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ===================================================================
+ * 7. دکمه‌ها
+ * =================================================================== */
+
+/* دکمه ورود / ثبت‌نام */
+.btn-primary.rounded-pill {
+    background: linear-gradient(135deg, #fd5631, #ff3d1a);
+    border: none;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(253, 86, 49, 0.3);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-primary.rounded-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(253, 86, 49, 0.5);
+}
+
+/* افکت درخشش روی دکمه */
+.btn-primary.rounded-pill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary.rounded-pill:hover::before {
+    left: 100%;
+}
+
+/* دکمه شیشه‌ای (پس‌زمینه شفاف) */
+.btn-translucent-light {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    border-radius: 0.75rem !important;
+    transition: background 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.btn-translucent-light:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+
+
+/* ===================================================================
+ * 8. پروفایل کاربر
+ * =================================================================== */
+
+/* دکمه آواتار در هدر */
+.user-avatar-only {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 50% !important;
+    padding: 3px !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.user-avatar-only:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 0 15px rgba(253, 86, 49, 0.3);
+}
+
+/* حذف آیکون دراپ‌داون پیش‌فرض */
+.user-avatar-only::after {
+    display: none !important;
+}
+
+/* کانتینر آواتار */
+.user-avatar-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.user-avatar-img {
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    object-fit: cover;
+    display: block;
+    width: 36px !important;
+    height: 36px !important;
+    transition: border-color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.user-avatar-img-drop{
+    width: 100px!important;
+    height: 100px!important;
+}
+
+.user-avatar-only:hover .user-avatar-img {
+    border-color: #fd5631;
+    transform: scale(1.05);
+}
+
+.user-avatar-placeholder {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* نشانگر آنلاین بودن */
+.user-status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 2px solid #1f1b2d;
+    z-index: 2;
+}
+
+.user-status.online {
+    background: #07c98b;
+    animation: headerPulseStatus 2s infinite;
+}
+
+@keyframes headerPulseStatus {
+    0% {
+        box-shadow: 0 0 0 0 rgba(7, 201, 139, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(7, 201, 139, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(7, 201, 139, 0);
+    }
+}
+
+/* نشان تایید (verified) */
+.verified-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #1f1b2d;
+    border-radius: 50%;
+    font-size: 15px;
+    color: #3c76f2;
+    line-height: 1;
+    z-index: 3;
+}
+
+
+/* ===================================================================
+ * 9. آف‌کَنوس (منوی موبایل)
+ * =================================================================== */
+
+/* مخفی کردن کامل آف‌کَنوس در دسکتاپ */
+@media (min-width: 992px) {
+    .offcanvas {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .offcanvas-backdrop {
+        display: none !important;
+    }
+
+    #mobileMenu {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        flex: none !important;
+    }
+}
+
+/* نمایش آف‌کَنوس فقط در موبایل */
+@media (max-width: 992px) {
+    .offcanvas {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 300px !important;
+        height: 100% !important;
+        position: fixed !important;
+    }
+
+    #mobileMenu {
+        display: flex !important;
+        width: 300px !important;
+    }
+
+    .d-lg-flex.navbar-nav {
+        display: none !important;
+    }
+}
+
+/* لینک‌های داخل منوی موبایل */
+.mobile-nav-link {
+    color: rgba(255, 255, 255, 0.75) !important;
+    padding: 0.8rem 1rem !important;
+    border-radius: 0.75rem;
+    transition: color 0.3s ease, background 0.3s ease;
+    font-weight: 500;
+}
+
+.mobile-nav-link:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* چرخش آیکون در حالت باز */
+.transition-transform {
+    transition: transform 0.3s ease;
+}
+
+[aria-expanded="true"] .transition-transform {
+    transform: rotate(180deg);
+}
+
+/* لینک‌های زیرمجموعه در منوی موبایل */
+.mobile-sub-link {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: color 0.2s ease,
+    background 0.2s ease,
+    padding 0.2s ease;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.mobile-sub-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+    padding-right: 1rem;
+}
+
+
+/* ===================================================================
+ * 10. ریسپانسیو - بهینه‌سازی برای تبلت و دسکتاپ
+ * =================================================================== */
+
+/* مخفی کردن منوی دسکتاپ توی موبایل (مجددا اطمینان) */
+@media (max-width: 992px) {
+    .offcanvas {
+        width: 85vw !important;
+        max-width: 320px !important;
+    }
+}
+
+/* سایزهای متوسط (تبلت) - فشرده‌تر کردن منو */
+@media (min-width: 992px) and (max-width: 1200px) {
+    .navbar-nav .nav-link {
+        padding: 0.5rem 0.35rem !important;
+        font-size: 0.8rem;
+    }
+
+    .btn-primary.rounded-pill {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.8rem;
+    }
+
+    /* مخفی کردن متن دکمه ورود و فقط نمایش آیکون */
+    .btn-primary.rounded-pill .btn-login-text,
+    .btn-primary.rounded-pill .fi-arrow-left {
+        display: none;
+    }
+}
+
+/* مخفی کردن متن‌های اضافی در صفحه‌های باریک */
+@media (min-width: 992px) and (max-width: 1100px) {
+    .nav-text-hide-responsive {
+        display: none;
+    }
+
+    .navbar-nav .nav-link i {
+        font-size: 1.2rem;
+    }
+
+    .navbar-nav .nav-link {
+        padding: 0.6rem !important;
+    }
+}
