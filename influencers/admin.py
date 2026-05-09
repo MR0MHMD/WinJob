@@ -129,11 +129,8 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "channel_display",
         "influencer",
         "platform",
-        "followers_formatted_display",
-        "channel_province",
-        "location_city",
-        "rates_count",
         "is_active",
+        "status",
         "formatted_created_at",
     )
     list_filter = ('platform', 'province', "is_active", 'created_at',)
@@ -141,6 +138,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     autocomplete_fields = ("influencer", "platform", "category", "province", "city",)
     ordering = ("created_at", 'followers_count')
     inlines = [InfluencerServiceRateInline, InfluencerReviewInline]
+    actions = ['mark_as_approved', 'mark_as_rejected']
     readonly_fields = (
         "followers_formatted_display", "formatted_created_at", "formatted_updated_at", "rates_count_display",)
 
@@ -257,6 +255,16 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if request.user.is_regional_manager and request.user.province:
             obj.province = request.user.province
         super().save_model(request, obj, form, change)
+
+    def mark_as_approved(modeladmin, request, queryset):
+        queryset.update(status='approved')
+
+    mark_as_approved.short_description = "تایید کانال‌های انتخاب شده"
+
+    def mark_as_rejected(modeladmin, request, queryset):
+        queryset.update(status='rejected')
+
+    mark_as_rejected.short_description = "رد کانال‌های انتخاب شده"
 
 
 @admin.register(InfluencerServiceRate)
