@@ -27,8 +27,8 @@ class LoginForm(forms.Form):
 class RegistrationForm(forms.Form):
     ROLE_CHOICES = (
         ("advertiser", "تبلیغ دهنده"),
-        ("influencer", "اینفلوئنسر"),
-        ("team_member", "عضو تیم"),
+        ("influencer", "ناشر"),
+        ("team_member", "تیم تولید محتوا"),
     )
 
     phone_number = forms.CharField(

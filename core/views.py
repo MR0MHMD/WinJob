@@ -55,6 +55,21 @@ def home(request):
 
     blog_posts = Post.published.order_by('-created_at')[:4]
 
+    brand_testimonials = [
+        {'name': 'دیجیکالا', 'logo': 'digikala.png',
+         'text': 'همکاری با وینجاب نرخ تبدیل کمپین‌های ما رو ۳ برابر کرد. آنالیز دقیق و ناشران حرفه‌ای، برگ برنده ما بود.',
+         'rating': 5},
+        {'name': 'اسنپ', 'logo': 'snap.png',
+         'text': 'سرعت اجرا و شفافیت گزارش‌ها بی‌نظیره. تیم وینجاب واقعاً مفهوم مارکتینگ مدرن رو پیاده کردن.',
+         'rating': 5},
+        {'name': 'تپسی', 'logo': 'tapsi.png',
+         'text': 'قیمت‌گذاری منصفانه و دسترسی به کانال‌های هدف، هزینه‌های تبلیغاتیمون رو نصف کرد.', 'rating': 4},
+        {'name': 'همراه اول', 'logo': 'hamrah-aval.png',
+         'text': 'بزرگترین چالش ما پیدا کردن اینفلوئنسر واقعی بود که وینجاب به بهترین شکل حلش کرد.', 'rating': 5},
+        {'name': 'فیلیمو', 'logo': 'filimo.png',
+         'text': 'کمپین معرفی سریال جدیدمون با وینجاب ۲.۵ میلیون بازدید ارگانیک گرفت.', 'rating': 4},
+    ]
+
     context = {
         'total_influencers': total_influencers,
         'total_channels': total_channels,
@@ -64,6 +79,7 @@ def home(request):
         'top_channels': top_channels,
         'content_teams': content_teams,
         'recent_reviews': recent_reviews,
+        'brand_testimonials': brand_testimonials,
         'blog_posts': blog_posts,
         'now': timezone.now(),
     }

@@ -17,7 +17,9 @@ function showExpelModal(memberId, memberName) {
 }
 
 function copyInviteCode() {
-    const code = '{{ team.slug }}';
+    const codeElement = document.querySelector('.code');
+    const code = codeElement ? codeElement.textContent.trim() : '';
+
     navigator.clipboard.writeText(code).then(function () {
         const btn = document.getElementById('copyInviteCodeBtn');
         const originalHtml = btn.innerHTML;
