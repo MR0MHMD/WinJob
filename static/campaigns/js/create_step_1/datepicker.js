@@ -1,138 +1,134 @@
 "use strict";
 
 window.initDatepicker = function () {
+    console.log("🔥 initDatepicker called");
+    var today = new persianDate().startOf('day');
+    var todayUnix = today.unix() * 1000;
+    var minDaysAfterStart = 2;
+    var maxDaysAfterStart = 14;
 
-    $(function () {
-        var today = new persianDate().startOf('day');
-        var todayUnix = today.unix() * 1000;
-        var minDaysAfterStart = 2;
-        var maxDaysAfterStart = 14;
+    var $startHidden = $("#id_start_date");
+    var $endHidden = $("#id_end_date");
+    var $startPicker = $(".range-from");
+    var $endPicker = $(".range-to");
+    var startPickerInstance = null;
+    var endPickerInstance = null;
 
-        // گرفتن مقادیر واقعی از hidden input‌ها (از سرور یا از داده‌های POST بعد از خطا)
-        var $startHidden = $("#id_start_date");
-        var $endHidden = $("#id_end_date");
-        var initialStart = $startHidden.val();
-        var initialEnd = $endHidden.val();
+    // تابع کمکی برای ساخت دیت‌پیکر پایان با محدودیت بر اساس startUnix
+    function setupEndPicker(startUnix, selectedEndUnix) {
+        if (!startUnix) return;
 
-        var $startPicker = $(".range-from");
-        var $endPicker = $(".range-to");
+        var minEndUnix = startUnix + (minDaysAfterStart * 24 * 60 * 60 * 1000);
+        var maxEndUnix = startUnix + (maxDaysAfterStart * 24 * 60 * 60 * 1000);
 
-        // تابع برای مقداردهی دیت‌پیکر تاریخ پایان با محدودیت از startUnix
-        function setupEndDatepickerWithConstraints(startUnix, selectedEndUnix) {
-            if (!startUnix) return;
-
-            var minEndUnix = startUnix + (minDaysAfterStart * 24 * 60 * 60 * 1000);
-            var maxEndUnix = startUnix + (maxDaysAfterStart * 24 * 60 * 60 * 1000);
-
-            if ($endPicker.data("datepicker")) {
-                $endPicker.data("datepicker").destroy();
-            }
-
-            $endPicker.persianDatepicker({
-                format: "YYYY/MM/DD",
-                minDate: minEndUnix,
-                maxDate: maxEndUnix,
-                initialValue: false,
-                timePicker: { enabled: false },
-                onSelect: function (unix) {
-                    var formatted = new persianDate(unix).format("YYYY/MM/DD");
-                    $endHidden.val(formatted);
-                    $endPicker.val(formatted);
-                }
-            });
-
-            // اگر مقدار end_date از قبل وجود داشت و در بازه هست، ست کن
-            if (selectedEndUnix && selectedEndUnix >= minEndUnix && selectedEndUnix <= maxEndUnix) {
-                var formattedEnd = new persianDate(selectedEndUnix).format("YYYY/MM/DD");
-                $endPicker.val(formattedEnd);
-            } else {
-                $endPicker.val("");
-                $endHidden.val("");
-            }
+        if (endPickerInstance) {
+            endPickerInstance.destroy();
         }
 
-        // تابع برای بروزرسانی دیت‌پیکر پایان بعد از انتخاب تاریخ شروع جدید
-        function updateEndDatepickerOnStartSelect(startUnix) {
-            var minEndUnix = startUnix + (minDaysAfterStart * 24 * 60 * 60 * 1000);
-            var maxEndUnix = startUnix + (maxDaysAfterStart * 24 * 60 * 60 * 1000);
-
-            if ($endPicker.data("datepicker")) {
-                $endPicker.data("datepicker").destroy();
-            }
-
-            $endPicker.persianDatepicker({
-                format: "YYYY/MM/DD",
-                minDate: minEndUnix,
-                maxDate: maxEndUnix,
-                initialValue: false,
-                timePicker: { enabled: false },
-                onSelect: function (unix) {
-                    var formatted = new persianDate(unix).format("YYYY/MM/DD");
-                    $endHidden.val(formatted);
-                    $endPicker.val(formatted);
-                }
-            });
-
-            // پاک کردن مقدار قبلی end_date چون تاریخ شروع عوض شده
-            $endHidden.val("");
-            $endPicker.val("");
-        }
-
-        // مقداردهی دیت‌پیکر تاریخ شروع
-        $startPicker.val(""); // پاک کردن مقدار نمایشی اولیه
-        $startPicker.persianDatepicker({
+        $endPicker.persianDatepicker({
             format: "YYYY/MM/DD",
-            minDate: todayUnix,
+            minDate: minEndUnix,
+            maxDate: maxEndUnix,
             initialValue: false,
             timePicker: { enabled: false },
             onSelect: function (unix) {
                 var formatted = new persianDate(unix).format("YYYY/MM/DD");
-                $startHidden.val(formatted);
-                $startPicker.val(formatted);
-                updateEndDatepickerOnStartSelect(unix);
+                $endHidden.val(formatted);
+                $endPicker.val(formatted);
             }
         });
+        endPickerInstance = $endPicker.data("datepicker");
 
-        // اگر start_date وجود دارد (از سرور یا بعد از خطا)
-        if (initialStart) {
-            var startUnix = new persianDate(initialStart).unix() * 1000;
-            $startPicker.val(initialStart);
-            // اگر end_date هم وجود دارد، مقدار یونیکس آن را محاسبه کن
-            var endUnix = initialEnd ? new persianDate(initialEnd).unix() * 1000 : null;
-            setupEndDatepickerWithConstraints(startUnix, endUnix);
+        if (selectedEndUnix && selectedEndUnix >= minEndUnix && selectedEndUnix <= maxEndUnix) {
+            var formattedEnd = new persianDate(selectedEndUnix).format("YYYY/MM/DD");
+            $endPicker.val(formattedEnd);
         } else {
-            // اگر start_date وجود ندارد، دیت‌پیکر پایان را به صورت ابتدایی با minDate امروز راه بینداز،
-            // اما اجازه انتخاب نده تا وقتی start_date انتخاب شود (در onSelect چک میکنیم)
-            $endPicker.persianDatepicker({
-                format: "YYYY/MM/DD",
-                minDate: todayUnix,
-                initialValue: false,
-                timePicker: { enabled: false },
-                onSelect: function (unix) {
-                    var startVal = $startHidden.val();
-                    if (!startVal) {
-                        alert("لطفاً ابتدا تاریخ شروع را انتخاب کنید.");
-                        $endPicker.val("");
-                        return;
-                    }
-                    var startUnix = new persianDate(startVal).unix() * 1000;
-                    var minEndUnix = startUnix + (minDaysAfterStart * 24 * 60 * 60 * 1000);
-                    var maxEndUnix = startUnix + (maxDaysAfterStart * 24 * 60 * 60 * 1000);
-                    if (unix >= minEndUnix && unix <= maxEndUnix) {
-                        var formatted = new persianDate(unix).format("YYYY/MM/DD");
-                        $endHidden.val(formatted);
-                        $endPicker.val(formatted);
-                        // بعد از انتخاب، دیت‌پیکر را با محدودیت درست دوباره میسازیم
-                        updateEndDatepickerOnStartSelect(startUnix);
-                    } else {
-                        alert("تاریخ پایان باید بین ۲ تا ۱۴ روز بعد از تاریخ شروع باشد.");
-                        $endPicker.val("");
-                    }
-                }
-            });
-            // اگر start_date وجود نداشته باشد، مقدار end_date هم باید پاک شود
-            $endHidden.val("");
             $endPicker.val("");
+            $endHidden.val("");
+        }
+    }
+
+    // تابع بازسازی دیت‌پیکر پایان بعد از انتخاب تاریخ شروع
+    function updateEndPickerOnStartSelect(startUnix) {
+        var minEndUnix = startUnix + (minDaysAfterStart * 24 * 60 * 60 * 1000);
+        var maxEndUnix = startUnix + (maxDaysAfterStart * 24 * 60 * 60 * 1000);
+
+        if (endPickerInstance) {
+            endPickerInstance.destroy();
+        }
+
+        $endPicker.persianDatepicker({
+            format: "YYYY/MM/DD",
+            minDate: minEndUnix,
+            maxDate: maxEndUnix,
+            initialValue: false,
+            timePicker: { enabled: false },
+            onSelect: function (unix) {
+                var formatted = new persianDate(unix).format("YYYY/MM/DD");
+                $endHidden.val(formatted);
+                $endPicker.val(formatted);
+                if (window.validateForm) window.validateForm();
+            }
+        });
+        endPickerInstance = $endPicker.data("datepicker");
+        $endHidden.val("");
+        $endPicker.val("");
+    }
+
+    // متد اصلی برای تنظیم حداقل روزهای مجاز برای تاریخ شروع
+    function setStartMinDays(daysOffset) {
+    // جبران offset برای نمایش صحیح در persian-datepicker
+    var actualOffset = daysOffset - 1;
+    var todayClean = new persianDate().startOf('day');
+    var minDateUnix = new persianDate(todayClean).add('days', actualOffset).unix() * 1000;
+
+    // از بین بردن دیت‌پیکرهای قبلی
+    if (startPickerInstance) startPickerInstance.destroy();
+    if (endPickerInstance) endPickerInstance.destroy();
+
+    // بررسی اینکه آیا مقدار قبلی تاریخ شروع معتبر هست یا نه
+    var prevStartStr = $startHidden.val();
+    var prevStartUnix = prevStartStr ? new persianDate(prevStartStr).unix() * 1000 : null;
+    var validStart = prevStartUnix && prevStartUnix >= minDateUnix;
+
+    // اگر معتبر نیست، پاکش کن
+    if (!validStart) {
+        $startHidden.val("");
+        $startPicker.val("");
+        $endHidden.val("");
+        $endPicker.val("");
+    } else {
+        $startPicker.val(prevStartStr);
+    }
+
+    // ساخت دیت‌پیکر شروع با محدودیت جدید
+    $startPicker.persianDatepicker({
+        format: "YYYY/MM/DD",
+        minDate: minDateUnix,
+        initialValue: validStart ? prevStartUnix : false,
+        timePicker: { enabled: false },
+        onSelect: function (unix) {
+            var formatted = new persianDate(unix).format("YYYY/MM/DD");
+            $startHidden.val(formatted);
+            $startPicker.val(formatted);
+            updateEndPickerOnStartSelect(unix);
+            if (window.validateForm) window.validateForm();
         }
     });
+    startPickerInstance = $startPicker.data("datepicker");
+
+    if (validStart) {
+        var prevEndStr = $endHidden.val();
+        var prevEndUnix = prevEndStr ? new persianDate(prevEndStr).unix() * 1000 : null;
+        setupEndPicker(prevStartUnix, prevEndUnix);
+    }
+}
+
+    // در ابتدا با offSet پیش‌فرض ۲ روزه اجرا کن
+    setStartMinDays(2);
+
+    // شئ سراسری برای دسترسی از بیرون
+    window.CampaignDatepicker = {
+        setStartMinDays: setStartMinDays
+    };
 };

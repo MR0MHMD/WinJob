@@ -13,14 +13,6 @@ def home(request):
 
     user = request.user
 
-    if user.is_authenticated:
-        if user.is_advertiser:
-            return redirect("advertisers:dashboard")
-        elif user.is_influencer:
-            return redirect("influencers:dashboard")
-        elif user.is_team_member:
-            return redirect("content_team:dashboard")
-
     # ========== آمار کلی پلتفرم ==========
     total_influencers = InfluencerProfile.objects.filter(is_active=True).count()
     total_channels = InfluencerChannel.objects.filter(is_active=True).count()
