@@ -6,7 +6,7 @@ from django.http import JsonResponse
 import json
 
 from campaigns.models import Campaign
-from content_team.models import ContentServiceRate
+from content_team.models import ContentServicePlan
 
 
 @require_POST
@@ -97,7 +97,7 @@ def api_content_team_rates(request):
 
     minutes = int(minutes) if minutes else 1
 
-    rates = ContentServiceRate.objects.filter(
+    rates = ContentServicePlan.objects.filter(
         service_type_id=service_type,
         is_available=True,
         team__is_active=True

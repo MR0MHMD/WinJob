@@ -1,0 +1,198 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %} مدیریت تیم {{ team.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/forms/team_management.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-5">
+        <div class="glass-effect rounded-4 p-4 p-lg-5 mb-5 animate-card">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-4">
+                <div class="d-flex align-items-center gap-4">
+                    {% if team.logo %}
+                        <div class="position-relative">
+                            <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="rounded-3 shadow" style="width: 85px; height: 85px; object-fit: cover; border: 2px solid #fd5631;">
+                            <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1 border border-dark"></span>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <span class="badge bg-primary bg-opacity-25 text-primary px-3 py-1 rounded-pill mb-2"><i class="fi-star-filled ms-1"></i> پنل مدیریت حرفه‌ای</span>
+                        <h1 class="display-6 text-light fw-bold mb-1">{{ team.name }}</h1>
+                        
+                        <div class="d-flex flex-wrap gap-3 mt-2">
+                            <small class="text-muted"><i class="fi-calendar ms-1"></i> ایجاد: {{ team.created_at|date:"Y/m/d" }}</small>
+                            <small class="text-muted"><i class="fi-refresh ms-1"></i> بروزرسانی: {{ team.updated_at|date:"Y/m/d" }}</small>
+                            <small class="text-muted"><i class="fi-users ms-1"></i> کد تیم: #{{ team.id }}</small>
+                        </div>
+                    </div>
+                </div>
+            
+                <a href="{% url 'content_team:team_detail' team.slug %}" target="_blank" class="btn btn-outline-primary rounded-pill px-4"><i class="fi-eye-on ms-2"></i> مشاهده عمومی</a>
+            </div>
+        </div>
+    
+        <div class="row g-5">
+            <div class="col-lg-7">
+                <div class="card bg-dark border-light rounded-4 shadow animate-card" style="animation-delay: 0.1s;">
+                    <div class="card-header bg-transparent border-light py-3 d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 rounded-3 p-2">
+                            <i class="fi-edit fs-3 text-primary"></i>
+                        </div>
+                        
+                        <div>
+                            <h3 class="h5 text-light mb-0">اطلاعات اصلی تیم</h3>
+                            <p class="small text-muted mb-0">ویرایش و به‌روزرسانی اطلاعات</p>
+                        </div>
+                    </div>
+                
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data" id="teamForm" novalidate>
+                            {% csrf_token %}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger alert-dismissible fade show rounded-3">{{ form.non_field_errors }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                            {% endif %}
+    
+                            <div class="mb-4">
+                                <label for="team-name" class="form-label text-light fw-semibold">
+                                    <i class="fi-flag ms-1"></i>نام تیم 
+                                    <span class="text-danger">*</span>
+                                </label>
+                            
+                                <input type="text" name="{{ form.name.name }}" value="{{ form.name.value|default:'' }}" id="team-name" class="form-control form-control-light rounded-3 {% if form.name.errors %}is-invalid{% endif %}" placeholder="مثل: تیم دیجیتال آرت">
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+    
+                            <div class="mb-4">
+                                <label for="slug-input" class="form-label text-light fw-semibold"><i class="fi-link ms-1"></i> شناسه یکتا (اسلاگ)</label>
+                                <div class="input-group" dir="ltr">
+                                    <span class="input-group-text bg-dark border-light text-muted rounded-start-3">winjob.ir/content_team/</span>
+                                    <input type="text" name="{{ form.slug.name }}" value="{{ form.slug.value|default:'' }}" id="slug-input" class="form-control form-control-light rounded-end-3 {% if form.slug.errors %}is-invalid{% endif %}" autocomplete="off">
+                                </div>
+                            
+                                <div id="slug-feedback" class="small mt-1"></div>
+                            
+                                {% if form.slug.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.slug.errors.0 }}</div>
+                                {% endif %}
+                            
+                                <div class="form-text text-muted">فقط حروف انگلیسی، اعداد، خط تیره و زیرخط. خالی = خودکار</div>
+                            </div>
+    
+                            <div class="mb-4">
+                                <label class="form-label text-light fw-semibold"><i class="fi-image ms-1"></i> لوگوی تیم</label>
+                                <div class="row g-3 align-items-center">
+                                    {% if team.logo %}
+                                        <div class="col-auto">
+                                            <img src="{{ team.logo.url }}" id="logoPreview" class="rounded-3 shadow-sm" style="width: 85px; height: 85px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" alt="لوکوی تیم">
+                                        </div>
+                                    {% endif %}
+                                
+                                    <div class="col">
+                                        <div id="dropZone" class="drag-drop-zone p-4 text-center rounded-4">
+                                            <i class="fi-cloud-upload fs-2 text-primary mb-2 d-block"></i>
+                                            <span class="small text-light">کلیک کنید یا تصویر را بکشید</span>
+                                            <div class="text-muted small mt-1">JPEG, PNG, GIF (حداکثر 2 مگابایت)</div>
+                                            <input type="file" name="{{ form.logo.name }}" id="{{ form.logo.id_for_label }}" class="d-none" accept="image/*">
+                                        </div>
+                                        {% if form.logo.errors %}<div class="text-danger small mt-1">{{ form.logo.errors.0 }}</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <div class="mb-4">
+                                <label for="description-field" class="form-label text-light fw-semibold"><i class="fi-align-left ms-1"></i> توضیحات تیم</label>
+                                <textarea name="{{ form.description.name }}" id="description-field" rows="5" class="form-control form-control-light rounded-3 {% if form.description.errors %}is-invalid{% endif %}" placeholder="درباره تیم، تخصص‌ها، سابقه و هر آنچه برای جذب سفارش لازم است...">{{ form.description.value|default:'' }}</textarea>
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.description.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+    
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-semibold shadow" style="background: linear-gradient(95deg, #fd5631, #fd7e4a); border: none;">
+                                <i class="fi-check-circle ms-2"></i> ذخیره تغییرات
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="col-lg-5">
+                <div class="card bg-dark border-light rounded-4 shadow animate-card" style="animation-delay: 0.2s;">
+                    <div class="card-header bg-transparent border-light py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="h5 text-light mb-0"><i class="fi-users text-primary ms-2"></i> اعضای تیم</h3>
+                            <span class="small text-muted">{{ members|length }} عضو فعال</span>
+                        </div>
+                        
+                        <a href="{% url 'content_team:team_members_manage' team.slug %}" class="btn btn-manage text-primary">مدیریت اعضا<i class="fi-settings ms-1"></i> </a>
+                    </div>
+                
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for member in members %}
+                                <div class="member-row p-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if member.user.avatar %}
+                                            <img src="{{ member.user.avatar.url }}" class="avatar-sm" alt="{{ member.user.nickname }}">
+                                        {% else %}
+                                            <div class="avatar-sm d-flex align-items-center justify-content-center bg-dark"><i class="fi-user fs-4 text-muted"></i></div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-semibold text-light mb-2">{{ member.user.nickname|default:member.get_role_display }}</div>
+                                            <span class="badge-role">{{ member.get_role_display }}</span>
+                                        </div>
+                                    </div>
+                                
+                                    <span class="badge-percent">{{ member.revenue_share_percent }}%</span>
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-5">
+                                    <i class="fi-users fs-1 text-muted opacity-25 mb-2"></i>
+                                    <p class="text-muted mb-0">هیچ عضوی در تیم نیست</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if members %}
+                        <div class="card-footer bg-transparent border-light d-flex justify-content-between">
+                            <span class="small text-muted">مجموع درصد سهام</span>
+                            <span class="fw-bold {% if total_percent == 100 %}text-success{% else %}text-warning{% endif %}">{{ total_percent }}%</span>
+                        </div>
+                        {% if total_percent != 100 %}
+                            <div class="alert alert-warning m-3 py-2 small rounded-3">
+                                <i class="fi-alert-triangle ms-1"></i> مجموع درصد سهام باید ۱۰۰ باشد. اکنون {{ total_percent }}% است.
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+    
+                <div class="card bg-dark border-light rounded-4 shadow mt-4 animate-card" style="animation-delay: 0.3s;">
+                    <div class="card-body text-center">
+                        <i class="fi-help text-primary fs-2 mb-2 d-block"></i>
+                        <h6 class="text-light">پشتیبانی و راهنما</h6>
+                        <p class="small text-muted mb-2">برای تغییر نقش اعضا یا تنظیمات پیشرفته با ادمین سایت تماس بگیرید.</p>
+                        <a href="#" class="btn btn-link text-primary small p-0">تماس با پشتیبانی <i class="fi-arrow-left"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+	<script>
+        window.teamFormConfig = {
+            logoInputId: '{{ form.logo.id_for_label }}',
+            teamId: '{{ team.id }}'
+        };
+    </script>
+    <script src="{% static 'content_team/js/forms/team_management.js' %}"></script>
+{% endblock %}

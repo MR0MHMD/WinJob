@@ -34,7 +34,7 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     inlines = [
         ContentTeamMemberInline,
-        ContentServiceRateInline,
+        ContentServicePlanInline,
         TeamReviewInline,
         ContentPortfolioInline
     ]
@@ -266,26 +266,36 @@ class ContentServiceTypeAdmin(admin.ModelAdmin):
     }
 
 
-@admin.register(ContentServiceRate)
-class ContentServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+@admin.register(ContentServicePlan)
+class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    """
+    مدیریت پلن‌های خدمات تیم‌ها
+    هر تیم برای هر نوع خدمت تا ۳ پلن می‌تونه داشته باشه
+    """
     list_display = (
-        "team",
+        "id",
+        "name",
+        "team_link",
         "service_type",
-        "price_per_unit",
+        "price_display",
         "estimated_delivery_days",
-        "is_available",
-        "created_at",
+        "orders_count_display",
+        "is_active_badge",
+        "formated_created_ad",
     )
 
     list_filter = (
-        "is_available",
+        "is_active",
         "team",
         "service_type",
+        "estimated_delivery_days",
     )
 
     search_fields = (
         "team__name",
         "service_type__name",
+        "name",
+        "description",
     )
 
     autocomplete_fields = (
@@ -293,25 +303,128 @@ class ContentServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "service_type",
     )
 
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "price_display",
+        "features_display",
+        "orders_count_display",
+    )
+
+    fieldsets = (
+        (_("اطلاعات اصلی"), {
+            "fields": (
+                "team",
+                "service_type",
+                "name",
+                "description",
+            )
+        }),
+        (_("قیمت‌گذاری و زمان"), {
+            "fields": (
+                "price_per_unit",
+                "price_display",
+                "estimated_delivery_days",
+            )
+        }),
+        (_("ویژگی‌های پلن"), {
+            "fields": (
+                "features",
+                "features_display",
+            ),
+            "classes": ("wide",),
+        }),
+        (_("وضعیت و آمار"), {
+            "fields": (
+                "is_active",
+                "orders_count_display",
+            )
+        }),
+        (_("تاریخ‌ها"), {
+            "fields": (
+                "created_at",
+                "updated_at",
+            ),
+            "classes": ("collapse",)
+        }),
+    )
+
+    # ---------- متدهای نمایش ----------
+    def team_link(self, obj):
+        url = reverse("admin:content_team_contentteam_change", args=[obj.team.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.team.name)
+
+    team_link.short_description = _("تیم")
+    team_link.admin_order_field = "team__name"
+
+    def price_display(self, obj):
+        """نمایش قیمت خوانا"""
+        return obj.price_display
+
+    price_display.short_description = _("قیمت")
+    price_display.admin_order_field = "price_per_unit"
+
+    def features_display(self, obj):
+        """نمایش کامل ویژگی‌ها در جزئیات"""
+        features_list = obj.get_features_list()
+        if not features_list:
+            return mark_safe('<span style="color: #6c757d;">بدون ویژگی</span>')
+
+        badges = []
+        for feature in features_list:
+            badges.append(
+                f'<span style="display: inline-block; background: #e9ecef; color: #495057; '
+                f'padding: 3px 10px; margin: 2px; border-radius: 15px; font-size: 13px;">'
+                f'{feature}</span>'
+            )
+        return mark_safe(''.join(badges))
+
+    features_display.short_description = _("ویژگی‌های پلن")
+
+    def orders_count_display(self, obj):
+        if not obj.pk:  # هنوز ذخیره نشده
+            return "-"
+        count = obj.orders.count()
+        if count:
+            return format_html('<span style="color: #007bff;">{} سفارش</span>', count)
+        return mark_safe('<span style="color: #6c757d;">بدون سفارش</span>')
+
+    orders_count_display.short_description = _("سفارش‌ها")
+
+    def is_active_badge(self, obj):
+        if obj.is_active:
+            return mark_safe('<span style="color: #28a745;">✓ فعال</span>')
+        return mark_safe('<span style="color: #dc3545;">✗ غیرفعال</span>')
+
+    is_active_badge.short_description = _("وضعیت")
+
+    def formated_created_ad(self, obj):
+        return format_datetime(obj.created_at)
+
+    formated_created_ad.short_description = _("تاریخ ایجاد")
+
+    # ---------- محدودیت منطقه‌ای ----------
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_regional_manager and request.user.province:
+            # فیلتر کردن پلن‌هایی که تیم‌شون در استان مدیر منطقست
             team_ids = []
-            for rate in qs:
-                province = get_team_province(rate.team)
+            for plan in qs:
+                province = get_team_province(plan.team)
                 if province and province.id == request.user.province.id:
-                    team_ids.append(rate.team_id)
+                    team_ids.append(plan.team_id)
             return qs.filter(team_id__in=team_ids)
-        return qs
+        return qs.select_related('team', 'service_type')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'team' and request.user.is_regional_manager:
+        if db_field.name == "team" and request.user.is_regional_manager:
+            # فقط تیم‌های هم‌استان مدیر منطقه‌ای
             team_ids = []
             for team in ContentTeam.objects.all():
                 province = get_team_province(team)
                 if province and province.id == request.user.province.id:
                     team_ids.append(team.id)
-            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+            kwargs["queryset"] = ContentTeam.objects.filter(id__in=team_ids)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
@@ -320,7 +433,7 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "campaign",
         "team",
-        "service_rate",
+        "plan",
         "price",
         "status",
         "has_brief_display",
@@ -341,7 +454,7 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     autocomplete_fields = (
         "campaign",
         "team",
-        "service_rate",
+        "plan",
     )
 
     readonly_fields = (
@@ -360,7 +473,7 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             "fields": (
                 "campaign",
                 "team",
-                "service_rate",
+                "plan",
                 "price",
             )
         }),

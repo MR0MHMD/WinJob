@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 
-from content_team.models import ContentServiceType, ContentServiceRate, ContentOrderDescription
+from content_team.models import ContentServiceType, ContentServicePlan, ContentOrderDescription
 from .utils import jalali_str_to_datetime, validate_start_date, validate_end_date
 from .models import ContentType, AdType, CampaignContent
 from urllib.parse import urlparse, urlencode, urlunparse
@@ -333,35 +333,37 @@ class CampaignStep2Form(forms.Form):
         return influencers
 
 
+from content_team.models import ContentServicePlan
+
 class CampaignStep3TeamForm(forms.Form):
-    """
-    فرم انتخاب تیم تولید محتوا
-    فقط مسئول انتخاب یک تیم (service rate) است
-    """
-    selected_rate = forms.ModelChoiceField(
-        queryset=ContentServiceRate.objects.none(),
-        label="انتخاب تیم",
+    selected_plan = forms.IntegerField(
         required=True,
-        widget=forms.RadioSelect(),
+        widget=forms.HiddenInput(),
         error_messages={
-            'required': 'لطفاً یک تیم تولید محتوا انتخاب کنید.',
-            'invalid_choice': 'تیم انتخاب‌شده معتبر نیست.',
+            'required': 'لطفاً یک پلن تولید محتوا انتخاب کنید.',
         }
     )
 
     def __init__(self, *args, service_type=None, **kwargs):
+        self.service_type = service_type
         super().__init__(*args, **kwargs)
 
-        if service_type:
-            self.fields['selected_rate'].queryset = (
-                ContentServiceRate.objects
-                .filter(
-                    service_type=service_type,
-                    is_available=True,
-                    team__is_active=True
-                )
-                .select_related("team", "service_type")
+    def clean_selected_plan(self):
+        plan_id = self.cleaned_data.get('selected_plan')
+        if not plan_id:
+            raise forms.ValidationError("لطفاً یک پلن انتخاب کنید.")
+        try:
+            plan = ContentServicePlan.objects.select_related('team', 'service_type').get(
+                id=plan_id,
+                is_active=True,
+                team__is_active=True
             )
+            # بررسی کنم که پلن با نوع سرویس کمپین همخوانی داشته باشه
+            if self.service_type and plan.service_type != self.service_type:
+                raise forms.ValidationError("پلن انتخاب شده با نوع سرویس کمپین هماهنگ نیست.")
+        except ContentServicePlan.DoesNotExist:
+            raise forms.ValidationError("پلن انتخاب شده نامعتبر یا غیرفعال است.")
+        return plan_id  # یا می‌توانی خود شیء plan رو برگردونی، بعداً در ویو ازش استفاده کنی
 
     def clean_selected_rate(self):
         rate = self.cleaned_data.get("selected_rate")

@@ -1,40 +1,67 @@
 /* ========================================
-   Description / Brief Form Fields
+   Ad Content Card
+======================================== */
+.ad-content-card {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.05));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+}
+
+.ad-content-card:hover {
+    border-color: rgba(253, 86, 49, 0.3);
+    transform: translateY(-2px);
+}
+
+.required-field::after {
+    content: "*";
+    color: #f23c49;
+    margin-right: 4px;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    transition: color 0.3s ease;
+}
+
+.char-counter.valid {
+    color: #07c98b;
+}
+
+.char-counter.invalid {
+    color: #f23c49;
+}
+
+.preview-link {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+/* ========================================
+   Brief Section
 ======================================== */
 .brief-section {
     display: none;
 }
 
-.description-section, .brief-section {
-    animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .description-card {
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(var(--fi-primary-rgb), 0.2);
+    border: 1px solid rgba(253, 86, 49, 0.2);
     border-radius: 12px;
     overflow: hidden;
 }
 
 .description-header {
     padding: 1rem 1.25rem;
-    background: rgba(var(--fi-primary-rgb), 0.08);
-    border-bottom: 1px solid rgba(var(--fi-primary-rgb), 0.15);
+    background: rgba(253, 86, 49, 0.08);
+    border-bottom: 1px solid rgba(253, 86, 49, 0.15);
 }
 
 .description-header h6 {
-    color: var(--fi-light);
+    color: #fff;
     font-size: 0.9rem;
     font-weight: 600;
 }
@@ -62,46 +89,6 @@
     transition: all 0.25s ease;
 }
 
-/* فرم‌های لایت در کارت بریف */
-.description-card .form-control-light,
-.modal-body .form-control-light,
-.description-card .form-select-light {
-    width: 100%;
-    border-radius: 0.75rem;
-    padding: 0.75rem 0.9rem;
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #fff;
-    font-size: 0.875rem;
-    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
-}
-
-.description-card .form-control-light:focus,
-.modal-body .form-control-light:focus,
-.description-card .form-select-light:focus {
-    background-color: rgba(255, 255, 255, 0.08);
-    border-color: rgb(255, 98, 0);
-    outline: none;
-}
-
-.description-card .form-control-light::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.description-card .form-select-light {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ffffff80' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.9rem center;
-    background-size: 14px;
-    padding-right: 2.1rem;
-}
-
-.description-card textarea.form-control-light {
-    min-height: 110px;
-    resize: vertical;
-}
-
 /* ========================================
    File Upload
 ======================================== */
@@ -111,14 +98,14 @@
     padding: 30px;
     text-align: center;
     cursor: pointer;
-    transition: all .25s ease;
+    transition: all 0.25s ease;
     background: rgba(255, 255, 255, 0.02);
 }
 
 .file-upload-box:hover,
 .file-upload-box.dragover {
-    border-color: var(--fi-primary);
-    background: rgba(255, 78, 0, 0.04);
+    border-color: #fd5631;
+    background: rgba(253, 86, 49, 0.04);
     transform: scale(1.02);
 }
 
@@ -131,7 +118,7 @@
 
 .upload-icon {
     font-size: 36px;
-    color: var(--fi-primary);
+    color: #fd5631;
     margin-bottom: 10px;
 }
 
@@ -143,13 +130,13 @@
 
 .upload-text p {
     font-size: 13px;
-    opacity: .8;
+    opacity: 0.8;
     margin-bottom: 4px;
 }
 
 .upload-text span {
     font-size: 12px;
-    opacity: .6;
+    opacity: 0.6;
 }
 
 .file-list {
@@ -183,7 +170,8 @@
 /* ========================================
    Attachments Table
 ======================================== */
-#attachments-table td, #attachments-table th {
+#attachments-table td,
+#attachments-table th {
     vertical-align: middle;
 }
 
@@ -200,22 +188,18 @@
 ======================================== */
 #char-count {
     font-weight: 600;
-    color: var(--fi-primary);
+    color: #fd5631;
 }
 
 .min-char-warning {
     font-size: 0.75rem;
-    color: var(--fi-primary);
+    color: #fd5631;
     animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.6;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 /* ========================================

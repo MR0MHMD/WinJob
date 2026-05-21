@@ -182,6 +182,9 @@ class ContentTeamMember(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def is_manager(self):
+        return self.role == self.Role.MANAGER and self.is_active
+
 
 class ContentServiceType(models.Model):
     """
@@ -239,65 +242,140 @@ class ContentServiceType(models.Model):
         return self.name
 
 
-class ContentServiceRate(models.Model):
+class ContentServicePlan(models.Model):
     """
-    نرخ‌گذاری خدمات هر تیم تولید محتوا
-    هر تیم برای هر نوع خدمت می‌تواند نرخ مشخصی تعیین کند
+    پلن‌های قیمت‌گذاری خدمات تیم‌های تولید محتوا
+    هر تیم برای هر خدمت می‌تونه تا ۳ پلن تعریف کنه
+    مدیر تیم می‌تونه پلن‌ها رو ایجاد و مدیریت کنه
     """
+
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.CASCADE,
-        related_name='service_rates',
+        related_name='service_plans',
         verbose_name=_('تیم')
     )
+
     service_type = models.ForeignKey(
-        ContentServiceType,
+        'ContentServiceType',
         on_delete=models.CASCADE,
-        related_name='rates',
+        related_name='plans',
         verbose_name=_('نوع خدمت')
     )
 
+    name = models.CharField(
+        _('نام پلن'),
+        max_length=200,
+        help_text=_('مثلاً: "پلن اقتصادی - دو دوربین" یا "پکیج حرفه‌ای - چهار دوربین"')
+    )
+
+    description = models.TextField(
+        _('توضیحات پلن'),
+        help_text=_('توضیح کامل این پلن شامل چه چیزایی میشه')
+    )
+
+    features = models.JSONField(
+        _('ویژگی‌ها'),
+        default=list,
+        blank=True,
+        help_text=_('لیست ویژگی‌های این پلن. مثال: ["۲ دوربین 4K", "تدوین حرفه‌ای", "موزیک متن", "تحویل ۳ روزه"]')
+    )
+
     price_per_unit = models.DecimalField(
-        _('قیمت (تومان)'),
+        _('قیمت به ازای واحد (تومان)'),
         max_digits=12,
         decimal_places=0,
-        validators=[MinValueValidator(Decimal('0'))]
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text=_('قیمت برای هر دقیقه/پروژه')
     )
 
     estimated_delivery_days = models.PositiveIntegerField(
-        _('زمان تحویل تقریبی (روز)'),
-        default=3,
-        validators=[MinValueValidator(1)]
+        _('مدت آماده سازی'),
+        default=5,
+        validators=[MinValueValidator(1)],
+        help_text=_('حداکثر چند روز کاری طول میکشه تا تحویل داده بشه')
     )
 
-    description = models.CharField(max_length=255, blank=True, null=True)
+    is_active = models.BooleanField(
+        _('فعال'),
+        default=True,
+        help_text=_('آیا این پلن در حال حاضر قابل سفارش هست؟')
+    )
 
-    is_available = models.BooleanField(
-        _('در دسترس'),
-        default=True
-    )
-    notes = models.TextField(
-        _('یادداشت‌ها'),
-        blank=True,
-        help_text=_('توضیحات اضافی درباره این خدمت')
-    )
     created_at = jmodels.jDateTimeField(
         _('تاریخ ایجاد'),
         auto_now_add=True
     )
+
     updated_at = jmodels.jDateTimeField(
-        _('تاریخ ویرایش'),
+        _('تاریخ بروزرسانی'),
         auto_now=True
     )
 
     class Meta:
-        verbose_name = _('نرخ خدمت تیم')
-        verbose_name_plural = _('نرخ‌های خدمات تیم‌ها')
-        unique_together = ['team', 'service_type']
-        ordering = ['team', 'service_type']
+        verbose_name = _('پلن خدمت')
+        verbose_name_plural = _('پلن‌های خدمات')
+        unique_together = [
+            ['team', 'service_type', 'name']  # هر تیم برای هر خدمت نمیتونه دو پلن با نام یکسان داشته باشه
+        ]
+        ordering = ['team', 'service_type', 'price_per_unit']  # مرتب‌سازی بر اساس قیمت از کم به زیاد
+        indexes = [
+            models.Index(fields=['team', 'service_type', 'is_active']),
+            models.Index(fields=['price_per_unit']),
+        ]
 
     def __str__(self):
-        return f"{self.team.name} - {self.service_type.name}: {self.price_per_unit:,} تومان"
+        return f"{self.team.name} - {self.service_type.name} - {self.name}"
+
+    def clean(self):
+        """اعتبارسنجی پلن"""
+        super().clean()
+
+        # بررسی تعداد پلن‌های فعال برای این تیم و خدمت
+        active_plans_count = ContentServicePlan.objects.filter(
+            team=self.team,
+            service_type=self.service_type,
+            is_active=True
+        ).exclude(pk=self.pk).count()
+
+        if self.is_active and not self.pk:  # پلن جدید
+            if active_plans_count >= 3:
+                raise ValidationError(
+                    _('هر تیم برای هر خدمت حداکثر می‌تونه ۳ پلن فعال داشته باشه.')
+                )
+        elif self.is_active and self.pk:  # ویرایش پلن موجود
+            if active_plans_count > 3:
+                raise ValidationError(
+                    _('نمیشه بیشتر از ۳ پلن فعال برای یک خدمت داشت.')
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def price_display(self):
+        """نمایش قیمت به صورت خوانا"""
+        if self.price_per_unit is not None:
+            return f"{self.price_per_unit:,} تومان"
+        return "-"  # یا "نامشخص"
+
+    @property
+    def price_per_unit_int(self):
+        """قیمت به صورت عدد صحیح برای محاسبات"""
+        return int(self.price_per_unit)
+
+    def get_features_list(self):
+        """دریافت لیست ویژگی‌ها"""
+        if isinstance(self.features, list):
+            return self.features
+        elif isinstance(self.features, str):
+            try:
+                import json
+                return json.loads(self.features)
+            except:
+                return [self.features]
+        return []
 
 
 class ContentOrder(models.Model):
@@ -322,11 +400,11 @@ class ContentOrder(models.Model):
         verbose_name="تیم تولید محتوا"
     )
 
-    service_rate = models.ForeignKey(
-        ContentServiceRate,
+    plan = models.ForeignKey(
+        ContentServicePlan,
         on_delete=models.PROTECT,
         related_name="orders",
-        verbose_name="تعرفه سرویس"
+        verbose_name="پلن انتخابی"
     )
 
     price = models.PositiveBigIntegerField(
@@ -357,6 +435,15 @@ class ContentOrder(models.Model):
 
     def __str__(self):
         return f' سفارش {self.campaign.name} - {self.campaign.advertiser.user.nickname}'
+
+    def save(self, *args, **kwargs):
+        """محاسبه خودکار قیمت قبل از ذخیره"""
+        if self.plan and not self.price:
+            if self.minutes:
+                self.price = int(self.plan.price_per_unit) * self.minutes
+            else:
+                self.price = int(self.plan.price_per_unit)
+        super().save(*args, **kwargs)
 
 
 class ContentOrderDescription(models.Model):

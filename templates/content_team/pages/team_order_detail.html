@@ -374,7 +374,7 @@
     }
     
     .action-btn-primary {
-        background: var(--primary-gradient);
+        background: var(--success-gradient);
         border: none;
         box-shadow: 0 5px 20px rgba(253, 86, 49, 0.3);
     }
@@ -418,21 +418,7 @@
         background: rgba(0, 0, 0, 0.6);
     }
     
-    /* ========== SCROLLBAR ========== */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
     
-    ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #fd5631, #5d3cf2);
-        border-radius: 10px;
-    }
     
     /* ========== LOADING SPINNER ========== */
     .btn-loading {
@@ -641,10 +627,17 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <div class="info-icon small">
-                            <i class="fi-tag"></i>
+                            <i class="{{ order.plan.service_type.icon }}"></i>
                         </div>
                         <div class="small text-muted mb-1">نوع خدمت</div>
-                        <div class="fw-bold text-light">{{ order.service_rate.service_type.name }}</div>
+                        <div class="fw-bold text-light">{{ order.plan.service_type.name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon small">
+                            <i class="bi bi-layers-half"></i>
+                        </div>
+                        <div class="small text-muted mb-1">پلن انتخاب شده</div>
+                        <div class="fw-bold text-light">{{ order.plan.name }}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-icon small">
@@ -836,9 +829,14 @@
                     <h5 class="text-light mb-0">تبلیغ‌دهنده</h5>
                 </div>
                 <div class="text-center mb-3">
-                    <div class="avatar-circle mx-auto" style="width: 80px; height: 80px; font-size: 2rem; background: var(--primary-gradient);">
-                        {{ order.campaign.advertiser.user.nickname|first|upper }}
-                    </div>
+                        {% if order.campaign.advertiser.user.avatar %}
+                            <img class="rounded-circle" width="100" src="{{ order.campaign.advertiser.user.avatar.url }}" alt="">
+                        {% else %}
+                            <div class="avatar-circle mx-auto" style="width: 80px; height: 80px; font-size: 2rem; background: var(--primary-gradient);">
+                                {{ order.campaign.advertiser.user.nickname|first|upper }}
+                            </div>
+                        {% endif %} 
+                    
                     <h5 class="text-light mt-3 mb-1">{{ order.campaign.advertiser.user.nickname }}</h5>
                     {% if order.campaign.advertiser.business_name %}
                         <div class="small text-muted">{{ order.campaign.advertiser.business_name }}</div>
@@ -930,7 +928,7 @@
         <!-- وضعیت: در انتظار - نمایش دکمه قبول و رد -->
         {% if order.status == 'pending' %}
             <!-- دکمه قبول سفارش -->
-            <button class="btn action-btn action-btn-primary accept-order-btn" 
+            <button class="btn action-btn action-btn-primary accept-order-btn rounded-pill py-3 text-light" 
                     data-order-id="{{ order.id }}"
                     data-bs-toggle="modal" 
                     data-bs-target="#acceptConfirmModal">
@@ -962,12 +960,19 @@
         
         <!-- وضعیت: تکمیل شده - نمایش پیام -->
         {% elif order.status == 'completed' %}
-            <div class="text-center py-3">
-                <i class="fi-check-circle text-success fs-1 mb-2 d-block"></i>
-                <p class="text-success mb-0">این سفارش تکمیل شده است</p>
-                <small class="text-muted">در انتظار تأیید نهایی تبلیغ‌دهنده</small>
-            </div>
-        
+            {% if order.delivery.status == "final_accepted" %}
+            	<div class="text-center py-3">
+                    <i class="fi-check-circle text-success fs-1 mb-2 d-block"></i>
+                    <p class="text-success mb-0">این سفارش تکمیل شده است</p>
+                    <small class="text-muted">مبلغ آن بین اعضای تیم تقسیم شده </small>
+                </div>
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fi-check-circle text-success fs-1 mb-2 d-block"></i>
+                    <p class="text-success mb-0">این سفارش تکمیل شده است</p>
+                    <small class="text-muted">در انتظار تأیید نهایی تبلیغ‌دهنده</small>
+                </div>
+            {% endif %}
         {% elif order.status == 'cancelled' %}
             <div class="text-center py-3">
                 <i class="fi-x-circle text-danger fs-1 mb-2 d-block"></i>
@@ -1018,7 +1023,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-light p-4">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
                     <button type="submit" class="btn btn-primary rounded-pill px-4" id="deliverSubmitBtn">
                         <i class="fi-upload me-2"></i> تحویل سفارش
                     </button>
@@ -1077,7 +1082,7 @@
                 </div>
             </div>
             <div class="modal-footer border-light p-4">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
                 <button type="button" class="btn btn-success rounded-pill px-4 confirm-accept-btn">قبول سفارش</button>
             </div>
         </div>
@@ -1109,7 +1114,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-light p-4">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
                     <button type="submit" class="btn btn-danger rounded-pill px-4 reject-submit-btn">تأیید رد سفارش</button>
                 </div>
             </form>
@@ -1178,7 +1183,7 @@ function showConfirmModal(title, message, onConfirm, onCancel = null) {
                         </p>
                     </div>
                     <div class="modal-footer border-light">
-                        <button type="button" class="btn btn-secondary rounded-pill px-4" id="confirmModalCancelBtn">
+                        <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmModalCancelBtn">
                             <i class="bi bi-x-lg me-1"></i> انصراف
                         </button>
                         <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmModalConfirmBtn">

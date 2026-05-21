@@ -8,24 +8,31 @@
     </div>
 
     <div class="bale-image-wrapper">
-        <img id="baleImage" class="bale-image d-none" alt="" src="">
+        {% if media_url %}
+            {% if is_video %}
+                <video class="bale-video" controls style="width:100%; border-radius:12px;">
+                    <source src="{{ media_url }}" type="video/mp4">
+                    مرورگر شما از ویدیو پشتیبانی نمی‌کند.
+                </video>
+            {% else %}
+                <img id="baleImage" class="bale-image" src="{{ media_url }}" alt="پیش‌نمایش تبلیغ">
+            {% endif %}
+        {% else %}
+            <div class="bale-placeholder" style="text-align:center; padding:20px; color:#999;">تصویر یا ویدیویی وجود ندارد</div>
+        {% endif %}
     </div>
 
     <div class="bale-content">
+        <p id="baleCaption" class="bale-text">{{ caption|default:"" }}</p>
 
-        <p id="baleCaption" class="bale-text"></p>
-
-        <a id="baleLink"
-           href="#"
-           class="bale-link d-none"
-           target="_blank">
-        </a>
+        {% if link %}
+            <a id="baleLink" href="{{ link }}" class="bale-link" target="_blank" rel="noopener noreferrer">{{ link }}</a>
+        {% endif %}
 
         <div class="bale-meta">
             <span id="baleViews">3.2K views 👁</span>
             <span id="baleTime">16:13</span>
         </div>
-
     </div>
 
 </div>

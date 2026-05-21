@@ -3,7 +3,7 @@ from django.urls import reverse
 from django_jalali.db import models as jmodels
 from accounts.models import CustomUser
 from django.utils.translation import gettext_lazy as _
-from core.utils import generate_english_slug
+from core.utils import generate_random_slug
 
 
 class PublishedManager(models.Manager):
@@ -45,7 +45,7 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = generate_english_slug(self.title)
+            self.slug = generate_random_slug()
         super().save(*args, **kwargs)
 
     class Meta:
@@ -85,7 +85,7 @@ class BlogTags(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = generate_english_slug(self.name)
+            self.slug = generate_random_slug()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -102,7 +102,7 @@ class BlogCategory(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = generate_english_slug(self.name)
+            self.slug = generate_random_slug()
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -271,7 +271,12 @@
                                                 {% elif order.delivery.status == 'revision_requested' %}bg-faded-warning text-warning
                                                 {% elif order.delivery.status == 'final_accepted' %}bg-faded-success text-success
                                                 {% else %}bg-faded-secondary{% endif %} rounded-pill">
-                                                {{ order.delivery.get_status_display }}
+                                                {% if order.delivery %}
+                                                	{{ order.delivery.get_status_display }}
+                                                {% else %}
+                                                    در انتظار
+                                                {% endif %} 
+                                                
                                             </span>
                                         </div>
                                     {% endif %}
@@ -502,7 +507,8 @@
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div class="col-6">
+                                                    {% if order.delivery %}
+                                                    	<div class="col-6">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
                                                             <div class="text-muted small mb-1">وضعیت تحویل</div>
                                                             <span class="badge
@@ -515,6 +521,8 @@
                                                             </span>
                                                         </div>
                                                     </div>
+                                                    {% endif %} 
+                                                    
                                                     <div class="col-6">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
                                                             <div class="text-muted small mb-1">قیمت سفارش</div>
@@ -524,7 +532,7 @@
                                                     <div class="col-6">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
                                                             <div class="text-muted small mb-1">نوع خدمت</div>
-                                                            <div class="text-light">{{ order.service_rate.service_type.name }}</div>
+                                                            <div class="text-light">{{ order.plan.service_type.name }}</div>
                                                         </div>
                                                     </div>
                                                     <div class="col-6">

@@ -1,9 +1,9 @@
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncMonth, TruncDate
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Count, Avg, Prefetch
 from accounts.models import Transaction, CustomUser
-from django.db.models import Q, Count, Avg, Prefetch, Sum
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from core.utils import convert_to_jalali
 from django.http import JsonResponse
 from datetime import datetime as dt
@@ -11,13 +11,13 @@ from django.contrib import messages
 from campaigns.models import Coupon
 from django.utils import timezone
 from datetime import timedelta
-from .models import *
+from content_team.models import *
 import jdatetime
 import json
-from .models import (
+from content_team.models import (
     ContentTeam,
     ContentServiceType,
-    ContentServiceRate,
+    ContentServicePlan,
     TeamReview,
     ContentTeamMember,
     ContentOrder,
@@ -53,13 +53,13 @@ def team_list_view(request):
     if service_type_filter:
         for slug in service_type_filter:
             teams = teams.filter(
-                service_rates__service_type__slug=slug,
-                service_rates__is_available=True
+                service_plans__service_type__slug=slug,
+                service_plans__is_active=True
             )
 
     # Prefetch بدون اسلایس
     teams = teams.prefetch_related(
-        'service_rates__service_type',
+        'service_plans__service_type',
         'portfolio_items',
         Prefetch('reviews', queryset=TeamReview.objects.order_by('-created_at')),  # اسلایس رو برداشتم
         Prefetch('members', queryset=ContentTeamMember.objects.filter(is_active=True))
@@ -103,7 +103,7 @@ def team_detail_view(request, slug):
     team = get_object_or_404(
         ContentTeam.objects.filter(is_active=True).prefetch_related(
             'members',
-            'service_rates__service_type',
+            'service_plans__service_type',
             'portfolio_items',
             Prefetch(
                 'reviews',
@@ -173,9 +173,18 @@ def team_detail_view(request, slug):
         },
     ]
 
-    available_services = team.service_rates.filter(
-        is_available=True
-    ).select_related('service_type')
+    from itertools import groupby
+
+    active_plans = team.service_plans.filter(
+        is_active=True
+    ).select_related('service_type').order_by('service_type__name', 'price_per_unit')
+
+    service_plans_by_type = []
+    for service_type, plans in groupby(active_plans, key=lambda p: p.service_type):
+        service_plans_by_type.append({
+            'service_type': service_type,
+            'plans': list(plans),
+        })
 
     portfolio_items = team.portfolio_items.filter(
         is_active=True
@@ -202,7 +211,7 @@ def team_detail_view(request, slug):
         'member_roles': member_roles,
         'videographers': videographers,
         'other_members': other_members,
-        'available_services': available_services,
+        'service_plans_by_type': service_plans_by_type,
         'portfolio_items': portfolio_items,
         'stats': stats,
         'reviews': reviews,
@@ -227,6 +236,7 @@ def content_team_dashboard(request):
 
     is_manager = (current_member.role == 'manager')
 
+    # سفارش‌ها
     orders = ContentOrder.objects.filter(team=team)
 
     total_orders = orders.count()
@@ -255,7 +265,6 @@ def content_team_dashboard(request):
         avg_rating = round(avg_rating, 1)
 
     total_reviews = team.reviews.count()
-
     total_members = team.members.filter(is_active=True).count()
 
     total_percent_sum = team.members.filter(is_active=True).aggregate(
@@ -283,10 +292,10 @@ def content_team_dashboard(request):
         if item['month']:
             jalali_date = convert_to_jalali(item['month'])
             if jalali_date:
-                monthly_labels.append(jalali_date.strftime('%B'))  # فقط اسم ماه مثل "فروردین"
+                monthly_labels.append(jalali_date.strftime('%B'))
                 monthly_data.append(float(item['total']) if item['total'] else 0)
 
-    # ========== نمودار تعداد سفارشات روزانه (30 روز اخیر) - مثل ویو موفق ==========
+    # ========== نمودار تعداد سفارشات روزانه (30 روز اخیر) ==========
     now = timezone.now()
     last_30_days = now - timedelta(days=30)
 
@@ -305,26 +314,25 @@ def content_team_dashboard(request):
         if item['day']:
             jalali_date = convert_to_jalali(item['day'])
             if jalali_date:
-                # فقط روز/ماه مثل "15/01" - همین ساده و تمیز
                 daily_orders_labels.append(jalali_date.strftime('%d/%m'))
             else:
                 daily_orders_labels.append(item['day'].strftime('%d/%m'))
             daily_orders_data.append(item['count'])
 
-    # ========== بقیه کدها ==========
+    # ========== سفارش‌های اخیر (با select_related اصلاح شده) ==========
     recent_orders = orders.select_related(
-        'campaign', 'team', 'service_rate'
+        'campaign', 'team', 'plan__service_type'  # اصلاح: به‌جای service_rate
     ).order_by('-created_at')[:10]
 
     active_orders = orders.filter(
         status='in_progress'
-    ).select_related('campaign', 'service_rate').order_by('created_at')[:5]
+    ).select_related('campaign', 'plan__service_type').order_by('created_at')[:5]
 
     pending_approval_orders = []
     if is_manager:
         pending_approval_orders = orders.filter(
             status='pending'
-        ).select_related('campaign', 'service_rate').order_by('created_at')[:5]
+        ).select_related('campaign', 'plan__service_type').order_by('created_at')[:5]
 
     recent_reviews = team.reviews.select_related(
         'advertiser', 'order'
@@ -344,13 +352,43 @@ def content_team_dashboard(request):
     if is_manager:
         team_members = team.members.filter(is_active=True).select_related('user')
 
-    service_rates = []
-    if is_manager:
-        service_rates = ContentServiceRate.objects.filter(
-            team=team,
-            is_available=True
-        ).select_related('service_type')
+    # ========== وضعیت پلن‌های خدمات (برای مدیر) ==========
+    service_types_with_plans = []
+    service_types_without_plans = []
+    services_without_plans = 0
+    services_with_plans_count = 0
+    total_services = 0
 
+    if is_manager:
+        all_service_types = ContentServiceType.objects.filter(is_active=True)
+
+        for st in all_service_types:
+            active_plans_count = ContentServicePlan.objects.filter(
+                team=team,
+                service_type=st,
+                is_active=True
+            ).count()
+
+            item = {
+                'service_type': st,
+                'active_plans_count': active_plans_count,
+                'max_plans': 3,
+                'percentage': (active_plans_count / 3) * 100,
+                'has_plans': active_plans_count > 0,
+                'is_full': active_plans_count >= 3,
+                'empty_slots': 3 - active_plans_count
+            }
+
+            if active_plans_count > 0:
+                service_types_with_plans.append(item)
+            else:
+                service_types_without_plans.append(item)
+
+        services_without_plans = len(service_types_without_plans)
+        services_with_plans_count = len(service_types_with_plans)
+        total_services = len(all_service_types)
+
+    # تاریخ شمسی امروز
     today = jdatetime.date.today()
     persian_date = today.strftime("%A %d %B %Y")
 
@@ -400,7 +438,11 @@ def content_team_dashboard(request):
         'recent_reviews': recent_reviews,
         'recent_transactions': recent_transactions,
         'team_members': team_members,
-        'service_rates': service_rates,
+        'service_types_with_plans': service_types_with_plans,
+        'service_types_without_plans': service_types_without_plans,
+        'services_without_plans': services_without_plans,
+        'services_with_plans_count': services_with_plans_count,
+        'total_services': total_services,
         'persian_date': persian_date,
     }
 
@@ -614,16 +656,21 @@ def team_orders_list(request):
     sort_by = request.GET.get('sort', '-created_at')
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
+    show_current_only = request.GET.get('current') == '1'
 
-    # کوئری اصلی با بهینه‌سازی
-    orders = ContentOrder.objects.filter(
-        team=user_team
-    ).select_related(
+    orders = None
+
+    if show_current_only:
+        orders = ContentOrder.objects.exclude(status__in=['completed', 'cancelled'])
+    else:
+        orders = ContentOrder.objects.filter(team=user_team)
+
+    orders.select_related(
         'campaign',
         'campaign__advertiser',
         'campaign__advertiser__user',
-        'service_rate',
-        'service_rate__service_type',
+        'plan',
+        'plan__service_type',
         'delivery',
     ).prefetch_related(
         'brief',
@@ -640,11 +687,12 @@ def team_orders_list(request):
 
     if search_query:
         orders = orders.filter(
-            Q(campaign__name__icontains=search_query) |
-            Q(campaign__advertiser__user__nickname__icontains=search_query) |
-            Q(campaign__advertiser__business_name__icontains=search_query) |
-            Q(brief__brand_name__icontains=search_query)
-        )
+    Q(campaign__name__icontains=search_query) |
+    Q(campaign__advertiser__user__nickname__icontains=search_query) |
+    Q(campaign__advertiser__business_name__icontains=search_query) |
+    Q(brief__brand_name__icontains=search_query)
+
+    )
 
     if price_min:
         orders = orders.filter(price__gte=int(price_min))
@@ -709,8 +757,8 @@ def team_order_detail(request, order_id):
             'campaign__advertiser',
             'campaign__advertiser__user',
             'team',
-            'service_rate',
-            'service_rate__service_type',
+            'plan',
+            'plan__service_type',
             'delivery',
         ).prefetch_related(
             'brief',
@@ -789,7 +837,6 @@ def reject_order(request, order_id):
 
         if order.status != 'pending':
             return JsonResponse({'error': 'این سفارش قابل رد نیست'}, status=400)
-
 
         order.status = 'cancelled'
         order.save()
@@ -1166,3 +1213,45 @@ def team_coupon_delete(request, coupon_id):
 
     messages.success(request, f"کد تخفیف {code} با موفقیت حذف شد! 🗑️")
     return redirect('content_team:team_coupons')
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from ..models import ContentTeamMember
+from ..forms import TeamManageForm
+
+
+@login_required
+def team_manage_view(request):
+    # پیدا کردن عضو تیم برای کاربر جاری (به دلیل OneToOneField حداکثر یک رکورد)
+    try:
+        team_member = ContentTeamMember.objects.select_related('team').get(user=request.user, is_active=True)
+    except ContentTeamMember.DoesNotExist:
+        messages.error(request, "شما عضو هیچ تیم فعالی نیستید.")
+        return redirect('home')  # یا صفحه مناسب دیگر
+
+    # بررسی نقش مدیر بودن
+    if team_member.role != ContentTeamMember.Role.MANAGER:
+        messages.error(request, "شما دسترسی مدیریت این تیم را ندارید.")
+        return redirect('home')
+
+    team = team_member.team
+
+    # پردازش فرم
+    if request.method == 'POST':
+        form = TeamManageForm(request.POST, request.FILES, instance=team)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "اطلاعات تیم با موفقیت به‌روزرسانی شد.")
+            return redirect('content_team:team_manage')
+    else:
+        form = TeamManageForm(instance=team)
+
+    context = {
+        'team': team,
+        'form': form,
+        'members': team.members.filter(is_active=True).select_related('user'),
+        'total_percent': team.get_total_revenue_percent(),
+    }
+    return render(request, 'content_team/forms/team_management.html', context)

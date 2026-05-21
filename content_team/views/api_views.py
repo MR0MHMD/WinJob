@@ -1,4 +1,4 @@
-from .models import TeamJoinRequest, ContentTeam, ContentTeamMember
+from content_team.models import TeamJoinRequest, ContentTeam, ContentTeamMember
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -140,3 +140,29 @@ def team_join_request_handle(request, team_slug, request_id):
 
     messages.error(request, 'درخواست نامعتبر است.')
     return redirect('content_team:team_members_manage', team_slug=team.slug)
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from ..models import ContentTeam
+
+
+@require_GET
+def check_slug_availability(request):
+    slug = request.GET.get('slug', '').strip()
+    team_id = request.GET.get('team_id', None)
+
+    if not slug:
+        return JsonResponse({'available': False, 'error': 'اسلاگ نمی‌تواند خالی باشد.'})
+
+    # بررسی یکتایی به جز تیم فعلی
+    qs = ContentTeam.objects.filter(slug=slug)
+    if team_id and team_id.isdigit():
+        qs = qs.exclude(id=int(team_id))
+
+    is_available = not qs.exists()
+
+    return JsonResponse({
+        'available': is_available,
+        'message': 'این اسلاگ قابل استفاده است.' if is_available else 'این اسلاگ قبلاً توسط تیم دیگری استفاده شده است.'
+    })

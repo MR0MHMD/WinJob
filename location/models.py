@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
-
-from core.utils import generate_english_slug
+from core.utils import generate_random_slug
 
 
 class Province(models.Model):
@@ -52,5 +51,5 @@ class City(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = generate_english_slug(self.name)
+            self.slug = generate_random_slug()
         super().save(*args, **kwargs)

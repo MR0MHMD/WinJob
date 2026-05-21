@@ -1,0 +1,197 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}مدیریت پلن‌های تیم{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/plans_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container-xxl py-4">
+
+        <!-- ==================== هدر صفحه ==================== -->
+        <div class="page-header">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+                        <h1 class="mb-0">مدیریت پلن‌ها</h1>
+                        <div class="team-badge text-light">
+                            <i class="fi-users me-1"></i>
+                            {{ team.name }}
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">
+                        برای هر خدمت می‌توانید حداکثر ۳ پلن فعال تعریف کنید
+                    </p>
+                </div>
+                <a href="{% url 'content_team:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="fi-arrow-right ms-2"></i>
+                    بازگشت به داشبورد
+                </a>
+            </div>
+
+            <!-- نکته مهم در مورد محدودیت تعداد پلن‌ها -->
+            <div class="info-alert mt-4">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="fi-lightbulb fa-lg mt-0.5"></i>
+                    <div>
+                        <strong class="text-white">نکته مهم:</strong>
+                        هر تیم می‌تواند برای هر خدمت حداکثر <strong class="text-primary">۳ پلن فعال</strong> داشته باشد.
+                        برای ایجاد پلن جدید، ابتدا در صورت نیاز یک پلن غیرفعال کنید.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== کارت‌های آمار ==================== -->
+        <div class="stats-section mb-5">
+            <div class="row g-4">
+                <div class="col-6 col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-icon">
+                            <i class="fi-grid"></i>
+                        </div>
+                        <div class="stats-number">{{ total_services }}</div>
+                        <div class="stats-label">کل خدمات</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-icon">
+                            <i class="fi-check-circle"></i>
+                        </div>
+                        <div class="stats-number">{{ services_with_plans }}</div>
+                        <div class="stats-label">خدمات دارای پلن</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-icon">
+                            <i class="fi-alert-circle"></i>
+                        </div>
+                        <div class="stats-number">{{ services_without_plans }}</div>
+                        <div class="stats-label">خدمات بدون پلن</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-icon">
+                            <i class="fi-pie-chart"></i>
+                        </div>
+                        <div class="stats-number">{{ total_plans }}</div>
+                        <div class="stats-label">کل پلن‌ها</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== لیست خدمات (کارت‌ها) ==================== -->
+        {% if service_types %}
+            <div class="row g-4">
+                {% for service in service_types %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="service-card"
+                             onclick="window.location.href='{% url 'content_team:service_plans' service.slug %}'">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start justify-content-between mb-4">
+                                    <div class="service-icon">
+                                        {% if service.icon %}
+                                            <i class="{{ service.icon }} fa-2x text-primary" style="font-size: 1.8rem;"></i>
+                                        {% else %}
+                                            <i class="fi-layers fa-2x text-primary" style="font-size: 1.8rem;"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="plans-counter">
+                                        <i class="fi-pie-chart"></i>
+                                        <span class="count">{{ service.plans_count }}</span>
+                                        <span>/ {{ max_plans_per_service }}</span>
+                                    </div>
+                                </div>
+
+                                <h3 class="h5 mb-2 text-white">{{ service.name }}</h3>
+
+                                {% if service.description %}
+                                    <p class="text-muted small mb-3 opacity-75">
+                                        {{ service.description|truncatewords:15 }}
+                                    </p>
+                                {% endif %}
+
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2">
+                                        <i class="fi-clock ms-1"></i>
+                                        واحد: {{ service.get_unit_display }}
+                                    </small>
+                                </div>
+
+                                <!-- نمایش تگ‌های پلن‌های فعال (حداکثر ۳ عدد) -->
+                                {% if service.active_plans %}
+                                    <div class="mb-3">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for plan in service.active_plans|slice:":3" %}
+                                                <span class="plan-mini-tag">
+                                                    <i class="fi-star-filled ms-1" style="font-size: 0.6rem;"></i>
+                                                    {{ plan.name|truncatechars:18 }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="empty-plans-placeholder text-center py-3">
+                                        <i class="fi-alert-circle text-muted mb-2 d-block"></i>
+                                        <small class="text-muted">هنوز پلنی تعریف نشده</small>
+                                    </div>
+                                {% endif %}
+
+                                <!-- دکمه اقدام (ایجاد یا مدیریت بر اساس وجود پلن) -->
+                                <div class="mt-3">
+                                    {% if service.plans_count == 0 %}
+                                        <button class="btn-plan-outline w-100"
+                                                onclick="event.stopPropagation(); window.location.href='{% url 'content_team:service_plans' service.slug %}'">
+                                            <i class="fi-plus ms-2"></i>
+                                            ایجاد پلن جدید
+                                        </button>
+                                    {% else %}
+                                        <button class="btn-plan-primary w-100"
+                                                onclick="event.stopPropagation(); window.location.href='{% url 'content_team:service_plans' service.slug %}'">
+                                            <i class="fi-edit ms-2"></i>
+                                            مدیریت پلن‌ها
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- حالت خالی: هیچ خدمتی موجود نیست -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fi-tags"></i>
+                </div>
+                <h3 class="h5 text-white mb-2">هیچ خدمتی یافت نشد</h3>
+                <p class="text-muted mb-4">در حال حاضر هیچ نوع خدمتی برای نمایش وجود ندارد</p>
+                <button class="btn-plan-primary" onclick="window.location.href='{% url 'admin:index' %}'">
+                    <i class="fi-settings ms-2"></i>
+                    تماس با پشتیبانی
+                </button>
+            </div>
+        {% endif %}
+
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+        // اعمال افکت hover روی کارت‌های خدمات
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-8px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+{% endblock %}

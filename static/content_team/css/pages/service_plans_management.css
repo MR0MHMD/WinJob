@@ -1,0 +1,501 @@
+/* ============================================
+   صفحه مدیریت پلن‌های خدمت - service_plans_management.html
+   طراحی مدرن با کارت‌های سه‌بعدی و افکت‌های ناب
+   ============================================ */
+
+/* ---- متغیرهای خاص ---- */
+.spm-container {
+    --spm-primary: #fd5631;
+    --spm-primary-dark: #e64a2a;
+    --spm-primary-glow: 0 0 25px rgba(253, 86, 49, 0.5);
+    --spm-card-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    --spm-card-border: rgba(255, 255, 255, 0.08);
+    --spm-transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+
+/* --- هدر صفحه --- */
+.spm-header {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.1) 0%, rgba(253, 86, 49, 0.02) 100%);
+    backdrop-filter: blur(20px);
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem 2rem;
+    margin-bottom: 2.5rem;
+}
+
+.spm-back-btn {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--spm-transition);
+    color: #fff;
+    text-decoration: none;
+}
+
+.spm-back-btn:hover {
+    background: var(--spm-primary);
+    transform: translateX(-5px);
+    color: #fff;
+}
+
+.spm-service-icon-mini {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.2) 0%, rgba(253, 86, 49, 0.05) 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spm-service-icon-mini i {
+    font-size: 1.8rem;
+    color: var(--spm-primary);
+}
+
+.spm-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #fd5631 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.spm-plans-limit-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 60px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* --- گرید کارت‌های پلن --- */
+.spm-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.75rem;
+}
+
+/* کارت پلن - طراحی خاص */
+.spm-plan-card {
+    background: var(--spm-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--spm-card-border);
+    border-radius: 28px;
+    padding: 1.5rem;
+    transition: var(--spm-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.spm-plan-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--spm-primary), transparent);
+    transform: scaleX(0);
+    transition: transform 0.5s ease;
+}
+
+.spm-plan-card:hover::before {
+    transform: scaleX(1);
+}
+
+.spm-plan-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(253, 86, 49, 0.3);
+    box-shadow: 0 25px 40px -20px rgba(0, 0, 0, 0.4);
+}
+
+.spm-plan-card.inactive {
+    opacity: 0.6;
+}
+
+.spm-plan-card.inactive:hover {
+    opacity: 0.8;
+}
+
+/* نشانگر وضعیت */
+.spm-plan-status-badge {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 60px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.spm-plan-status-badge.active {
+    background: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+    border: 1px solid rgba(7, 201, 139, 0.3);
+}
+
+.spm-plan-status-badge.inactive {
+    background: rgba(150, 145, 164, 0.15);
+    color: #9691a4;
+    border: 1px solid rgba(150, 145, 164, 0.3);
+}
+
+/* هدر کارت */
+.spm-plan-header {
+    margin: 3rem auto 1rem;
+    padding-left: 2.5rem;
+}
+
+.spm-plan-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.75rem;
+}
+
+.spm-plan-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.spm-plan-price .price-amount {
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 0%, #fd5631 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.spm-plan-price .price-unit {
+    font-size: 0.85rem;
+    color: #9691a4;
+}
+
+.spm-plan-price .price-per {
+    font-size: 0.7rem;
+    color: #666276;
+}
+
+/* توضیحات */
+.spm-plan-description {
+    font-size: 0.85rem;
+    color: #9691a4;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ویژگی‌ها */
+.spm-plan-features {
+    margin-bottom: 1rem;
+}
+
+.features-title {
+    font-size: 0.75rem;
+    color: #666276;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.features-title i {
+    color: var(--spm-primary);
+    font-size: 0.7rem;
+}
+
+.features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.features-list li {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.features-list li i {
+    color: var(--spm-primary);
+    font-size: 0.7rem;
+}
+
+/* اطلاعات تحویل */
+.spm-plan-delivery {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+}
+
+.spm-plan-delivery i {
+    color: var(--spm-primary);
+}
+
+/* دکمه‌های اکشن */
+.spm-plan-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+
+.spm-action-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    transition: var(--spm-transition);
+    cursor: pointer;
+}
+
+.spm-action-btn:hover {
+    background: var(--spm-primary);
+    color: #fff;
+    transform: translateY(-3px);
+}
+
+.spm-action-btn.delete-plan:hover {
+    background: #f23c49;
+}
+
+/* دکمه‌های اصلی */
+.spm-btn-primary {
+    background: linear-gradient(135deg, #fd5631 0%, #fd3509 100%);
+    border: none;
+    padding: 0.65rem 1.5rem;
+    border-radius: 16px;
+    font-weight: 600;
+    transition: var(--spm-transition);
+    color: #fff;
+}
+
+.spm-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -8px rgba(253, 86, 49, 0.5);
+}
+
+.spm-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.65rem 1.5rem;
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: var(--spm-transition);
+}
+
+.spm-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* فرم */
+.spm-form-control {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+    color: #fff;
+    transition: var(--spm-transition);
+}
+
+.spm-form-control:focus {
+    outline: none;
+    border-color: var(--spm-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.spm-form-control::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ویژگی‌های داینامیک */
+.spm-features-container {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    padding: 1rem;
+}
+
+.spm-feature-item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.spm-feature-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    color: #fff;
+}
+
+.spm-feature-input:focus {
+    outline: none;
+    border-color: var(--spm-primary);
+}
+
+.remove-feature {
+    width: 40px;
+    background: rgba(242, 60, 73, 0.15);
+    border: 1px solid rgba(242, 60, 73, 0.3);
+    border-radius: 12px;
+    color: #f23c49;
+    transition: var(--spm-transition);
+}
+
+.remove-feature:hover {
+    background: #f23c49;
+    color: #fff;
+}
+
+.spm-add-feature-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: var(--spm-transition);
+}
+
+.spm-add-feature-btn:hover {
+    border-color: var(--spm-primary);
+    color: var(--spm-primary);
+}
+
+/* مودال */
+.spm-modal-content {
+    background: linear-gradient(145deg, #1a1625 0%, #0f0d17 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 32px;
+}
+
+/* هشدار */
+.spm-warning-box {
+    background: rgba(253, 188, 49, 0.1);
+    border: 1px solid rgba(253, 188, 49, 0.2);
+    border-radius: 20px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: #fdbc31;
+}
+
+/* حالت خالی */
+.spm-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 40px;
+}
+
+.spm-empty-icon {
+    width: 100px;
+    height: 100px;
+    background: rgba(253, 86, 49, 0.1);
+    border-radius: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.spm-empty-icon i {
+    font-size: 3rem;
+    color: var(--spm-primary);
+}
+
+/* انیمیشن ورود کارت‌ها */
+@keyframes spmCardGlow {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.spm-plan-card {
+    animation: spmCardGlow 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.spm-plan-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.spm-plan-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.spm-plan-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.spm-plan-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.spm-plan-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+.spm-plan-card:nth-child(6) {
+    animation-delay: 0.3s;
+}
+
+/* ریسپانسیو */
+@media (max-width: 768px) {
+    .spm-plans-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .spm-header {
+        padding: 1rem;
+    }
+
+    .spm-title {
+        font-size: 1.2rem;
+    }
+
+    .spm-plan-card {
+        padding: 1.25rem;
+    }
+
+    .spm-plan-price .price-amount {
+        font-size: 1.4rem;
+    }
+}

@@ -1,0 +1,261 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ plan.name }} {{ plan.team.name }}
+{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/plan_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <!-- بخش هیرو با لوگو و تیم -->
+    <div class="hero-wave rounded-4 p-4 p-lg-5 mb-5 position-relative">
+        <div class="row align-items-center gy-4">
+            <div class="col-lg-7 text-center text-lg-start fade-scale">
+                <div class="d-flex align-items-center gap-3 mb-3 flex-wrap justify-content-center justify-content-lg-start">
+                    {% if team.logo %}
+                        <img src="{{ team.logo.url }}" alt="{{ team.name }}" width="85" class="rounded-circle border border-2 border-primary p-1 bg-dark shadow-lg animate-float">
+                    {% else %}
+                        <div class="rounded-circle bg-gradient d-flex align-items-center justify-content-center animate-float" style="width: 85px; height: 85px; background: linear-gradient(135deg, #fd5631, #5d3cf2);">
+                            <i class="fi-users fs-1 text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h1 class="display-4 fw-bold text-white mb-1">{{ plan.name }}</h1>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="text-primary fs-5"><a href="{% url 'content_team:team_detail' team.slug %}" class="text-decoration-none">{{ team.name }}</a></span>
+                            <span class="text-muted">•</span>
+                            <span class="text-light-50">{{ plan.service_type.name }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="d-flex gap-3 align-items-center justify-content-center justify-content-lg-start flex-wrap">
+                        <div class="badge bg-faded-light px-3 py-2 rounded-pill">
+                            <i class="fi-clock me-1"></i> تحویل: {{ plan.estimated_delivery_days }} روز کاری
+                        </div>
+                        <div class="badge bg-faded-light px-3 py-2 rounded-pill">
+                            <i class="fi-check-circle me-1 text-success"></i> {{ completed_orders_count }} سفارش موفق
+                        </div>
+                        <div class="stars">
+                            {% with avg=team.avg_rating|default:0 %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= avg %}
+                                        <i class="fi-star-filled text-warning"></i>
+                                    {% elif forloop.counter <= avg|add:0.5 %}
+                                        <i class="fi-star-half text-warning"></i>
+                                    {% else %}
+                                        <i class="fi-star text-muted"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                            <span class="text-muted ms-2">({{ reviews.count }})</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5 text-center slide-right delay-1">
+                <div class="glass-premium p-4">
+                    <div class="text-muted mb-2 small">قیمت پلن</div>
+                    <div class="price-neon">
+                        {{ plan.price_per_unit|floatformat:0|default:"0" }}
+                        <small class="fs-5 text-white-50">تومان</small>
+                    </div>
+                    <div class="small text-muted mb-3">به ازای هر 
+                        {% if plan.service_type.unit == "minute" %}دقیقه{% else %}پروژه{% endif %}
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        {% if from_campaign %}
+                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ plan.id }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                                <i class="fi-arrow-right me-2"></i> انتخاب این پلن
+                            </a>
+                            <a href="javascript:history.back()" class="btn btn-outline-light rounded-pill py-2">
+                                <i class="fi-arrow-left me-2"></i> بازگشت
+                            </a>
+                        {% else %}
+                            <a href="{% url 'core:pending' %}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                                <i class="fi-cart me-2"></i> ثبت سفارش
+                            </a>
+                            <a href="#reviews" class="btn btn-outline-light rounded-pill py-2">
+                                <i class="fi-star me-2"></i> نظرات
+                            </a>
+                        {% endif %}
+                    </div>
+                    <hr class="opacity-25 my-3">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <i class="fi-check-circle text-success fs-4"></i>
+                            <div class="stat-value">{{ team.avg_rating|default:"جدید" }}</div>
+                            <small class="text-muted">میانگین امتیاز</small>
+                        </div>
+                        <div class="col-6">
+                            <i class="fi-users text-primary fs-4"></i>
+                            <div class="stat-value">{{ team.members_count }}</div>
+                            <small class="text-muted">اعضای تیم</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5">
+        <!-- ستون اصلی محتوا -->
+        <div class="col-lg-7">
+            <!-- توضیحات کامل پلن -->
+            <div class="glass-premium p-4 p-lg-5 mb-5 slide-left delay-2">
+                <h3 class="h3 text-white mb-3"><i class="fi-info-circle text-primary me-2"></i> توضیحات کامل پلن</h3>
+                <div class="text-light opacity-75 lh-lg" style="text-align: justify; line-height: 1.8;">
+                    {{ plan.description|linebreaksbr|safe }}
+                </div>
+            </div>
+
+            <!-- ویژگی‌ها -->
+            <div class="glass-premium p-4 mb-5 slide-left delay-3">
+                <h3 class="h3 text-white mb-4"><i class="fi-gift text-primary me-2"></i> ویژگی‌های پلن</h3>
+                <div class="feature-grid">
+                    {% for feature in plan.get_features_list %}
+                        <div class="feature-item d-flex align-items-center">
+                            <i class="fi-check-circle text-primary me-2 fs-5"></i>
+                            <span class="text-light">{{ feature }}</span>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">ویژگی خاصی تعریف نشده است.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- نمونه کارها (اسکرول افقی) -->
+            {% if portfolio_items %}
+            <div class="glass-premium p-4 mb-5 slide-left delay-4">
+                <h3 class="h3 text-white mb-4"><i class="fi-image text-primary me-2"></i> نمونه کارهای تیم</h3>
+                <div class="portfolio-scroll">
+                    {% for item in portfolio_items %}
+                    <div class="portfolio-card">
+                        {% if item.media %}
+                            <img src="{{ item.media.url }}" class="portfolio-img" alt="{{ item.title }}">
+                        {% else %}
+                            <div class="portfolio-img bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fi-image fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <div class="p-3">
+                            <h6 class="text-white mb-1">{{ item.title|truncatechars:30 }}</h6>
+                            <p class="small text-muted mb-0">{{ item.description|truncatechars:45 }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- نظرات -->
+            <div id="reviews" class="glass-premium p-4 slide-left delay-4">
+                <h3 class="h3 text-white mb-4"><i class="fi-star-filled text-warning me-2"></i> نظرات تبلیغ‌دهندگان</h3>
+                {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="border-bottom border-light pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                <span class="fw-bold text-white">{{ review.advertiser.user.nickname }}</span>
+                                <div class="stars mt-1">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}
+                                            <i class="fi-star-filled text-warning"></i>
+                                        {% else %}
+                                            <i class="fi-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <span class="text-muted small">{{ review.created_at|date:"Y/m/d" }}</span>
+                        </div>
+                        <p class="text-light-75 mt-2 mb-0">{{ review.comment|linebreaksbr }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fi-chat-circle fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">هنوز نظری ثبت نشده است.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ستون کناری: خلاصه سریع -->
+        <div class="col-lg-5 slide-bar">
+            <div class="glass-premium p-4 sticky-lg-top" style="top: 120px;">
+                <div class="text-center mb-4">
+                    <div class="badge bg-primary rounded-pill px-3 py-2 mb-3 animate-glow">پلن ویژه</div>
+                    <div class="price-neon fs-1">{{ plan.price_per_unit|floatformat:0 }}</div>
+                    <div class="text-muted">تومان / {% if plan.service_type.unit == "minute" %}دقیقه{% else %}پروژه{% endif %}</div>
+                </div>
+                <hr class="opacity-25">
+                <ul class="list-unstyled mb-4">
+                    <li class="my-2 text-secondary"><i class="fi-check-circle text-success me-2"></i> تضمین کیفیت</li>
+                    <li class="mb-2 text-secondary"><i class="fi-check-circle text-success me-2"></i> پشتیبانی رایگان</li>
+                    <li class="mb-2 text-secondary"><i class="fi-check-circle text-success me-2"></i> ویرایش‌های رایگان</li>
+                </ul>
+                <div class="d-grid">
+                    {% if from_campaign %}
+                        <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ plan.id }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                            <i class="fi-arrow-right me-2"></i> انتخاب این پلن
+                        </a>
+                    {% else %}
+                        <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                            استفاده در کمپین
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="text-center mt-4 pt-2">
+                    <i class="fi-shield text-primary fs-3"></i>
+                    <p class="small text-muted mt-1">پرداخت امن و ضمانت بازگشت وجه</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // انیمیشن اسکرول با Intersection Observer برای المنت‌های فید
+    const fadeElements = document.querySelectorAll('.fade-scale, .slide-right, .slide-left');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateX(0) scale(1)';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+    fadeElements.forEach(el => observer.observe(el));
+
+    // اسکرول افقی با موس (اختیاری)
+    const scrollContainers = document.querySelectorAll('.portfolio-scroll');
+    scrollContainers.forEach(container => {
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        container.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+        container.addEventListener('mouseleave', () => { isDown = false; });
+        container.addEventListener('mouseup', () => { isDown = false; });
+        container.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            container.scrollLeft = scrollLeft - walk;
+        });
+    });
+</script>
+{% endblock %}

@@ -296,51 +296,88 @@
                     </div>
                 {% endif %}
 
-                {% if available_services %}
-                    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
-                        <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#servicesCollapse" role="button" aria-expanded="false">
-                            <div class="section-icon">
-                                <i class="fi-cash"></i>
-                            </div>
-                            
-                            <h3 class="section-title">خدمات و قیمت‌ها</h3>
-                            <div class="section-line"></div>
-                            <span class="reviews-count-badge me-2">{{ available_services|length }}</span>
-                            
-                            <div class="collapse-arrow">
-                                <i class="fi-chevron-down"></i>
-                            </div>
-                        </div>
+                {% if service_plans_by_type %}
+    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
+        <!-- هدر اصلی -->
+        <div class="section-header collapse-header" data-bs-toggle="collapse"
+             data-bs-target="#servicesCollapse" role="button" aria-expanded="false">
+            <div class="section-icon">
+                <i class="fi-cash"></i>
+            </div>
+            <h3 class="section-title">پلن ها</h3>
+            <div class="section-line"></div>
+            <span class="reviews-count-badge">{{ service_plans_by_type|length }} پلن</span>
+            <div class="collapse-arrow">
+                <i class="fi-chevron-down"></i>
+            </div>
+        </div>
 
-                        <div class="collapse" id="servicesCollapse">
-                            <div class="pricing-grid">
-                                {% for rate in available_services %}
-                                    <div class="pricing-card">
-                                        <div class="pricing-card-icon">
-                                            {% if rate.service_type.icon %}
-                                                <i class="{{ rate.service_type.icon }}"></i>
+        <div class="collapse" id="servicesCollapse">
+            {% for group in service_plans_by_type %}
+                <!-- هر گروه یک نوع خدمت -->
+                <div class="service-type-group mb-4">
+                    <div class="service-type-header collapse-header"
+                         data-bs-toggle="collapse"
+                         data-bs-target="#serviceCollapse{{ group.service_type.id }}"
+                         role="button" aria-expanded="false">
+                        <div class="service-type-icon-wrapper">
+                            {% if group.service_type.icon %}
+                                <i class="{{ group.service_type.icon }}"></i>
+                            {% else %}
+                                <i class="fi-check-circle"></i>
+                            {% endif %}
+                        </div>
+                        <span class="service-type-name">{{ group.service_type.name }}</span>
+                        <span class="service-type-plan-count">{{ group.plans|length }} پلن</span>
+                        <div class="collapse-arrow collapse-arrow-sm">
+                            <i class="fi-chevron-down"></i>
+                        </div>
+                    </div>
+
+                    <!-- لیست پلن‌های این سرویس -->
+                    <div class="collapse" id="serviceCollapse{{ group.service_type.id }}">
+                        <div class="pricing-grid mt-3 plans-count-{{ group.plans|length }}">
+                            {% for plan in group.plans %}
+                                <a href="{% url 'content_team:plan_detail' plan.id %}" class="text-decoration-none">
+                                    <div class="pricing-card h-100 d-flex flex-column position-relative {% if group.plans|length == 3 and forloop.counter0 == 1 %}most-popular{% endif %}" style="margin: 0 auto" >
+                                        
+                                        {% if group.plans|length == 3 and forloop.counter0 == 1 %}
+                                            <div class="most-popular-badge">
+                                                <i class="fi-star-filled me-1"></i>محبوب‌ترین
+                                            </div>
+                                        {% endif %}
+    
+                                        <div class="pricing-card-icon mx-auto">
+                                            {% if group.service_type.icon %}
+                                                <i class="{{ group.service_type.icon }}"></i>
                                             {% else %}
                                                 <i class="fi-check-circle"></i>
                                             {% endif %}
                                         </div>
-                                    
-                                        <div class="pricing-card-title">{{ rate.service_type.name }}</div>
-                                    
-                                        <div class="pricing-card-price">
-                                            <span class="price-number">{{ rate.price_per_unit|floatformat:0 }}</span>
+                                        <div class="pricing-card-title">{{ plan.name }}</div>
+    
+                                        <div class="pricing-card-price mb-2">
+                                            <span class="price-number">{{ plan.price_per_unit|floatformat:0 }}</span>
                                             <span class="price-currency">تومان</span>
                                         </div>
-                                    
-                                        <div class="pricing-card-feature">
-                                            <i class="fi-check-circle"></i>
-                                            <span>{{ rate.estimated_delivery_days }} روز</span>
+    
+                                        <div class="pricing-card-feature mt-auto">
+                                            <i class="fi-clock me-1"></i>
+                                            تحویل {{ plan.estimated_delivery_days }} روزه
                                         </div>
+                                        {% if plan.description %}
+                                            <p class="small text-muted mt-2 mb-0">{{ plan.description|truncatewords:12 }}</p>
+                                        {% endif %}
                                     </div>
-                                {% endfor %}
-                            </div>
+                                </a>
+                            {% endfor %}
                         </div>
                     </div>
-                {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
 
                 <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="250">
                     <div class="section-header collapse-header" data-bs-toggle="collapse" data-bs-target="#reviewsCollapse" role="button" aria-expanded="false">

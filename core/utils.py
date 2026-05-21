@@ -1,20 +1,9 @@
 import random
 import string
-
-from deep_translator import GoogleTranslator
-from django.utils.text import slugify
 from jdatetime import datetime as jdatetime
 import jdatetime
 
 
-def generate_english_slug(text):
-    try:
-        translated = GoogleTranslator(source='fa', target='en').translate(text)
-    except:
-        translated = "can not translate"
-
-    final_slug = slugify(translated)
-    return final_slug
 
 
 def generate_random_slug():

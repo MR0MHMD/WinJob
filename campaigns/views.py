@@ -1,11 +1,12 @@
 from .models import CampaignClick, CampaignInfluencer, Campaign, Payment
 from django.shortcuts import redirect, get_object_or_404, render
-from content_team.models import ContentOrder, ContentOrderFile
+from content_team.models import ContentOrder, ContentOrderFile, ContentTeam
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
 from accounts.models import Transaction
 from .services import create_campaign_invoice
 from .utils import _detect_file_type
+from django.db.models import Prefetch
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
@@ -251,9 +252,7 @@ def campaign_create_step3_team(request):
             )
         return True
 
-    # ------------------------
-    # Campaign + Order
-    # ------------------------
+    # ------------------------ کمپین و سرویس ------------------------
     campaign_id = request.session.get("campaign_draft_id")
     if not campaign_id:
         return redirect("campaigns:campaign_create_step1")
@@ -269,97 +268,144 @@ def campaign_create_step3_team(request):
         messages.error(request, "نوع خدمت تولید محتوا مشخص نشده است.")
         return redirect("campaigns:campaign_create_step1")
 
-    minutes = request.session.get("content_minutes")
+    minutes = request.session.get("content_minutes")  # فقط برای سرویس‌های دقیقه‌ای
 
-    order = (
-        ContentOrder.objects
-        .filter(campaign=campaign)
-        .select_related("service_rate", "team")
-        .first()
-    )
+    # ------------------------ اطلاعات موجود (در صورت ویرایش) ------------------------
+    existing_order = ContentOrder.objects.filter(campaign=campaign).select_related("plan", "team", "brief").first()
+    attachments = existing_order.files.all() if existing_order else []
 
-    attachments = order.files.all() if order else []
-
-    # ------------------------
-    # Team Rates + Prices
-    # ------------------------
-    available_rates = (
-        ContentServiceRate.objects
-        .filter(
-            service_type=service_type,
-            is_available=True,
-            team__is_active=True
+    # ------------------------ تیم‌های دارای پلن برای این سرویس ------------------------
+    # گرفتن همه تیم‌هایی که حداقل یک پلن فعال برای این سرویس دارن
+    teams_with_plans = ContentTeam.objects.filter(
+        service_plans__service_type=service_type,
+        service_plans__is_active=True,
+        is_active=True
+    ).distinct().prefetch_related(
+        Prefetch(
+            'service_plans',
+            queryset=ContentServicePlan.objects.filter(
+                service_type=service_type,
+                is_active=True
+            ).select_related('service_type').order_by('price_per_unit'),  # <-- اینجا select_related اضافه شد
+            to_attr='active_plans_for_service'
         )
-        .select_related("team", "service_type")
-        .prefetch_related("team__members", "team__reviews")
     )
 
-    rates_with_price = [
-        {
-            "rate": r,
-            "total_price": calculate_price(r, minutes),
-            "minutes": minutes if service_type.unit == "minute" else None,
-        }
-        for r in available_rates
-    ]
+    # در تابع campaign_create_step3_team، بعد از خطوط اولیه و قبل از ساختن teams_data
+    # ========== اضافه کردن قابلیت انتخاب خودکار از طریق GET ==========
+    preselect_plan_id = request.GET.get('selected_plan')
+    preselect_team_id = None
+    if preselect_plan_id:
+        try:
+            plan_id_int = int(preselect_plan_id)
+            plan = ContentServicePlan.objects.filter(id=plan_id_int, is_active=True).select_related('team').first()
+            if plan:
+                preselect_team_id = plan.team.id
+        except (ValueError, TypeError):
+            pass
+    else:
+        preselect_plan_id = None
 
-    # ============================================================
-    #                       POST (Save)
-    # ============================================================
+    # ... داخل ویو، بعد از گرفتن teams_with_plans
+    teams_data = []
+    for team in teams_with_plans:
+        plans = getattr(team, 'active_plans_for_service', [])
+        if plans:
+            plan_prices = []
+            for plan in plans:
+                # محاسبه قیمت نهایی
+                if service_type.unit == "minute" and minutes:
+                    total_price = int(plan.price_per_unit) * int(minutes)
+                else:
+                    total_price = int(plan.price_per_unit)
+
+                features = plan.features
+                if isinstance(features, str):
+                    try:
+                        features = json.loads(features)
+                    except:
+                        features = []
+                elif not isinstance(features, list):
+                    features = []
+
+                icon = plan.service_type.icon or 'fi-star'
+
+                plan_prices.append({
+                    'id': plan.id,
+                    'name': plan.name,
+                    'price': int(total_price),
+                    'price_per_unit': int(plan.price_per_unit),
+                    'description': plan.description,
+                    'delivery_days': plan.estimated_delivery_days,
+                    'features': features,
+                    'service_type_icon': icon,
+                })
+            teams_data.append({
+                'team': team,
+                'plans': plan_prices,
+                'plans_json': json.dumps(plan_prices, ensure_ascii=False)  # برای استفاده در data attribute
+            })
+
+    # ------------------------ پردازش POST ------------------------
     if request.method == "POST":
         team_form = CampaignStep3TeamForm(request.POST, service_type=service_type)
         brief_form = CampaignStep3BriefForm(request.POST, request.FILES)
 
         if team_form.is_valid() and brief_form.is_valid():
-            rate = team_form.cleaned_data['selected_rate']
-            final_price = calculate_price(rate, minutes)
+            selected_plan_id = team_form.cleaned_data['selected_plan']
+            selected_plan = ContentServicePlan.objects.get(id=selected_plan_id)
 
+            # محاسبه قیمت نهایی
+            if service_type.unit == "minute" and minutes:
+                final_price = selected_plan.price_per_unit * int(minutes)
+            else:
+                final_price = selected_plan.price_per_unit
+
+            # ایجاد یا بروزرسانی ContentOrder
             order, created = ContentOrder.objects.get_or_create(
                 campaign=campaign,
                 defaults={
-                    "team": rate.team,
-                    "service_rate": rate,
+                    "team": selected_plan.team,
+                    "plan": selected_plan,
                     "price": final_price,
                     "minutes": int(minutes) if minutes else None,
                     "status": ContentOrder.Status.PENDING,
                 }
             )
-
             if not created:
-                order.team = rate.team
-                order.service_rate = rate
+                order.team = selected_plan.team
+                order.plan = selected_plan
                 order.price = final_price
                 order.minutes = int(minutes) if minutes else None
                 order.save()
 
             # ذخیره بریف
-            save_brief(order, brief_form)
+            save_brief(order, brief_form)  # همان تابع قبلی
 
-            # ========== ذخیره کپشن و لینک در CampaignContent ==========
-            save_campaign_content(campaign, brief_form)
+            # ذخیره محتوای تبلیغ (caption و link) در CampaignContent
+            save_campaign_content(campaign, brief_form)  # همان تابع قبلی
 
+            # مدیریت فایل‌های پیوست
             handle_deleted_files(request.POST)
-
             if not handle_new_files(request, order):
                 return redirect("campaigns:campaign_create_step3_team")
 
             return redirect("campaigns:campaign_create_step4")
 
-        # فرم‌ها ایراد دارند → دونه‌دونه خطاها را پیام بده
-        for form in (team_form, brief_form):
-            for errors in form.errors.values():
-                for err in errors:
-                    messages.error(request, err)
+        else:
+            for form in (team_form, brief_form):
+                for errors in form.errors.values():
+                    for err in errors:
+                        messages.error(request, err)
 
-    # ============================================================
-    #                       GET (Load Form)
-    # ============================================================
+    # ------------------------ GET (بارگذاری اولیه) ------------------------
     else:
-        team_initial = {"selected_rate": order.service_rate_id} if order else {}
-        brief_initial = {}
+        initial_plan = existing_order.plan.id if existing_order else None
+        team_form = CampaignStep3TeamForm(initial={'selected_plan': initial_plan}, service_type=service_type)
 
-        if order and hasattr(order, "brief"):
-            b = order.brief
+        brief_initial = {}
+        if existing_order and hasattr(existing_order, 'brief'):
+            b = existing_order.brief
             brief_initial = {
                 'goal': b.goal,
                 'goal_description': b.goal_description,
@@ -371,32 +417,29 @@ def campaign_create_step3_team(request):
                 'description': b.description,
                 'do_not_include': b.do_not_include,
             }
-
-        # ========== بارگذاری کپشن و لینک از CampaignContent ==========
+        # بارگذاری caption و link از CampaignContent
         if hasattr(campaign, 'content') and campaign.content:
             brief_initial['ad_caption'] = campaign.content.caption
             brief_initial['ad_link'] = campaign.content.link or ''
 
-        team_form = CampaignStep3TeamForm(initial=team_initial, service_type=service_type)
         brief_form = CampaignStep3BriefForm(initial=brief_initial)
 
-    # ------------------------
-    # Context
-    # ------------------------
+    # ------------------------ کانتکست ------------------------
     context = {
         "campaign": campaign,
         "service_type": service_type,
-        "rates_with_price": rates_with_price,
+        "teams_data": teams_data,
         "minutes": minutes,
-        "existing_order": order,
+        "existing_order": existing_order,
         "team_form": team_form,
         "brief_form": brief_form,
         "attachments": attachments,
+        "preselect_plan_id": preselect_plan_id,
+        "preselect_team_id": preselect_team_id,
         "step": 3,
         "total_steps": 4,
-        "step_name": "انتخاب تیم تولید محتوا",
+        "step_name": "انتخاب تیم و پلن تولید محتوا",
     }
-
     return render(request, "campaigns/forms/create_campaign_step3_team.html", context)
 
 
@@ -482,9 +525,18 @@ def campaign_create_step4(request):
 
     content_order = (
         campaign.content_orders
-        .select_related("team")
+        .select_related("team", "plan", "plan__service_type")
         .first()
     )
+
+    campaign_content = None
+    is_video = False
+    if campaign.content_type.slug == "ready-content":
+        try:
+            campaign_content = campaign.content
+            is_video = campaign_content.is_video if campaign_content else False
+        except CampaignContent.DoesNotExist:
+            campaign_content = None
 
     invoice = create_campaign_invoice(campaign)
     wallet = request.user.wallet
@@ -594,6 +646,8 @@ def campaign_create_step4(request):
         }),
         "invoice": invoice,
         "wallet": wallet,
+        "campaign_content": campaign_content,
+        "is_video": is_video,
         "step": 4,
         "total_steps": 4,
         "step_name": "پرداخت",

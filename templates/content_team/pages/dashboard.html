@@ -50,7 +50,7 @@
                             <i class="fi-wallet ms-1"></i> کیف پول
                         </a>
                         {% if is_manager %}
-                            <a href="#" class="btn btn-outline-accent">
+                            <a href="{% url 'content_team:team_manage' %}" class="btn btn-outline-accent">
                                 <i class="fi-settings ms-1"></i> مدیریت تیم
                             </a>
                         {% endif %}
@@ -217,19 +217,19 @@
                     <div class="card-body p-4">
                         <div class="row g-3">
                             <div class="col-md-3 col-6">
-                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                <a href="{% url 'content_team:team_orders_list' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-list"></i>
                                     <span class="small text-white">همه سفارشات</span>
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                <a href="{% url 'content_team:team_orders_list' %}?current=1" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-play-circle"></i>
                                     <span class="small text-white">سفارشات جاری</span>
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="#" class="quick-action-btn d-block text-decoration-none">
+                                <a href="{% url 'core:pending' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-dashboard"></i>
                                     <span class="small text-white">گزارش عملکرد</span>
                                 </a>
@@ -379,7 +379,7 @@
                         {% if recent_orders %}
                             {% for order in recent_orders %}
                                 <div class="booking-item">
-                                    <a class="text-decoration-none" href="#">
+                                    <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="text-white fw-bold">{{ order.campaign.name }}</div>
@@ -546,6 +546,95 @@
                         {% endif %}
                     </div>
                 </div>
+            
+                <!-- کارت وضعیت پلن‌ های خدمات (فقط مدیر) -->
+                {% if is_manager %}
+                    <div class="dashboard-card mt-4">
+                        <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-layers text-primary"></i>
+                                <h5 class="text-white mb-0">وضعیت پلن‌ های خدمات</h5>
+                            </div>
+                            <a href="{% url 'content_team:plans_dashboard' %}" class="small text-primary text-decoration-none">
+                                مدیریت <i class="fi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="card-body p-3">
+                            <!-- خلاصه آمار (همون قبلی) -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 pb-1 border-bottom border-light">
+                                <div class="text-center flex-grow-1">
+                                    <div class="h5 text-white mb-0">{{ total_services|default:"۰" }}</div>
+                                    <div class="small text-muted">کل خدمات</div>
+                                </div>
+                                <div class="text-center flex-grow-1">
+                                    <div class="h5 text-success mb-0">{{ services_with_plans_count|default:"۰" }}</div>
+                                    <div class="small text-muted">دارای پلن</div>
+                                </div>
+                                <div class="text-center flex-grow-1">
+                                    <div class="h5 text-warning mb-0">{{ services_without_plans|default:"۰" }}</div>
+                                    <div class="small text-muted">بدون پلن</div>
+                                </div>
+                            </div>
+                            
+                            <!-- ========== لیست خدماتی که پلن دارند ========== -->
+                            {% if service_types_with_plans %}
+                                <div class="vstack gap-3 mb-4">
+                                    <div class="small text-muted mb-1">خدمات فعال با پلن :</div>
+                                    {% for item in service_types_with_plans %}
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="text-white small fw-semibold">{{ item.service_type.name }}</span>
+                                                <span class="small {% if item.is_full %}text-success{% elif item.has_plans %}text-primary{% else %}text-muted{% endif %}">
+                                                    {{ item.active_plans_count }}/{{ item.max_plans }}
+                                                </span>
+                                            </div>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar {% if item.is_full %}bg-success{% elif item.has_plans %}bg-primary{% else %}bg-secondary{% endif %}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ item.percentage|floatformat:0 }}%;" 
+                                                     aria-valuenow="{{ item.active_plans_count }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="{{ item.max_plans }}">
+                                                </div>
+                                            </div>
+                                            {% if item.empty_slots > 0 %}
+                                                <div class="small text-muted mt-1">
+                                                    <i class="fi-plus-circle ms-1"></i>
+                                                    {{ item.empty_slots }} پلن خالی مانده
+                                                </div>
+                                            {% else %}
+                                                <div class="small text-success mt-1">
+                                                    <i class="fi-check-circle ms-1"></i>
+                                                    تکمیل شده (حداکثر ۳ پلن)
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3 mb-3">
+                                    <i class="fi-layers fs-1 text-muted mb-2 d-block"></i>
+                                    <p class="text-muted small mb-0">هیچ خدمتی با پلن فعال وجود ندارد</p>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- ========== خلاصه خدماتی که پلن ندارند و دکمه واحد ========== -->
+                            {% if service_types_without_plans %}
+                                <div class="border-top border-light pt-3 mt-2">
+                                    <div class="alert alert-warning bg-faded-warning border-0 py-2 mb-3 small">
+                                        <i class="fi-info-circle ms-1"></i>
+                                        هنوز <strong>{{ services_without_plans }}</strong> خدمت از خدماتی که می‌توانید ارائه دهید، هیچ پلنی ندارند.
+                                    </div>
+                                    <div class="text-center">
+                                        <a href="{% url 'content_team:plans_dashboard' %}" class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fi-plus ms-1"></i> افزودن پلن جدید
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             
                 <!-- کارت کدهای تخفیف -->
                 <div class="dashboard-card mt-4">

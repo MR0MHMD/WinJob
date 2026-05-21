@@ -1,0 +1,260 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}مدیریت پلن‌ها | {{ service_type.name }}{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/service_plans_management.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container-xxl py-4 spm-container">
+
+        <!-- ==================== هدر صفحه ==================== -->
+        <div class="spm-header">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <a href="{% url 'content_team:plans_dashboard' %}" class="spm-back-btn">
+                        <i class="fi-chevron-right"></i>
+                    </a>
+                    <div class="spm-service-icon-mini">
+                        {% if service_type.icon %}
+                            <i class="{{ service_type.icon }}"></i>
+                        {% else %}
+                            <i class="fi-layers"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h1 class="spm-title mb-1">{{ service_type.name }}</h1>
+                        <p class="text-muted mb-0 small">
+                            <i class="fi-clock me-1"></i>
+                            واحد: {{ service_type.get_unit_display }}
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="spm-plans-limit-badge">
+                        <i class="fi-pie-chart me-1"></i>
+                        <span class="fw-bold text-primary">{{ active_plans_count }}</span>
+                        <span>/ {{ max_plans }}</span>
+                        <span class="ms-1">پلن فعال</span>
+                    </div>
+                    {% if can_add_plan %}
+                        <button class="spm-btn-primary" data-bs-toggle="modal" data-bs-target="#createPlanModal">
+                            <i class="fi-plus me-2"></i>
+                            پلن جدید
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== نمایش لیست پلن‌ها ==================== -->
+        {% if plans %}
+            <div class="spm-plans-grid">
+                {% for plan in plans %}
+                    <div class="spm-plan-card {% if not plan.is_active %}inactive{% endif %}"
+                         data-plan-id="{{ plan.id }}"
+                         data-edit-url="{% url 'content_team:edit_plan' plan.id %}"
+                         data-delete-url="{% url 'content_team:delete_plan' plan.id %}">
+
+                        <!-- وضعیت فعال / غیرفعال -->
+                        <div class="spm-plan-status-badge {% if plan.is_active %}active{% else %}inactive{% endif %}">
+                            {% if plan.is_active %}
+                                <i class="fi-check-circle"></i> فعال
+                            {% else %}
+                                <i class="fi-x-circle"></i> غیرفعال
+                            {% endif %}
+                        </div>
+
+                        <!-- عنوان و قیمت -->
+                        <div class="spm-plan-header">
+                            <h3 class="spm-plan-name">{{ plan.name }}</h3>
+                            <div class="spm-plan-price">
+                                <span class="price-amount">{{ plan.price_per_unit|floatformat:0 }}</span>
+                                <span class="price-unit">تومان</span>
+                                <small class="price-per">/ {{ service_type.get_unit_display }}</small>
+                            </div>
+                        </div>
+
+                        <!-- توضیحات (اختیاری) -->
+                        {% if plan.description %}
+                            <p class="spm-plan-description">{{ plan.description|truncatewords:25 }}</p>
+                        {% endif %}
+
+                        <!-- لیست ویژگی‌ها -->
+                        {% if plan.features %}
+                            <div class="spm-plan-features">
+                                <div class="features-title">
+                                    <i class="fi-star-filled"></i>
+                                    <span>ویژگی‌های این پلن</span>
+                                </div>
+                                <ul class="features-list">
+                                    {% for feature in plan.get_features_list %}
+                                        <li><i class="fi-check"></i> {{ feature }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- زمان تحویل -->
+                        <div class="spm-plan-delivery">
+                            <i class="fi-clock"></i>
+                            <span>تحویل در <strong>{{ plan.estimated_delivery_days }}</strong> روز کاری</span>
+                        </div>
+
+                        <!-- دکمه‌های عملیات -->
+                        <div class="spm-plan-actions">
+                            <button class="spm-action-btn edit-plan" onclick="editPlan(this)" title="ویرایش">
+                                <i class="fi-edit"></i>
+                            </button>
+                            <button class="spm-action-btn delete-plan" onclick="deletePlan(this)" title="حذف">
+                                <i class="fi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- حالت خالی: هیچ پلنی وجود ندارد -->
+            <div class="spm-empty-state">
+                <div class="spm-empty-icon">
+                    <i class="bi bi-tags"></i>
+                </div>
+                <h3 class="h5 text-white mb-2">هیچ پلنی تعریف نشده</h3>
+                <p class="text-muted mb-4">اولین پلن خود را برای این خدمت ایجاد کنید</p>
+                {% if can_add_plan %}
+                    <button class="spm-btn-primary" data-bs-toggle="modal" data-bs-target="#createPlanModal">
+                        <i class="fi-plus me-2"></i>
+                        ایجاد پلن جدید
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- هشدار رسیدن به حداکثر تعداد پلن فعال -->
+        {% if not can_add_plan and plans %}
+            <div class="spm-warning-box mt-4">
+                <i class="fi-alert-triangle"></i>
+                <div>
+                    <strong>توجه:</strong> شما به حداکثر مجاز ({{ max_plans }} پلن فعال) رسیده‌اید.
+                    برای ایجاد پلن جدید، ابتدا یکی از پلن‌های فعال را غیرفعال کنید.
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ==================== مودال ایجاد / ویرایش پلن ==================== -->
+    <div class="modal fade" id="createPlanModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark spm-modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title text-light" id="planModalTitle">
+                        <i class="fi-plus-circle me-2 text-primary"></i>
+                        ایجاد پلن جدید
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="planForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="planId" name="plan_id" value="">
+
+                        <div class="row g-4">
+                            <!-- نام پلن -->
+                            <div class="col-12">
+                                <label for="planName" class="form-label text-white">نام پلن <span class="text-danger">*</span></label>
+                                <input type="text" class="spm-form-control" id="planName" name="name" required
+                                       placeholder="مثال: پلن اقتصادی - دو دوربین">
+                            </div>
+
+                            <!-- توضیحات -->
+                            <div class="col-12">
+                                <label for="planDescription" class="form-label text-white">توضیحات</label>
+                                <textarea class="spm-form-control" id="planDescription" name="description" rows="5"
+                                          placeholder="توضیح کامل این پلن..."></textarea>
+                            </div>
+
+                            <!-- قیمت (با کاماگذاری خودکار) -->
+                            <div class="col-md-6">
+                                <label for="planPrice" class="form-label text-white">قیمت (تومان) <span class="text-danger">*</span></label>
+                                <input type="text" inputmode="numeric" class="spm-form-control" id="planPrice"
+                                       name="price_per_unit" required placeholder="مثلاً ۲,۵۰۰,۰۰۰">
+                            </div>
+
+                            <!-- مدت تحویل -->
+                            <div class="col-md-6">
+                                <label for="planDelivery" class="form-label text-white">مدت تحویل (روز کاری)</label>
+                                <input type="number" class="spm-form-control" id="planDelivery"
+                                       name="estimated_delivery_days" value="5" min="1">
+                            </div>
+
+                            <!-- ویژگی‌های پلن (داینامیک) -->
+                            <div class="col-12">
+                                <label for="featuer_input" class="form-label text-white">ویژگی‌های پلن</label>
+                                <div id="featuresContainer" class="spm-features-container">
+                                    <div class="spm-feature-item">
+                                        <input id="featuer_input" type="text" class="spm-feature-input" placeholder="مثال: ۲ دوربین 4K">
+                                        <button type="button" class="remove-feature" onclick="removeFeature(this)">
+                                            <i class="fi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="spm-add-feature-btn mt-2" onclick="addFeature()">
+                                    <i class="fi-plus me-1"></i> افزودن ویژگی
+                                </button>
+                            </div>
+
+                            <!-- وضعیت فعال/غیرفعال -->
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="planActive" name="is_active" checked>
+                                    <label class="form-check-label text-white" for="planActive">فعال بودن پلن</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="spm-btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="spm-btn-primary" id="submitPlanBtn">ذخیره پلن</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== مودال تأیید حذف پلن ==================== -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content spm-modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title text-danger">
+                        <i class="fi-alert-triangle me-2"></i>
+                        حذف پلن
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fi-trash" style="font-size: 3rem; color: #f23c49;"></i>
+                    </div>
+                    <h6 class="text-white mb-2">آیا از حذف این پلن مطمئن هستید؟</h6>
+                    <p class="text-muted small mb-0">این عمل غیرقابل بازگشت است و پلن به طور کامل حذف خواهد شد.</p>
+                    <input type="hidden" id="deletePlanId" value="">
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-center gap-3">
+                    <button type="button" class="spm-btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn" style="border-radius: 40px;">
+                        <i class="fi-trash me-1"></i>
+                        حذف کن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'content_team/js/pages/service_plans_management.js' %}"></script>
+{% endblock %}

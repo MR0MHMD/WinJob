@@ -1,21 +1,41 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
+from core.admin_utils import format_datetime
 from .models import *
 
 
-class ContentServiceRateInline(admin.TabularInline):
-    model = ContentServiceRate
+class ContentServicePlanInline(admin.TabularInline):
+    """
+    اینلاین پلن‌های خدمات - جایگزین ContentServiceRateInline
+    """
+    model = ContentServicePlan
     extra = 0
     fields = (
         "service_type",
+        "name",
         "price_per_unit",
         "estimated_delivery_days",
-        "is_available",
-        "created_at",
+        "is_active",
+        "formated_created_at",
     )
-    readonly_fields = ("created_at",)
+    readonly_fields = ("service_type",
+                       "name",
+                       "price_per_unit",
+                       "estimated_delivery_days",
+                       "is_active",
+                       "formated_created_at",
+   )
     classes = ['collapse']
+
+    def formated_created_at(self, obj):
+        return format_datetime(obj.created_at)
+
+    formated_created_at.short_description = _("تاریخ ایجاد")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('service_type')
 
 
 class TeamReviewInline(admin.TabularInline):
@@ -44,10 +64,6 @@ class ContentTeamMemberInline(admin.TabularInline):
 
 
 class ContentOrderDescriptionInline(admin.StackedInline):
-    """
-    بریف سفارش - به صورت Stacked نمایش داده می‌شه
-    چون فیلدهای زیادی داره و TabularInline خوانا نیست
-    """
     model = ContentOrderDescription
     extra = 0
     can_delete = False
@@ -91,9 +107,6 @@ class ContentOrderDescriptionInline(admin.StackedInline):
 
 
 class ContentOrderFileInline(admin.TabularInline):
-    """
-    فایل‌های پیوست سفارش
-    """
     model = ContentOrderFile
     extra = 0
     can_delete = True

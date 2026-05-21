@@ -1,0 +1,263 @@
+/* ========== انیمیشن‌های پیشرفته ========== */
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+    @keyframes glowPulse {
+        0% { box-shadow: 0 0 5px rgba(253,86,49,0.3), 0 0 10px rgba(93,60,242,0.2); }
+        100% { box-shadow: 0 0 25px rgba(253,86,49,0.8), 0 0 40px rgba(93,60,242,0.4); }
+    }
+    @keyframes borderRotate {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+    }
+    @keyframes fadeInScale {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(40px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-40px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-float {
+        animation: float 5s ease-in-out infinite;
+    }
+    .animate-glow {
+        animation: glowPulse 2s infinite alternate;
+    }
+    .fade-scale {
+        animation: fadeInScale 0.7s ease-out forwards;
+        opacity: 0;
+    }
+    .slide-right {
+        animation: slideInRight 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    .slide-left {
+        animation: slideInLeft 0.6s ease-out forwards;
+        opacity: 0;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+
+    /* کارت شیشه‌ای با حاشیه دو رنگ متحرک */
+    .glass-premium {
+        background: rgba(12, 10, 22, 0.07);
+        backdrop-filter: blur(16px);
+        border-radius: 32px;
+        border: 1px solid rgba(255,255,255,0.08);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        max-width: 100%; /* اضافه کن */
+        word-wrap: break-word; /* اضافه کن */
+        box-sizing: border-box; /* اضافه کن */
+    }
+    .glass-premium::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, #fd5631, #5d3cf2, #fd5631);
+        background-size: 200% 200%;
+        border-radius: 34px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.4s;
+        animation: borderRotate 3s linear infinite;
+    }
+    .glass-premium:hover::before {
+        opacity: 0.4;
+    }
+    .glass-premium:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 45px -12px rgba(0,0,0,0.6);
+    }
+
+    /* هدر با گرادیانت متحرک و موج */
+    .hero-wave {
+        background: radial-gradient(ellipse at 30% 40%, rgba(93,60,242,0.25) 0%, rgba(31,27,45,0.95) 70%);
+        border-bottom: 1px solid rgba(253,86,49,0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-wave::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, #fd5631, #5d3cf2, transparent);
+        animation: borderRotate 2s linear infinite;
+    }
+
+    /* قیمت با افکت نئون */
+    .price-neon {
+        font-size: 4rem;
+        font-weight: 900;
+        text-shadow: 0 0 10px rgba(253,86,49,0.5), 0 0 20px rgba(93,60,242,0.3);
+        background: linear-gradient(135deg, #fff, #fd5631, #ffb347);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: shimmer 2.5s linear infinite;
+    }
+    @keyframes shimmer {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+    }
+
+    /* دکمه‌های سه بعدی با ریپل */
+    .btn-ripple {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+        transform: translateY(-2px);
+    }
+    .btn-ripple:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px -8px rgba(253,86,49,0.5);
+    }
+    .btn-ripple:active {
+        transform: translateY(1px);
+    }
+
+    /* لیست ویژگی‌ها */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 0.75rem;
+    }
+    .feature-item {
+        background: rgba(255,255,255,0.02);
+        border-radius: 16px;
+        padding: 12px 16px;
+        transition: all 0.25s;
+        border: 1px solid rgba(255,255,255,0.03);
+    }
+    .feature-item:hover {
+        background: rgba(253,86,49,0.1);
+        border-color: rgba(253,86,49,0.3);
+        transform: translateX(-5px);
+    }
+
+    /* نمونه کارها اسلایدر مدرن */
+    .portfolio-scroll {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    overflow-y: hidden; /* اضافه کن */
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1rem;
+    cursor: grab;
+    /* این دو خط مهمه: */
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch; /* برای اسکرول نرم توی iOS */
+}
+
+    .portfolio-scroll::-webkit-scrollbar {
+        height: 6px;
+    }
+    .portfolio-scroll::-webkit-scrollbar-track {
+        background: #1e1a2f;
+        border-radius: 10px;
+    }
+    .portfolio-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #fd5631, #5d3cf2);
+        border-radius: 10px;
+    }
+    .portfolio-card {
+        flex: 0 0 280px;
+        scroll-snap-align: start;
+        transition: 0.3s;
+        border-radius: 24px;
+        overflow: hidden;
+        background: rgba(255,255,255,0.03);
+    }
+    .portfolio-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 20px 30px -15px rgba(0,0,0,0.5);
+    }
+    .portfolio-img {
+        height: 180px;
+        width: 100%;
+        object-fit: cover;
+        transition: 0.4s;
+    }
+    .portfolio-card:hover .portfolio-img {
+        transform: scale(1.05);
+        filter: brightness(1.1);
+    }
+
+    /* استار ریتینگ */
+    .stars {
+        display: inline-flex;
+        gap: 4px;
+    }
+    .stars i {
+        font-size: 0.9rem;
+        transition: 0.1s;
+    }
+
+    /* شمارنده آمار */
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #fd5631);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /*@media (max-width: 991px) {*/
+    /*    .slide-bar{ display: none;}*/
+    /*}*/
+
+
+    /* ریسپانسیو */
+    @media (max-width: 768px) {
+        .price-neon { font-size: 2.8rem; }
+        .feature-grid { grid-template-columns: 1fr; }
+        .portfolio-card { flex: 0 0 220px; }
+
+    }
+
+@media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
+    }
+
+    .row.g-5 {
+        --fi-gutter-x: 1rem; /* کاهش گاتر در موبایل */
+        margin-left: calc(-0.5 * var(--fi-gutter-x));
+        margin-right: calc(-0.5 * var(--fi-gutter-x));
+    }
+    .row.g-5 > * {
+        padding-left: calc(var(--fi-gutter-x) * 0.5);
+        padding-right: calc(var(--fi-gutter-x) * 0.5);
+    }
+    .hero-wave {
+        padding: 1.5rem !important; /* پدینگ کمتر */
+    }
+    .hero-wave .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    /* اگه آیکون یا متن بزرگه: */
+    .price-neon {
+        font-size: 2.5rem;
+        word-break: break-all; /* اگه عدد بزرگ باشه */
+    }
+}
