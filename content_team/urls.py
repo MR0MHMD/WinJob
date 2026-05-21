@@ -5,6 +5,7 @@ app_name = 'content_team'
 
 urlpatterns = [
     path('dashboard/', views.content_team_dashboard, name='dashboard'),
+    path('dashboard/performance', views.team_performance_report, name='performance'),
     path('', views.team_list_view, name='team_list'),
     path('<slug:slug>/', views.team_detail_view, name='team_detail'),
     path('team/manage/', views.team_manage_view, name='team_manage'),

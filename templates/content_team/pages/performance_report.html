@@ -1,0 +1,270 @@
+{% extends 'parent/base.html' %}
+{% load static humanize %}
+
+{% block title %}گزارش عملکرد تیم {{ team.name }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/performance_report.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-5 page-animation">
+        <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb breadcrumb-light">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'core:home' %}">خانه</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+                </li>
+                <li class="breadcrumb-item active text-primary" aria-current="page">گزارش عملکرد
+                    تیم {{ team.name }}</li>
+            </ol>
+        </nav>
+
+        <!-- ==================== هدر تیم ==================== -->
+        <div class="team-header-card d-flex flex-wrap justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                {% if team.logo %}
+                    <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="team-logo">
+                {% else %}
+                    <div class="team-avatar">{{ team.name|slice:":1" }}</div>
+                {% endif %}
+                <div>
+                    <h1 class="text-light mb-1 fs-2">{{ team.name }}</h1>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="rating-badge-custom"><i
+                                class="bi bi-star-fill me-1"></i> میانگین امتیاز: {{ avg_rating|default:'بدون امتیاز' }}</span>
+                        <span class="badge bg-primary bg-opacity-25 px-3 py-1 rounded-pill"><i
+                                class="bi bi-people me-1"></i> {{ team.members_count }} عضو</span>
+                        <span class="badge bg-success bg-opacity-25 px-3 py-1 rounded-pill"><i
+                                class="bi bi-check-circle me-1"></i> {{ completed_count }} سفارش تکمیل</span>
+                    </div>
+                </div>
+            </div>
+
+            <a href="{% url 'accounts:dashboard_router' %}"
+               class="btn-outline-primary text-decoration-none mt-3 mt-sm-0">
+                <i class="bi bi-arrow-right me-1"></i> بازگشت
+            </a>
+        </div>
+
+        <!-- ==================== کارت‌های KPI ==================== -->
+        <div class="row g-3 mb-5">
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-layers-fill stat-icon"
+                            style="background: linear-gradient(135deg, #ca0ecf, #df0e58); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ total_orders|intcomma }}</div>
+                    <div class="stat-label">کل سفارشات</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-check-circle-fill stat-icon"
+                            style="background: linear-gradient(135deg, #07c98b, #0ee5a0); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ completed_count|intcomma }}</div>
+                    <div class="stat-label">تکمیل شده</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-cash-stack stat-icon"
+                            style="background: linear-gradient(135deg, #fdbc31, #ffdd77); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ total_revenue|default:0|intcomma }}</div>
+                    <div class="stat-label">درآمد کل (تومان)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-clock stat-icon"
+                            style="background: linear-gradient(135deg, #3c76f2, #6fa0ff); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ avg_delivery_days|default:'-' }}</div>
+                    <div class="stat-label">میانگین تحویل (روز)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-pencil-square stat-icon"
+                            style="background: linear-gradient(135deg, #f23c49, #ff7a84); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ pending_revisions }}</div>
+                    <div class="stat-label">ویرایش در انتظار</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-card">
+                    <div><i class="bi bi-hand-thumbs-up stat-icon"
+                            style="background: linear-gradient(135deg, #5d3cf2, #9b84fa); -webkit-background-clip: text;"></i>
+                    </div>
+                    <div class="stat-value">{{ satisfaction_rate }}%</div>
+                    <div class="stat-label">رضایت مشتریان</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== درآمد شخصی کاربر ==================== -->
+        <div class="personal-income-card mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div>
+                    <h5 class="text-light mb-1"><i class="bi bi-person-check me-2"></i> درآمد شما
+                        ({{ current_user_nickname }})</h5>
+                    <p class="text-muted small">جمع درآمد از تمام سفارشات تیم</p>
+                </div>
+                <div class="text-center">
+                    <span class="personal-income-value">{{ current_user_income|intcomma }}</span>
+                    <span class="text-muted ms-1">تومان</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== آمار ماه جاری ==================== -->
+        <div class="current-month-card mb-5">
+            <div class="row align-items-center">
+                <div class="col-md-7">
+                    <h5 class="text-light mb-1"><i class="bi bi-calendar3 me-2"></i> آمار ماه جاری</h5>
+                    <p class="text-muted small">از ۱ اردیبهشت تا امروز</p>
+                    <div class="d-flex gap-4 flex-wrap mt-2">
+                        <div><span class="current-month-value">{{ current_month_count }}</span> <span
+                                class="text-muted ms-1">سفارش ثبت شده</span></div>
+                        <div><span class="current-month-value text-success">{{ current_month_completed }}</span> <span
+                                class="text-muted ms-1">تکمیل شده</span></div>
+                        <div><span class="current-month-value text-info">{{ current_month_revenue|intcomma }}</span>
+                            <span class="text-muted ms-1">تومان درآمد</span></div>
+                    </div>
+                </div>
+                <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                    <div class="growth-badge d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-graph-up"></i>
+                        <span>نرخ رشد سفارش:
+                            {% if current_month_count > 0 %} +{{ current_month_count }}% {% else %} 0% {% endif %}
+                    </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== نمودارها (۶ ماهه + ۱۰ روزه) ==================== -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-7">
+                <div class="chart-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-light mb-0"><i class="bi bi-bar-chart-steps me-2"></i> روند ماهانه (۶ ماه اخیر)
+                        </h5>
+                    </div>
+                    <canvas id="trendChart" height="260" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="chart-card">
+                    <h5 class="text-light mb-3"><i class="bi bi-pie-chart me-2"></i> تفکیک سفارشات بر اساس سرویس</h5>
+                    <canvas id="servicePieChart" height="260" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- نمودار ۱۰ روزه جدید -->
+        <div class="row g-4 mb-5">
+            <div class="col-12">
+                <div class="chart-card">
+                    <h5 class="text-light mb-3"><i class="bi bi-calendar-week me-2"></i> روند روزانه (۱۰ روز اخیر)</h5>
+                    <canvas id="dailyChart" height="220" style="max-height: 260px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== درآمد اعضا + وضعیت سفارشات ==================== -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-7">
+                <div class="chart-card">
+                    <h5 class="text-light mb-3"><i class="bi bi-coin me-2"></i> درآمد اعضای تیم</h5>
+                    <div class="table-responsive">
+                        <table class="members-table">
+                            <thead>
+                            <tr>
+                                <th>عضو</th>
+                                <th>نقش</th>
+                                <th>درآمد کل</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for member in members_income %}
+                                <tr>
+                                    <td style="width: 40%;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if member.avatar %}
+                                                <img src="{{ member.avatar }}" alt="{{ member.nickname }}"
+                                                     class="member-avatar-sm"
+                                                     style="object-fit: cover; width: 36px; height: 36px; border-radius: 0.9rem;">
+                                            {% else %}
+                                                <div class="member-avatar-sm">{{ member.nickname|slice:":1" }}</div>
+                                            {% endif %}
+                                            <span class="text-light fw-500">{{ member.nickname }}</span>
+                                            {% if member.nickname == current_user_nickname %}
+                                                <span class="badge bg-primary bg-opacity-50 rounded-pill px-2 py-0 fs-xxs">شما</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-dark-soft text-light rounded-pill">{{ member.role }}</span>
+                                    </td>
+                                    <td class="income-number" style="font-weight: 600; color: #07c98b;">
+                                        {{ member.total_income|intcomma }} تومان
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        هیچ تراکنش پرداختی برای اعضا ثبت نشده است
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="chart-card">
+                    <h5 class="text-light mb-3"><i class="bi bi-exclamation-triangle me-2"></i> وضعیت سفارشات</h5>
+                    <div class="status-item d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-hourglass-split text-warning me-2"></i> <span class="text-light">در حال انجام</span></div>
+                        <div class="fw-bold text-white">{{ in_progress_count }}</div>
+                    </div>
+                    <div class="status-item d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-clock-history text-info me-2"></i> <span class="text-light">در انتظار تایید</span></div>
+                        <div class="fw-bold text-white">{{ pending_count }}</div>
+                    </div>
+                    <div class="status-item d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-pencil-square text-danger me-2"></i> <span class="text-light">نیاز به ویرایش</span></div>
+                        <div class="fw-bold text-white">{{ review_pending_count }}</div>
+                    </div>
+                    <hr class="opacity-25 my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-files me-1"></i> کل درخواست‌های ویرایش</span>
+                        <span class="badge bg-secondary rounded-pill px-3 py-2">{{ total_revisions }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== فوتر تیم ==================== -->
+        <div class="team-footer d-flex flex-wrap justify-content-between align-items-center">
+            <div><i class="bi bi-info-circle text-primary me-2"></i> <span class="text-light">تیم تولید محتوای حرفه‌ای با {{ team.members_count }} عضو فعال</span>
+            </div>
+            <div><span class="badge bg-dark-soft rounded-pill"><i class="bi bi-pencil-square me-1"></i> میانگین زمان تحویل: {{ avg_delivery_days|default:'نامشخص' }} روز</span>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+    <script>window.chartData = {{ chart_data_json|safe }};</script>
+    <script src="{% static 'content_team/js/pages/performance_report.js' %}"></script>
+{% endblock %}

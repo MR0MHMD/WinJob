@@ -1,3 +1,8 @@
+from django.utils import timezone
+from datetime import datetime
+import jdatetime
+
+
 def get_team_province(team):
     """دریافت استان تیم از طریق مدیر تیم"""
     try:
@@ -22,3 +27,26 @@ def content_order_file_path(instance, filename):
 
     # fallback
     return f'content_orders/unknown/{filename}'
+
+
+def get_jalali_month_name(dt):
+    """دریافت نام ماه شمسی از تاریخ میلادی (dt: datetime)"""
+    jd = jdatetime.datetime.fromgregorian(datetime=dt)
+    month_names = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+                   'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند']
+    return month_names[jd.month - 1]
+
+
+def get_last_n_months(n=6):
+    """بازگرداندن لیست datetime از اولین روز هر ماه برای n ماه گذشته (شامل ماه جاری)"""
+    today = timezone.now().date()
+    current_month_start = today.replace(day=1)
+    months = []
+    for i in range(n - 1, -1, -1):
+        year = current_month_start.year
+        month = current_month_start.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        months.append(datetime(year, month, 1, tzinfo=timezone.get_current_timezone()))
+    return months

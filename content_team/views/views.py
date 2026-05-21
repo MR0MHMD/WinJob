@@ -1,27 +1,21 @@
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from content_team.utils import get_last_n_months, get_jalali_month_name
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models.functions import TruncMonth, TruncDate
+from django.db.models.functions import TruncMonth, TruncDay
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count, Avg, Prefetch
 from accounts.models import Transaction, CustomUser
-from core.utils import convert_to_jalali
 from django.http import JsonResponse
 from datetime import datetime as dt
 from django.contrib import messages
 from campaigns.models import Coupon
+from ..forms import TeamManageForm
+from content_team.models import *
 from django.utils import timezone
 from datetime import timedelta
-from content_team.models import *
+from datetime import datetime
 import jdatetime
 import json
-from content_team.models import (
-    ContentTeam,
-    ContentServiceType,
-    ContentServicePlan,
-    TeamReview,
-    ContentTeamMember,
-    ContentOrder,
-)
 
 
 def team_list_view(request):
@@ -273,55 +267,9 @@ def content_team_dashboard(request):
 
     wallet_balance = request.user.wallet.balance if hasattr(request.user, 'wallet') else 0
 
-    # ========== نمودار درآمد ماهانه (6 ماه اخیر) ==========
-    six_months_ago = timezone.now() - timedelta(days=180)
-
-    monthly_revenue = orders.filter(
-        status='completed',
-        created_at__gte=six_months_ago
-    ).annotate(
-        month=TruncMonth('created_at')
-    ).values('month').annotate(
-        total=Sum('price')
-    ).order_by('month')
-
-    monthly_labels = []
-    monthly_data = []
-
-    for item in monthly_revenue:
-        if item['month']:
-            jalali_date = convert_to_jalali(item['month'])
-            if jalali_date:
-                monthly_labels.append(jalali_date.strftime('%B'))
-                monthly_data.append(float(item['total']) if item['total'] else 0)
-
-    # ========== نمودار تعداد سفارشات روزانه (30 روز اخیر) ==========
-    now = timezone.now()
-    last_30_days = now - timedelta(days=30)
-
-    daily_orders = orders.filter(
-        created_at__gte=last_30_days
-    ).annotate(
-        day=TruncDate('created_at')
-    ).values('day').annotate(
-        count=Count('id')
-    ).order_by('day')
-
-    daily_orders_labels = []
-    daily_orders_data = []
-
-    for item in daily_orders:
-        if item['day']:
-            jalali_date = convert_to_jalali(item['day'])
-            if jalali_date:
-                daily_orders_labels.append(jalali_date.strftime('%d/%m'))
-            else:
-                daily_orders_labels.append(item['day'].strftime('%d/%m'))
-            daily_orders_data.append(item['count'])
-
     # ========== سفارش‌های اخیر (با select_related اصلاح شده) ==========
     recent_orders = orders.select_related(
-        'campaign', 'team', 'plan__service_type'  # اصلاح: به‌جای service_rate
+        'campaign', 'team', 'plan__service_type'
     ).order_by('-created_at')[:10]
 
     active_orders = orders.filter(
@@ -428,10 +376,6 @@ def content_team_dashboard(request):
         'total_reviews': total_reviews,
         'total_members': total_members,
         'wallet_balance': wallet_balance,
-        'monthly_labels_json': json.dumps(monthly_labels, ensure_ascii=False),
-        'monthly_data_json': json.dumps(monthly_data, ensure_ascii=False),
-        'monthly_orders_labels_json': json.dumps(daily_orders_labels, ensure_ascii=False),
-        'monthly_orders_data_json': json.dumps(daily_orders_data, ensure_ascii=False),
         'recent_orders': recent_orders,
         'active_orders': active_orders,
         'pending_approval_orders': pending_approval_orders,
@@ -447,6 +391,212 @@ def content_team_dashboard(request):
     }
 
     return render(request, "content_team/pages/dashboard.html", context)
+
+
+@login_required
+def team_performance_report(request):
+    # بررسی عضویت در تیم
+    if not hasattr(request.user, 'team_member') or not request.user.team_member:
+        return redirect('core:home')
+
+    team_member = request.user.team_member
+    team = team_member.team
+    current_user_nickname = request.user.nickname or request.user.phone_number
+
+    # ----- آمار پایه -----
+    total_orders = ContentOrder.objects.filter(team=team).count()
+    completed_orders = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.COMPLETED)
+    completed_count = completed_orders.count()
+    total_revenue = completed_orders.aggregate(total=Sum('price'))['total'] or 0
+    avg_rating = team.avg_rating
+    in_progress_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.IN_PROGRESS).count()
+    pending_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.PENDING).count()
+    review_pending_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.REVIEW_PENDING).count()
+
+    # میانگین زمان تحویل
+    deliveries = ContentDelivery.objects.filter(
+        order__team=team,
+        status=ContentDelivery.DeliveryStatus.FINAL_ACCEPTED
+    ).select_related('order')
+    delivery_times = []
+    for delivery in deliveries:
+        if delivery.order.created_at and delivery.accepted_at:
+            delta = delivery.accepted_at - delivery.order.created_at
+            delivery_times.append(delta.days)
+    avg_delivery_days = round(sum(delivery_times) / len(delivery_times), 1) if delivery_times else None
+
+    total_revisions = ContentOrderRevision.objects.filter(order__team=team).count()
+    pending_revisions = ContentOrderRevision.objects.filter(order__team=team, status='pending').count()
+
+    positive_reviews = TeamReview.objects.filter(team=team, rating__gte=4).count()
+    total_reviews = TeamReview.objects.filter(team=team).count()
+    satisfaction_rate = round((positive_reviews / total_reviews) * 100) if total_reviews > 0 else 0
+
+    # ----- نمودار روند ماهانه (۶ ماه) -----
+    last_months = get_last_n_months(6)
+    first_day = last_months[0]
+    orders_by_month = (
+        ContentOrder.objects.filter(
+            team=team,
+            status=ContentOrder.Status.COMPLETED,
+            created_at__gte=first_day
+        )
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(count=Count('id'), revenue=Sum('price'))
+        .order_by('month')
+    )
+    data_dict = {}
+    for item in orders_by_month:
+        if item['month']:
+            key = item['month'].date()
+            data_dict[key] = {
+                'count': item['count'],
+                'revenue': int(item['revenue'] or 0)
+            }
+
+    month_labels = []
+    orders_data = []
+    revenue_data = []
+    for datet in last_months:
+        month_labels.append(get_jalali_month_name(datet))
+        key_date = datet.date()
+        if key_date in data_dict:
+            orders_data.append(data_dict[key_date]['count'])
+            revenue_data.append(data_dict[key_date]['revenue'])
+        else:
+            orders_data.append(0)
+            revenue_data.append(0)
+
+    # ----- نمودار روند روزانه (۱۰ روز اخیر) -----
+    today = timezone.now().date()
+    start_10_days_ago = today - timedelta(days=9)  # ۱۰ روز شامل امروز
+    start_datetime = datetime.combine(start_10_days_ago, datetime.min.time(), tzinfo=timezone.get_current_timezone())
+
+    daily_orders = (
+        ContentOrder.objects.filter(
+            team=team,
+            status=ContentOrder.Status.COMPLETED,
+            created_at__gte=start_datetime
+        )
+        .annotate(day=TruncDay('created_at'))
+        .values('day')
+        .annotate(count=Count('id'), revenue=Sum('price'))
+        .order_by('day')
+    )
+
+    daily_dict = {}
+    for item in daily_orders:
+        if item['day']:
+            day_date = item['day'].date()
+            daily_dict[day_date] = {
+                'count': item['count'],
+                'revenue': int(item['revenue'] or 0)
+            }
+
+    daily_labels = []
+    daily_orders_count = []
+    daily_revenue = []
+    for i in range(10):
+        current_day = start_10_days_ago + timedelta(days=i)
+        jd = jdatetime.date.fromgregorian(date=current_day)
+        # فرمت روز/ماه با دو رقم (مثلاً ۳۱/۰۲)
+        label = f"{jd.month:02d}/{jd.day:02d}"
+        daily_labels.append(label)
+        if current_day in daily_dict:
+            daily_orders_count.append(daily_dict[current_day]['count'])
+            daily_revenue.append(daily_dict[current_day]['revenue'])
+        else:
+            daily_orders_count.append(0)
+            daily_revenue.append(0)
+
+    # ----- تفکیک خدمات -----
+    service_breakdown = (
+        ContentOrder.objects.filter(team=team, status=ContentOrder.Status.COMPLETED)
+        .values('plan__service_type__name')
+        .annotate(count=Count('id'), total_price=Sum('price'))
+        .order_by('-count')
+    )
+    service_labels = [item['plan__service_type__name'] or 'متفرقه' for item in service_breakdown]
+    service_counts = [item['count'] for item in service_breakdown]
+    service_revenues = [int(item['total_price'] or 0) for item in service_breakdown]
+
+    from django.conf import settings
+
+
+    members_income = (
+        Transaction.objects.filter(
+            type=Transaction.Type.TEAM_PAYMENT,
+            team_member__team=team,
+            status=Transaction.Status.SUCCESS
+        )
+        .values('team_member__user__nickname', 'team_member__role', 'team_member__user__avatar')
+        .annotate(total_income=Sum('amount'))
+        .order_by('-total_income')
+    )
+    members_income_list = []
+    current_user_income = 0
+    for m in members_income:
+        nickname = m['team_member__user__nickname'] or 'نامشخص'
+        income = int(m['total_income'] or 0)
+        avatar_path = m['team_member__user__avatar']
+        if avatar_path:
+            full_avatar_url = settings.MEDIA_URL + avatar_path
+        else:
+            full_avatar_url = None
+        members_income_list.append({
+            'nickname': nickname,
+            'role': dict(ContentTeamMember.Role.choices).get(m['team_member__role'], m['team_member__role']),
+            'total_income': income,
+            'avatar': full_avatar_url,
+        })
+        if nickname == current_user_nickname:
+            current_user_income = income
+
+    # ----- آمار ماه جاری -----
+    now = timezone.now()
+    current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_month_orders = ContentOrder.objects.filter(team=team, created_at__gte=current_month_start)
+    current_month_count = current_month_orders.count()
+    current_month_revenue = current_month_orders.aggregate(total=Sum('price'))['total'] or 0
+    current_month_completed = current_month_orders.filter(status=ContentOrder.Status.COMPLETED).count()
+
+    # آماده‌سازی JSON برای نمودارها
+    chart_data = {
+        'months': month_labels,
+        'orders_count': orders_data,
+        'revenue': revenue_data,
+        'service_labels': service_labels,
+        'service_counts': service_counts,
+        'service_revenues': service_revenues,
+        'daily_labels': daily_labels,
+        'daily_orders': daily_orders_count,
+        'daily_revenue': daily_revenue,
+    }
+
+    context = {
+        'team': team,
+        'team_member': team_member,
+        'current_user_nickname': current_user_nickname,
+        'current_user_income': current_user_income,
+        'total_orders': total_orders,
+        'completed_count': completed_count,
+        'total_revenue': total_revenue,
+        'avg_rating': avg_rating,
+        'in_progress_count': in_progress_count,
+        'pending_count': pending_count,
+        'review_pending_count': review_pending_count,
+        'avg_delivery_days': avg_delivery_days,
+        'total_revisions': total_revisions,
+        'pending_revisions': pending_revisions,
+        'satisfaction_rate': satisfaction_rate,
+        'members_income': members_income_list,
+        'current_month_count': current_month_count,
+        'current_month_revenue': current_month_revenue,
+        'current_month_completed': current_month_completed,
+        'chart_data_json': json.dumps(chart_data, ensure_ascii=False),
+    }
+    return render(request, 'content_team/pages/performance_report.html', context)
 
 
 @login_required
@@ -658,7 +808,6 @@ def team_orders_list(request):
     price_max = request.GET.get('price_max', '')
     show_current_only = request.GET.get('current') == '1'
 
-    orders = None
 
     if show_current_only:
         orders = ContentOrder.objects.exclude(status__in=['completed', 'cancelled'])
@@ -687,12 +836,12 @@ def team_orders_list(request):
 
     if search_query:
         orders = orders.filter(
-    Q(campaign__name__icontains=search_query) |
-    Q(campaign__advertiser__user__nickname__icontains=search_query) |
-    Q(campaign__advertiser__business_name__icontains=search_query) |
-    Q(brief__brand_name__icontains=search_query)
+            Q(campaign__name__icontains=search_query) |
+            Q(campaign__advertiser__user__nickname__icontains=search_query) |
+            Q(campaign__advertiser__business_name__icontains=search_query) |
+            Q(brief__brand_name__icontains=search_query)
 
-    )
+        )
 
     if price_min:
         orders = orders.filter(price__gte=int(price_min))
@@ -1213,13 +1362,6 @@ def team_coupon_delete(request, coupon_id):
 
     messages.success(request, f"کد تخفیف {code} با موفقیت حذف شد! 🗑️")
     return redirect('content_team:team_coupons')
-
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from ..models import ContentTeamMember
-from ..forms import TeamManageForm
 
 
 @login_required

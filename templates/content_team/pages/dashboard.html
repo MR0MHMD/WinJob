@@ -9,7 +9,7 @@
 
 {% block content %}
     <div class="container py-4 dashboard-container">
-        <!-- بنر خوش‌آمدگویی -->
+        <!-- بنر خوش‌آمدگویی (بدون تغییر) -->
         <div class="welcome-banner">
             <div class="row align-items-center">
                 <div class="col-md-8">
@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <!-- کارت‌های آماری -->
+        <!-- کارت‌های آماری (بدون تغییر) -->
         <div class="row g-4 mb-5">
             <!-- سفارشات -->
             <div class="col-xl-3 col-md-6">
@@ -138,7 +138,7 @@
             </div>
         </div>
 
-        <!-- کارت‌های عملکرد تیم (امتیاز و اعضا) -->
+        <!-- کارت‌های عملکرد تیم (امتیاز و اعضا) (بدون تغییر) -->
         <div class="row g-4 mb-5">
             <div class="col-md-6">
                 <div class="dashboard-card">
@@ -204,7 +204,7 @@
             </div>
         </div>
 
-        <!-- دسترسی سریع -->
+        <!-- دسترسی سریع (بدون تغییر) -->
         <div class="row g-3 mb-5">
             <div class="col-12">
                 <div class="dashboard-card">
@@ -229,7 +229,7 @@
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="{% url 'core:pending' %}" class="quick-action-btn d-block text-decoration-none">
+                                <a href="{% url 'content_team:performance' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-dashboard"></i>
                                     <span class="small text-white">گزارش عملکرد</span>
                                 </a>
@@ -248,51 +248,91 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
-                <!-- نمودار درآمد ماهانه -->
-                <div class="dashboard-card earnings-chart-card mb-4">
-                    <div class="dashboard-card-header">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="chart-header-icon">
-                                    <i class="fi-cash"></i>
-                                </div>
-                                <h5 class="text-white mb-0">درآمد ماهانه تیم</h5>
-                            </div>
-                            <span class="badge bg-faded-success">۶ ماه اخیر</span>
-                        </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="chart-container">
-                            <canvas id="monthlyRevenueChart" width="800" height="400" 
-                                data-labels='{{ monthly_labels_json|safe }}' 
-                                data-values='{{ monthly_data_json|safe }}'></canvas>
-                        </div>
-                    </div>
-                </div>
-            
-                <!-- نمودار تعداد سفارشات روزانه -->
+                <!-- ========== بخش جایگزین نمودارها: آخرین نظرات ========== -->
                 <div class="dashboard-card mb-4">
-                    <div class="dashboard-card-header">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="chart-header-icon" style="background: rgba(253, 86, 49, 0.15);">
-                                    <i class="fi-list" style="color: #fd5631;"></i>
-                                </div>
-                                <h5 class="text-white mb-0">تعداد سفارشات روزانه</h5>
-                            </div>
-                            <span class="badge bg-faded-primary">۳۰ روز اخیر</span>
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-star-filled text-warning"></i>
+                            <h5 class="text-white mb-0">آخرین نظرات</h5>
                         </div>
+                        <a href="#" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="chart-container">
-                            <canvas id="monthlyOrdersChart" width="800" height="400" 
-                                data-labels='{{ monthly_orders_labels_json|safe }}' 
-                                data-values='{{ monthly_orders_data_json|safe }}'></canvas>
-                        </div>
+                    <div class="card-body p-0">
+                        {% if recent_reviews %}
+                            {% for review in recent_reviews %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="text-white fw-bold small">{{ review.advertiser.business_name|default:review.advertiser.user.nickname }}</div>
+                                            <div class="star-rating star-rating-sm mt-1">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= review.rating %}
+                                                        <i class="fi-star-filled star-rating-icon active"></i>
+                                                    {% else %}
+                                                        <i class="fi-star star-rating-icon"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            {% if review.comment %}
+                                                <div class="small text-muted mt-1">{{ review.comment|truncatechars:40 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted">{{ review.created_at|date:"Y/m/d" }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-star fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز نظری ثبت نشده است</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- سفارشات در حال انجام -->
+                <!-- ========== بخش جایگزین نمودارها: آخرین تراکنش‌ها ========== -->
+                <div class="dashboard-card mb-4">
+                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-list text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
+                        </div>
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_transactions %}
+                            {% for transaction in recent_transactions %}
+                                <div class="transaction-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
+                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
+                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
+                                            {{ transaction.sign_display }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- سفارشات در حال انجام (بدون تغییر) -->
                 {% if active_orders %}
                     <div class="dashboard-card mb-4">
                         <div class="dashboard-card-header">
@@ -333,7 +373,7 @@
                     </div>
                 {% endif %}
 
-                <!-- سفارشات در انتظار تایید (فقط مدیر) -->
+                <!-- سفارشات در انتظار تایید (فقط مدیر) (بدون تغییر) -->
                 {% if is_manager and pending_approval_orders %}
                     <div class="dashboard-card mb-4">
                         <div class="dashboard-card-header">
@@ -364,7 +404,7 @@
                     </div>
                 {% endif %}
 
-                <!-- آخرین سفارشات -->
+                <!-- آخرین سفارشات (بدون تغییر) -->
                 <div class="dashboard-card">
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
@@ -415,7 +455,7 @@
             </div>
 
             <div class="col-lg-4">
-                <!-- اعضای تیم (فقط مدیر) -->
+                <!-- اعضای تیم (فقط مدیر) (بدون تغییر) -->
                 {% if is_manager %}
                     <div class="dashboard-card mb-4">
                         <div class="dashboard-card-header d-flex justify-content-between align-items-center">
@@ -463,93 +503,11 @@
                     </div>
                 {% endif %}
 
-                <!-- آخرین نظرات -->
-                <div class="dashboard-card mb-4">
-                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fi-star-filled text-warning"></i>
-                            <h5 class="text-white mb-0">آخرین نظرات</h5>
-                        </div>
-                        <a href="#" class="small text-primary text-decoration-none">
-                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
-                        </a>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if recent_reviews %}
-                            {% for review in recent_reviews %}
-                                <div class="transaction-item">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <div class="text-white fw-bold small">{{ review.advertiser.business_name|default:review.advertiser.user.nickname }}</div>
-                                            <div class="star-rating star-rating-sm mt-1">
-                                                {% for i in "12345"|make_list %}
-                                                    {% if forloop.counter <= review.rating %}
-                                                        <i class="fi-star-filled star-rating-icon active"></i>
-                                                    {% else %}
-                                                        <i class="fi-star star-rating-icon"></i>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                            {% if review.comment %}
-                                                <div class="small text-muted mt-1">{{ review.comment|truncatechars:40 }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="small text-muted">{{ review.created_at|date:"Y/m/d" }}</div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-5">
-                                <i class="fi-star fs-1 text-muted mb-3 d-block"></i>
-                                <p class="text-muted mb-3">هنوز نظری ثبت نشده است</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+                <!-- بخش‌های «آخرین نظرات» و «آخرین تراکنش‌ها» از سایدبار حذف شدند -->
 
-                <!-- آخرین تراکنش‌ها -->
-                <div class="dashboard-card">
-                    <div class="dashboard-card-header d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fi-list text-primary"></i>
-                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
-                        </div>
-                        <a href="{% url 'accounts:wallet_dashboard' %}" class="small text-primary text-decoration-none">
-                            مشاهده همه <i class="fi-arrow-left ms-1"></i>
-                        </a>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if recent_transactions %}
-                            {% for transaction in recent_transactions %}
-                                <div class="transaction-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
-                                                <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
-                                            </div>
-                                            <div>
-                                                <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
-                                                <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
-                                            {{ transaction.sign_display }}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-5">
-                                <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
-                                <p class="text-muted mb-3">هنوز تراکنشی انجام نشده است</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            
-                <!-- کارت وضعیت پلن‌ های خدمات (فقط مدیر) -->
+                <!-- وضعیت پلن‌های خدمات (فقط مدیر) (بدون تغییر) -->
                 {% if is_manager %}
-                    <div class="dashboard-card mt-4">
+                    <div class="dashboard-card mb-4">
                         <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="fi-layers text-primary"></i>
@@ -560,7 +518,6 @@
                             </a>
                         </div>
                         <div class="card-body p-3">
-                            <!-- خلاصه آمار (همون قبلی) -->
                             <div class="d-flex justify-content-between align-items-center mb-3 pb-1 border-bottom border-light">
                                 <div class="text-center flex-grow-1">
                                     <div class="h5 text-white mb-0">{{ total_services|default:"۰" }}</div>
@@ -576,7 +533,6 @@
                                 </div>
                             </div>
                             
-                            <!-- ========== لیست خدماتی که پلن دارند ========== -->
                             {% if service_types_with_plans %}
                                 <div class="vstack gap-3 mb-4">
                                     <div class="small text-muted mb-1">خدمات فعال با پلن :</div>
@@ -618,7 +574,6 @@
                                 </div>
                             {% endif %}
                             
-                            <!-- ========== خلاصه خدماتی که پلن ندارند و دکمه واحد ========== -->
                             {% if service_types_without_plans %}
                                 <div class="border-top border-light pt-3 mt-2">
                                     <div class="alert alert-warning bg-faded-warning border-0 py-2 mb-3 small">
@@ -635,9 +590,9 @@
                         </div>
                     </div>
                 {% endif %}
-            
-                <!-- کارت کدهای تخفیف -->
-                <div class="dashboard-card mt-4">
+
+                <!-- کدهای تخفیف (بدون تغییر) -->
+                <div class="dashboard-card">
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-ticket text-primary"></i>
@@ -693,9 +648,4 @@
             </div>
         </div>
     </div>
-{% endblock %}
-
-{% block script %}
-    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
-    <script src="{% static 'content_team/js/pages/dashboard.js' %}"></script>
 {% endblock %}
