@@ -90,8 +90,8 @@ class Notification(models.Model):
     )
 
     class Meta:
-        verbose_name = _('نوتیفیکیشن')
-        verbose_name_plural = _('نوتیفیکیشن‌ها')
+        verbose_name = _('اعلان')
+        verbose_name_plural = _('اعلان ها')
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at']),
@@ -213,8 +213,8 @@ class NotificationPreference(models.Model):
     )
 
     class Meta:
-        verbose_name = _('تنظیمات نوتیفیکیشن')
-        verbose_name_plural = _('تنظیمات نوتیفیکیشن کاربران')
+        verbose_name = _('تنظیمات اعلان کاربر')
+        verbose_name_plural = _('تنظیمات اعلان کاربران')
 
     def __str__(self):
         return f"تنظیمات نوتیفیکیشن - کاربر {self.user.id}"
