@@ -263,7 +263,6 @@ class Campaign(models.Model):
         return format_datetime(self.created_at)
 
 
-
 class CampaignInfluencer(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"

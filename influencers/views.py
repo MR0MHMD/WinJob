@@ -1,5 +1,5 @@
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
-from .models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerReview
+from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.db.models import Sum, Q, Value, IntegerField, FloatField
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncDate, Coalesce
@@ -263,26 +263,23 @@ def influencer_respond(request, order_id):
         messages.error(request, "شما دسترسی به این عملیات ندارید.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    if order.status != CampaignInfluencer.Status.PENDING:
+    if order.status != 'pending': # اینجا از استرینگ استفاده کردم طبق مدل‌ها
         messages.error(request, "این سفارش قبلاً پاسخ داده شده است و قابل تغییر نیست.")
         return redirect('influencers:order_detail', order_id=order.id)
 
     action = request.POST.get('action')
 
-    if action == 'accept':
-        order.status = CampaignInfluencer.Status.ACCEPTED
-        order.save()
-        messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ‌دهنده باشید.")
+    if action in ['accept', 'reject']:
+        from campaigns.services.campaigns_notifications import respond_to_influencer_order_service
+        respond_to_influencer_order_service(order, action)
 
-    elif action == 'reject':
-        # تغییر وضعیت به رد شده
-        order.status = CampaignInfluencer.Status.REJECTED
-        order.save()
-        messages.success(request, "❌ سفارش رد شد. در صورت تمایل می‌توانید در کمپین‌های دیگر شرکت کنید.")
-
+        if action == 'accept':
+            messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ‌دهنده باشید.")
+        else:
+            messages.success(request, "❌ سفارش رد شد. در صورت تمایل می‌توانید در کمپین‌های دیگر شرکت کنید.")
     else:
         messages.error(request, "عملیات نامعتبر است.")
-        return redirect('order_detail', order_id=order.id)
+        return redirect('influencers:order_detail', order_id=order.id)
 
     return redirect('influencers:order_detail', order_id=order.id)
 
@@ -318,53 +315,18 @@ def submit_report(request, order_id):
 
     if request.method == 'POST':
         if now < campaign.start_date:
-            messages.error(request, f"زمان ثبت گزارش از {campaign.start_date|date:'Y/m/d H:i'} شروع می‌شود.")
+            messages.error(request, f"زمان ثبت گزارش از {campaign.start_date | date:'Y/m/d H:i'} شروع می‌شود.")
             return redirect('influencers:order_detail', order_id=order.id)
 
         post_link = request.POST.get('post_link')
         screenshot = request.FILES.get('screenshot')
+
         if not post_link or not screenshot:
             messages.error(request, "لطفاً تمام فیلدها را پر کنید.")
             return redirect('influencers:submit_report', order_id=order.id)
 
-        # ثبت گزارش
-        CampaignReport.objects.create(
-            campaign_influencer=order,
-            post_link=post_link,
-            screenshot=screenshot,
-            status='pending'
-        )
-
-        # تغییر وضعیت سفارش به COMPLETED (انجام شده)
-        order.status = CampaignInfluencer.Status.COMPLETED
-        order.save(update_fields=['status'])
-
-        # =======================================================
-        # بروزرسانی وضعیت کمپین
-        # =======================================================
-
-        # 1. اگر اولین گزارش است، کمپین به RUNNING می‌رود (اگر قبلاً RUNNING نبوده)
-        total_reports = CampaignReport.objects.filter(
-            campaign_influencer__campaign=campaign
-        ).count()
-        if total_reports == 1 and campaign.status != Campaign.Status.RUNNING:
-            campaign.status = Campaign.Status.RUNNING
-            campaign.save(update_fields=['status'])
-
-        # 2. بررسی اتمام کمپین:
-        #    آیا هیچ سفارش PENDING یا ACCEPTED بدون گزارشی باقی نمانده است؟
-        pending_or_accepted_without_report = CampaignInfluencer.objects.filter(
-            campaign=campaign
-        ).filter(
-            models.Q(status=CampaignInfluencer.Status.PENDING) |
-            models.Q(status=CampaignInfluencer.Status.ACCEPTED, report__isnull=True)
-        ).count()
-
-        if pending_or_accepted_without_report == 0:
-            # هیچ سفارشی در وضعیت PENDING یا ACCEPTED بدون گزارش وجود ندارد
-            if campaign.status != Campaign.Status.COMPLETED:
-                campaign.status = Campaign.Status.COMPLETED
-                campaign.save(update_fields=['status'])
+        from campaigns.services.campaigns_notifications import submit_influencer_report_service
+        submit_influencer_report_service(order, post_link, screenshot)
 
         messages.success(request, "گزارش شما با موفقیت ثبت شد. پس از بررسی، نتیجه به شما اطلاع داده می‌شود.")
         return redirect('influencers:order_detail', order_id=order.id)

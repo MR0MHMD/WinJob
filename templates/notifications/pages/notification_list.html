@@ -1,0 +1,155 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}مدیریت اعلان ‌ها{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'notifications/css/notification_list.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container pt-5 pb-4 mt-4 notif-container">
+
+        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-secondary">
+            <h1 class="h3 text-white mb-0 d-flex align-items-center">
+                <i class="fi-bell text-primary me-3"></i>
+                اعلان‌های شما
+                {% if unread_count > 0 %}
+                    <span class="badge bg-primary rounded-pill fs-sm ms-3" id="unreadBadge">{{ unread_count }}</span>
+                {% endif %}
+            </h1>
+
+            <div class="d-flex gap-2">
+                {% if unread_count > 0 %}
+                    <button id="markAllReadBtn" data-mark-all-url="{% url 'notifications:mark_all_read' %}"
+                            class="btn btn-outline-light btn-sm rounded-pill">
+                        <i class="fi-check-circle me-1"></i> خواندن همه
+                    </button>
+                {% endif %}
+
+                <button class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal"
+                        data-bs-target="#settingsModal">
+                    <i class="fi-settings me-1"></i> تنظیمات اعلان
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                {% for notif in notifications %}
+                    <div class="notif-card mb-3 {% if not notif.is_read %}notif-unread{% endif %}">
+                        <div class="card-body p-4 align-items-start">
+                            {% with icon=notif.get_icon_data %}
+                                <div class="d-flex gap-3">
+                                    <div class="notif-icon flex-shrink-0 ms-3 {{ icon.1 }} text-white">
+                                        <i class="{{ icon.0 }}"></i>
+                                    </div>
+                                    <div class="d-flex flex-column  mb-1 flex-wrap">
+                                        <h5 class="text-title-dark fs-lg mb-0 text-truncate">{{ notif.title }}</h5>
+                                        <span class="d-inline-block mx-1 text-body-dark fs-sm text-nowrap"><i
+                                                class="fi-clock me-1"></i>{{ notif.time_ago }}</span>
+                                    </div>
+                                </div>
+
+                            {% endwith %}
+
+
+                            <div class="flex-grow-1 min-w-0">
+
+
+                                <p class="text-body-dark mb-3 mt-2" style="line-height: 1.8; font-size: 0.95rem;">
+                                    {{ notif.message|linebreaksbr }}
+                                </p>
+
+                                {% if notif.link %}
+                                    <a href="{{ notif.link }}"
+                                       class="btn btn-sm btn-link text-primary px-0 text-decoration-none mark-notification-read"
+                                       data-notif-id="{{ notif.id }}"
+                                       data-mark-url="{% url 'notifications:mark_read' notif.id %}"
+                                       data-notif-link="{{ notif.link }}">
+                                        مشاهده جزئیات <i class="fi-chevron-right fs-xs ms-1"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-5 mt-5">
+                        <i class="fi-bell-off text-muted opacity-50 mb-3" style="font-size: 4rem;"></i>
+                        <h4 class="text-white font-vazir">صندوق اعلان‌ها خالیه!</h4>
+                        <p class="text-body-dark">هنوز هیچ پیامی برای شما ثبت نشده.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark settings-modal-content">
+                <div class="modal-header border-secondary border-bottom">
+                    <h5 class="modal-title text-white">
+                        <i class="fi-settings me-2"></i> مدیریت تنظیمات اعلان
+                    </h5>
+
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <form id="preferencesForm">
+                        {% csrf_token %}
+
+                        <h6 class="text-primary mb-3"><i class="fi-globe me-1"></i> تنظیمات عمومی و مالی</h6>
+                        <div class="settings-group">
+                            {% include 'notifications/pages/partials/switch.html' with name="receive_in_bale" label="دریافت نوتیفیکیشن در بله" checked=prefs.receive_in_bale %}
+                            {% include 'notifications/pages/partials/switch.html' with name="ticket_replies" label="پاسخ تیکت‌ها" checked=prefs.ticket_replies %}
+                            {% include 'notifications/pages/partials/switch.html' with name="financial_alerts" label="تراکنش‌های مالی (واریز، برداشت)" checked=prefs.financial_alerts %}
+                            {% include 'notifications/pages/partials/switch.html' with name="marketing_messages" label="اخبار و کدهای تخفیف" checked=prefs.marketing_messages %}
+                        </div>
+
+                        {% if request.user.is_advertiser %}
+                            <h6 class="text-primary mb-3 mt-4"><i class="fi-briefcase me-1"></i> پنل تبلیغ‌دهنده</h6>
+                            <div class="settings-group">
+                                {% include 'notifications/pages/partials/switch.html' with name="adv_campaign_status" label="وضعیت کمپین‌ها (تایید، رد، اکران)" checked=prefs.adv_campaign_status %}
+                                {% include 'notifications/pages/partials/switch.html' with name="adv_influencer_actions" label="واکنش ناشران (پذیرش سفارش)" checked=prefs.adv_influencer_actions %}
+                                {% include 'notifications/pages/partials/switch.html' with name="adv_content_orders" label="وضعیت سفارش تولید محتوا" checked=prefs.adv_content_orders %}
+                            </div>
+                        {% endif %}
+
+                        {% if request.user.is_influencer %}
+                            <h6 class="text-primary mb-3 mt-4"><i class="fi-user me-1"></i> پنل ناشر (اینفلوئنسر)</h6>
+                            <div class="settings-group">
+                                {% include 'notifications/pages/partials/switch.html' with name="inf_new_orders" label="دریافت سفارش تبلیغ جدید" checked=prefs.inf_new_orders %}
+                                {% include 'notifications/pages/partials/switch.html' with name="inf_report_status" label="تایید یا رد گزارش‌های کار" checked=prefs.inf_report_status %}
+                            </div>
+                        {% endif %}
+
+                        {% if request.user.is_team_member %}
+                            <h6 class="text-primary mb-3 mt-4"><i class="fi-monitor me-1"></i> پنل تیم تولید محتوا</h6>
+                            <div class="settings-group">
+                                {% include 'notifications/pages/partials/switch.html' with name="team_new_orders" label="دریافت سفارش محتوای جدید" checked=prefs.team_new_orders %}
+                                {% include 'notifications/pages/partials/switch.html' with name="team_revisions" label="درخواست ویرایش توسط تبلیغ‌دهنده" checked=prefs.team_revisions %}
+                                {% include 'notifications/pages/partials/switch.html' with name="team_financial" label="تایید نهایی فایل و واریز وجه" checked=prefs.team_financial %}
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <div class="modal-footer border-secondary border-top">
+                    <button type="button" class="btn btn-outline-light rounded-pill" data-bs-dismiss="modal">انصراف
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" id="savePreferencesBtn"
+                            data-save-preferences-url="{% url 'notifications:update_preferences' %}">
+                        <i class="fi-save me-1"></i> ذخیره تنظیمات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'notifications/js/notification_list.js' %}"></script>
+{% endblock %}

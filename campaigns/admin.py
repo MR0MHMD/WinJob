@@ -8,6 +8,10 @@ from django.utils.html import format_html
 from django.urls import reverse
 from .inline_admin import *
 import os
+from campaigns.services.campaigns_notifications import (
+    approve_campaign_by_admin,
+    reject_campaign_by_admin
+)
 from .models import (
     ContentType,
     AdType,
@@ -214,16 +218,29 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     # ========== اکشن‌ها ==========
 
     def approve_campaign(self, request, queryset):
-        updated = queryset.update(status=Campaign.Status.APPROVED)
-        self.message_user(request, f"{updated} کمپین تایید شد.")
+        # بررسی می‌کنیم که فقط کمپین‌های در انتظار بررسی آپدیت بشن
+        pending_campaigns = queryset.filter(status=Campaign.Status.PENDING)
+        updated_count = pending_campaigns.count()
 
-    approve_campaign.short_description = "تایید کمپین"
+        for campaign in pending_campaigns:
+            # استفاده از سرویسِ خودمون تا هم وضعیت عوض شه هم نوتیف بره
+            approve_campaign_by_admin(campaign)
+
+        self.message_user(request, f"{updated_count} کمپین با موفقیت تایید و نوتیفیکیشن ارسال شد.")
+
+    approve_campaign.short_description = "تایید کمپین‌های انتخاب شده"
 
     def reject_campaign(self, request, queryset):
-        updated = queryset.update(status=Campaign.Status.CANCELLED)
-        self.message_user(request, f"{updated} کمپین رد شد.")
+        pending_campaigns = queryset.filter(status=Campaign.Status.PENDING)
+        updated_count = pending_campaigns.count()
 
-    reject_campaign.short_description = "رد کمپین"
+        for campaign in pending_campaigns:
+            # دلیلِ رد شدن رو فعلا یه متن پیش‌فرض می‌ذاریم، یا اگه بخوای میتونی Action با فرم بسازی
+            reject_campaign_by_admin(campaign, reason="رد شده توسط مدیریت")
+
+        self.message_user(request, f"{updated_count} کمپین رد شد و نوتیفیکیشن ارسال گردید.")
+
+    reject_campaign.short_description = "رد کمپین‌های انتخاب شده"
 
     # ========== اورراید متدهای میکسین ==========
 
@@ -260,11 +277,35 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
+        # ۱. بررسی دسترسی مدیر منطقه‌ای (کد قبلی خودت)
         if request.user.is_regional_manager and request.user.province:
             if obj.advertiser.user.province != request.user.province:
                 from django.core.exceptions import ValidationError
                 raise ValidationError('شما فقط می‌توانید کمپین‌های تبلیغ‌دهندگان استان خودتان را ایجاد کنید.')
-        super().save_model(request, obj, form, change)
+
+        # ۲. منطق هوشمند نوتیفیکیشن برای ویرایش کمپین
+        if change:
+            # گرفتن وضعیت واقعی و قبلی کمپین از دیتابیس (چون obj وضعیت جدید فرم را دارد)
+            old_status = Campaign.objects.get(pk=obj.pk).status
+            new_status = obj.status  # وضعیت جدیدی که ادمین انتخاب کرده
+
+            # ابتدا تغییرات را در دیتابیس ذخیره می‌کنیم
+            super().save_model(request, obj, form, change)
+
+            # حالا اگر وضعیت قبلاً در انتظار تایید (PENDING) بوده و الان تغییر کرده:
+            if old_status == Campaign.Status.PENDING:
+                from notifications.utils import notify_advertiser_campaign_approved, notify_advertiser_campaign_rejected
+
+                if new_status == Campaign.Status.APPROVED:
+                    notify_advertiser_campaign_approved(obj)
+
+                elif new_status == Campaign.Status.CANCELLED:
+                    # استفاده از متد مستقیم نوتیفیکیشن برای فرم ادمین
+                    # چون وضعیت قبلاً توسط super().save_model تغییر کرده است
+                    notify_advertiser_campaign_rejected(obj, reason="رد/لغو شده توسط مدیریت در پنل ادمین")
+        else:
+            # اگر کمپین کاملاً جدید بود (ساخت از صفر در ادمین)
+            super().save_model(request, obj, form, change)
 
 
 @admin.register(CampaignInfluencer)

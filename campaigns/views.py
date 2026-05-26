@@ -4,7 +4,8 @@ from content_team.models import ContentOrder, ContentOrderFile, ContentTeam
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
 from accounts.models import Transaction
-from .services import create_campaign_invoice
+from .services.campaigns_notifications import submit_campaign_for_review
+from .services.create_invoice import create_campaign_invoice
 from .utils import _detect_file_type
 from django.db.models import Prefetch
 from django.contrib import messages
@@ -16,36 +17,91 @@ import json
 
 
 @login_required
-def campaign_create_step1(request):
+def campaign_create_step1(request, campaign_id=None):
+    editing_campaign = None
+    minutes_value = None  # متغیر برای ذخیره دقیقه‌ها
+
+    if campaign_id:
+        editing_campaign = get_object_or_404(
+            Campaign,
+            id=campaign_id,
+            advertiser=request.user.advertiser_profile,
+            status=Campaign.Status.DRAFT
+        )
+        request.session['campaign_draft_id'] = editing_campaign.id
+
+        # دریافت دقیقه از order در صورت وجود
+        if editing_campaign.content_service_type and editing_campaign.content_service_type.unit == 'minute':
+            order = editing_campaign.content_orders.first()
+            if order and order.minutes:
+                minutes_value = order.minutes
+                request.session['content_minutes'] = minutes_value
+            else:
+                request.session.pop('content_minutes', None)
+        else:
+            request.session.pop('content_minutes', None)
+
     if request.method == 'POST':
         form = CampaignStep1Form(request.POST)
-
         if form.is_valid():
             cd = form.cleaned_data
-            campaign = Campaign.objects.create(
-                advertiser=request.user.advertiser_profile,
-                platform=cd['platform'],
-                content_type=cd['content_type'],
-                ad_type=cd['ad_type'],
-                content_service_type=cd.get("content_service_type"),
-                name=cd['name'],
-                start_date=cd['start_date'],
-                end_date=cd['end_date'],
-                status=Campaign.Status.DRAFT,
-            )
-            request.session['content_minutes'] = cd.get("minutes")
+            if editing_campaign:
+                editing_campaign.platform = cd['platform']
+                editing_campaign.content_type = cd['content_type']
+                editing_campaign.ad_type = cd['ad_type']
+                editing_campaign.content_service_type = cd.get('content_service_type')
+                editing_campaign.name = cd['name']
+                editing_campaign.start_date = cd['start_date']
+                editing_campaign.end_date = cd['end_date']
+                editing_campaign.save()
+                campaign = editing_campaign
+            else:
+                campaign = Campaign.objects.create(
+                    advertiser=request.user.advertiser_profile,
+                    platform=cd['platform'],
+                    content_type=cd['content_type'],
+                    ad_type=cd['ad_type'],
+                    content_service_type=cd.get('content_service_type'),
+                    name=cd['name'],
+                    start_date=cd['start_date'],
+                    end_date=cd['end_date'],
+                    status=Campaign.Status.DRAFT,
+                )
+            request.session['content_minutes'] = cd.get('minutes')
             request.session['campaign_draft_id'] = campaign.id
             return redirect('campaigns:campaign_create_step2')
-
     else:
-        form = CampaignStep1Form()
+        initial = {}
+        if editing_campaign:
+            initial = {
+                'platform': editing_campaign.platform,
+                'content_type': editing_campaign.content_type,
+                'ad_type': editing_campaign.ad_type,
+                'content_service_type': editing_campaign.content_service_type,
+                'name': editing_campaign.name,
+                'start_date': editing_campaign.start_date,
+                'end_date': editing_campaign.end_date,
+            }
+            if minutes_value:
+                initial['minutes'] = minutes_value
+        form = CampaignStep1Form(initial=initial)
 
     context = {
         'form': form,
         'step': 1,
         'total_steps': 4,
-        'step_name': "اطلاعات پایه کمپین"
+        'step_name': 'اطلاعات پایه کمپین',
+        'edit_mode': bool(editing_campaign),
+        'campaign': editing_campaign,
     }
+
+    if editing_campaign:
+        context.update({
+            'edit_content_type_id': editing_campaign.content_type_id,
+            'edit_ad_type_id': editing_campaign.ad_type_id,
+            'edit_service_type_id': editing_campaign.content_service_type_id,
+            'edit_minutes': minutes_value,  # استفاده از متغیر قبلی
+        })
 
     return render(request, 'campaigns/forms/create_campaign_step1.html', context)
 
@@ -162,6 +218,8 @@ def campaign_create_step2(request):
 
             return redirect('campaigns:campaign_create_step3')
 
+    print("prev_selected:", prev_selected)  # در ترمینال لاگ می‌شود
+
     context = {
         "campaign": campaign,
         "rates": rates,
@@ -172,11 +230,7 @@ def campaign_create_step2(request):
         "total_steps": 4,
     }
 
-    return render(
-        request,
-        "campaigns/forms/create_campaign_step2.html",
-        context
-    )
+    return render(request, "campaigns/forms/create_campaign_step2.html", context)
 
 
 @login_required
@@ -401,6 +455,15 @@ def campaign_create_step3_team(request):
     # ------------------------ GET (بارگذاری اولیه) ------------------------
     else:
         initial_plan = existing_order.plan.id if existing_order else None
+
+        if existing_order:
+            preselect_plan_id = existing_order.plan.id
+            preselect_team_id = existing_order.team.id
+        else:
+            preselect_plan_id = None
+            preselect_team_id = None
+
+
         team_form = CampaignStep3TeamForm(initial={'selected_plan': initial_plan}, service_type=service_type)
 
         brief_initial = {}
@@ -487,11 +550,7 @@ def campaign_create_step3_ready(request):
         "step_name": "آپلود محتوای تبلیغ",
     }
 
-    return render(
-        request,
-        "campaigns/forms/create_campaign_step3_ready.html",
-        context
-    )
+    return render(request, "campaigns/forms/create_campaign_step3_ready.html", context)
 
 
 @login_required
@@ -621,8 +680,7 @@ def campaign_create_step4(request):
                         coupon.used_count += 1
                         coupon.save(update_fields=["used_count"])
 
-                campaign.status = Campaign.Status.PENDING
-                campaign.save(update_fields=["status"])
+                submit_campaign_for_review(campaign)
 
             del request.session["campaign_draft_id"]
             messages.success(request, "پرداخت با موفقیت انجام شد. کمپین ثبت گردید.")
@@ -653,11 +711,7 @@ def campaign_create_step4(request):
         "step_name": "پرداخت",
     }
 
-    return render(
-        request,
-        "campaigns/forms/create_campaign_step4.html",
-        context
-    )
+    return render(request, "campaigns/forms/create_campaign_step4.html", context)
 
 
 def track_click(request, code):

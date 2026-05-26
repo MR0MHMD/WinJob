@@ -213,3 +213,8 @@ load_dotenv()
 
 GHASEDAK_OTP_API = os.getenv("GHASEDAK_OTP_API")
 GHASEDAK_OTP_TEMPLATE = os.getenv('GHASEDAK_OTP_TEMPLATE')
+BALE_BOT_TOKEN = os.environ.get("BALE_BOT_TOKEN")
+if not BALE_BOT_TOKEN:
+    raise ValueError("متغیر BALE_BOT_TOKEN در فایل .env تنظیم نشده است!")
+
+SITE_URL = os.environ.get("SITE_URL", "https://winjob.chbkn.run")

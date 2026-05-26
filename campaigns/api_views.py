@@ -298,3 +298,17 @@ def apply_discount_code(request):
             {"error": str(e)},
             status=500
         )
+
+
+@login_required
+@require_POST
+def campaign_delete(request, campaign_id):
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile,
+        status=Campaign.Status.DRAFT
+    )
+    campaign.delete()
+    messages.success(request, "کمپین با موفقیت حذف شد.")
+    return redirect('advertisers:my_campaigns')

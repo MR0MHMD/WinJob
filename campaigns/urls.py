@@ -6,6 +6,7 @@ app_name = 'campaigns'
 
 urlpatterns = [
     path('campaign_create_step1', campaign_create_step1, name='campaign_create_step1'),
+    path('campaign_edit/<int:campaign_id>/step1/', campaign_create_step1, name='campaign_edit_step1'),
     path('campaign_create_step2', campaign_create_step2, name='campaign_create_step2'),
     path("campaign_create_step3", campaign_create_step3_router, name="campaign_create_step3"),
     path("campaign_create_step3/ready", campaign_create_step3_ready, name="campaign_create_step3_ready"),
@@ -14,5 +15,6 @@ urlpatterns = [
     path('campaign_create_step4', campaign_create_step4, name='campaign_create_step4'),
     path('campaign_create_step2/calculate', campaign_step2_calculate_price, name='step2_calculate'),
     path('campaign_create_step4/apply_discount', apply_discount_code, name='apply_discount'),
+    path('delete/<int:campaign_id>/', campaign_delete, name='campaign_delete'),
     path("r/<str:code>/", track_click, name="track_click"),
 ]

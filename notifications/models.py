@@ -1,5 +1,5 @@
 from django.db import models
-from django.conf import settings
+from accounts.models import CustomUser
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
@@ -10,9 +10,17 @@ class Notification(models.Model):
         CAMPAIGN_PENDING = 'campaign_pending', 'کمپین در انتظار تایید'
         CAMPAIGN_APPROVED = 'campaign_approved', 'کمپین تایید شد'
         CAMPAIGN_REJECTED = 'campaign_rejected', 'کمپین رد شد'
+        CAMPAIGN_RUNNING = 'campaign_running', 'کمپین در حال اجراست'
         CAMPAIGN_COMPLETED = 'campaign_completed', 'کمپین تمام شد'
+        CONTENT_ACCEPTED = 'content_accepted', 'سفارش محتوا قبول شد'
+        CONTENT_REJECTED = 'content_rejected', 'سفارش محتوا رد شد'
+        CONTENT_DELIVERED = 'content_delivered', 'فایل محتوا تحویل شد'
+        REVISION_ACCEPTED = 'revision_accepted', 'ویرایش قبول شد'
+        REVISION_REJECTED = 'revision_rejected', 'ویرایش رد شد'
+        FINAL_ACCEPT = 'final_accept', 'تسویه با اعضای تیم'
         INFLUENCER_ACCEPTED = 'influencer_accepted', 'اینفلوئنسر سفارش را قبول کرد'
         INFLUENCER_REPORT_APPROVED = 'influencer_report_approved', 'گزارش اینفلوئنسر تایید شد'
+        INFLUENCER_REPORT_REJECTED = 'influencer_report_rejected', 'گزارش اینفلوئنسر رد شد'
         TICKET_ANSWERED = 'ticket_answered', 'تیکت پاسخ داده شد'
         NEW_ORDER = 'new_order', 'سفارش جدید'
         PENALTY = 'penalty', 'جریمه'
@@ -26,7 +34,7 @@ class Notification(models.Model):
         CONTENT_WITHDRAWAL_SUCCESS = 'content_withdrawal_success', 'برداشت موفق تیم'
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        CustomUser,
         on_delete=models.CASCADE,
         related_name='notifications',
         verbose_name=_('کاربر')
@@ -100,16 +108,113 @@ class Notification(models.Model):
             self.read_at = timezone.now()
             self.save(update_fields=['is_read', 'read_at'])
 
+    def get_icon_data(self):
+        # (آیکون، کلاس رنگی پس‌زمینه)
+        mapping = {
+            # موفقیت‌ها (سبز)
+            'campaign_approved': ('bi-check-circle-fill', 'bg-success'),
+            'content_accepted': ('bi-people-fill', 'bg-success'),
+            'revision_accepted': ('bi-pencil-square', 'bg-success'),
+            'influencer_accepted': ('bi-person-check-fill', 'bg-success'),
+            'influencer_report_approved': ('bi bi-file-text', 'bg-success'),
+            'report_approved': ('bi-cart-plus-fill', 'bg-success'),
+            'final_accepted': ('bi bi-thumbs-up', 'bg-success'),
+            'withdrawal_success': ('bi bi-credit-card', 'bg-success'),
+            'content_withdrawal_success': ('bi bi-credit-card', 'bg-success'),
+
+            'campaign_pending': ('bi-check-circle-fill', 'bg-warning'),
+            'new_order': ('bi-cart-plus-fill', 'bg-warning'),
+            'new_content_order': ('bi bi-file-plus', 'bg-warning'),
+            'revision_requested': ('bi bi-edit', 'bg-warning'),
+            'ticket_answered': ('bi-envelope-open-fill', 'bg-warning'),
+
+            # شکست / جریمه (قرمز)
+            'campaign_rejected': ('bi-x-circle-fill', 'bg-danger'),
+            'content_rejected': ('bi-people-fill', 'bg-danger'),
+            'revision_rejected': ('bi-pencil-square', 'bg-danger'),
+            'influencer_report_rejected': ('bi-cash-stack', 'bg-danger'),
+
+            # اطلاعات / کیف پول (آبی)
+            'campaign_completed': ('bi-check-all', 'bg-info'),
+            'final_accept': ('bi-cart-plus-fill', 'bg-info'),
+            'campaign_running': ('bi-check-circle-fill', 'bg-info'),
+            'content_delivered': ('bi-file-check-fill', 'bg-info'),
+            'wallet_deposit': ('bi bi-wallet', 'bg-info'),
+            'content_wallet_deposit': ('bi bi-wallet', 'bg-info'),
+        }
+
+        icon_class, bg_class = mapping.get(self.type, ('fi-bell', 'bg-secondary'))
+        return icon_class, bg_class
+
+
     @property
     def time_ago(self):
+        # گرفتن زمان حال به صورت Aware (منطبق با تنظیمات TIME_ZONE در settings.py)
         now = timezone.now()
-        diff = now - self.created_at
+
+        # تبدیل فیلد created_at (که jDateTimeField است) به datetime استاندارد پایتون برای مقایسه
+        # چون created_at خودش Aware هست، حالا هر دو Aware میشن و تفریق بدون خطا انجام میشه
+        created_at_dt = self.created_at
+
+        diff = now - created_at_dt
 
         if diff.days > 0:
             return f"{diff.days} روز پیش"
-        elif diff.seconds > 3600:
+        elif diff.seconds >= 3600:
             return f"{diff.seconds // 3600} ساعت پیش"
-        elif diff.seconds > 60:
+        elif diff.seconds >= 60:
             return f"{diff.seconds // 60} دقیقه پیش"
         else:
             return "چند لحظه پیش"
+
+
+class NotificationPreference(models.Model):
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='notification_prefs',
+        verbose_name=_('کاربر')
+    )
+
+    # ==================== تنظیمات عمومی ====================
+    receive_in_bale = models.BooleanField(_('دریافت نوتیفیکیشن در بله'), default=True)
+    ticket_replies = models.BooleanField(_('پاسخ تیکت‌ها'), default=True)
+    marketing_messages = models.BooleanField(_('اخبار، آپدیت‌ها و کدهای تخفیف'), default=False)
+    financial_alerts = models.BooleanField(_('تراکنش‌های مالی (واریز، برداشت، فاکتور)'), default=True)
+
+    # ==================== تنظیمات تبلیغ‌دهنده ====================
+    adv_campaign_status = models.BooleanField(
+        _('وضعیت کمپین‌ها (تایید، رد، اکران، پایان)'), default=True
+    )
+    adv_influencer_actions = models.BooleanField(
+        _('واکنش ناشران (پذیرش سفارش تبلیغ)'), default=True
+    )
+    adv_content_orders = models.BooleanField(
+        _('وضعیت سفارش تولید محتوا (تایید، رد، تحویل فایل)'), default=True
+    )
+
+    # ==================== تنظیمات ناشر (اینفلوئنسر) ====================
+    inf_new_orders = models.BooleanField(
+        _('دریافت سفارش تبلیغ جدید'), default=True
+    )
+    inf_report_status = models.BooleanField(
+        _('تایید یا رد گزارش‌های کار'), default=True
+    )
+
+    # ==================== تنظیمات تیم تولید محتوا ====================
+    team_new_orders = models.BooleanField(
+        _('دریافت سفارش تولید محتوای جدید'), default=True
+    )
+    team_revisions = models.BooleanField(
+        _('درخواست ویرایش توسط تبلیغ‌دهنده'), default=True
+    )
+    team_financial = models.BooleanField(
+        _('تایید نهایی فایل و واریز وجه'), default=True
+    )
+
+    class Meta:
+        verbose_name = _('تنظیمات نوتیفیکیشن')
+        verbose_name_plural = _('تنظیمات نوتیفیکیشن کاربران')
+
+    def __str__(self):
+        return f"تنظیمات نوتیفیکیشن - کاربر {self.user.id}"

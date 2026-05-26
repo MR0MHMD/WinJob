@@ -10,6 +10,13 @@ import random
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+    bale_chat_id = models.CharField(
+        _('شناسه ربات بله'),
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True
+    )
 
     phone_number = models.CharField(
         _('شماره تماس'),

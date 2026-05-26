@@ -6,6 +6,10 @@ from .models import InfluencerProfile
 from location.models import Province
 from django.urls import reverse
 from .inline_admin import *
+from campaigns.services.campaigns_notifications import (
+    approve_influencer_report_service,
+    reject_influencer_report_service
+)
 
 
 @admin.register(InfluencerProfile)
@@ -614,16 +618,20 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         updated = 0
         for report in queryset:
             if report.status != 'approved':
-                report.status = 'approved'
-                report.save()
+                approve_influencer_report_service(report)
                 updated += 1
-        self.message_user(request, f"{updated} گزارش تأیید و پرداخت انجام شد.")
+        self.message_user(request, f"{updated} گزارش تأیید، نوتیفیکیشن ارسال و پرداخت انجام شد.")
 
     mark_as_approved.short_description = "تأیید گزارش‌های انتخاب شده"
 
     def mark_as_rejected(self, request, queryset):
-        updated = queryset.update(status='rejected')
-        self.message_user(request, f"{updated} گزارش رد شد.")
+        updated = 0
+        for report in queryset:
+            if report.status != 'rejected':
+                # دلیل رد شدن رو فعلاً خالی می‌ذاریم برای اکشن‌های گروهی
+                reject_influencer_report_service(report, reason="رد شده توسط ادمین")
+                updated += 1
+        self.message_user(request, f"{updated} گزارش رد و نوتیفیکیشن ارسال شد.")
 
     mark_as_rejected.short_description = "رد گزارش‌های انتخاب شده"
 
@@ -660,3 +668,21 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             if obj.campaign_influencer.channel.province != request.user.province:
                 return False
         return super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            # بررسی تغییر وضعیت
+            old_status = CampaignReport.objects.get(pk=obj.pk).status
+            new_status = obj.status
+
+            # ابتدا آبجکت رو ذخیره می‌کنیم
+            super().save_model(request, obj, form, change)
+
+            if old_status != new_status:
+                if new_status == 'approved':
+                    approve_influencer_report_service(obj)
+                elif new_status == 'rejected':
+                    reason = obj.admin_notes if obj.admin_notes else "رد شده پس از بررسی مجدد"
+                    reject_influencer_report_service(obj, reason=reason)
+        else:
+            super().save_model(request, obj, form, change)

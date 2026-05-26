@@ -17,14 +17,14 @@
             <li class="breadcrumb-item">
                 <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
             </li>
-            
+
             <li class="breadcrumb-item">
                 <a href="{% url 'advertisers:my_campaigns' %}">مدیریت کمپین ها</a>
             </li>
-            
+
             <li class="breadcrumb-item active" aria-current="page">{{ campaign.name }}</li>
         </ol>
-    
+
         <!-- ==================== هدر اصلی ==================== -->
         <div class="card glass-box bg-dark border-light mb-4 animate-up">
             <div class="card-body p-4">
@@ -35,48 +35,72 @@
                             <span class="badge bg-faded-primary rounded-pill">
                                 <i class="bi bi-tag me-1"></i> {{ campaign.platform.name }}
                             </span>
-                        
+
                             <span class="badge bg-faded-accent rounded-pill">
                                 <i class="fi-calendar me-1"></i> {{ campaign.duration_days }} روز
                             </span>
-                        
+
                             <span class="badge
                                 {% if campaign.status == 'running' %}bg-faded-success
                                 {% elif campaign.status == 'completed' %}bg-faded-info
                                 {% else %}bg-faded-warning{% endif %} rounded-pill">
                                 <i class="fi-settings me-1"></i> {{ campaign.get_status_display }}
                             </span>
+
+                            <span class="badge bg-faded-info rounded-pill">
+                                <i class="fi-calendar me-1"></i>
+                                {{ campaign.start_date|jformat:"%Y/%m/%d" }} تا {{ campaign.end_date|jformat:"%Y/%m/%d" }}
+                            </span>
                         </div>
                     </div>
-                
+
                     <div class="text-center text-md-end">
                         <div class="h2 text-primary mb-0">
                             {{ campaign.invoice.payable_amount|floatformat:0|default:0 }}
                             <small class="fs-6 text-muted">تومان</small>
                         </div>
-                        
+
                         <div class="small text-muted">قابل پرداخت</div>
                     </div>
                 </div>
-    
+
                 <!-- پیشرفت کمپین -->
                 <div class="mt-4">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small text-muted">پیشرفت کمپین</span>
                         <span class="small fw-bold text-light">{{ progress_percent }}%</span>
                     </div>
-                    
+
                     <div class="progress" style="height: 6px;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%; background-color: {{ progress_color }};"></div>
+                        <div class="progress-bar" role="progressbar"
+                             style="width: {{ progress_percent }}%; background-color: {{ progress_color }};"></div>
                     </div>
                 </div>
+
+                {% if campaign.status == 'draft' %}
+                    <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
+                        <a href="{% url 'campaigns:campaign_edit_step1' campaign.id %}"
+                           class="btn btn-outline-warning w-100 w-sm-auto">
+                            <i class="fi-edit me-2"></i> ویرایش کمپین
+                        </a>
+                        <form method="post" action="{% url 'campaigns:campaign_delete' campaign.id %}"
+                              id="deleteCampaignForm" class="w-100 w-sm-auto">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal"
+                                    data-bs-target="#deleteCampaignModal">
+                                <i class="fi-trash me-2"></i> حذف کمپین
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
             </div>
         </div>
-    
+
         <!-- ==================== آمار سریع ==================== -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
-                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-left" style="animation-delay: 0.05s;">
+                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-left"
+                     style="animation-delay: 0.05s;">
                     <i class="fi-users fs-2 text-primary mb-2 d-block"></i>
                     <div class="h3 text-light mb-0">{{ channels_count }}</div>
                     {% if campaign.platform.slug == "instagram" %}
@@ -86,17 +110,19 @@
                     {% endif %}
                 </div>
             </div>
-        
+
             <div class="col-6 col-md-3">
-                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-left" style="animation-delay: 0.1s;">
+                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-left"
+                     style="animation-delay: 0.1s;">
                     <i class="fi-calendar fs-2 text-info mb-2 d-block"></i>
                     <div class="h3 text-light mb-0">{{ campaign.duration_days }}</div>
-                    <div class="small text-muted">روز</div>
+                    <div class="small text-muted mb-2">روز</div>
                 </div>
             </div>
-        
+
             <div class="col-6 col-md-3">
-                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-right" style="animation-delay: 0.15s;">
+                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-right"
+                     style="animation-delay: 0.15s;">
                     <i class="fi-wallet fs-2 {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %} mb-2 d-block"></i>
                     <div class="small text-muted">وضعیت پرداخت</div>
                     <div class="fw-bold {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %}">
@@ -104,16 +130,17 @@
                     </div>
                 </div>
             </div>
-        
+
             <div class="col-6 col-md-3">
-                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover animate-right" style="animation-delay: 0.2s;">
+                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-right"
+                     style="animation-delay: 0.2s;">
                     <i class="bi bi-mouse2 text-warning mb-2 d-block" style="font-size: 1.55rem"></i>
                     <div class="h3 text-light mb-0">{{ campaign.total_clicks|default:0 }}</div>
                     <div class="small text-muted">کلیک</div>
                 </div>
             </div>
         </div>
-    
+
         <div class="row g-4">
             <!-- ==================== ستون راست: مشخصات کمپین ==================== -->
             <div class="col-lg-4">
@@ -123,13 +150,13 @@
                             <i class="fi-info-circle text-primary me-2"></i>
                             مشخصات کمپین
                         </h5>
-                    
+
                         <ul class="list-unstyled mb-0">
                             <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
                                 <span class="text-muted">پلتفرم</span>
                                 <span class="text-light">{{ campaign.platform.name }}</span>
                             </li>
-                        
+
                             <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
                                 <span class="text-muted">نوع محتوا</span>
                                 <span class="text-light">
@@ -139,7 +166,7 @@
                                     {{ campaign.content_type.name }}
                                 </span>
                             </li>
-                        
+
                             <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
                                 <span class="text-muted">نوع تبلیغ</span>
                                 <span class="text-light">
@@ -149,7 +176,7 @@
                                     {{ campaign.ad_type.name }}
                                 </span>
                             </li>
-                        
+
                             <li class="mb-3 d-flex justify-content-between info-item-hover p-2 rounded-2">
                                 <span class="text-muted">تولید محتوا</span>
                                 <span class="text-light">
@@ -173,7 +200,7 @@
                     </div>
                 </div>
             </div>
-    
+
             <!-- ==================== ستون میانی: هزینه‌ها ==================== -->
             <div class="col-lg-4">
                 <div class="card glass-box bg-dark border-light h-100 animate-up" style="animation-delay: 0.15s;">
@@ -182,7 +209,7 @@
                             <i class="fi-wallet text-primary me-2"></i>
                             هزینه‌ها
                         </h5>
-                    
+
                         {% if campaign.invoice %}
                             <ul class="list-unstyled mb-0">
                                 <li class="mb-3 d-flex justify-content-between">
@@ -204,7 +231,7 @@
                                         <span class="text-muted text-success">تخفیف</span>
                                         <span class="text-success">-{{ campaign.invoice.discount_amount }} تومان</span>
                                     </li>
-                                    
+
                                     <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
                                         <span class="fw-bold text-light">مبلغ کل</span>
                                         <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
@@ -224,7 +251,7 @@
                     </div>
                 </div>
             </div>
-    
+
             <!-- ==================== ستون چپ: محتوای کمپین ==================== -->
             <div class="col-lg-4">
                 {% if campaign.content_type.slug == "content-production-team" %}
@@ -239,9 +266,12 @@
                                     <!-- تیم تولید (خلاصه) -->
                                     <div class="d-flex align-items-center gap-3 mb-3">
                                         {% if order.team.logo %}
-                                            <img src="{{ order.team.logo.url }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;" alt="{{ order.team.name }}">
+                                            <img src="{{ order.team.logo.url }}" class="rounded-circle"
+                                                 style="width: 50px; height: 50px; object-fit: cover;"
+                                                 alt="{{ order.team.name }}">
                                         {% else %}
-                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width: 50px; height: 50px;">
                                                 <i class="fi-users fs-3 text-light"></i>
                                             </div>
                                         {% endif %}
@@ -272,7 +302,7 @@
                                                 {% elif order.delivery.status == 'final_accepted' %}bg-faded-success text-success
                                                 {% else %}bg-faded-secondary{% endif %} rounded-pill">
                                                 {% if order.delivery %}
-                                                	{{ order.delivery.get_status_display }}
+                                                    {{ order.delivery.get_status_display }}
                                                 {% else %}
                                                     در انتظار
                                                 {% endif %} 
@@ -286,7 +316,8 @@
                                         <span class="text-success fw-bold">{{ order.price }} تومان</span>
                                     </div>
                                     <!-- دکمه مشاهده جزئیات کامل -->
-                                    <button class="btn btn-outline-light w-100 mt-2 rounded-pill" data-bs-toggle="modal" data-bs-target="#campaignContentModal">
+                                    <button class="btn btn-outline-light w-100 mt-2 rounded-pill" data-bs-toggle="modal"
+                                            data-bs-target="#campaignContentModal">
                                         <i class="fi-eye me-2"></i> مشاهده جزئیات کامل
                                     </button>
                                 </div>
@@ -329,13 +360,16 @@
                                     {% if campaign.content.link %}
                                         <div class="small text-light mb-0">
                                             <span class="text-muted">لینک:</span>
-                                            <a href="{{ campaign.content.link }}" target="_blank" class="text-primary text-truncate d-inline-block" style="max-width: 200px;">
+                                            <a href="{{ campaign.content.link }}" target="_blank"
+                                               class="text-primary text-truncate d-inline-block"
+                                               style="max-width: 200px;">
                                                 {{ campaign.content.link|truncatechars:40 }}
                                             </a>
                                         </div>
                                     {% endif %}
                                 </div>
-                                <button class="btn btn-outline-primary w-100 rounded-pill" data-bs-toggle="modal" data-bs-target="#campaignContentModal">
+                                <button class="btn btn-outline-primary w-100 rounded-pill" data-bs-toggle="modal"
+                                        data-bs-target="#campaignContentModal">
                                     <i class="fi-eye me-2"></i> مشاهده بیشتر
                                 </button>
                             {% else %}
@@ -346,14 +380,40 @@
                 {% endif %}
             </div>
         </div>
-    
+
+        {% if has_click_data %}
+            <!-- ==================== نمودار کلیک‌های روزانه به تفکیک کانال ==================== -->
+            <div class="card glass-box bg-dark border-light my-4 animate-up">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-mouse text-accent"></i>
+                            <h5 class="text-white mb-0">کلیک‌های روزانه به تفکیک کانال</h5>
+                        </div>
+                        <span class="badge bg-faded-primary">۳۰ روز اخیر</span>
+                    </div>
+                    <div class="chart-container" style="position: relative;">
+                        <canvas class="p-3" id="dailyClicksByChannelChart" width="800" height="400"
+                                data-labels='{{ daily_labels_json|safe }}'
+                                data-datasets='{{ daily_datasets_json|safe }}'
+                                data-hasdata='{{ has_click_data|yesno:"true,false" }}'>
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
         <!-- ==================== جدول اینفلوئنسرها ==================== -->
         <div class="card glass-box bg-dark border-light mt-4 animate-up" style="animation-delay: 0.25s;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="card-title text-light mb-0">
                         <i class="fi-users text-primary me-2"></i>
-                        اینفلوئنسرها
+                        {% if campaign.platform.slug == "instagram" %}
+                            پیج ها
+                        {% else %}
+                            کانال ها
+                        {% endif %}
                         <span class="badge bg-faded-primary rounded-pill ms-2">{{ channels_count }}</span>
                     </h5>
                 </div>
@@ -361,37 +421,40 @@
                     <div class="table-responsive">
                         <table class="table table-dark table-hover align-middle mb-0">
                             <thead>
-                                <tr>
-                                    <th>پروفایل</th>
-                                    <th>کانال</th>
-                                    <th>پلتفرم</th>
-                                    <th>فالوورها</th>
-                                    <th>قیمت</th>
-                                    <th>وضعیت</th>
-                                    <th>کلیک</th>
-                                    <th>لینک</th>
-                                </tr>
+                            <tr>
+                                <th>پروفایل</th>
+                                <th>کانال</th>
+                                <th>پلتفرم</th>
+                                <th>فالوورها</th>
+                                <th>قیمت</th>
+                                <th>وضعیت</th>
+                                <th>کلیک</th>
+                                <th>لینک</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {% for ch in channels %}
-                                    <tr>
-                                        <td>
-                                            {% if ch.channel.avatar %}
-                                                <img src="{{ ch.channel.avatar.url }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;" alt="{{ ch.channel.channel_name }}">
-                                            {% else %}
-                                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                    <i class="fi-user text-light"></i>
-                                                </div>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <div class="fw-semibold text-light">{{ ch.channel.channel_name }}</div>
-                                            <div class="small text-muted">{{ ch.channel.channel_id }}</div>
-                                        </td>
-                                        <td>{{ ch.channel.platform.name }}</td>
-                                        <td>{{ ch.channel.followers_formatted }}</td>
-                                        <td class="text-success fw-semibold">{{ ch.price }}</td>
-                                        <td>
+                            {% for ch in channels %}
+                                <tr>
+                                    <td>
+                                        {% if ch.channel.avatar %}
+                                            <img src="{{ ch.channel.avatar.url }}" class="rounded-circle" width="40"
+                                                 height="40" style="object-fit: cover;"
+                                                 alt="{{ ch.channel.channel_name }}">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="fi-user text-light"></i>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-light">{{ ch.channel.channel_name }}</div>
+                                        <div class="small text-muted">{{ ch.channel.channel_id }}</div>
+                                    </td>
+                                    <td>{{ ch.channel.platform.name }}</td>
+                                    <td>{{ ch.channel.followers_formatted }}</td>
+                                    <td class="text-success fw-semibold">{{ ch.price }}</td>
+                                    <td>
                                             <span class="badge
                                                 {% if ch.status == 'pending' %}bg-faded-warning text-warning
                                                 {% elif ch.status == 'accepted' %}bg-faded-success text-success
@@ -400,19 +463,20 @@
                                                 {% endif %} rounded-pill">
                                                 {{ ch.get_status_display }}
                                             </span>
-                                        </td>
-                                        <td>{{ ch.tracking_link.clicks|default:0 }}</td>
-                                        <td>
-                                            {% if ch.channel.url %}
-                                                <a href="{{ ch.channel.url }}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill">
-                                                    <i class="fi-external-link"></i>
-                                                </a>
-                                            {% else %}
-                                                —
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
+                                    </td>
+                                    <td>{{ ch.tracking_link.clicks|default:0 }}</td>
+                                    <td>
+                                        {% if ch.channel.url %}
+                                            <a href="{{ ch.channel.url }}" target="_blank"
+                                               class="btn btn-sm btn-outline-light rounded-pill">
+                                                <i class="fi-external-link"></i>
+                                            </a>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -426,7 +490,6 @@
         </div>
     </div>
 
-    <!-- ==================== مودال جزئیات (تیم / آماده) ==================== -->
     <div class="modal fade" id="campaignContentModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content modal-dark bg-dark border-light">
@@ -441,7 +504,7 @@
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-    
+
                 <div class="modal-body p-0">
                     {% if campaign.content_type.slug == "content-production-team" %}
                         {% with order=campaign.content_orders.first %}
@@ -449,36 +512,51 @@
                                 <!-- تب‌های تیم تولید -->
                                 <ul class="nav glass-tabs px-3 pt-3">
                                     <li class="nav-item">
-                                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-team">تیم تولید</button>
+                                        <button class="nav-link active" data-bs-toggle="tab"
+                                                data-bs-target="#modal-team">تیم تولید
+                                        </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-files">فایل‌های تحویلی</button>
+                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-files">
+                                            فایل‌های تحویلی
+                                        </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-brief">بریف سفارش</button>
+                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-brief">بریف
+                                            سفارش
+                                        </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-revisions">تاریخچه ویرایش</button>
+                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-revisions">
+                                            تاریخچه ویرایش
+                                        </button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-attachments">فایل‌های پیوست</button>
+                                        <button class="nav-link" data-bs-toggle="tab"
+                                                data-bs-target="#modal-attachments">فایل‌های پیوست
+                                        </button>
                                     </li>
                                 </ul>
-    
+
                                 <div class="tab-content p-4">
                                     <!-- تب تیم تولید -->
                                     <div class="tab-pane fade show active" id="modal-team">
                                         <div class="row g-4 mb-4">
                                             <div class="col-md-4 text-center">
                                                 {% if order.team.logo %}
-                                                    <img src="{{ order.team.logo.url }}" class="rounded-circle mb-3 team-logo-hover" style="width: 100px; height: 100px; object-fit: cover;" alt="{{ order.team.name }}">
+                                                    <img src="{{ order.team.logo.url }}"
+                                                         class="rounded-circle mb-3 team-logo-hover"
+                                                         style="width: 100px; height: 100px; object-fit: cover;"
+                                                         alt="{{ order.team.name }}">
                                                 {% else %}
-                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 100px; height: 100px;">
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                                                         style="width: 100px; height: 100px;">
                                                         <i class="fi-users fs-1 text-light"></i>
                                                     </div>
                                                 {% endif %}
                                                 <h5 class="text-light">{{ order.team.name }}</h5>
-                                                <div class="small text-muted">{{ order.team.members_count }} عضو فعال</div>
+                                                <div class="small text-muted">{{ order.team.members_count }} عضو فعال
+                                                </div>
                                                 {% if order.team.avg_rating %}
                                                     <div class="mt-2">
                                                         {% for i in "12345"|make_list %}
@@ -492,7 +570,7 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
-    
+
                                             <div class="col-md-8">
                                                 <div class="row g-3">
                                                     <div class="col-6">
@@ -508,10 +586,10 @@
                                                         </div>
                                                     </div>
                                                     {% if order.delivery %}
-                                                    	<div class="col-6">
-                                                        <div class="p-3 rounded-2 bg-faded-dark">
-                                                            <div class="text-muted small mb-1">وضعیت تحویل</div>
-                                                            <span class="badge
+                                                        <div class="col-6">
+                                                            <div class="p-3 rounded-2 bg-faded-dark">
+                                                                <div class="text-muted small mb-1">وضعیت تحویل</div>
+                                                                <span class="badge
                                                                 {% if order.delivery.status == 'pending' %}bg-faded-secondary
                                                                 {% elif order.delivery.status == 'delivered' %}bg-faded-info text-info
                                                                 {% elif order.delivery.status == 'revision_requested' %}bg-faded-warning text-warning
@@ -519,14 +597,16 @@
                                                                 {% else %}bg-faded-secondary{% endif %} fs-6">
                                                                 {{ order.delivery.get_status_display }}
                                                             </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    {% endif %} 
-                                                    
+                                                    {% endif %}
+
                                                     <div class="col-6">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
                                                             <div class="text-muted small mb-1">قیمت سفارش</div>
-                                                            <div class="text-success fw-bold fs-5">{{ order.price }} تومان</div>
+                                                            <div class="text-success fw-bold fs-5">{{ order.price }}
+                                                                تومان
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div class="col-6">
@@ -552,27 +632,30 @@
                                                 </div>
                                             </div>
                                         </div>
-    
+
                                         {% with pending_revision=order.revisions.all|dictsortreversed:"created_at"|first %}
                                             {% if pending_revision and pending_revision.status == 'pending' %}
                                                 <div class="alert alert-warning bg-faded-warning text-warning mb-4">
                                                     <div class="d-flex align-items-center gap-3">
                                                         <i class="fi-edit fs-2"></i>
                                                         <div>
-                                                            <strong class="d-block">درخواست ویرایش در انتظار بررسی</strong>
+                                                            <strong class="d-block">درخواست ویرایش در انتظار
+                                                                بررسی</strong>
                                                             <span class="small">{{ pending_revision.feedback|truncatewords:30 }}</span>
-                                                            <div class="small text-muted mt-1">تاریخ درخواست: {{ pending_revision.created_at|jformat:"%Y/%m/%d %H:%M" }}</div>
+                                                            <div class="small text-muted mt-1">تاریخ
+                                                                درخواست: {{ pending_revision.created_at|jformat:"%Y/%m/%d %H:%M" }}</div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             {% endif %}
                                         {% endwith %}
-    
+
                                         {% if order.status == 'completed' %}
                                             {% if not order.delivery or order.delivery.status != 'final_accepted' %}
                                                 <div class="d-grid gap-3 mt-4 pt-2 border-top border-light">
                                                     <h6 class="text-light mb-2">اقدامات</h6>
-                                                    <button class="btn btn-success rounded-pill py-3 final-accept-btn" data-order-id="{{ order.id }}">
+                                                    <button class="btn btn-success rounded-pill py-3 final-accept-btn"
+                                                            data-order-id="{{ order.id }}">
                                                         <i class="fi-check-circle me-2"></i> تأیید نهایی سفارش
                                                     </button>
                                                     <button class="btn btn-outline-warning rounded-pill py-3 request-revision-btn"
@@ -586,11 +669,12 @@
                                                 <div class="alert alert-success bg-faded-success text-success text-center mt-4">
                                                     <i class="fi-check-circle fs-3 d-block mb-2"></i>
                                                     <strong>سفارش تأیید شده است</strong>
-                                                    <p class="mb-0 small">شما این سفارش را تأیید کرده‌اید. از همکاری شما متشکریم.</p>
+                                                    <p class="mb-0 small">شما این سفارش را تأیید کرده‌اید. از همکاری شما
+                                                        متشکریم.</p>
                                                 </div>
                                             {% endif %}
                                         {% endif %}
-    
+
                                         {% if order.status == 'in_progress' %}
                                             <div class="alert alert-info bg-faded-info text-info text-center mt-4">
                                                 <i class="fi-settings fs-3 d-block mb-2"></i>
@@ -598,7 +682,7 @@
                                                 <p class="mb-0 small">تیم تولید محتوا در حال کار روی سفارش شماست.</p>
                                             </div>
                                         {% endif %}
-    
+
                                         {% if order.status == 'pending' %}
                                             <div class="alert alert-warning bg-faded-warning text-warning text-center mt-4">
                                                 <i class="fi-clock fs-3 d-block mb-2"></i>
@@ -607,7 +691,7 @@
                                             </div>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب فایل‌های تحویلی -->
                                     <div class="tab-pane fade" id="modal-files">
                                         {% if order.delivery and order.delivery.file %}
@@ -646,7 +730,8 @@
                                                             {% endif %}
                                                         </div>
                                                     </div>
-                                                    <a href="{{ order.delivery.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill" download>
+                                                    <a href="{{ order.delivery.file.url }}"
+                                                       class="btn btn-sm btn-outline-primary rounded-pill" download>
                                                         <i class="fi-download"></i>
                                                     </a>
                                                 </div>
@@ -658,7 +743,7 @@
                                             </div>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب بریف سفارش -->
                                     <div class="tab-pane fade" id="modal-brief">
                                         {% if order.brief %}
@@ -697,11 +782,12 @@
                                             </div>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب تاریخچه ویرایش -->
                                     <div class="tab-pane fade" id="modal-revisions">
                                         {% if order.revisions.all %}
-                                            <div class="revision-timeline revision-scroll" style="max-height: 400px; overflow-y: auto;">
+                                            <div class="revision-timeline revision-scroll"
+                                                 style="max-height: 400px; overflow-y: auto;">
                                                 {% for revision in order.revisions.all|dictsortreversed:"created_at" %}
                                                     <div class="revision-item">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
@@ -722,9 +808,12 @@
                                                             </div>
                                                             {% if revision.files.all %}
                                                                 <div class="mt-2 pt-2 border-top border-light">
-                                                                    <div class="small text-muted mb-2">📎 فایل‌های پیوست:</div>
+                                                                    <div class="small text-muted mb-2">📎 فایل‌های
+                                                                        پیوست:
+                                                                    </div>
                                                                     {% for file in revision.files.all %}
-                                                                        <a href="{{ file.file.url }}" class="small text-primary d-block" download>
+                                                                        <a href="{{ file.file.url }}"
+                                                                           class="small text-primary d-block" download>
                                                                             <i class="fi-attachment"></i> {{ file.original_name }}
                                                                         </a>
                                                                     {% endfor %}
@@ -741,7 +830,7 @@
                                             </div>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب فایل‌های پیوست اولیه -->
                                     <div class="tab-pane fade" id="modal-attachments">
                                         {% if order.files.all %}
@@ -756,7 +845,9 @@
                                                                     <div class="small text-muted">{{ file.file_size_display }}</div>
                                                                 </div>
                                                             </div>
-                                                            <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-info rounded-pill" download>
+                                                            <a href="{{ file.file.url }}"
+                                                               class="btn btn-sm btn-outline-info rounded-pill"
+                                                               download>
                                                                 <i class="fi-download"></i>
                                                             </a>
                                                         </div>
@@ -782,16 +873,21 @@
                         <!-- تب‌های محتوای آماده -->
                         <ul class="nav glass-tabs px-3 pt-3">
                             <li class="nav-item">
-                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-file">فایل</button>
+                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-file">فایل
+                                </button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-info">توضیحات و لینک</button>
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-info">توضیحات و
+                                    لینک
+                                </button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-preview">پیش‌نمایش</button>
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-preview">
+                                    پیش‌نمایش
+                                </button>
                             </li>
                         </ul>
-    
+
                         <div class="tab-content p-4">
                             {% with content=campaign.content %}
                                 {% if content %}
@@ -804,28 +900,32 @@
                                                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                                                 </video>
                                             {% else %}
-                                                <img src="{{ content.media.url }}" class="media-display" alt="محتوای تبلیغ">
+                                                <img src="{{ content.media.url }}" class="media-display"
+                                                     alt="محتوای تبلیغ">
                                             {% endif %}
-                                            <a href="{{ content.media.url }}" class="btn btn-outline-info rounded-pill mt-3" download>
+                                            <a href="{{ content.media.url }}"
+                                               class="btn btn-outline-info rounded-pill mt-3" download>
                                                 <i class="fi-download me-1"></i> دانلود فایل
                                             </a>
                                         {% else %}
                                             <p class="text-muted">فایلی آپلود نشده است.</p>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب توضیحات و لینک -->
                                     <div class="tab-pane fade" id="modal-info">
                                         <div class="mb-4">
                                             <h6 class="text-light mb-2">متن کامل تبلیغ</h6>
-                                            <div class="p-3 rounded-2 bg-faded-dark text-light" style="white-space: pre-line;">{{ content.caption }}</div>
+                                            <div class="p-3 rounded-2 bg-faded-dark text-light"
+                                                 style="white-space: pre-line;">{{ content.caption }}</div>
                                         </div>
                                         {% if content.link %}
                                             <div class="mb-4">
                                                 <h6 class="text-light mb-2">لینک مقصد</h6>
                                                 <div class="d-flex align-items-center gap-2">
                                                     <code class="bg-faded-dark text-light p-2 rounded-2 flex-grow-1">{{ content.link }}</code>
-                                                    <a href="{{ content.link }}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill">
+                                                    <a href="{{ content.link }}" target="_blank"
+                                                       class="btn btn-sm btn-outline-light rounded-pill">
                                                         <i class="fi-external-link"></i>
                                                     </a>
                                                 </div>
@@ -839,11 +939,12 @@
                                         {% endif %}
                                         {% if content.utm_enabled %}
                                             <div class="small text-muted mt-3">
-                                                <i class="fi-tag me-1"></i> پارامترهای UTM فعال هستند و در لینک‌های اینفلوئنسرها اعمال می‌شوند.
+                                                <i class="fi-tag me-1"></i> پارامترهای UTM فعال هستند و در لینک‌های
+                                                اینفلوئنسرها اعمال می‌شوند.
                                             </div>
                                         {% endif %}
                                     </div>
-    
+
                                     <!-- تب پیش‌نمایش -->
                                     <div class="tab-pane fade" id="modal-preview">
                                         {% if content %}
@@ -857,14 +958,16 @@
                                                                 مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                                                             </video>
                                                         {% else %}
-                                                            <img src="{{ content.media.url }}" class="bale-image" alt="پیش‌نمایش">
+                                                            <img src="{{ content.media.url }}" class="bale-image"
+                                                                 alt="پیش‌نمایش">
                                                         {% endif %}
                                                     {% endif %}
                                                 </div>
                                                 <div class="bale-content">
                                                     <p class="bale-text">{{ content.caption }}</p>
                                                     {% if content.link %}
-                                                        <a href="{{ content.link }}" class="bale-link" target="_blank">{{ content.link }}</a>
+                                                        <a href="{{ content.link }}" class="bale-link"
+                                                           target="_blank">{{ content.link }}</a>
                                                     {% endif %}
                                                     <div class="bale-meta">
                                                         <span>3.2K views 👁</span>
@@ -884,9 +987,10 @@
                         </div>
                     {% endif %}
                 </div>
-    
+
                 <div class="modal-footer border-light">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">بستن</button>
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">بستن
+                    </button>
                 </div>
             </div>
         </div>
@@ -909,7 +1013,8 @@
                             <label for="feedback" class="form-label text-light small fw-semibold mb-2">
                                 📝 توضیحات ویرایش <span class="text-danger">*</span>
                             </label>
-                            <textarea id="feedback" name="feedback" class="form-control bg-faded-dark border-light text-light" rows="5"
+                            <textarea id="feedback" name="feedback"
+                                      class="form-control bg-faded-dark border-light text-light" rows="5"
                                       placeholder="لطفاً توضیح دهید چه تغییراتی می‌خواهید..."></textarea>
                             <small class="text-muted">توضیحات دقیق به تیم کمک میکند تا ویرایش بهتری انجام دهد</small>
                         </div>
@@ -920,7 +1025,8 @@
                             <div class="dropzone-revision bg-faded-dark border border-light rounded-3 p-4 text-center"
                                  id="revisionDropzone" style="border-style: dashed !important; cursor: pointer;">
                                 <i class="fi-cloud-upload fs-1 text-primary mb-2 d-block"></i>
-                                <p class="text-muted small mb-0" id="dropzoneText">برای آپلود کلیک کنید یا فایل را بکشید</p>
+                                <p class="text-muted small mb-0" id="dropzoneText">برای آپلود کلیک کنید یا فایل را
+                                    بکشید</p>
                                 <input type="file" name="revision_file" id="revisionFileInput" class="d-none">
                             </div>
                             <small class="text-muted">می‌توانید یک فایل مرجع آپلود کنید (تصویر، ویدیو، سند)</small>
@@ -931,7 +1037,9 @@
                         </div>
                     </div>
                     <div class="modal-footer border-light p-4">
-                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                            انصراف
+                        </button>
                         <button type="submit" class="btn btn-warning rounded-pill px-4">
                             <i class="fi-edit me-2"></i> ثبت درخواست
                         </button>
@@ -940,8 +1048,49 @@
             </div>
         </div>
     </div>
+
+    <!-- ==================== مودال حذف کمپین (جایگزین confirm) ==================== -->
+    <div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-labelledby="deleteCampaignModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-dark bg-dark border-light">
+                <div class="modal-header border-light">
+                    <h5 class="modal-title text-light" id="deleteCampaignModalLabel">
+                        <i class="fi-alert-triange text-danger me-2"></i>
+                        حذف کمپین
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="بستن"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="notification-icon warning mb-3">
+                        <i class="fi-alert-triange fs-1 text-danger"></i>
+                    </div>
+                    <p class="text-light mb-2 fs-5 fw-semibold">آیا از حذف کمپین مطمئن هستید؟</p>
+                    <p class="text-muted small mb-0">
+                        کمپین <strong class="text-light mx-1">{{ campaign.name }}</strong> به طور کامل حذف خواهد شد.<br>
+                        این عمل <strong class="text-danger">غیرقابل بازگشت</strong> است.
+                    </p>
+                </div>
+                <div class="modal-footer border-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                        <i class="fi-x me-1"></i> انصراف
+                    </button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmDeleteBtn">
+                        <i class="fi-trash me-1"></i> حذف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block script %}
+    <script>
+        document.getElementById('confirmDeleteBtn')?.addEventListener('click', function () {
+            document.getElementById('deleteCampaignForm').submit();
+        });
+    </script>
+    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
     <script src="{% static 'advertisers/js/pages/campaign_detail.js' %}"></script>
 {% endblock %}

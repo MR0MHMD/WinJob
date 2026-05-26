@@ -35,7 +35,6 @@ def campaigns_list(request):
         "invoice"
     )
 
-    # *** extract only statuses that actually exist ***
     available_statuses = (
         campaigns_qs
         .values_list("status", flat=True)
@@ -49,7 +48,6 @@ def campaigns_list(request):
         if value in available_statuses
     ]
 
-    # apply status filter
     campaigns = campaigns_qs
     if status_filter != "all":
         campaigns = campaigns.filter(status=status_filter)
@@ -63,7 +61,7 @@ def campaigns_list(request):
     context = {
         "campaigns": page_obj,
         "status_filter": status_filter,
-        "statuses": filtered_status_choices,  # <- فقط status های واقعی
+        "statuses": filtered_status_choices,
     }
 
     # AJAX response
@@ -122,19 +120,83 @@ def campaign_detail(request, campaign_id):
     except:
         pass
 
-    return render(
-        request,
-        "advertisers/pages/campaign_detail.html",
-        {
-            "campaign": campaign,
-            "channels": channels,
-            "channels_count": channels_count,
-            "progress_percent": progress_percent,
-            "payment_status": payment_status,
-            "progress_color": progress_color,
+    now = timezone.now()
+    last_30_days = now - timedelta(days=30)
 
-        }
-    )
+    # گرفتن کلیک‌های ۳۰ روز اخیر این کمپین
+    clicks_qs = CampaignClick.objects.filter(
+        tracking_link__campaign_influencer__campaign=campaign,
+        created_at__gte=last_30_days
+    ).annotate(
+        day=TruncDate('created_at')
+    ).values(
+        'day',
+        'tracking_link__campaign_influencer__channel__channel_name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('day')
+
+    data_by_day = {}
+    channels_set = set()
+
+    for item in clicks_qs:
+        day = item['day']
+        channel_name = item['tracking_link__campaign_influencer__channel__channel_name']
+        count = item['count']
+
+        channels_set.add(channel_name)
+        if day not in data_by_day:
+            data_by_day[day] = {}
+        data_by_day[day][channel_name] = count
+
+    sorted_days = sorted(data_by_day.keys())
+    daily_labels = []
+    for d in sorted_days:
+        jalali_date = convert_to_jalali(d)
+        if jalali_date:
+            daily_labels.append(jalali_date.strftime('%d/%m'))
+        else:
+            daily_labels.append(d.strftime('%d/%m'))
+
+    channels_list = sorted(channels_set)
+    datasets = []
+    color_palette = [
+        '#fd5631', '#5d3cf2', '#ffc107', '#28a745', '#17a2b8',
+        '#6f42c1', '#e83e8c', '#20c997', '#fd7e14', '#6610f2'
+    ]
+
+    for idx, channel in enumerate(channels_list):
+        color = color_palette[idx % len(color_palette)]
+        data_array = []
+        for day in sorted_days:
+            data_array.append(data_by_day.get(day, {}).get(channel, 0))
+        datasets.append({
+            'label': channel,
+            'data': data_array,
+            'borderColor': color,
+            'backgroundColor': f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.1)',
+            'borderWidth': 2,
+            'fill': True,
+            'tension': 0.3,
+            'pointBackgroundColor': color,
+            'pointBorderColor': '#fff',
+            'pointRadius': 3,
+            'pointHoverRadius': 5,
+        })
+
+    context = {
+        "campaign": campaign,
+        "channels": channels,
+        "channels_count": channels_count,
+        "progress_percent": progress_percent,
+        "payment_status": payment_status,
+        "progress_color": progress_color,
+        'daily_labels_json': json.dumps(daily_labels, ensure_ascii=False),
+        'daily_datasets_json': json.dumps(datasets, ensure_ascii=False),
+        'has_click_data': len(datasets) > 0 and len(daily_labels) > 0,
+    }
+
+    return render(request, "advertisers/pages/campaign_detail.html", context)
 
 
 @login_required
@@ -210,27 +272,6 @@ def advertiser_dashboard(request):
                 daily_spending_labels.append(jalali_date.strftime('%d/%m'))
                 daily_spending_data.append(float(item['total']) if item['total'] else 0)
 
-    daily_clicks = CampaignClick.objects.filter(
-        tracking_link__campaign_influencer__campaign_id__in=campaign_ids,
-        created_at__gte=last_30_days
-    ).annotate(
-        day=TruncDate('created_at')
-    ).values('day').annotate(
-        count=Count('id')
-    ).order_by('day')
-
-    daily_labels = []
-    daily_data = []
-
-    for item in daily_clicks:
-        if item['day']:
-            jalali_date = convert_to_jalali(item['day'])
-            if jalali_date:
-                daily_labels.append(jalali_date.strftime('%d/%m'))
-            else:
-                daily_labels.append(item['day'].strftime('%d/%m'))
-            daily_data.append(item['count'])
-
     recent_transactions = Transaction.objects.filter(
         user=request.user
     ).order_by('-created_at')[:4]
@@ -263,8 +304,6 @@ def advertiser_dashboard(request):
         'persian_date': persian_date,
         'daily_spending_labels_json': json.dumps(daily_spending_labels, ensure_ascii=False),
         'daily_spending_data_json': json.dumps(daily_spending_data, ensure_ascii=False),
-        'daily_labels_json': json.dumps(daily_labels, ensure_ascii=False),
-        'daily_data_json': json.dumps(daily_data, ensure_ascii=False),
         'recent_campaigns': recent_campaigns,
         'recent_transactions': recent_transactions,
         'top_channels': top_channels,
@@ -301,30 +340,15 @@ def request_revision(request, order_id):
         if not feedback or not feedback.strip():
             return JsonResponse({'error': 'لطفاً توضیحات ویرایش را وارد کنید'}, status=400)
 
-        # ایجاد درخواست ویرایش
-        revision = ContentOrderRevision.objects.create(
+        file = request.FILES.get('revision_file')
+
+        from campaigns.services.campaigns_notifications import create_revision_request_service
+        create_revision_request_service(
             order=order,
             requested_by=request.user,
-            feedback=feedback.strip(),
-            status='pending'
+            feedback=feedback,
+            file=file
         )
-
-        # اضافه کردن فایل مرجع (اختیاری)
-        file = request.FILES.get('revision_file')
-        if file:
-            revision.file = file
-            revision.file_name = file.name
-            revision.file_size = file.size
-            revision.save()
-
-        # ========== تغییر وضعیت سفارش به review_pending ==========
-        order.status = 'review_pending'
-        order.save()
-
-        # آپدیت وضعیت delivery
-        if hasattr(order, 'delivery'):
-            order.delivery.status = 'revision_requested'
-            order.delivery.save()
 
         return JsonResponse({
             'success': True,
@@ -342,9 +366,6 @@ def request_revision(request, order_id):
 def final_accept_order(request, order_id):
     """
     تأیید نهایی سفارش توسط تبلیغ‌دهنده
-    پس از تأیید:
-    1. مبلغ تولید محتوا بین اعضای تیم تقسیم می‌شود
-    2. فایل نهایی به CampaignContent اضافه می‌شود
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -358,21 +379,19 @@ def final_accept_order(request, order_id):
         if order.status != 'completed':
             return JsonResponse({'error': 'این سفارش قابل تأیید نیست'}, status=400)
 
-        if not hasattr(order, 'delivery'):
-            return JsonResponse({'error': 'هیچ فایلی برای تأیید وجود ندارد'}, status=400)
-
-        if order.delivery.status != 'delivered':
+        if not hasattr(order, 'delivery') or order.delivery.status != 'delivered':
             return JsonResponse({'error': 'این سفارش قبلاً تأیید شده یا در وضعیت مناسبی نیست'}, status=400)
 
-        content_cost = order.campaign.invoice.content_cost if order.campaign.invoice else 0
+        content_cost = order.campaign.invoice.content_cost if hasattr(order.campaign, 'invoice') and order.campaign.invoice else 0
 
         if content_cost <= 0:
             return JsonResponse({'error': 'مبلغ تولید محتوا معتبر نیست'}, status=400)
 
+        # گرفتن اعضای تیم همراه با یوزرها برای جلوگیری از N+1
         team_members = ContentTeamMember.objects.filter(
             team=order.team,
             is_active=True
-        )
+        ).select_related('user')
 
         if not team_members.exists():
             return JsonResponse({'error': 'هیچ عضو فعالی در تیم وجود ندارد'}, status=400)
@@ -383,49 +402,12 @@ def final_accept_order(request, order_id):
             return JsonResponse({'error': f'مجموع درصد سهام اعضای تیم باید ۱۰۰ باشد (در حال حاضر: {total_percent}%)'},
                                 status=400)
 
-        with transaction.atomic():
-            # ========== 1. تقسیم مبلغ بین اعضای تیم ==========
-            for member in team_members:
-                share_amount = int((content_cost * member.revenue_share_percent) / 100)
-
-                if share_amount <= 0:
-                    continue
-
-                wallet, created = Wallet.objects.get_or_create(user=member.user)
-
-                wallet.balance += share_amount
-                wallet.save()
-
-                Transaction.objects.create(
-                    user=member.user,
-                    amount=share_amount,
-                    type=Transaction.Type.TEAM_PAYMENT,
-                    status=Transaction.Status.SUCCESS,
-                    campaign=order.campaign,
-                    invoice=order.campaign.invoice,
-                    team_member=member,
-                    description=f'پرداخت سهم از سفارش #{order.id} - تیم {order.team.name} - {member.revenue_share_percent}% - مبلغ: {share_amount:,} تومان'
-                )
-
-            # ========== 2. اضافه کردن فایل نهایی به CampaignContent موجود ==========
-            campaign_content, created = CampaignContent.objects.get_or_create(
-                campaign=order.campaign,
-                defaults={
-                    'media': order.delivery.file,
-                    'notes': f'محتوای تولید شده توسط تیم {order.team.name}',
-                }
-            )
-
-            if not created:
-                # اگر CampaignContent از قبل وجود داشت (با کپشن و لینک)، فقط فایل رو اضافه کن
-                campaign_content.media = order.delivery.file
-                campaign_content.notes = f'محتوای تولید شده توسط تیم {order.team.name} در تاریخ {timezone.now()}'
-                campaign_content.save()
-
-            # ========== 3. بروزرسانی وضعیت تحویل ==========
-            order.delivery.status = 'final_accepted'
-            order.delivery.accepted_at = timezone.now()
-            order.delivery.save()
+        from campaigns.services.campaigns_notifications import accept_content_order_delivery
+        accept_content_order_delivery(
+            order=order,
+            content_cost=content_cost,
+            team_members=team_members
+        )
 
         return JsonResponse({
             'success': True,

@@ -2,10 +2,10 @@
 {% load i18n static %}
 
 {% block title %}
-    انتخاب تیم تولید محتوا
+    ساخت کمپین | انتخاب تیم تولید محتوا
 {% endblock %}
 
-{% block extra_style %}
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/team.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/layout-price.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/badges-stats.css' %}">
@@ -14,7 +14,7 @@
 
 {% block content %}
     <div class="container mt-4 pb-5" dir="rtl">
-        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
 
         <div class="card border-0 shadow-sm page-card bg-dark">
             <div class="card-body p-4">
@@ -109,7 +109,7 @@
                         <div class="row g-3" id="plans-container"></div>
                     </div>
 
-                    <input type="hidden" name="selected_plan" id="selected_plan_hidden">
+                    <input type="hidden" name="selected_plan" id="selected_plan_hidden" value="{{ preselect_plan_id|default:'' }}">
 
                     <!-- بخش محتوای تبلیغ (در ابتدا مخفی) -->
                     <div id="ad-content-section" class="mt-5" style="display: none;">
@@ -335,10 +335,10 @@
         window.PRESELECT_PLAN_ID = {{ preselect_plan_id|default:'null' }};
         window.PRESELECT_TEAM_ID = {{ preselect_team_id|default:'null' }};
     </script>
-    <script src="{% static 'campaigns/js/create_step_3/team-selection.js' %}"></script>
-    <script src="{% static 'campaigns/js/create_step_3/brief-control.js' %}"></script>
-    <script src="{% static 'campaigns/js/create_step_3/ad-content-controller.js' %}"></script>
-    <script src="{% static 'campaigns/js/create_step_3/modal-upload-dragdrop.js' %}"></script>
-    <script src="{% static 'campaigns/js/create_step_3/attachments-manager.js' %}"></script>
-    <script src="{% static 'campaigns/js/create_step_3/step3-init.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/team-selection.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/brief-control.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/ad-content-controller.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/modal-upload-dragdrop.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/attachments-manager.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_3/team/step3-init.js' %}"></script>
 {% endblock %}

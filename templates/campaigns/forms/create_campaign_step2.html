@@ -1,13 +1,18 @@
 {% extends 'parent/base.html' %}
 {% load i18n static %}
-{% block extra_style %}
+
+{% block title %}
+	ساخت کمپین | انتخاب ناشران
+{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_2.css' %}">
     <link rel="stylesheet" href="{% static 'finder/vendor/nouislider/dist/nouislider.min.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4 pb-5" dir="rtl">
-    {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+    {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
 
     <div class="card border-0 shadow-sm page-card bg-dark">
         <div class="card-body p-4">
@@ -197,7 +202,7 @@
                                      data-id="{{ rate.id }}"
                                      data-price="{{ rate.price }}">
 
-                                    <label></label>
+                                    <label for="rate_{{ rate.id }}"></label>
                                     <input type="checkbox"
                                            name="rates"
                                            value="{{ rate.id }}"
@@ -259,10 +264,6 @@
                                                 {{ rate.price|default:0 }} تومان
                                             </span>
                                         </div>
-
-                                        {% if rate.id in prev_selected_rate_ids %}
-                                            <script>/* for SSR check we still set via JS */</script>
-                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -283,7 +284,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between mt-5">
-                    <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-accent px-4">← مرحله قبل</a>
+                    <a href="{% url 'campaigns:campaign_edit_step1' campaign.id %}" class="btn btn-accent px-4">← مرحله قبل</a>
                     <button type="submit" class="btn btn-primary px-5">مرحله بعد ←</button>
                 </div>
             </form>
@@ -309,21 +310,19 @@
 {% block script %}
 {{ block.super }}
 <script>
-    window.TEAM_RATES = {
+    window.PREV_SELECTED_RATE_IDS = {{ prev_selected|safe }};
+    
+    window.RATES_PRICES = {
         {% for rate in rates %}
-            "{{ rate.id }}": {
-                "price": {{ rate.price }},
-                "pricePerUnit": {% if rate.price_per_unit %}{{ rate.price_per_unit }}{% else %}null{% endif %},
-                "minutes": {% if rate.minutes %}{{ rate.minutes }}{% else %}null{% endif %}
-            }{% if not forloop.last %},{% endif %}
+            "{{ rate.id }}": {{ rate.price|floatformat:"0"|cut:"," }},
         {% endfor %}
     };
-
-    window.EXISTING_RATE_ID = {% if prev_selected_rate_ids %}{{ prev_selected_rate_ids.0 }}{% else %}null{% endif %};
-
+    
     window.CALCULATE_URL = "{% url 'campaigns:step2_calculate' %}";
+    
+    console.log("PREV_SELECTED_RATE_IDS:", window.PREV_SELECTED_RATE_IDS);
+    console.log("RATES_PRICES:", window.RATES_PRICES);
 </script>
-
 
 <script src="{% static 'campaigns/js/create_step_2.js' %}"></script>
 <script src="{% static 'finder/vendor/nouislider/dist/nouislider.min.js' %}"></script>

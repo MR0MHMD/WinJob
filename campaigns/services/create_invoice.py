@@ -1,4 +1,4 @@
-from campaigns.models import CampaignInvoice, Coupon
+from campaigns.models import CampaignInvoice
 
 PLATFORM_COMMISSION = 0.15
 

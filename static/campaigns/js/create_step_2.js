@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-
     var PRICES = window.RATES_PRICES || {};
     var PREV_SELECTED = window.PREV_SELECTED_RATE_IDS || [];
 

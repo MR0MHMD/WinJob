@@ -109,6 +109,32 @@
         return String(num).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
     }
 
+    // تابع بررسی وضعیت اولیه (برای حالت ویرایش)
+    function checkInitialState() {
+        // بررسی وجود پلن انتخاب‌شده
+        const planInput = document.querySelector('input[name="selected_plan"]');
+        const hasPlan = planInput && planInput.value && planInput.value !== '';
+
+        // بررسی اعتبار محتوای تبلیغ (متن و لینک)
+        const adCaptionInput = document.getElementById('id_ad_caption');
+        const adLinkInput = document.getElementById('id_ad_link');
+        let adValid = false;
+
+        if (adCaptionInput && adLinkInput) {
+            const caption = adCaptionInput.value.trim();
+            const link = adLinkInput.value.trim();
+            const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+            adValid = caption.length >= 10 && link !== '' && urlPattern.test(link);
+        }
+
+        if (hasPlan && adValid) {
+            isPlanSelected = true;
+            isAdContentValid = true;
+            if (briefSection) briefSection.style.display = 'block';
+            validateForm();
+        }
+    }
+
     window.initBriefControl = function () {
         if (briefSection) briefSection.style.display = "none";
         isPlanSelected = false;
@@ -132,6 +158,9 @@
             if (briefSection) briefSection.style.display = "none";
             validateForm();
         });
+
+        // ✨ بررسی وضعیت اولیه (حالت ویرایش)
+        checkInitialState();
 
         validateForm();
     };

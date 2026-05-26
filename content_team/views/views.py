@@ -952,8 +952,8 @@ def accept_order(request, order_id):
         if order.status != 'pending':
             return JsonResponse({'error': 'این سفارش قابل قبول نیست'}, status=400)
 
-        order.status = 'in_progress'
-        order.save()
+        from campaigns.services.campaigns_notifications import accept_content_order_service
+        accept_content_order_service(order)
 
         return JsonResponse({
             'success': True,
@@ -987,8 +987,8 @@ def reject_order(request, order_id):
         if order.status != 'pending':
             return JsonResponse({'error': 'این سفارش قابل رد نیست'}, status=400)
 
-        order.status = 'cancelled'
-        order.save()
+        from campaigns.services.campaigns_notifications import reject_content_order_service
+        reject_content_order_service(order)
 
         return JsonResponse({
             'success': True,
@@ -1036,20 +1036,8 @@ def deliver_order(request, order_id):
         else:
             new_version = 1
 
-        delivery = ContentDelivery.objects.create(
-            order=order,
-            status='delivered',
-            delivered_by=team_member,
-            delivered_at=timezone.now(),
-            notes=notes,
-            version=new_version,
-            file=file,
-            file_name=file.name,
-            file_size=file.size
-        )
-
-        order.status = 'completed'
-        order.save()
+        from campaigns.services.campaigns_notifications import deliver_content_order_service
+        deliver_content_order_service(order, team_member, notes, file, new_version)
 
         return JsonResponse({
             'success': True,
@@ -1086,8 +1074,8 @@ def accept_revision(request, order_id, revision_id):
             return JsonResponse({'error': 'این درخواست قبلاً بررسی شده'}, status=400)
 
         # قبول درخواست
-        revision.status = 'accepted'
-        revision.save()
+        from campaigns.services.campaigns_notifications import accept_revision_service
+        accept_revision_service(order, revision)
 
         # ========== برگردوندن سفارش به حالت در حال انجام ==========
         order.status = 'in_progress'
@@ -1128,8 +1116,8 @@ def reject_revision(request, order_id, revision_id):
             return JsonResponse({'error': 'این درخواست قبلاً بررسی شده'}, status=400)
 
         # رد درخواست
-        revision.status = 'rejected'
-        revision.save()
+        from campaigns.services.campaigns_notifications import reject_revision_service
+        reject_revision_service(order, revision)
 
         # ========== برگردوندن سفارش به حالت completed ==========
         order.status = 'completed'

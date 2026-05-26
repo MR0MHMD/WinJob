@@ -249,9 +249,11 @@
                                 </ul>
                             </div>
 
-                            <a href="#" class="btn btn-icon btn-sm btn-translucent-light position-relative">
+                            <a href="{% url 'notifications:list' %}" class="btn btn-icon btn-sm btn-translucent-light position-relative">
                                 <i class="fi-bell fs-sm"></i>
-                                <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">3</span>
+                                {% if unread_notifications_count != 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
+                                {% endif %} 
                             </a>
                         {% endwith %}
                     {% endwith %}
@@ -443,9 +445,11 @@
                             <p class="text-muted fs-xs mt-1 mb-3">تبلیغ دهنده</p>
                         {% endif %}
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="#" class="btn btn-icon btn-sm btn-translucent-light position-relative">
-                                <i class="fi-bell"></i>
-                                <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">3</span>
+                            <a href="{% url 'notifications:list' %}" class="btn btn-icon btn-sm btn-translucent-light position-relative">
+                                <i class="fi-bell fs-sm"></i>
+                                {% if unread_notifications_count != 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
+                                {% endif %} 
                             </a>
                         </div>
                     </div>

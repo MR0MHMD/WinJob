@@ -1,7 +1,15 @@
 {% extends 'parent/base.html' %}
 {% load i18n static %}
 
-{% block extra_style %}
+{% block title %}
+    {% if edit_mode %}
+    	ویرایش کمپین | اطلاعات پایه
+    {% else %}
+        ساخت کمپین | اطلاعات پایه
+    {% endif %} 
+{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'finder/vendor/persain-date/persian-datepicker.min.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_1/create_step_1.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_1/datepicker.css' %}">
@@ -10,14 +18,14 @@
 {% block content %}
     <div class="container mt-4" dir="rtl">
 
-        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه کمپین' step_name2='انتخاب تبلیغ گیرندگان' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
 
         <div class="card border-0 shadow-sm">
         
 
             <div class="card-body p-4 bg-dark">
 
-                <form method="POST" id="step1-form" novalidate>
+                <form method="POST" id="step1-form" novalidate action="{% if edit_mode %}{% url 'campaigns:campaign_edit_step1' campaign.id %}{% else %}{% url 'campaigns:campaign_create_step1' %}{% endif %}">
 
                     {% csrf_token %}
 
@@ -240,4 +248,18 @@
     <script src="{% static 'campaigns/js/create_step_1/listeners.js' %}"></script>
     <script src="{% static 'campaigns/js/create_step_1/datepicker.js' %}"></script>
     <script src="{% static 'campaigns/js/create_step_1/init.js' %}"></script>
+    {% if edit_mode %}
+        <script>
+            window.EDIT_MODE = true;
+            window.EDIT_CONTENT_TYPE_ID = "{{ edit_content_type_id|default:'' }}";
+            window.EDIT_AD_TYPE_ID = "{{ edit_ad_type_id|default:'' }}";
+            window.EDIT_SERVICE_TYPE_ID = "{{ edit_service_type_id|default:'' }}";
+            window.EDIT_MINUTES = "{{ edit_minutes|default:'' }}";
+            console.log("EDIT_MINUTES:", window.EDIT_MINUTES);  // برای دیباگ
+        </script>
+    {% else %}
+        <script>
+            window.EDIT_MODE = false;
+        </script>
+    {% endif %}
 {% endblock %}

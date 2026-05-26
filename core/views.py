@@ -1,33 +1,26 @@
-from influencers.models import InfluencerProfile, InfluencerChannel, InfluencerReview
-from campaigns.models import CampaignInvoice, CampaignClick
-from django.db.models import Count, Q, Sum, Avg
+from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile
+from campaigns.models import CampaignClick, Campaign
+from django.db.models import Count, Q, Avg
 from content_team.models import ContentTeam
 from plat_form.models import Platform
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.utils import timezone
 from django.http import Http404
 from blog.models import Post
+from accounts.models import CustomUser
 
 
 def home(request):
-
-    user = request.user
-
-    # ========== آمار کلی پلتفرم ==========
     total_influencers = InfluencerProfile.objects.filter(is_active=True).count()
+    total_campaigns = Campaign.objects.filter(status=Campaign.Status.COMPLETED).count()
     total_channels = InfluencerChannel.objects.filter(is_active=True).count()
-
-    # مجموع هزینه‌های سایت (از فاکتورهای پرداخت شده)
-    total_spent = CampaignInvoice.objects.filter(is_paid=True).aggregate(total=Sum('payable_amount'))['total'] or 0
-
+    total_teams = ContentTeam.objects.filter(is_active=True).count()
     total_clicks = CampaignClick.objects.count()
 
-    # ========== پلتفرم‌ها با آمار ==========
     platforms = Platform.objects.filter(is_active=True).annotate(
         channels_count=Count('influencer_channels', filter=Q(influencer_channels__is_active=True))
     ).order_by('-channels_count')
 
-    # ========== برترین کانال‌ها (جایگزین اینفلوئنسرهای برتر) ==========
     top_channels_raw = InfluencerChannel.objects.filter(
         is_active=True,
         influencer__is_active=True
@@ -63,9 +56,10 @@ def home(request):
     ]
 
     context = {
-        'total_influencers': total_influencers,
+        'total_campaigns': total_campaigns,
         'total_channels': total_channels,
-        'total_spent': total_spent,
+        'total_influencers': total_influencers,
+        'total_teams': total_teams,
         'total_clicks': total_clicks,
         'platforms': platforms,
         'top_channels': top_channels,
