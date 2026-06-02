@@ -193,15 +193,6 @@
                                         </div>
                                         <h6 class="text-white mb-0 mt-2">{{ user.nickname|default:"کاربر" }}</h6>
                                         <span class="text-success fs-xs">{{ user.phone_number }}</span>
-                                        {% if advertiser %}
-                                            <p class="text-muted fs-xs mt-1 mb-0">
-                                                <i class="fi-check-circle text-success me-1"></i>تبلیغ دهنده
-                                            </p>
-                                        {% elif influencer %}
-                                            <p class="text-muted fs-xs mt-1 mb-0">
-                                                <i class="fi-check-circle text-success me-1"></i>ناشر
-                                            </p>
-                                        {% endif %}
                                     </li>
                                     <li>
                                         <hr class="dropdown-divider">
@@ -215,15 +206,63 @@
                                                     {% if request.user.wallet.balance == 0 %}
                                                         <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
                                                     {% else %}
-                                                        <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
-                                                        <span class="fw-bold text-white">
-                                                    {{ request.user.wallet.balance }} تومان
-                                                </span>
+                                                        <div class="d-flex flex-column align-items-center">
+                                                            <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
+                                                            <span class="fw-bold">
+                                                                {{ request.user.wallet.balance }} تومان
+                                                            </span>
+                                                        </div>
                                                     {% endif %}
                                                 </a>
                                             </div>
                                         </div>
                                     </li>
+                                    {% if not user.is_influencer %}
+                                    	<li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        
+                                        <!-- بخش امتیازات (دراپ‌داون) -->
+                                        <li class="px-3 py-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if user.is_advertiser %}
+                                                    {% with score=user.advertiser_profile.score %}
+                                                        <a href="{% url 'gamification:points_guide' %}"
+                                                           class="text-decoration-none d-flex align-items-center gap-2">
+                                                            {% if score.badge and score.badge.icon %}
+                                                                <img src="{{ score.badge.icon.url }}" width="28" height="28"
+                                                                     class="rounded-circle" alt="نشان">
+                                                            {% else %}
+                                                                <i class="fi-award text-primary fs-5"></i>
+                                                            {% endif %}
+                                                            <div class="d-flex gap-1">
+                                                                <span class="text-light fs-sm d-block">امتیاز شما</span>
+                                                                <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
+                                                            </div>
+                                                        </a>
+                                                    {% endwith %}
+                                                {% elif user.is_team_member %}
+                                                    {% with score=user.team_member.team.score %}
+                                                        <a href="{% url 'gamification:points_guide' %}"
+                                                           class="text-decoration-none d-flex align-items-center gap-2">
+                                                            {% if score.badge and score.badge.icon %}
+                                                                <img src="{{ score.badge.icon.url }}" width="28" height="28"
+                                                                     class="rounded-circle" alt="نشان">
+                                                            {% else %}
+                                                                <i class="fi-award text-primary fs-5"></i>
+                                                            {% endif %}
+                                                            <div class="d-flex gap-1">
+                                                                <span class="text-light fs-sm d-block">امتیاز تیم</span>
+                                                                <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
+                                                            </div>
+                                                        </a>
+                                                    {% endwith %}
+                                                {% endif %}
+                                            </div>
+                                        </li>
+                                    {% endif %} 
+                                    
+                                
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
@@ -235,11 +274,12 @@
                                             class="fi-pie-chart me-2"></i>اطلاعات فردی</a></li>
                                     <li><a class="dropdown-item rounded-3" href="{% url 'accounts:wallet_dashboard' %}"><i
                                             class="fi-wallet me-2"></i>کیف پول</a></li>
+                                    {% if user.is_influencer %}
+                                    <li><a class="dropdown-item rounded-3" href="{% url 'gamification:points_guide' %}"><i
+                                            class="fi-star-filled me-2"></i>امتیاز های من</a></li>
+                                    {% endif %}
                                     <li><a class="dropdown-item rounded-3" href="{% url 'tickets:ticket_list' %}"><i
-                                            class="fi-settings me-2"></i>پشتیبانی</a>
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'core:pending' %}"><i
-                                            class="fi-layers me-2"></i>مستندات</a>
-                                    </li>
+                                            class="bi bi-headset me-2"></i>پشتیبانی</a>
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
@@ -249,11 +289,12 @@
                                 </ul>
                             </div>
 
-                            <a href="{% url 'notifications:list' %}" class="btn btn-icon btn-sm btn-translucent-light position-relative">
+                            <a href="{% url 'notifications:list' %}"
+                               class="btn btn-icon btn-sm btn-translucent-light position-relative">
                                 <i class="fi-bell fs-sm"></i>
                                 {% if unread_notifications_count != 0 %}
                                     <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
-                                {% endif %} 
+                                {% endif %}
                             </a>
                         {% endwith %}
                     {% endwith %}
@@ -445,11 +486,12 @@
                             <p class="text-muted fs-xs mt-1 mb-3">تبلیغ دهنده</p>
                         {% endif %}
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="{% url 'notifications:list' %}" class="btn btn-icon btn-sm btn-translucent-light position-relative">
+                            <a href="{% url 'notifications:list' %}"
+                               class="btn btn-icon btn-sm btn-translucent-light position-relative">
                                 <i class="fi-bell fs-sm"></i>
                                 {% if unread_notifications_count != 0 %}
                                     <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
-                                {% endif %} 
+                                {% endif %}
                             </a>
                         </div>
                     </div>
@@ -473,34 +515,86 @@
                             </div>
                         </div>
                     </div>
+                    
+                    {% if not user.is_influencer %}
+                    	<hr class="border-light my-2">
+                    
+                        <!-- بخش امتیازات در موبایل -->
+                        <div class="px-3 py-2">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if user.is_advertiser %}
+                                    {% with score=user.advertiser_profile.score %}
+                                        <a href="{% url 'gamification:points_guide' %}" class="text-decoration-none d-flex align-items-center gap-2">
+                                            {% if score.badge and score.badge.icon %}
+                                                <img src="{{ score.badge.icon.url }}" width="28" height="28" class="rounded-circle" alt="نشان">
+                                            {% else %}
+                                                <i class="fi-award text-primary fs-5"></i>
+                                            {% endif %}
+                                            <div class="d-flex gap-1">
+                                                <span class="text-light fs-sm d-block">امتیاز شما</span>
+                                                <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
+                                            </div>
+                                        </a>
+                                    {% endwith %}
+                                {% elif user.is_team_member %}
+                                    {% with score=user.team_member.team.score %}
+                                        <a href="{% url 'gamification:points_guide' %}" class="text-decoration-none d-flex align-items-center gap-2">
+                                            {% if score.badge and score.badge.icon %}
+                                                <img src="{{ score.badge.icon.url }}" width="28" height="28" class="rounded-circle" alt="نشان">
+                                            {% else %}
+                                                <i class="fi-award text-primary fs-5"></i>
+                                            {% endif %}
+                                            <div class="d-flex gap-1">
+                                                <span class="text-light fs-sm d-block">امتیاز تیم</span>
+                                                <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
+                                            </div>
+                                        </a>
+                                    {% endwith %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
 
                     <hr class="border-light my-2">
 
                     <div class="list-group list-group-flush bg-transparent">
-                        <a href="{% url 'core:home' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                        <a href="{% url 'core:home' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-home me-2"></i>خانه
                         </a>
-                        
-                        <a href="{% url 'accounts:dashboard_router' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+
+                        <a href="{% url 'accounts:dashboard_router' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-dashboard me-2"></i>داشبورد
                         </a>
-                        
-                        <a href="{% url 'accounts:edit' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+
+                        <a href="{% url 'accounts:edit' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-user me-2"></i>اطلاعات فردی
                         </a>
-                        
-                        <a href="{% url 'accounts:wallet_dashboard' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+
+                        <a href="{% url 'accounts:wallet_dashboard' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-wallet me-2"></i>کیف پول
                         </a>
                         
-                        <a href="{% url 'tickets:ticket_list' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                        {% if user.is_influencer %}
+                        	<a href="{% url 'gamification:points_guide' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                                <i class="fi-star-filled me-2"></i>امتیاز های من
+                            </a>
+                        {% endif %} 
+                        
+
+                        <a href="{% url 'tickets:ticket_list' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-help me-2"></i>پشتیبانی
                         </a>
-                        
-                        <a href="{% url 'core:pending' %}" class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+
+                        <a href="{% url 'core:pending' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
                             <i class="fi-layers me-2"></i>مستندات
                         </a>
-                        
+
                         <a href="{% url 'accounts:logout' %}"
                            class="list-group-item bg-transparent text-danger border-light rounded-3"><i
                                 class="fi-logout me-2"></i>خروج</a>

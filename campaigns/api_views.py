@@ -59,6 +59,8 @@ def campaign_step2_calculate_price(request):
         return JsonResponse({'error': str(e)}, status=400)
 
 
+from django.urls import reverse
+
 @login_required
 def campaign_create_step3_router(request):
     campaign_id = request.session.get("campaign_draft_id")
@@ -74,12 +76,14 @@ def campaign_create_step3_router(request):
 
     content_slug = campaign.content_type.slug.lower()
 
+    # دریافت شماره صفحه ذخیره شده در سشن (اگر وجود نداشت 1)
+    step3_page = request.session.get('step3_team_page', '1')
+
     if content_slug == "ready-content":
         return redirect("campaigns:campaign_create_step3_ready")
-
     elif content_slug == "content-production-team":
-        return redirect("campaigns:campaign_create_step3_team")
-
+        url = reverse("campaigns:campaign_create_step3_team")
+        return redirect(f"{url}?page={step3_page}")
     else:
         messages.error(request, "نوع محتوای کمپین معتبر نیست.")
         return redirect("campaigns:campaign_create_step1")

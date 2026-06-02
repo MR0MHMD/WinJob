@@ -7,7 +7,6 @@ urlpatterns = [
     path('dashboard/', views.content_team_dashboard, name='dashboard'),
     path('dashboard/performance', views.team_performance_report, name='performance'),
     path('', views.team_list_view, name='team_list'),
-    path('<slug:slug>/', views.team_detail_view, name='team_detail'),
     path('team/manage/', views.team_manage_view, name='team_manage'),
     path('team/check-slug/', api_views.check_slug_availability, name='check_slug_availability'),
     path('team/<slug:team_slug>/members/manage/', views.team_members_manage, name='team_members_manage'),
@@ -30,4 +29,7 @@ urlpatterns = [
     path('plans/api/create/<slug:service_slug>/', plan_views.create_plan, name='create_plan'),
     path('plans/api/edit/<int:plan_id>/', plan_views.edit_plan, name='edit_plan'),
     path('plans/api/delete/<int:plan_id>/', plan_views.delete_plan, name='delete_plan'),
+    path('submit-review/', api_views.submit_team_review_ajax, name='submit_review'),
+    path('edit-review/', api_views.edit_team_review_ajax, name='edit_review'),
+    path('<slug:slug>/', views.team_detail_view, name='team_detail'),
 ]

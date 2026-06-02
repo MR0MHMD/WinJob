@@ -27,29 +27,3 @@ class Province(models.Model):
                 i += 1
             self.slug = slug
         super().save(*args, **kwargs)
-
-
-class City(models.Model):
-    province = models.ForeignKey(
-        'Province',
-        on_delete=models.CASCADE,
-        related_name='cities',
-        verbose_name='استان'
-    )
-    name = models.CharField('نام', max_length=150)
-    slug = models.SlugField('اسلاگ', max_length=160, blank=True)
-
-    class Meta:
-        verbose_name = 'شهر'
-        verbose_name_plural = 'شهر ها'
-        ordering = ['name']
-        unique_together = (('province', 'slug'),)
-
-    def __str__(self):
-        return f"{self.name} — {self.province.name}"
-
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = generate_random_slug()
-        super().save(*args, **kwargs)

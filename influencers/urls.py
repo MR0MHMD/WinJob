@@ -12,7 +12,7 @@ urlpatterns = [
     path('my_channels/delete/<int:pk>/', views.delete_channel_view, name='delete_channel'),
     path('service-rates/', views.service_rates_view, name='service_rates'),
     path('service-rates/edit/<int:channel_id>/<int:ad_type_id>/', api_views.rate_inline_edit, name='rate_inline_edit'),
-    path('order_list/', views.order_list.as_view(), name="order_list"),
+    path('order_list/', views.order_list, name="order_list"),
     path('order_detail/<int:order_id>', views.order_detail, name="order_detail"),
     path('order_detail/<int:order_id>/response', views.influencer_respond, name="influencer_respond"),
     path('order_detail/<int:order_id>/report/', views.submit_report, name='submit_report'),
@@ -22,4 +22,6 @@ urlpatterns = [
     path('coupons/create/', views.coupon_create, name='coupon_create'),
     path('coupons/<int:coupon_id>/edit/', views.coupon_edit, name='coupon_edit'),
     path('coupons/<int:coupon_id>/delete/', views.coupon_delete, name='coupon_delete'),
+    path('submit-review/', api_views.submit_influencer_review_ajax, name='submit_review'),
+    path('edit-review/', api_views.edit_influencer_review_ajax, name='edit_review'),
 ]

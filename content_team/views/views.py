@@ -64,7 +64,7 @@ def team_list_view(request):
         annotated_active_members_count=Count('members', filter=Q(members__is_active=True))
     ).order_by(ordering)
 
-    paginator = Paginator(teams, 12)
+    paginator = Paginator(teams, 21)
     page = request.GET.get('page', 1)
 
     try:
@@ -196,6 +196,40 @@ def team_detail_view(request, slug):
     reviews = team.reviews.all()[:3]
     recent_completed_orders = team.orders.filter(status='completed')[:5]
 
+    # دریافت پارامترهای انتخاب خودکار از استپ سوم
+    select_team = request.GET.get('select_team')
+    from_campaign = bool(select_team)
+    return_page = request.GET.get('page', '1')
+
+    can_submit_review = False
+    pending_orders = []
+
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        advertiser = request.user.advertiser_profile
+        # 1. سفارش‌های تکمیل شده بدون نظر
+        pending_orders = list(ContentOrder.objects.filter(
+            campaign__advertiser=advertiser,
+            team=team,
+            status=ContentOrder.Status.COMPLETED,
+            review__isnull=True
+        ).select_related('campaign').order_by('-created_at'))
+
+        # 2. بررسی آیا قبلاً نظری ثبت کرده؟
+        has_any_review = TeamReview.objects.filter(team=team, advertiser=advertiser).exists()
+
+        if not has_any_review:
+            can_submit_review = True
+        elif pending_orders:
+            can_submit_review = True
+
+    all_reviews = list(team.reviews.all())
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        user_reviews = [r for r in all_reviews if r.advertiser.user == request.user]
+        other_reviews = [r for r in all_reviews if r.advertiser.user != request.user]
+        sorted_reviews = user_reviews + sorted(other_reviews, key=lambda x: x.created_at, reverse=True)
+    else:
+        sorted_reviews = sorted(all_reviews, key=lambda x: x.created_at, reverse=True)
+
     context = {
         'team': team,
         'managers': managers,
@@ -210,6 +244,13 @@ def team_detail_view(request, slug):
         'stats': stats,
         'reviews': reviews,
         'recent_completed_orders': recent_completed_orders,
+        'from_campaign': from_campaign,
+        'team_id': select_team,
+        'return_page': return_page,
+        'gamification': team.gamification_status,
+        'can_submit_review': can_submit_review,
+        'pending_orders': pending_orders,
+        'sorted_reviews': sorted_reviews,
     }
 
     return render(request, 'content_team/pages/team_detail.html', context)
@@ -388,6 +429,7 @@ def content_team_dashboard(request):
         'services_with_plans_count': services_with_plans_count,
         'total_services': total_services,
         'persian_date': persian_date,
+        'gamification': team.gamification_status,
     }
 
     return render(request, "content_team/pages/dashboard.html", context)

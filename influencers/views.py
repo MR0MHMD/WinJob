@@ -4,12 +4,10 @@ from django.db.models import Sum, Q, Value, IntegerField, FloatField
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count, Prefetch
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
-from django.views.generic import ListView
 from .forms import InfluencerChannelForm
 from accounts.models import Transaction
 from plat_form.models import Platform
@@ -128,32 +126,42 @@ def service_rates_view(request):
     return render(request, 'influencers/pages/service_rates.html', context)
 
 
-class order_list(LoginRequiredMixin, ListView):
+@login_required
+def order_list(request):
     template_name = "influencers/pages/orders_list.html"
     context_object_name = "orders"
     paginate_by = 10
 
-    def get_queryset(self):
-        user = self.request.user
+    user = request.user
 
-        if not hasattr(user, "influencer_profile"):
-            return CampaignInfluencer.objects.none()
-
+    if not hasattr(user, "influencer_profile"):
+        orders = CampaignInfluencer.objects.none()
+    else:
         influencer = user.influencer_profile
+        orders = (
+            CampaignInfluencer.objects.select_related(
+                "campaign",
+                "channel",
+                "campaign__content",
+                "service_rate",
+                "campaign__advertiser",
+            )
+            .filter(channel__influencer=influencer)
+            .exclude(
+                campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+            )
+            .order_by("-created_at")
+        )
 
-        queryset = CampaignInfluencer.objects.select_related(
-            "campaign",
-            "channel",
-            "campaign__content",
-            "service_rate",
-            "campaign__advertiser",
-        ).filter(
-            channel__influencer=influencer,
-        ).exclude(
-            campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
-        ).order_by("-created_at")
+    paginator = Paginator(orders, 20)
+    page_number = request.GET.get('page')
+    orders = paginator.get_page(page_number)
 
-        return queryset
+    context = {
+        "orders": orders,
+    }
+
+    return render(request, template_name, context)
 
 
 @login_required
@@ -175,7 +183,6 @@ def order_detail(request, order_id):
             "channel__platform",
             "channel__category",
             "channel__province",
-            "channel__city",
             "channel__influencer",
             "channel__influencer__user",
             "service_rate",
@@ -263,7 +270,7 @@ def influencer_respond(request, order_id):
         messages.error(request, "شما دسترسی به این عملیات ندارید.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    if order.status != 'pending': # اینجا از استرینگ استفاده کردم طبق مدل‌ها
+    if order.status != 'pending':  # اینجا از استرینگ استفاده کردم طبق مدل‌ها
         messages.error(request, "این سفارش قبلاً پاسخ داده شده است و قابل تغییر نیست.")
         return redirect('influencers:order_detail', order_id=order.id)
 
@@ -516,7 +523,6 @@ def influencer_dashboard(request):
     return render(request, "influencers/pages/dashboard.html", context)
 
 
-
 def channel_list(request):
     """
     صفحه لیست کانال‌های اینفلوئنسرها با فیلتر حرفه‌ای
@@ -525,11 +531,11 @@ def channel_list(request):
     # کوئری اصلی - اصلاح شده با output_field
     channels = InfluencerChannel.objects.filter(
         is_active=True,
+        status="approved",
         influencer__is_active=True
     ).select_related(
         'platform',
         'province',
-        'city',
         'category',
         'influencer'
     ).prefetch_related(
@@ -561,11 +567,6 @@ def channel_list(request):
     province_id = request.GET.get('province')
     if province_id:
         channels = channels.filter(province_id=province_id)
-
-    # فیلتر بر اساس شهر
-    city_id = request.GET.get('city')
-    if city_id:
-        channels = channels.filter(city_id=city_id)
 
     # فیلتر بر اساس دسته‌بندی محتوایی
     category_id = request.GET.get('category')
@@ -624,11 +625,6 @@ def channel_list(request):
     sort_by = valid_sorts.get(sort_by, '-followers_count')
     channels = channels.order_by(sort_by).distinct()
 
-    # ========== صفحه‌بندی ==========
-    paginator = Paginator(channels, 12)  # 12 کارت در هر صفحه
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
     # ========== دیتا برای فیلترها (نمایش در سایدبار) ==========
     platforms = Platform.objects.filter(
         is_active=True,
@@ -657,8 +653,13 @@ def channel_list(request):
         max_followers=Max('followers_count')
     )
 
+    # ========== صفحه‌بندی ==========
+    paginator = Paginator(channels, 21)
+    page_number = request.GET.get('page')
+    channels = paginator.get_page(page_number)
+
     context = {
-        'channels': page_obj,
+        'channels': channels,
         'platforms': platforms,
         'provinces': provinces,
         'categories': categories,
@@ -667,7 +668,6 @@ def channel_list(request):
         'selected_filters': {
             'platform': platform_slug,
             'province': province_id,
-            'city': city_id,
             'category': category_id,
             'followers_min': followers_min,
             'followers_max': followers_max,
@@ -683,11 +683,10 @@ def channel_list(request):
     return render(request, 'influencers/pages/channel_list.html', context)
 
 
-
 def channel_detail(request, channel_id):
     channel = get_object_or_404(
         InfluencerChannel.objects.select_related(
-            'platform', 'province', 'city', 'category', 'influencer'
+            'platform', 'province', 'category', 'influencer'
         ).prefetch_related(
             'service_rates__ad_type',
             Prefetch(
@@ -709,13 +708,62 @@ def channel_detail(request, channel_id):
         influencer__is_active=True
     )
 
+    select_rate_param = request.GET.get('select_rate')
+    from_campaign = select_rate_param is not None
+    selectable_rate_id = int(select_rate_param) if select_rate_param and select_rate_param.isdigit() else None
+
+    # influencers/views.py (قسمت منطق ثبت نظر)
+    # ========== منطق ثبت نظر ==========
+    can_submit_review = False
+    pending_bookings = []
+
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        advertiser = request.user.advertiser_profile
+
+        # ۱. کمپین‌های تکمیل شده بدون نظر
+        pending_bookings = list(CampaignInfluencer.objects.filter(
+            campaign__advertiser=advertiser,
+            channel=channel,
+            status=CampaignInfluencer.Status.COMPLETED,
+            review__isnull=True
+        ).select_related('campaign').order_by('-created_at'))
+
+        # ۲. بررسی آیا کاربر قبلاً نظری (حتی عمومی) ثبت کرده؟
+        has_any_review = InfluencerReview.objects.filter(
+            channel=channel,
+            advertiser=advertiser
+        ).exists()
+
+        if not has_any_review:
+            # کاربر هیچ نظری ندارد → می‌تواند یک نظر عمومی ثبت کند
+            can_submit_review = True
+        elif pending_bookings:
+            # کاربر نظر دارد ولی کمپین بدون نظر وجود دارد
+            can_submit_review = True
+
+    # مرتب‌سازی نظرات: نظر کاربر فعلی اول، سپس بقیه بر اساس تاریخ نزولی
+    all_reviews = list(channel.reviews.all())
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        user_reviews = [r for r in all_reviews if r.advertiser.user == request.user]
+        other_reviews = [r for r in all_reviews if r.advertiser.user != request.user]
+        # مرتب کردن سایر نظرات بر اساس تاریخ (جدیدترین اول)
+        other_reviews_sorted = sorted(other_reviews, key=lambda x: x.created_at, reverse=True)
+        sorted_reviews = user_reviews + other_reviews_sorted
+    else:
+        sorted_reviews = sorted(all_reviews, key=lambda x: x.created_at, reverse=True)
+
     context = {
         'channel': channel,
         'avg_rating': channel.avg_rating,
         'total_reviews': channel._total_reviews,
         'completed_campaigns': channel._completed_campaigns,
         'service_rates': channel.service_rates.filter(is_active=True),
-        'reviews': channel.reviews.all(),
+        'reviews': sorted_reviews,  # نظرات مرتب شده
+        'gamification': channel.gamification_status,
+        'from_campaign': from_campaign,
+        'selectable_rate_id': selectable_rate_id,
+        'can_submit_review': can_submit_review,
+        'pending_bookings': pending_bookings,  # لیست به جای یک آیتم
     }
 
     return render(request, 'influencers/pages/channel_detail.html', context)

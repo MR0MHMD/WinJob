@@ -1,18 +1,16 @@
-# advertisers/models
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
 from accounts.models import CustomUser
 from core.models import Category
-from location.models import Province, City
+from gamification.mixins import GamificationMixin
+from location.models import Province
 
 
-class AdvertiserProfile(models.Model):
+class AdvertiserProfile(GamificationMixin, models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='advertiser_profile',
                                 verbose_name=_('کاربر'))
     business_name = models.CharField(_('نام کسب‌وکار'), max_length=200)
-    city = models.ForeignKey(City, verbose_name=_('شهر'), on_delete=models.CASCADE, related_name=_('advertisers'),
-                             null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True,
                                  verbose_name=_('دسته‌بندی'))
     description = models.TextField(_('توضیحات کسب‌وکار'), blank=True)
@@ -32,7 +30,7 @@ class AdvertiserProfile(models.Model):
     def wallet_balance(self):
         return self.user.wallet.balance
 
-    def get_full_location(self): return f"{self.city}، {self.user.province}"
+    def get_full_location(self): return self.user.province
 
     get_full_location.short_description = _('موقعیت جغرافیایی')
 

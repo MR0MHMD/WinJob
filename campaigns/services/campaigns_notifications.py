@@ -1,13 +1,13 @@
 from django.db import transaction
+from django.db import models
+from django.utils import timezone
 from collections import defaultdict
 from accounts.models import Wallet, Transaction
-from content_team.models import ContentOrderRevision
+from content_team.models import ContentOrderRevision, ContentDelivery
 from accounts.services.payment_service import pay_influencer
 from influencers.models import CampaignReport
-from campaigns.models import CampaignInfluencer, CampaignContent
-from campaigns.models import Campaign
-from django.utils import timezone
-from content_team.models import ContentDelivery
+from campaigns.models import CampaignInfluencer, CampaignContent, Campaign
+from gamification.services import update_score
 from notifications.utils import (
     notify_advertiser_content_order_accepted,
     notify_advertiser_content_order_rejected,
@@ -29,12 +29,29 @@ from notifications.utils import (
 
 
 def submit_campaign_for_review(campaign):
-    """انتقال کمپین از پیش‌نویس به در انتظار تایید پس از پرداخت"""
+    """انتقال کمپین از پیش‌نویس به در انتظار تایید پس از پرداخت و اعمال امتیاز های تبلیغ ‌دهنده"""
     if campaign.status == 'draft':
-        campaign.status = 'pending'
-        campaign.save(update_fields=['status'])
+        with transaction.atomic():
+            campaign.status = 'pending'
+            campaign.save(update_fields=['status'])
+            notify_advertiser_campaign_pending(campaign)
+            advertiser = campaign.advertiser
+            is_first_campaign = not advertiser.campaigns.exclude(status='draft').exists()
+            if is_first_campaign:
+                update_score(advertiser, 70, 'ساخت اولین کمپین', 'امتیاز ثبت اولین کمپین در پلتفرم')
 
-        notify_advertiser_campaign_pending(campaign)
+            if hasattr(campaign, 'invoice') and campaign.invoice:
+                payable_amount = campaign.invoice.payable_amount
+                if payable_amount < 10_000_000:
+                    update_score(advertiser, 30, 'ثبت کمپین زیر 10 میلیون تومان', f'ثبت کمپین با بودجه زیر ۱۰ میلیون تومان (کمپین {campaign.name})')
+                elif 10_000_000 <= payable_amount <= 30_000_000:
+                    update_score(advertiser, 50, 'ثبت کمپین زیر 30 میلیون تومان', f'ثبت کمپین با بودجه بین ۱۰ تا ۳۰ میلیون تومان (کمپین {campaign.name})')
+                elif payable_amount > 30_000_000:
+                    update_score(advertiser, 70, 'ثبت کمپین بالای 30 میلیون تومان', f'ثبت کمپین با بودجه بالای ۳۰ میلیون تومان (کمپین {campaign.name})')
+
+            if campaign.content_orders.exists():
+                update_score(advertiser, 15, 'استفاده از تیم تولید محتوا', f'استفاده از خدمات تیم تولید محتوا در کمپین {campaign.name}')
+
     return campaign
 
 
@@ -74,25 +91,31 @@ def reject_campaign_by_admin(campaign, reason):
 
 
 def accept_content_order_service(order):
-    """سرویس قبول سفارش توسط تیم محتوا"""
+    """سرویس قبول سفارش توسط تیم محتوا (+۲۰ امتیاز برای تیم)"""
     with transaction.atomic():
         order.status = 'in_progress'
         order.save(update_fields=['status'])
+
+        # --- سیستم گیمیفیکیشن ---
+        update_score(order.team, 20, 'قبول کردن سفارش تبلیغ', f'قبول سفارش تولید محتوای کمپین{order.campaign.name}')
 
         notify_advertiser_content_order_accepted(order)
 
 
 def reject_content_order_service(order):
-    """سرویس رد سفارش توسط تیم محتوا"""
+    """سرویس رد سفارش توسط تیم محتوا (۵۰- امتیاز منفی برای تیم)"""
     with transaction.atomic():
         order.status = 'cancelled'
         order.save(update_fields=['status'])
+
+        # --- سیستم گیمیفیکیشن ---
+        update_score(order.team, -50, 'رد کردن سفارش تبلیغ', f'رد سفارش تولید محتوای کمپین{order.campaign.name}')
 
         notify_advertiser_content_order_rejected(order)
 
 
 def deliver_content_order_service(order, team_member, notes, file, new_version):
-    """سرویس تحویل فایل سفارش و اتمام آن"""
+    """سرویس تحویل فایل سفارش و بررسی تحویل قبل یا بعد از ضرب‌الاجل (Deadline)"""
     with transaction.atomic():
         delivery = ContentDelivery.objects.create(
             order=order,
@@ -109,12 +132,20 @@ def deliver_content_order_service(order, team_member, notes, file, new_version):
         order.status = 'completed'
         order.save(update_fields=['status'])
 
+        if hasattr(order, 'deadline') and order.deadline:
+            if timezone.now() <= order.deadline:
+                update_score(order.team, 20, 'تحویل قبل از ددلاین', f'تحویل به موقع فایل سفارش #{order.id} قبل از ددلاین')
+            else:
+                update_score(order.team, -20, 'تحویل بعد از ددلاین', f'تحویل تاخیری فایل سفارش #{order.id} بعد از ددلاین')
+        else:
+            update_score(order.team, 20, 'تحویل فایل سفارش', f'تحویل فایل سفارش کمپین {order.campaign.id}')
+
         notify_advertiser_content_delivered(delivery)
         return delivery
 
 
 def accept_revision_service(order, revision):
-    """سرویس قبول درخواست ویرایش"""
+    """سرویس قبول درخواست ویرایش توسط تیم محتوا (+۱۰ امتیاز برای تیم)"""
     with transaction.atomic():
         revision.status = 'accepted'
         revision.save(update_fields=['status'])
@@ -126,11 +157,13 @@ def accept_revision_service(order, revision):
             order.delivery.status = 'revision_requested'
             order.delivery.save(update_fields=['status'])
 
+        update_score(order.team, 10, 'قبول درخواست ویرایش', f'پذیرش و انجام اصلاحیه کمپین{revision.order.campaign.name}')
+
         notify_advertiser_revision_accepted(revision)
 
 
 def reject_revision_service(order, revision):
-    """سرویس رد درخواست ویرایش"""
+    """سرویس رد درخواست ویرایش توسط تیم محتوا (۳۰- امتیاز منفی برای تیم)"""
     with transaction.atomic():
         revision.status = 'rejected'
         revision.save(update_fields=['status'])
@@ -142,13 +175,13 @@ def reject_revision_service(order, revision):
             order.delivery.status = 'delivered'
             order.delivery.save(update_fields=['status'])
 
+        update_score(order.team, -30, 'در درخواست ویرایش', f'رد درخواست اصلاحیه کمپین{revision.order.campaign.name}')
+
         notify_advertiser_revision_rejected(revision)
 
 
 def submit_influencer_report_service(order, post_link, screenshot):
-    """
-    سرویس ثبت گزارش ناشر، مدیریت وضعیت‌های کمپین و ارسال نوتیفیکیشن‌های مربوطه
-    """
+    """سرویس ثبت گزارش ناشر و اتمام کار کانال (+۱۵ امتیاز برای کانال ناشر)"""
     campaign = order.campaign
 
     with transaction.atomic():
@@ -161,6 +194,9 @@ def submit_influencer_report_service(order, post_link, screenshot):
 
         order.status = CampaignInfluencer.Status.COMPLETED
         order.save(update_fields=['status'])
+
+        # --- سیستم گیمیفیکیشن ---
+        update_score(order.channel, 15, 'ارسال گزارش تبلیغ', f'ارسال گزارش عملکرد و اتمام کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
 
         total_reports = CampaignReport.objects.filter(
             campaign_influencer__campaign=campaign
@@ -175,7 +211,6 @@ def submit_influencer_report_service(order, post_link, screenshot):
             except ImportError:
                 pass
 
-        from django.db import models
         pending_or_accepted_without_report = CampaignInfluencer.objects.filter(
             campaign=campaign
         ).filter(
@@ -192,13 +227,14 @@ def submit_influencer_report_service(order, post_link, screenshot):
 
 
 def respond_to_influencer_order_service(order, action):
-    """
-    مدیریت پاسخ اینفلوئنسر به سفارش (تایید یا رد)
-    """
+    """مدیریت پاسخ اینفلوئنسر به سفارش (تایید: ۲۰+ امتیاز / رد: ۴۰- امتیاز برای کانال)"""
     with transaction.atomic():
         if action == 'accept':
             order.status = 'accepted'
             order.save(update_fields=['status'])
+
+            # --- سیستم گیمیفیکیشن ---
+            update_score(order.channel, 20, 'قبول کردن تبلیغ', f'قبول سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
 
             from notifications.utils import notify_advertiser_influencer_accepted
             notify_advertiser_influencer_accepted(order)
@@ -207,9 +243,12 @@ def respond_to_influencer_order_service(order, action):
             order.status = 'rejected'
             order.save(update_fields=['status'])
 
+            # --- سیستم گیمیفیکیشن ---
+            update_score(order.channel, -40, 'رد کردن تبلیغ', f'رد سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
+
 
 def approve_influencer_report_service(report):
-    """سرویس تایید گزارش ناشر توسط ادمین و پرداخت به کیف پول"""
+    """سرویس تایید گزارش ناشر توسط ادمین و پرداخت مالی (+۵ امتیاز برای کانال)"""
     with transaction.atomic():
         if report.status != 'approved':
             report.status = 'approved'
@@ -218,6 +257,8 @@ def approve_influencer_report_service(report):
             ci = report.campaign_influencer
             if not ci.is_paid:
                 pay_influencer(ci)
+
+            update_score(ci.channel, 5, 'تایید شدن گزارش', f'تایید نهایی گزارش عملکرد توسط ادمین برای کانال {ci.channel.channel_name} در {ci.channel.platform.name}')
 
             notify_influencer_report_approved(ci)
 
@@ -233,9 +274,6 @@ def reject_influencer_report_service(report, reason=''):
 
 
 def create_revision_request_service(order, requested_by, feedback, file=None):
-    """
-    سرویس ثبت درخواست ویرایش، آپدیت وضعیت‌ها و ارسال نوتیفیکیشن
-    """
     with transaction.atomic():
         revision = ContentOrderRevision.objects.create(
             order=order,
@@ -265,9 +303,7 @@ def create_revision_request_service(order, requested_by, feedback, file=None):
 
 
 def accept_content_order_delivery(order, content_cost, team_members):
-    """
-    سرویس تأیید نهایی سفارش، تقسیم وجه بین اعضا، ذخیره فایل کمپین و ارسال نوتیفیکیشن
-    """
+    """سرویس تأیید نهایی سفارش، تقسیم وجه و بررسی بونوس تایید بدون اصلاحیه (+۳۰ امتیاز برای تیم)"""
     with transaction.atomic():
         for member in team_members:
             share_amount = int((content_cost * member.revenue_share_percent) / 100)
@@ -291,6 +327,10 @@ def accept_content_order_delivery(order, content_cost, team_members):
             )
 
             notify_content_team_order_accepted(member.user, order, share_amount)
+
+        has_revisions = ContentOrderRevision.objects.filter(order=order).exists()
+        if not has_revisions:
+            update_score(order.team, 30, 'تایید نهایی بدون درخواست ویرایش', f'تایید نهایی سفارش {order.campaign.name} بدون هیچ درخواست اصلاحیه‌ای از سمت کارفرما #{order.id}')
 
         campaign_content, created = CampaignContent.objects.get_or_create(
             campaign=order.campaign,

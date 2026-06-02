@@ -67,6 +67,7 @@
         plans.forEach((plan, idx) => {
             const isPopular = (plans.length === 3 && idx === 1);
             const col = document.createElement('div');
+            const currentPage = new URLSearchParams(window.location.search).get('page') || '1';
             col.className = 'col-md-6 col-lg-4 mb-4';
             col.innerHTML = `
                 <div class="plan-card ${isPopular ? 'plan-card-popular' : ''}" data-plan-id="${plan.id}">
@@ -103,8 +104,8 @@
                             <i class="fi-clock text-primary"></i> <span>تحویل: ${plan.delivery_days} روز کاری</span>
                         </div>
                     </div>
-                    <div class="plan-footer">
-                        <a href="/content_team/plan/${plan.id}/?from=create_campaign" class="btn btn-sm btn-more w-100">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
+                    <div class="plan-footer text-center">
+                        <a href="/content_team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
                     </div>
                 </div>
             `;
@@ -204,6 +205,26 @@
                     }
                     break;
                 }
+            }
+        }
+        // انتخاب خودکار فقط تیم (بدون پلن)
+        if (preselectedTeamId && !preselectedPlanId) {
+            const targetWrapper = Array.from(document.querySelectorAll('.team-card-wrapper')).find(
+                wrapper => parseInt(wrapper.dataset.teamId) === preselectedTeamId
+            );
+            if (targetWrapper) {
+                const teamInner = targetWrapper.querySelector('.team-card-inner');
+                if (teamInner) teamInner.classList.add('selected');
+                const teamId = targetWrapper.dataset.teamId;
+                const teamName = targetWrapper.dataset.teamName;
+                let plans = [];
+                try { plans = JSON.parse(targetWrapper.dataset.plans || '[]'); } catch(e) {}
+                renderPlansForTeam(teamId, teamName, plans);
+                // هیچ پلنی انتخاب نمی‌شود، hiddenPlanInput خالی می‌ماند
+                if (hiddenPlanInput) hiddenPlanInput.value = '';
+                currentSelectedPlan = null;
+                updatePriceUI(null);
+                document.dispatchEvent(new CustomEvent('planCleared'));
             }
         }
 

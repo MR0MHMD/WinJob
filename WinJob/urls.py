@@ -14,6 +14,7 @@ urlpatterns = [
     path('campaigns/', include("campaigns.urls", namespace="campaigns")),
     path('tickets/', include("tickets.urls", namespace="tickets")),
     path('blog/', include("blog.urls", namespace="blog")),
+    path('gamification/', include("gamification.urls", namespace="gamification")),
     path('', include("core.urls", namespace="core")),
 ]
 

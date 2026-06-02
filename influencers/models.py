@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_resized import ResizedImageField
 import django_jalali.db.models as jmodels
 from accounts.models import CustomUser
+from gamification.mixins import GamificationMixin
 
 
 class InfluencerProfile(models.Model):
@@ -30,7 +31,7 @@ class InfluencerProfile(models.Model):
         return self.full_name
 
 
-class InfluencerChannel(models.Model):
+class InfluencerChannel(GamificationMixin, models.Model):
     STATUS_CHOICES = (
         ('pending', _('در انتظار تایید')),
         ('approved', _('تایید شده')),
@@ -44,8 +45,6 @@ class InfluencerChannel(models.Model):
 
     province = models.ForeignKey('location.Province', on_delete=models.CASCADE, related_name="influencers",
                                  verbose_name=_('استان'), null=True, blank=True)
-    city = models.ForeignKey('location.City', on_delete=models.CASCADE, related_name="influencers",
-                             verbose_name=_('شهر'), null=True, blank=True)
     category = models.ForeignKey('core.Category', on_delete=models.SET_NULL, null=True, blank=True,
                                  verbose_name=_('دسته‌بندی محتوایی'), related_name='influencer_channel')
 
@@ -78,7 +77,6 @@ class InfluencerChannel(models.Model):
         indexes = [
             models.Index(fields=['platform']),
             models.Index(fields=['province']),
-            models.Index(fields=['city']),
             models.Index(fields=['category']),
             models.Index(fields=['followers_count']),
         ]
@@ -94,7 +92,7 @@ class InfluencerChannel(models.Model):
         return str(self.followers_count)
 
     def get_full_location(self):
-        return f"{self.province}، {self.city}"
+        return {self.province}
 
     followers_formatted.short_description = _('فالوورها')
 
@@ -203,6 +201,7 @@ class InfluencerReview(models.Model):
     campaign_booking = models.OneToOneField(
         'campaigns.CampaignInfluencer',
         on_delete=models.CASCADE,
+        null=True, blank=True,
         related_name='review',
         verbose_name=_('رزرو کمپین')
     )
@@ -221,8 +220,7 @@ class InfluencerReview(models.Model):
     )
 
     comment = models.TextField(
-        _('نظر'),
-        blank=True
+        _('نظر'), max_length=500
     )
 
     created_at = jmodels.jDateTimeField(

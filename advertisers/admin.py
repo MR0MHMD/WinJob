@@ -28,7 +28,6 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         'user__phone_number',
         'user__nickname',
         'user__province__name',
-        'city__name'
     ]
 
     readonly_fields = [
@@ -48,7 +47,7 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             )
         }),
         ('موقعیت مکانی', {
-            'fields': ('city', 'user_province_display'),
+            'fields': ('user_province_display', ),
             'classes': ('collapse',)
         }),
         ('وضعیت', {

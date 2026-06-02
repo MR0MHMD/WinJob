@@ -9,7 +9,6 @@ class AdvertiserProfileForm(forms.ModelForm):
         model = AdvertiserProfile
         fields = (
             "business_name",
-            "city",
             "category",
             "description",
             "website",

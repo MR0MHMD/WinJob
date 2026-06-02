@@ -93,6 +93,24 @@
                 {% for team in teams %}
                     <div class="col-md-6 col-xl-4" style="--i: {{ forloop.counter0 }}">
                         <div class="card card-light team-card h-100 border-0">
+                        {% with status=team.gamification_status %}
+                            <div class="level-badge position-absolute top-0 end-0 m-3" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="{{ status.current_badge_name }} ({{ status.current_points }} امتیاز)">
+                                {% if status.current_badge_icon %}
+                                    <div class="level-icon-image rounded-circle overflow-hidden d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: #2a2638; border: 2px solid rgba(255,255,255,0.2);">
+                                        <img src="{{ status.current_badge_icon }}" alt="{{ status.current_badge_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                {% else %}
+                                    <div class="level-icon rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: 
+                                             {% if status.current_badge_slug == 'bronze' %}#cd7f32
+                                             {% elif status.current_badge_slug == 'silver' %}#c0c0c0
+                                             {% elif status.current_badge_slug == 'gold' %}#ffd700
+                                             {% elif status.current_badge_slug == 'emerald' %}#50c878
+                                             {% else %}#6c757d{% endif %};">
+                                        <i class="fi-award text-white" style="font-size: 1.2rem;"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endwith %}
                             <div class="card-body p-4 d-flex flex-column">
                                 <div class="team-card-header">
                                     <div class="d-flex gap-3">
@@ -191,47 +209,8 @@
                 {% endfor %}
             </div>
             
-            {% if is_paginated %}
-                <div class="d-flex justify-content-center mt-5">
-                    <nav>
-                        <ul class="pagination pagination-custom-accent">
-                            {% if page_obj.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fi-chevron-right"></i>
-                                    </a>
-                                </li>
-                            {% else %}
-                                <li class="page-item disabled">
-                                    <span class="page-link"><i class="fi-chevron-right"></i></span>
-                                </li>
-                            {% endif %}
-                            
-                            {% for num in page_obj.paginator.page_range %}
-                                {% if page_obj.number == num %}
-                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                            
-                            {% if page_obj.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fi-chevron-left"></i>
-                                    </a>
-                                </li>
-                            {% else %}
-                                <li class="page-item disabled">
-                                    <span class="page-link"><i class="fi-chevron-left"></i></span>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-            {% endif %}
+            {% include 'partials/pagination.html' with page_obj=teams %}
+            
         {% else %}
             <div class="text-center py-5">
                 <div class="mb-4">

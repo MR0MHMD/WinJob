@@ -11,9 +11,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
-
 INSTALLED_APPS = [
     'django_daisy',
     'django.contrib.admin',
@@ -38,7 +35,8 @@ INSTALLED_APPS = [
     "plat_form.apps.PlatFormConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
-    "tickets.apps.TicketsConfig"
+    "tickets.apps.TicketsConfig",
+    "gamification.apps.GamificationConfig",
 ]
 
 DAISY_SETTINGS = {
@@ -130,7 +128,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'WinJob.urls'
+ROOT_URLCONF = "WinJob.urls"
 
 TEMPLATES = [
     {
@@ -195,19 +193,10 @@ NUMBER_GROUPING = 3
 DATE_FORMAT = 'Y/m/d'
 DATETIME_FORMAT = 'Y/m/d | H:i:s'
 
-# ✅ این خط رو اضافه کن:
-AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-DJANGORESIZED_DEFAULT_SIZE = [800, 800]
-DJANGORESIZED_DEFAULT_SCALE = 0.5
-DJANGORESIZED_DEFAULT_QUALITY = 90
-DJANGORESIZED_DEFAULT_KEEP_META = False
-DJANGORESIZED_DEFAULT_FORCE_FORMAT = 'JPEG'
-DJANGORESIZED_DEFAULT_FORMAT_EXTENSIONS = {'JPEG': ".jpg"}
-DJANGORESIZED_DEFAULT_NORMALIZE_ROTATION = True
 
 load_dotenv()
 

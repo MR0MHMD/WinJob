@@ -1,0 +1,366 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}🏆 مرکز امتیازات و نشان‌ها | WinJob{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* استایل‌های قبلی保持不变 */
+        .progress-custom {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+        .progress-custom .progress-bar {
+            background: linear-gradient(90deg, #fd5631, #ffb347);
+            border-radius: 1rem;
+        }
+        .current-badge-icon {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(253, 86, 49, 0.3));
+        }
+        .points-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fd5631, #ffb347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.2;
+        }
+        .role-badge {
+            background: rgba(253, 86, 49, 0.15);
+            color: #fd5631;
+            border-radius: 2rem;
+            padding: 0.3rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .rule-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0.75rem;
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.5rem;
+            border-right: 3px solid transparent;
+        }
+        .rule-item.positive { border-right-color: #07c98b; }
+        .rule-item.negative { border-right-color: #f23c49; }
+        .table-custom-dark {
+            --bs-table-bg: transparent;
+            color: #dee2e6 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .table-custom-dark td, .table-custom-dark th {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.9rem;
+            vertical-align: middle;
+        }
+        .insight-card {
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.08));
+            border: 1px solid rgba(253, 86, 49, 0.2);
+            border-radius: 1rem;
+        }
+        @media (max-width: 768px) {
+            .points-number { font-size: 1.8rem; }
+            .current-badge-icon { width: 50px; height: 50px; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <i class="bi bi-trophy-fill fs-1 text-warning" style="font-size: 3rem;"></i>
+        <h1 class="display-5 fw-bold text-light mt-3">مرکز امتیازات و نشان‌ها</h1>
+        <p class="text-muted">با هر اقدام حرفه‌ای امتیاز بگیر، سطح خود را بالا ببر و نشان‌های ویژه دریافت کن</p>
+    </div>
+
+    {% if user.is_authenticated %}
+        {% if not roles_data %}
+            <div class="alert alert-warning text-center bg-faded-warning border-0">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                هیچ نقش فعالی برای شما یافت نشد.
+            </div>
+        {% else %}
+            {# ========== تبلیغ‌دهنده و تیم محتوا (و همچنین اینفلوئنسر در حالت تک کانال) ========== #}
+            {% for role in roles_data %}
+                {% if role.role == 'advertiser' or role.role == 'team_member' or single_channel_mode %}
+                    <!-- کارت وضعیت امتیاز -->
+                    <div class="card bg-faded-light border-0 rounded-4 mb-4">
+                        <div class="card-body p-4 p-xl-5">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-2 border-bottom border-light">
+                                <span class="role-badge"><i class="bi {{ role.icon }}"></i> {{ role.title }}</span>
+                                <div class="text-muted small">
+                                    <i class="bi bi-star-fill text-warning me-1"></i>
+                                    نشان فعلی: <strong class="text-light">{{ role.status.current_badge_name|default:"بدون نشان" }}</strong>
+                                </div>
+                                {% if role.role == 'influencer' and not single_channel_mode %}
+                                    <a href="{% url 'points_guide_channel' role.channel_id %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                        <i class="bi bi-eye me-1"></i> جزئیات بیشتر
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="row g-4 align-items-center">
+                                <div class="col-md-3 text-center">
+                                    {% if role.status.current_badge_icon %}
+                                        <img src="{{ role.status.current_badge_icon }}" class="current-badge-icon" style="width:85px;height:85px;" alt="نشان">
+                                    {% else %}
+                                        <div class="bg-secondary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 85px; height: 85px;">
+                                            <i class="bi bi-award fs-1 text-secondary"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="d-flex justify-content-between align-items-baseline flex-wrap">
+                                        <span class="text-muted small">امتیاز کل</span>
+                                        <span class="points-number">{{ role.status.current_points|default:0 }}</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="progress mt-2" style="height: 8px; background-color: rgba(255,255,255,0.1); border-radius: 1rem;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ role.status.progress_percent|default:0|floatformat:'0' }}%; background: linear-gradient(90deg, #fd5631, #ffb347); border-radius: 1rem;"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2 small">
+                                            <span class="text-muted">{{ role.status.current_badge_name|default:"شروع" }}</span>
+                                            <span class="text-warning">{{ role.status.progress_percent|default:0 }}%</span>
+                                            <span class="text-muted">{{ role.status.next_badge_name|default:"نشان بعدی" }}</span>
+                                        </div>
+                                    </div>
+                                    {% if not role.status.is_max_level and role.status.points_needed_for_next > 0 %}
+                                        <div class="mt-3 text-center">
+                                            <span class="badge bg-primary bg-opacity-25 text-light px-3 py-2 rounded-pill">
+                                                <i class="bi bi-arrow-up-short me-1"></i> {{ role.status.points_needed_for_next }} امتیاز تا {{ role.status.next_badge_name }}
+                                            </span>
+                                        </div>
+                                    {% elif role.status.is_max_level %}
+                                        <div class="alert alert-success mt-3 py-2 text-center bg-success bg-opacity-10 border-0">
+                                            <i class="bi bi-trophy-fill me-1"></i> تبریک! شما به بالاترین سطح رسیده‌اید
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- آخرین فعالیت‌های امتیازی (فقط برای تبلیغ‌دهنده، تیم محتوا و اینفلوئنسر در حالت تک کانال) -->
+                    {% if role.recent_logs %}
+                    <div class="card bg-faded-light border-0 rounded-4 mb-5">
+                        <div class="card-body p-4">
+                            <h6 class="text-light mb-3"><i class="bi bi-clock-history me-2"></i> آخرین تغییرات امتیاز</h6>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-sm table-custom-dark">
+                                    <thead>
+                                        <tr><th>تغییر</th><th>توضیحات</th><th>تاریخ</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in role.recent_logs %}
+                                        <tr>
+                                            <td class="{% if log.points_changed > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                <i class="bi bi-{% if log.points_changed > 0 %}plus-circle{% else %}dash-circle{% endif %} me-1"></i>
+                                                {{ log.points_changed }}
+                                            </td>
+                                            <td class="small">{{ log.description|truncatechars:100 }}</td>
+                                            <td class="text-muted small">{{ log.created_at|date:"H:i | Y/m/d" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- نکته کلیدی ویژه هر نقش -->
+                    {% if role.role == 'advertiser' %}
+                        <div class="insight-card p-4 mb-4 text-center">
+                            <i class="bi bi-graph-up fs-2 text-primary mb-2 d-block"></i>
+                            <h6 class="text-light">🌟 چرا امتیاز خود را افزایش دهید؟</h6>
+                            <p class="text-muted small mb-0">هرچه امتیاز شما بالاتر باشد، اعتبار کسب‌وکارتان بیشتر می‌شود... (متن قبلی)</p>
+                        </div>
+                    {% elif role.role == 'team_member' %}
+                        <div class="insight-card p-4 mb-4 text-center">
+                            <i class="bi bi-trophy fs-2 text-warning mb-2 d-block"></i>
+                            <h6 class="text-light">🏆 چرا امتیاز تیم خود را افزایش دهید؟</h6>
+                            <p class="text-muted small mb-0">تیم‌های با امتیاز بالاتر در اولویت انتخاب تبلیغ‌دهندگان قرار می‌گیرند و پروژه‌های بزرگ‌تری دریافت می‌کنند. اعتبار تیم شما نشان‌دهنده کیفیت و حرفه‌ای‌گری است.</p>
+                        </div>
+                    {% elif role.role == 'influencer' %}
+                        <div class="insight-card p-4 mb-4 text-center">
+                            <i class="bi bi-megaphone fs-2 text-warning mb-2 d-block"></i>
+                            <h6 class="text-light">🚀 امتیاز بالاتر = فرصت‌های بیشتر!</h6>
+                            <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... (متن قبلی)</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- راهنمای امتیازات -->
+                    <div class="card bg-faded-light border-0 rounded-4 mb-5">
+                        <div class="card-body p-4">
+                            <h6 class="text-light mb-3"><i class="bi bi-lightbulb me-2"></i> چگونه امتیاز بیشتری کسب کنیم؟</h6>
+                            <div class="row text-light">
+                                {% if role.role == 'advertiser' %}
+                                    <div class="col-12">
+                                        {% for rule in rules.advertiser.positive %}
+                                        <div class="rule-item positive d-flex justify-content-between align-items-center">
+                                            <span>{{ rule.action }}</span>
+                                            <span class="badge bg-success bg-opacity-25 text-success px-3 py-1 rounded-pill">+{{ rule.points }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif role.role == 'team_member' %}
+                                    <div class="col-md-6">
+                                        <div class="small text-success mb-2">✨ امتیازات مثبت</div>
+                                        {% for rule in rules.team_member.positive %}
+                                        <div class="rule-item positive d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-success">+{{ rule.points }}</span></div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="small text-danger mb-2">⚠️ امتیازات منفی (از دست ندهید)</div>
+                                        {% for rule in rules.team_member.negative %}
+                                        <div class="rule-item negative d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-danger">{{ rule.points }}</span></div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif role.role == 'influencer' %}
+                                    <div class="col-md-6">
+                                        <div class="small text-success mb-2">✨ امتیازات مثبت</div>
+                                        {% for rule in rules.influencer.positive %}
+                                        <div class="rule-item positive d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-success">+{{ rule.points }}</span></div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="small text-danger mb-2">⚠️ امتیازات منفی (از دست ندهید)</div>
+                                        {% for rule in rules.influencer.negative %}
+                                        <div class="rule-item negative d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-danger">{{ rule.points }}</span></div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            {# ========== حالت عادی اینفلوئنسر (چند کانال) : کارت‌های کوچک دوستونی بدون لاگ و راهنما (راهنما بعداً جدا می‌آید) ========== #}
+            {% if influencer_exists and not single_channel_mode %}
+                <div class="row g-4 mb-4">
+                    {% for role in roles_data %}
+                        {% if role.role == 'influencer' %}
+                            <div class="col-md-6">
+                                <div class="card bg-faded-light border-0 rounded-4 h-100">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom border-light">
+                                            <span class="role-badge"><i class="bi {{ role.icon }}"></i> {{ role.title }}</span>
+                                            <div class="text-muted small">
+                                                <i class="bi bi-star-fill text-warning me-1"></i>
+                                                نشان فعلی: <strong class="text-light">{{ role.status.current_badge_name|default:"بدون نشان" }}</strong>
+                                            </div>
+                                            <a href="{% url 'gamification:points_guide_channel' role.channel_id %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                <i class="bi bi-eye me-1"></i> جزئیات
+                                            </a>
+                                        </div>
+                                        <div class="row g-3 align-items-center">
+                                            <div class="col-4 text-center">
+                                                {% if role.status.current_badge_icon %}
+                                                    <img src="{{ role.status.current_badge_icon }}" class="current-badge-icon" alt="نشان">
+                                                {% else %}
+                                                    <div class="bg-secondary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                                                        <i class="bi bi-award fs-1 text-secondary"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-8">
+                                                <div class="d-flex justify-content-between align-items-baseline">
+                                                    <span class="text-muted small">امتیاز کل</span>
+                                                    <span class="points-number">{{ role.status.current_points|default:0 }}</span>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <div class="progress mt-2" style="height: 8px; background-color: rgba(255,255,255,0.1); border-radius: 1rem;">
+                                                        <div class="progress-bar" role="progressbar" style="width: {{ role.status.progress_percent|default:0|floatformat:'0' }}%; background: linear-gradient(90deg, #fd5631, #ffb347); border-radius: 1rem;"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mt-1 small">
+                                                        <span class="text-muted">{{ role.status.current_badge_name|default:"شروع" }}</span>
+                                                        <span class="text-warning">{{ role.status.progress_percent|default:0 }}%</span>
+                                                        <span class="text-muted">{{ role.status.next_badge_name|default:"نشان بعدی" }}</span>
+                                                    </div>
+                                                </div>
+                                                {% if not role.status.is_max_level and role.status.points_needed_for_next > 0 %}
+                                                <div class="mt-2 text-center">
+                                                    <span class="badge bg-primary bg-opacity-25 text-light px-2 py-1 rounded-pill small">
+                                                        <i class="bi bi-arrow-up-short"></i> {{ role.status.points_needed_for_next }} امتیاز تا {{ role.status.next_badge_name }}
+                                                    </span>
+                                                </div>
+                                                {% elif role.status.is_max_level %}
+                                                <div class="alert alert-success mt-2 py-1 text-center bg-success bg-opacity-10 border-0 small">🌟 بالاترین سطح 🌟</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- نکته کلیدی و راهنمای اینفلوئنسر (در حالت عادی) -->
+                <div class="insight-card p-4 mb-4 text-center">
+                    <i class="bi bi-megaphone fs-2 text-warning mb-2 d-block"></i>
+                    <h6 class="text-light">🚀 امتیاز بالاتر = فرصت‌های بیشتر!</h6>
+                    <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... (متن قبلی)</p>
+                </div>
+                <div class="card bg-faded-light border-0 rounded-4 mb-5">
+                    <div class="card-body p-4">
+                        <h6 class="text-light mb-3"><i class="bi bi-lightbulb me-2"></i> چگونه امتیاز بیشتری کسب کنیم و از دست ندهیم؟</h6>
+                        <div class="row g-4 text-light">
+                            <div class="col-md-6">
+                                <div class="small text-success mb-2">✨ امتیازات مثبت</div>
+                                {% for rule in rules.influencer.positive %}
+                                <div class="rule-item positive d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-success">+{{ rule.points }}</span></div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-danger mb-2">⚠️ امتیازات منفی (از دست ندهید)</div>
+                                {% for rule in rules.influencer.negative %}
+                                <div class="rule-item negative d-flex justify-content-between"><span>{{ rule.action }}</span><span class="text-danger">{{ rule.points }}</span></div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# ========== جدول نشان‌ها (مشترک) ========== #}
+            <div class="card bg-faded-light border-0 rounded-4 mt-4">
+                <div class="card-body p-4">
+                    <h5 class="text-light mb-4"><i class="bi bi-award me-2"></i> سطوح نشان‌ها</h5>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-custom-dark align-middle">
+                            <thead>
+                                <tr class="border-bottom border-light"><th>نشان</th><th>حداقل امتیاز</th><th>توضیحات</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for badge in badges %}
+                                <tr>
+                                    <td><div class="d-flex align-items-center gap-2">{% if badge.icon %}<img src="{{ badge.icon.url }}" width="36" height="36" class="rounded-circle bg-dark p-1">{% else %}<i class="bi bi-award fs-4 text-secondary"></i>{% endif %}<span class="fw-semibold">{{ badge.name }}</span></div></td>
+                                    <td>{{ badge.min_points }} امتیاز</td>
+                                    <td class="text-muted small">{{ badge.description|truncatewords:20|default:"—" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">هنوز نشان‌ای تعریف نشده است.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="card bg-faded-light border-0 rounded-4 text-center p-5">
+            <i class="bi bi-box-arrow-in-right fs-1 text-warning"></i>
+            <h4 class="text-light mt-3">برای مشاهده امتیازات خود وارد شوید</h4>
+            <a href="{% url 'accounts:login' %}" class="btn btn-primary rounded-pill px-5 mt-3">ورود به حساب</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

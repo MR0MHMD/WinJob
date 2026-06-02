@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django_jalali.db import models as jmodels
 from django_resized import ResizedImageField
 from core.utils import generate_random_slug
+from gamification.mixins import GamificationMixin
 from .utils import content_order_file_path
 from django.db.models import Sum
 from django.db import models
@@ -11,7 +12,7 @@ from decimal import Decimal
 import mimetypes
 
 
-class ContentTeam(models.Model):
+class ContentTeam(GamificationMixin, models.Model):
     """
     مدل تیم تولید محتوا - توسط ادمین ایجاد می‌شود
     """
@@ -649,6 +650,7 @@ class TeamReview(models.Model):
     )
     order = models.OneToOneField(
         ContentOrder,
+        null=True, blank=True,
         on_delete=models.CASCADE,
         related_name='review',
         verbose_name=_('سفارش')
@@ -666,7 +668,6 @@ class TeamReview(models.Model):
     )
     comment = models.TextField(
         _('نظر'),
-        blank=True
     )
     created_at = jmodels.jDateTimeField(
         _('تاریخ ثبت'),

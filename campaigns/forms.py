@@ -5,7 +5,7 @@ from .utils import jalali_str_to_datetime, validate_start_date, validate_end_dat
 from .models import ContentType, AdType, CampaignContent
 from urllib.parse import urlparse, urlencode, urlunparse
 from influencers.models import InfluencerProfile
-from location.models import Province, City
+from location.models import Province
 from plat_form.models import Platform
 from core.models import Category
 from django import forms
@@ -703,15 +703,6 @@ class InfluencerFilterForm(forms.Form):
         })
     )
 
-    city = forms.ModelChoiceField(
-        queryset=City.objects.none(),
-        required=False,
-        empty_label='همه شهرها',
-        widget=forms.Select(attrs={
-            'class': 'form-select form-select-sm',
-        })
-    )
-
     followers_min = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
@@ -747,14 +738,3 @@ class InfluencerFilterForm(forms.Form):
             'min': 0,
         })
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'province' in self.data and self.data['province']:
-            try:
-                province_id = int(self.data['province'])
-                self.fields['city'].queryset = City.objects.filter(
-                    province_id=province_id
-                )
-            except (ValueError, TypeError):
-                pass

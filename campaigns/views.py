@@ -7,11 +7,13 @@ from accounts.models import Transaction
 from .services.campaigns_notifications import submit_campaign_for_review
 from .services.create_invoice import create_campaign_invoice
 from .utils import _detect_file_type
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, F
+from django.db.models import F, Case, When, Value, IntegerField, Q
+from django.core.paginator import Paginator
+from django.db.models.functions import Coalesce
 from .forms import *
 import json
 
@@ -136,7 +138,6 @@ def campaign_create_step2(request):
             'channel__influencer',
             'channel__platform',
             'channel__province',
-            'channel__city',
             'channel__category'
         )
     )
@@ -150,7 +151,6 @@ def campaign_create_step2(request):
         search = filter_form.cleaned_data.get("search")
         category = filter_form.cleaned_data.get("category")
         province = filter_form.cleaned_data.get("province")
-        city = filter_form.cleaned_data.get("city")
         followers_min = filter_form.cleaned_data.get("followers_min")
         followers_max = filter_form.cleaned_data.get("followers_max")
         price_min = filter_form.cleaned_data.get("price_min")
@@ -168,9 +168,6 @@ def campaign_create_step2(request):
         if province:
             rates = rates.filter(channel__province=province)
 
-        if city:
-            rates = rates.filter(channel__city=city)
-
         if followers_min is not None:
             rates = rates.filter(channel__followers_count__gte=followers_min)
 
@@ -183,7 +180,41 @@ def campaign_create_step2(request):
         if price_max is not None:
             rates = rates.filter(price__lte=price_max)
 
-    rates = rates.order_by("-channel__followers_count")
+    # ========== اولویت بندی بر اساس تطابق با تبلیغ‌دهنده ==========
+    advertiser = request.user.advertiser_profile
+    advertiser_category_id = advertiser.category_id if advertiser.category_id else None
+    advertiser_province_id = request.user.province_id if request.user.province_id else None
+
+    # تعیین اولویت: 1=هم دسته هم استان، 2=فقط دسته، 3=فقط استان، 4=هیچکدام
+    priority_case = Case(
+        When(
+            Q(channel__category_id=advertiser_category_id) & Q(channel__province_id=advertiser_province_id),
+            then=Value(1, output_field=IntegerField())
+        ),
+        When(
+            Q(channel__category_id=advertiser_category_id),
+            then=Value(2, output_field=IntegerField())
+        ),
+        When(
+            Q(channel__province_id=advertiser_province_id),
+            then=Value(3, output_field=IntegerField())
+        ),
+        default=Value(4, output_field=IntegerField()),
+    )
+
+    rates = rates.annotate(
+        channel_points=Coalesce(F('channel__score__points'), Value(0)),
+        priority=priority_case
+    )
+
+    # مرتب‌سازی: اولویت، سپس امتیاز (نزولی)، سپس فالوور (نزولی)
+    rates = rates.order_by('priority', '-channel_points', '-channel__followers_count')
+
+    # ========== صفحه‌بندی ==========
+    paginator = Paginator(rates, 21)
+    page_number = request.GET.get('page')
+    rates = paginator.get_page(page_number)
+
 
     prev_selected = list(
         campaign.influencer_bookings
@@ -218,8 +249,6 @@ def campaign_create_step2(request):
 
             return redirect('campaigns:campaign_create_step3')
 
-    print("prev_selected:", prev_selected)  # در ترمینال لاگ می‌شود
-
     context = {
         "campaign": campaign,
         "rates": rates,
@@ -235,19 +264,12 @@ def campaign_create_step2(request):
 
 @login_required
 def campaign_create_step3_team(request):
-    # ------------------------
-    # Helpers
-    # ------------------------
+    # ------------------------ Helper functions ------------------------
     def safe_load_json(value):
         try:
             return json.loads(value) if value else []
         except json.JSONDecodeError:
             return []
-
-    def calculate_price(rate, minutes):
-        if service_type.unit == "minute" and minutes:
-            return rate.price_per_unit * int(minutes)
-        return rate.price_per_unit
 
     def save_brief(order, brief_form):
         brief_data = brief_form.cleaned_data
@@ -255,14 +277,12 @@ def campaign_create_step3_team(request):
 
         brief_fields = ['goal', 'goal_description', 'tone', 'brand_name', 'hashtags',
                         'reference_links', 'target_audience', 'description', 'do_not_include']
-
         for field in brief_fields:
             if field in brief_data:
                 setattr(brief, field, brief_data[field])
         brief.save()
 
     def save_campaign_content(campaign, brief_form):
-        """ذخیره کپشن و لینک در CampaignContent"""
         ad_caption = brief_form.cleaned_data.get('ad_caption', '')
         ad_link = brief_form.cleaned_data.get('ad_link', '')
 
@@ -274,12 +294,10 @@ def campaign_create_step3_team(request):
                 'notes': 'محتوای سفارش داده شده از طریق بریف تیم تولید محتوا',
             }
         )
-
         if not created:
             campaign_content.caption = ad_caption
             campaign_content.link = ad_link or ''
             campaign_content.save()
-
         return campaign_content
 
     def handle_deleted_files(post):
@@ -306,7 +324,7 @@ def campaign_create_step3_team(request):
             )
         return True
 
-    # ------------------------ کمپین و سرویس ------------------------
+    # ------------------------ Campaign & service ------------------------
     campaign_id = request.session.get("campaign_draft_id")
     if not campaign_id:
         return redirect("campaigns:campaign_create_step1")
@@ -322,31 +340,41 @@ def campaign_create_step3_team(request):
         messages.error(request, "نوع خدمت تولید محتوا مشخص نشده است.")
         return redirect("campaigns:campaign_create_step1")
 
-    minutes = request.session.get("content_minutes")  # فقط برای سرویس‌های دقیقه‌ای
+    minutes = request.session.get("content_minutes")
 
-    # ------------------------ اطلاعات موجود (در صورت ویرایش) ------------------------
+    # ------------------------ Existing order (edit mode) ------------------------
     existing_order = ContentOrder.objects.filter(campaign=campaign).select_related("plan", "team", "brief").first()
     attachments = existing_order.files.all() if existing_order else []
 
-    # ------------------------ تیم‌های دارای پلن برای این سرویس ------------------------
-    # گرفتن همه تیم‌هایی که حداقل یک پلن فعال برای این سرویس دارن
-    teams_with_plans = ContentTeam.objects.filter(
-        service_plans__service_type=service_type,
-        service_plans__is_active=True,
-        is_active=True
-    ).distinct().prefetch_related(
-        Prefetch(
-            'service_plans',
-            queryset=ContentServicePlan.objects.filter(
-                service_type=service_type,
-                is_active=True
-            ).select_related('service_type').order_by('price_per_unit'),  # <-- اینجا select_related اضافه شد
-            to_attr='active_plans_for_service'
+    # ------------------------ Teams with active plans ------------------------
+    teams_with_plans = (
+        ContentTeam.objects.filter(
+            service_plans__service_type=service_type,
+            service_plans__is_active=True,
+            is_active=True
         )
+        .distinct()
+        .prefetch_related(
+            Prefetch(
+                'service_plans',
+                queryset=ContentServicePlan.objects.filter(
+                    service_type=service_type, is_active=True
+                ).select_related('service_type').order_by('price_per_unit'),
+                to_attr='active_plans_for_service'
+            )
+        )
+        .annotate(
+            total_points=Coalesce('score__points', Value(0, output_field=IntegerField())),
+            total_completed_orders=Count('orders', filter=Q(orders__status='completed'), distinct=True)
+        )
+        .order_by('-total_points', '-total_completed_orders')
     )
 
-    # در تابع campaign_create_step3_team، بعد از خطوط اولیه و قبل از ساختن teams_data
-    # ========== اضافه کردن قابلیت انتخاب خودکار از طریق GET ==========
+    paginator = Paginator(teams_with_plans, 21)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # ------------------------ Pre-selection logic (URL parameters take precedence over existing order) ------------------------
     preselect_plan_id = request.GET.get('selected_plan')
     preselect_team_id = None
     if preselect_plan_id:
@@ -357,17 +385,25 @@ def campaign_create_step3_team(request):
                 preselect_team_id = plan.team.id
         except (ValueError, TypeError):
             pass
-    else:
-        preselect_plan_id = None
+    elif request.GET.get('selected_team'):
+        # only team selected, no plan
+        try:
+            preselect_team_id = int(request.GET.get('selected_team'))
+        except (ValueError, TypeError):
+            pass
 
-    # ... داخل ویو، بعد از گرفتن teams_with_plans
+    # If no URL parameters but existing order exists, use it
+    if not preselect_plan_id and not preselect_team_id and existing_order:
+        preselect_plan_id = existing_order.plan.id
+        preselect_team_id = existing_order.team.id
+
+    # ------------------------ Build teams_data ------------------------
     teams_data = []
-    for team in teams_with_plans:
+    for team in page_obj:
         plans = getattr(team, 'active_plans_for_service', [])
         if plans:
             plan_prices = []
             for plan in plans:
-                # محاسبه قیمت نهایی
                 if service_type.unit == "minute" and minutes:
                     total_price = int(plan.price_per_unit) * int(minutes)
                 else:
@@ -397,10 +433,11 @@ def campaign_create_step3_team(request):
             teams_data.append({
                 'team': team,
                 'plans': plan_prices,
-                'plans_json': json.dumps(plan_prices, ensure_ascii=False)  # برای استفاده در data attribute
+                'plans_json': json.dumps(plan_prices, ensure_ascii=False),
+                'first_plan_id': plan_prices[0]['id'] if plan_prices else None
             })
 
-    # ------------------------ پردازش POST ------------------------
+    # ------------------------ POST ------------------------
     if request.method == "POST":
         team_form = CampaignStep3TeamForm(request.POST, service_type=service_type)
         brief_form = CampaignStep3BriefForm(request.POST, request.FILES)
@@ -409,13 +446,11 @@ def campaign_create_step3_team(request):
             selected_plan_id = team_form.cleaned_data['selected_plan']
             selected_plan = ContentServicePlan.objects.get(id=selected_plan_id)
 
-            # محاسبه قیمت نهایی
             if service_type.unit == "minute" and minutes:
                 final_price = selected_plan.price_per_unit * int(minutes)
             else:
                 final_price = selected_plan.price_per_unit
 
-            # ایجاد یا بروزرسانی ContentOrder
             order, created = ContentOrder.objects.get_or_create(
                 campaign=campaign,
                 defaults={
@@ -433,37 +468,27 @@ def campaign_create_step3_team(request):
                 order.minutes = int(minutes) if minutes else None
                 order.save()
 
-            # ذخیره بریف
-            save_brief(order, brief_form)  # همان تابع قبلی
+            save_brief(order, brief_form)
+            save_campaign_content(campaign, brief_form)
 
-            # ذخیره محتوای تبلیغ (caption و link) در CampaignContent
-            save_campaign_content(campaign, brief_form)  # همان تابع قبلی
-
-            # مدیریت فایل‌های پیوست
             handle_deleted_files(request.POST)
             if not handle_new_files(request, order):
                 return redirect("campaigns:campaign_create_step3_team")
 
-            return redirect("campaigns:campaign_create_step4")
+            current_page = request.GET.get('page', '1')
+            request.session['step3_team_page'] = current_page
 
+            return redirect("campaigns:campaign_create_step4")
         else:
             for form in (team_form, brief_form):
                 for errors in form.errors.values():
                     for err in errors:
                         messages.error(request, err)
 
-    # ------------------------ GET (بارگذاری اولیه) ------------------------
+    # ------------------------ GET (initial load) ------------------------
     else:
         initial_plan = existing_order.plan.id if existing_order else None
-
-        if existing_order:
-            preselect_plan_id = existing_order.plan.id
-            preselect_team_id = existing_order.team.id
-        else:
-            preselect_plan_id = None
-            preselect_team_id = None
-
-
+        # در حالت GET، preselected ها قبلاً تعیین شده‌اند، فقط فرم‌ها را مقداردهی می‌کنیم
         team_form = CampaignStep3TeamForm(initial={'selected_plan': initial_plan}, service_type=service_type)
 
         brief_initial = {}
@@ -480,16 +505,16 @@ def campaign_create_step3_team(request):
                 'description': b.description,
                 'do_not_include': b.do_not_include,
             }
-        # بارگذاری caption و link از CampaignContent
         if hasattr(campaign, 'content') and campaign.content:
             brief_initial['ad_caption'] = campaign.content.caption
             brief_initial['ad_link'] = campaign.content.link or ''
 
         brief_form = CampaignStep3BriefForm(initial=brief_initial)
 
-    # ------------------------ کانتکست ------------------------
+    # ------------------------ Context ------------------------
     context = {
         "campaign": campaign,
+        'page_obj': page_obj,
         "service_type": service_type,
         "teams_data": teams_data,
         "minutes": minutes,
@@ -601,6 +626,7 @@ def campaign_create_step4(request):
     wallet = request.user.wallet
 
     total_price = invoice.influencer_cost + invoice.content_cost
+    step3_page = request.session.get('step3_team_page', '1')
 
     if request.method == "POST":
         payment_method = request.POST.get("payment_method", "gateway")
@@ -636,7 +662,6 @@ def campaign_create_step4(request):
                 invoice.is_paid = True
                 invoice.save(update_fields=["is_paid"])
 
-                # افزایش تعداد استفاده برای هر سه نوع کوپن
                 for coupon in [campaign.influencer_coupon, campaign.content_team_coupon, campaign.platform_coupon]:
                     if coupon:
                         coupon.used_count += 1
@@ -693,6 +718,7 @@ def campaign_create_step4(request):
         "influencer_cost": invoice.influencer_cost,
         "team_cost": invoice.content_cost,
         "total_price": total_price,
+        'step3_page': step3_page,
         "commission": invoice.commission,
         "final_total": invoice.total_amount,
         "discount_amount": invoice.discount_amount,

@@ -4,110 +4,112 @@ function removeParam(event, ...params) {
     params.forEach(p => url.searchParams.delete(p));
     window.location.href = url.toString();
 }
-(function () {
-    // ---- helpers ----
-    function fmt(n) {
-        return Number(n).toLocaleString('fa-IR');
+
+(function() {
+    // تبدیل اعداد فارسی به انگلیسی
+    function toEnglishDigits(str) {
+        if (!str) return '';
+        const map = { '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9' };
+        return str.replace(/[۰-۹]/g, ch => map[ch]);
     }
 
-    function initSlider(sliderId, minInputId, maxInputId,
-                        minDisplayId, maxDisplayId, btnLabelId) {
-        const wrap = document.getElementById(sliderId);
-        if (!wrap) return;
+    // فقط ارقام رو نگه دار
+    function getDigits(str) {
+        return toEnglishDigits(str).replace(/[^\d]/g, '');
+    }
 
-        const min       = +wrap.dataset.min;
-        const max       = +wrap.dataset.max;
-        const startMin  = +wrap.dataset.startMin;
-        const startMax  = +wrap.dataset.startMax;
-        const step      = +wrap.dataset.step;
+    // فرمت با کاما (مثلاً "1234" -> "1,234")
+    function formatWithCommas(digits) {
+        if (!digits) return '';
+        return parseInt(digits, 10).toLocaleString('en-US');
+    }
 
-        const slider = noUiSlider.create(wrap, {
-            start:     [startMin, startMax],
-            connect:   true,
-            direction: 'rtl',
-            range:     { min, max },
-            step,
+    // مدیریت هر فیلد
+    function setupLiveFormat(input) {
+        if (!input) return;
+
+        // ذخیره مقدار خالص در attribute (برای ارسال)
+        let rawValue = '';
+
+        input.addEventListener('input', function(e) {
+            let cursorPos = this.selectionStart;
+            let oldLength = this.value.length;
+            // گرفتن ارقام خالص از مقدار فعلی
+            let digits = getDigits(this.value);
+            rawValue = digits;
+            let formatted = formatWithCommas(digits);
+            this.value = formatted;
+
+            // تنظیم cursor برای جلوگیری از پریدن به آخر
+            let newLength = this.value.length;
+            let diff = newLength - oldLength;
+            let newCursorPos = cursorPos + diff;
+            this.setSelectionRange(newCursorPos, newCursorPos);
         });
 
-        slider.on('update', function (values) {
-        // در RTL: values[0] = سمت راست (از)، values[1] = سمت چپ (تا)
-        const lo = Math.round(values[0]);  // از (راست)
-        const hi = Math.round(values[1]);  // تا (چپ)
+        // قبل از ارسال فرم، مقدار raw رو در value بذار (برای سرور)
+        input.form && input.form.addEventListener('submit', function() {
+            let digits = getDigits(input.value);
+            input.value = digits;  // عدد بدون کاما به سرور می‌ره
+        });
 
-        document.getElementById(minInputId).value   = lo;
-        document.getElementById(maxInputId).value   = hi;
-        document.getElementById(minDisplayId).textContent = fmt(lo);
-        document.getElementById(maxDisplayId).textContent = fmt(hi);
-
-        // آپدیت لیبل دکمه
-        if (lo === min && hi === max) {
-            document.getElementById(btnLabelId).textContent = 'همه';
-        } else {
-            document.getElementById(btnLabelId).textContent =
-                fmt(lo) + ' – ' + fmt(hi);
-        }
-    });
-
+        // مقدار اولیه رو فرمت کن
+        let initDigits = getDigits(input.value);
+        if (initDigits) input.value = formatWithCommas(initDigits);
     }
 
-    // ---- toggle panels ----
-    function togglePanel(btnId, panelId, sliderId, minInputId, maxInputId,
-                         minDisplayId, maxDisplayId, btnLabelId) {
-        const btn   = document.getElementById(btnId);
-        const panel = document.getElementById(panelId);
-        if (!btn || !panel) return;
+    // اعتبارسنجی min <= max
+    function validate(minEl, maxEl, errorEl) {
+        let min = getDigits(minEl.value);
+        let max = getDigits(maxEl.value);
+        if (min !== '' && max !== '' && parseInt(min,10) > parseInt(max,10)) {
+            errorEl.style.display = 'block';
+            return false;
+        }
+        errorEl.style.display = 'none';
+        return true;
+    }
 
-        btn.addEventListener('click', function () {
-            const isOpen = panel.style.display !== 'none';
-            // بستن همه پنل‌ها
-            document.querySelectorAll('.dropdown-panel')
-                    .forEach(p => p.style.display = 'none');
-            if (!isOpen) {
-                panel.style.display = 'block';
-                // اسلایدر رو فقط یه بار init کن
-                const wrap = document.getElementById(sliderId);
-                if (wrap && !wrap.noUiSlider) {
-                    initSlider(sliderId, minInputId, maxInputId,
-                               minDisplayId, maxDisplayId, btnLabelId);
-                }
+    // گرفتن المان‌ها
+    const followersMin = document.getElementById('followers-min-input');
+    const followersMax = document.getElementById('followers-max-input');
+    const priceMin = document.getElementById('price-min-input');
+    const priceMax = document.getElementById('price-max-input');
+    const followersError = document.getElementById('followers-range-error');
+    const priceError = document.getElementById('price-range-error');
+
+    // اعمال قالب زنده
+    setupLiveFormat(followersMin);
+    setupLiveFormat(followersMax);
+    setupLiveFormat(priceMin);
+    setupLiveFormat(priceMax);
+
+    // اعتبارسنجی هنگام ارسال فرم مودال
+    const filterForm = document.getElementById('filter-form-modal');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            let ok = true;
+            if (!validate(followersMin, followersMax, followersError)) ok = false;
+            if (!validate(priceMin, priceMax, priceError)) ok = false;
+            if (!ok) {
+                e.preventDefault();
+                let firstError = document.querySelector('.invalid-feedback[style*="display: block"]');
+                if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
     }
 
-    togglePanel(
-        'filter-followers-toggle', 'followers-slider-panel',
-        'followers-slider',
-        'followers-min-input', 'followers-max-input',
-        'followers-min-display', 'followers-max-display',
-        'followers-btn-label'
-    );
-
-    togglePanel(
-        'filter-price-toggle', 'price-slider-panel',
-        'price-slider',
-        'price-min-input', 'price-max-input',
-        'price-min-display', 'price-max-display',
-        'price-btn-label'
-    );
-
-    // ---- removeParam helper ----
-    window.removeParam = function (e) {
-        e.preventDefault();
-        const params = new URLSearchParams(window.location.search);
-        for (let i = 1; i < arguments.length; i++) params.delete(arguments[i]);
-        window.location.search = params.toString();
-    };
-
-    // اگه فیلتر اسلایدر از قبل فعال بود، پنل رو باز نگه‌دار
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('followers_min') || urlParams.get('followers_max')) {
-        document.getElementById('followers-slider-panel').style.display = 'block';
-        initSlider('followers-slider','followers-min-input','followers-max-input',
-                   'followers-min-display','followers-max-display','followers-btn-label');
-    }
-    if (urlParams.get('price_min') || urlParams.get('price_max')) {
-        document.getElementById('price-slider-panel').style.display = 'block';
-        initSlider('price-slider','price-min-input','price-max-input',
-                   'price-min-display','price-max-display','price-btn-label');
+    // دکمه بازنشانی
+    const resetBtn = document.getElementById('modal-reset-filters');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (followersMin) followersMin.value = '';
+            if (followersMax) followersMax.value = '';
+            if (priceMin) priceMin.value = '';
+            if (priceMax) priceMax.value = '';
+            if (followersError) followersError.style.display = 'none';
+            if (priceError) priceError.style.display = 'none';
+            window.location.href = window.location.pathname;
+        });
     }
 })();

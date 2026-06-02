@@ -58,6 +58,72 @@
                 </div>
             </div>
         </div>
+    
+       <div class="row g-4 mb-5">
+    <div class="col-12">
+        <div class="dashboard-card h-100">
+            <div class="dashboard-card-header">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fi-award text-warning"></i>
+                        <h5 class="text-white mb-0">سطح کاربری و پیشرفت</h5>
+                    </div>
+                    <a href="{% url 'gamification:points_guide' %}" class="small text-primary text-decoration-none">
+                        مشاهده بیشتر
+                        <i class="fi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10" 
+                             style="width: 60px; height: 60px;">
+                            {% if gamification.current_badge_icon %}
+                                <img src="{{ gamification.current_badge_icon }}" 
+                                     alt="{{ gamification.current_badge_name }}" 
+                                     width="48" height="48" 
+                                     style="border-radius: 50%; object-fit: cover;">
+                            {% else %}
+                                {# Fallback: آیکون پیش‌فرض با رنگ مناسب #}
+                                <i class="fi-award" style="font-size: 30px; color: 
+                                    {% if gamification.current_badge_code == 'bronze' %}#cd7f32
+                                    {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
+                                    {% elif gamification.current_badge_code == 'gold' %}#ffd700
+                                    {% elif gamification.current_badge_code == 'emerald' %}#50c878
+                                    {% else %}#ffffff
+                                    {% endif %}"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h5 class="text-white mb-1">{{ gamification.current_badge_name }}</h5>
+                            <p class="text-muted small mb-0">امتیاز فعلی: <strong class="text-white">{{ gamification.current_points }}</strong></p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-md-end text-start">
+                        {% if not gamification.is_max_level %}
+                            <span class="text-muted small d-block">نشان بعدی: <strong class="text-warning">{{ gamification.next_badge_name }}</strong></span>
+                            <span class="text-white fw-bold">{{ gamification.points_needed_for_next }} امتیاز تا ارتقاء</span>
+                        {% else %}
+                            <span class="text-warning fw-bold">🌟 بالاترین سطح کاربری 🌟</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="progress mt-4" style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                         role="progressbar" 
+                         style="width: {{ gamification.progress_percent|stringformat:'f' }}%;" 
+                         aria-valuenow="{{ gamification.progress_percent|stringformat:'f' }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- کارت‌های آماری (بدون تغییر) -->
         <div class="row g-4 mb-5">

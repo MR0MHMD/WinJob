@@ -139,7 +139,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     )
     list_filter = ('platform', 'province', "is_active", 'created_at',)
     search_fields = ("channel_id", "channel_name", "influencer__full_name", "influencer__user__phone_number",)
-    autocomplete_fields = ("influencer", "platform", "category", "province", "city",)
+    autocomplete_fields = ("influencer", "platform", "category", "province",)
     ordering = ("created_at", 'followers_count')
     inlines = [InfluencerServiceRateInline, InfluencerReviewInline]
     actions = ['mark_as_approved', 'mark_as_rejected']
@@ -157,7 +157,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             )
         }),
         ("موقعیت مکانی کانال", {
-            "fields": ("province", "city"),
+            "fields": ("province", ),
             "classes": ("collapse",)
         }),
         ("دسته‌بندی", {
@@ -189,13 +189,6 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     channel_province.short_description = "استان کانال"
     channel_province.admin_order_field = "province__name"
-
-    def location_city(self, obj):
-        """نمایش شهر کانال"""
-        return obj.city.name if obj.city else "-"
-
-    location_city.short_description = "شهر"
-    location_city.admin_order_field = "city__name"
 
     def followers_formatted_display(self, obj):
         return obj.followers_formatted()

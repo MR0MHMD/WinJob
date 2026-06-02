@@ -46,6 +46,26 @@
                                              data-team-name="{{ team.name|escapejs }}"
                                              data-plans='{{ plans_json|safe }}'>
                                             <div class="team-card-inner h-100 p-3">
+                                            {% with status=team.gamification_status %}
+    <div class="level-badge position-absolute top-0 start-0 m-2" 
+         style="z-index: 5; cursor: pointer;"
+         data-bs-toggle="tooltip" 
+         data-bs-placement="bottom" 
+         data-bs-title="{{ status.current_badge_name }} ({{ status.current_points }} امتیاز)">
+        {% if status.current_badge_icon %}
+            <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center"
+                 style="width: 34px; height: 34px; background-color: #2a2638; border: 2px solid rgba(255,255,255,0.2);">
+                <img src="{{ status.current_badge_icon }}" alt="{{ status.current_badge_name }}" 
+                     style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+        {% else %}
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width: 34px; height: 34px; background-color: #6c757d;">
+                <i class="fi-award text-white" style="font-size: 1rem;"></i>
+            </div>
+        {% endif %}
+    </div>
+    {% endwith %}
                                                 <div class="check-badge">✓</div>
 
                                                 <div class="d-flex flex-column align-items-center text-center mb-3 mt-1">
@@ -82,8 +102,12 @@
                                                 </div>
 
                                                 <div class="mt-3 text-center">
-                                                    <a class="btn btn-primary btn-sm ms-2 order-lg-3"
-                                                       href="{% url 'content_team:team_detail' team.slug %}">مشاهده پروفایل</a>
+                                                    <a href="{% url 'content_team:team_detail' team.slug %}?select_team={{ team.id }}&page={{ request.GET.page|default:'1' }}"
+                                                        class="btn-view-profile"
+                                                        onclick="event.stopPropagation();">
+                                                        <i class="fi-arrow-left ms-1"></i>
+                                                        مشاهده پروفایل
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -98,6 +122,8 @@
                                 </div>
                             </div>
                         {% endif %}
+                    
+                        {% include 'partials/pagination.html' %}
                     </div>
 
                     <!-- بخش پلن‌ها (در ابتدا مخفی) -->

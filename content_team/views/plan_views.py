@@ -66,8 +66,10 @@ def plan_detail(request, plan_id):
         id=plan_id, is_active=True
     )
     team = plan.team
-    # تشخیص اینکه آیا از صفحه ساخت کمپین آمده است
     from_campaign = request.GET.get('from') == 'create_campaign'
+
+    page = request.GET.get('page', '1')
+
     context = {
         'plan': plan,
         'team': team,
@@ -76,6 +78,7 @@ def plan_detail(request, plan_id):
         'members': team.members.filter(is_active=True),
         'reviews': team.reviews.select_related('advertiser__user').all()[:5],
         'from_campaign': from_campaign,
+        'page': page,
     }
     return render(request, 'content_team/pages/plan_detail.html', context)
 

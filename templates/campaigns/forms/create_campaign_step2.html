@@ -2,329 +2,345 @@
 {% load i18n static %}
 
 {% block title %}
-	ساخت کمپین | انتخاب ناشران
+    ساخت کمپین | انتخاب ناشران
 {% endblock %}
 
 {% block extra_head %}
+    <!--suppress JSDeprecatedSymbols -->
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_2.css' %}">
-    <link rel="stylesheet" href="{% static 'finder/vendor/nouislider/dist/nouislider.min.css' %}">
+    <style>
+        .level-badge {
+            transition: transform 0.2s ease;
+        }
+
+        .level-badge:hover {
+            transform: scale(1.08);
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4 pb-5" dir="rtl">
-    {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+    <div class="container mt-4 pb-5" dir="rtl">
+        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
 
-    <div class="card border-0 shadow-sm page-card bg-dark">
-        <div class="card-body p-4">
-            <div class="filter-panel mb-4">
-                <div class="filter-panel__header bg-dark">
-                    <div class="filter-panel__title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"></path>
-                        </svg>
-                        <span>فیلتر اینفلوئنسرها</span>
+        <div class="card border-0 shadow-sm page-card bg-dark">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-light fw-bold mb-1">انتخاب {% if platform.slug == "instagram" %}پیج ها{% else %}
+                            کانال ها{% endif %}</h5>
+                        <p class="text-secondary small mb-0">
+                            {% if platform.slug == "instagram" %}پیج{% else %}کانال{% endif %} های فعال برای پلتفرم
+                            <span class="badge ms-1 platform-badge"><img class="me-2" width="15"
+                                                                         src="{{ platform.logo.url }}"
+                                                                         alt="{{ platform.name }}">{{ platform.name }}</span>
+                        </p>
                     </div>
-
-                    {% if request.GET %}
-                        <a href="?" class="filter-panel__clear">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"></path>
-                            </svg>
-                            پاک کردن فیلترها
-                        </a>
-                    {% endif %}
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#filterModal">
+                            <i class="fi-filter me-1"></i> فیلتر
+                            {% if request.GET|length > 0 %}
+                                <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">*</span>
+                            {% endif %}
+                        </button>
+                        <div class="text-secondary small text-start">
+                            <span id="selected-count" class="fw-bold text-light">0</span>
+                            {% if platform.slug == "instagram" %}پیج{% else %}کانال{% endif %} انتخاب شده
+                        </div>
+                    </div>
                 </div>
 
-                <form method="GET" id="filter-form">
-                    <div class="filter-panel__body bg-dark">
-                        <div class="filter-group filter-group--wide">
-                            <label class="filter-label" for="search-name">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11"></path>
-                                </svg>
-                                جستجو
-                            </label>
-                            <input type="text"
-                                   name="search"
-                                   id="search-name"
-                                   class="form-control form-control-sm"
-                                   placeholder="نام یا آیدی"
-                                   value="{{ request.GET.search }}">
-                        </div>
+                <form method="POST" id="step2-form" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3" id="influencers-list">
 
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M2 2h4v4H2zm0 6h4v4H2zm6-6h4v4H8zm0 6h4v4H8z"></path>
-                                </svg>
-                                دسته‌بندی
-                            </label>
-                            {{ filter_form.category }}
-                        </div>
+                        {% if rates %}
+                            {% for rate in rates %}
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="influencer-card-wrapper h-100 position-relative" data-id="{{ rate.id }}"
+                                         data-price="{{ rate.price }}">
+                                        <label for="rate_{{ rate.id }}"></label>
+                                        <input type="checkbox"
+                                               name="rates"
+                                               value="{{ rate.id }}"
+                                               class="influencer-checkbox d-none"
+                                               id="rate_{{ rate.id }}">
 
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"></path>
-                                </svg>
-                                استان
-                            </label>
-                            {{ filter_form.province }}
-                        </div>
 
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"></path>
-                                </svg>
-                                شهر
-                            </label>
-                            {{ filter_form.city }}
-                        </div>
+                                        <div class="influencer-card-inner h-100 p-3 pb-0">
+                                            {% with status=rate.channel.gamification_status %}
+                                                <div class="level-badge position-absolute top-0 start-0 m-2"
+                                                     style="z-index: 5; cursor: pointer;"
+                                                     data-bs-toggle="tooltip"
+                                                     data-bs-placement="bottom"
+                                                     data-bs-title="{{ status.current_badge_name }} ({{ status.current_points }} امتیاز)">
+                                                    {% if status.current_badge_icon %}
+                                                        <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center"
+                                                             style="width: 34px; height: 34px; background-color: #2a2638; border: 2px solid rgba(255,255,255,0.2);">
+                                                            <img src="{{ status.current_badge_icon }}"
+                                                                 alt="{{ status.current_badge_name }}"
+                                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                                             style="width: 34px; height: 34px; background-color: #6c757d;">
+                                                            <i class="fi-award text-white" style="font-size: 1rem;"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endwith %}
 
-                        <div class="filter-group">
-                            <label class="filter-label">فالوور</label>
-                            <button type="button" class="btn btn-info btn-sm w-100 filter-toggle-btn" id="filter-followers-toggle">
-                                <i class="bi bi-people-fill me-1 text-primary"></i>
-                                <span id="followers-btn-label">همه</span>
-                            </button>
-                        </div>
+                                            <div class="check-badge">✓</div>
 
-                        <div class="filter-group">
-                            <label class="filter-label">قیمت</label>
-                            <button type="button" class="btn btn-info btn-sm w-100 filter-toggle-btn" id="filter-price-toggle">
-                                <i class="bi bi-cash-coin me-1 text-warning"></i>
-                                <span id="price-btn-label">همه</span>
-                            </button>
-                        </div>
+                                            <div class="d-flex flex-column align-items-center text-center mb-3 mt-1">
+                                                {% if rate.channel.avatar %}
+                                                    <img src="{{ rate.channel.avatar.url }}"
+                                                         alt="{{ rate.channel.channel_name }}"
+                                                         class="influencer-avatar mb-3">
+                                                {% else %}
+                                                    <div class="influencer-avatar-placeholder mb-3">👤</div>
+                                                {% endif %}
 
-                        <div class="filter-group filter-group--action">
-                            <button type="submit" class="btn btn-primary btn-sm w-100 filter-submit-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11"></path>
-                                </svg>
-                                اعمال فیلتر
-                            </button>
-                        </div>
-                    </div>
+                                                <h6 class="text-light fw-bold mb-0 influencer-name">
+                                                    {{ rate.channel.channel_name }}
+                                                </h6>
 
-                    <div id="followers-slider-panel" class="slider-panel dropdown-panel" style="display:none">
-                        <div class="slider-container"
-                             id="followers-slider"
-                             data-min="0"
-                             data-max="10000000"
-                             data-start-min="{{ request.GET.followers_min|default:'0' }}"
-                             data-start-max="{{ request.GET.followers_max|default:'10000000' }}"
-                             data-step="1000"></div>
-                        <input type="hidden" name="followers_min" id="followers-min-input" value="{{ request.GET.followers_min|default:'0' }}">
-                        <input type="hidden" name="followers_max" id="followers-max-input" value="{{ request.GET.followers_max|default:'10000000' }}">
-                        <div class="slider-display mt-2 text-center small text-secondary">
-                            از <span id="followers-min-display">{{ request.GET.followers_min|default:'0' }}</span>
-                            تا <span id="followers-max-display">{{ request.GET.followers_max|default:'10000000' }}</span>
-                            نفر
-                        </div>
-                    </div>
+                                                <small class="mt-1 influencer-channel">
+                                                    {{ rate.channel.channel_id }}@
+                                                </small>
+                                            </div>
 
-                    <div id="price-slider-panel" class="slider-panel dropdown-panel" style="display:none">
-                        <div class="slider-container"
-                             id="price-slider"
-                             data-min="0"
-                             data-max="50000000"
-                             data-start-min="{{ request.GET.price_min|default:'0' }}"
-                             data-start-max="{{ request.GET.price_max|default:'50000000' }}"
-                             data-step="100000"></div>
-                        <input type="hidden" name="price_min" id="price-min-input" value="{{ request.GET.price_min|default:'0' }}">
-                        <input type="hidden" name="price_max" id="price-max-input" value="{{ request.GET.price_max|default:'50000000' }}">
-                        <div class="slider-display mt-2 text-center small text-secondary">
-                            از <span id="price-min-display">{{ request.GET.price_min|default:'0' }}</span>
-                            تا <span id="price-max-display">{{ request.GET.price_max|default:'50000000' }}</span>
-                            تومان
-                        </div>
-                    </div>
+                                            <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
+                                                {% if rate.channel.category %}
+                                                    <span class="badge badge-category text-success"> <i
+                                                            class="fi-grid me-1"></i> {{ rate.channel.category.name }}</span>
+                                                {% endif %}
+                                                {% if rate.channel.province %}
+                                                    <span class="badge badge-province"> <i
+                                                            class="fi-geo me-1"></i> {{ rate.channel.province.name }}</span>
+                                                {% endif %}
+                                                <span class="badge badge-platform"><img class="me-2" width="15"
+                                                                                        src="{{ platform.logo.url }}"
+                                                                                        alt="{{ platform.name }}">{{ platform.name }}</span>
+                                            </div>
 
-                    {% if request.GET %}
-                        <div class="filter-panel__active-tags">
-                            {% if request.GET.search %}
-                                <span class="filter-tag">
-                                    جستجو: {{ request.GET.search }}
-                                    <a href="#" class="filter-tag__remove" onclick="removeParam(event,'search')">×</a>
-                                </span>
-                            {% endif %}
-                            {% if request.GET.province %}
-                                <span class="filter-tag">
-                                    استان انتخاب‌شده
-                                    <a href="#" class="filter-tag__remove" onclick="removeParam(event,'province')">×</a>
-                                </span>
-                            {% endif %}
-                            {% if request.GET.followers_min or request.GET.followers_max %}
-                                <span class="filter-tag">
-                                    فالوور:
-                                    {% if request.GET.followers_min %}از {{ request.GET.followers_min }}{% endif %}
-                                    {% if request.GET.followers_max %}تا {{ request.GET.followers_max }}{% endif %}
-                                    <a href="#" class="filter-tag__remove" onclick="removeParam(event,'followers_min','followers_max')">×</a>
-                                </span>
-                            {% endif %}
-                            {% if request.GET.price_min or request.GET.price_max %}
-                                <span class="filter-tag">
-                                    قیمت:
-                                    {% if request.GET.price_min %}از {{ request.GET.price_min }}{% endif %}
-                                    {% if request.GET.price_max %}تا {{ request.GET.price_max }}{% endif %}
-                                    <a href="#" class="filter-tag__remove" onclick="removeParam(event,'price_min','price_max')">×</a>
-                                </span>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </form>
-            </div>
-
-            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-                <div>
-                    <h5 class="text-light fw-bold mb-1">انتخاب اینفلوئنسرها</h5>
-                    <p class="text-secondary small mb-0">
-                        اینفلوئنسرهای فعال برای پلتفرم
-                        <span class="badge ms-1 platform-badge">{{ platform.name }}</span>
-                    </p>
-                </div>
-                <div class="text-secondary small text-start">
-                    <span id="selected-count" class="fw-bold text-light">0</span>
-                    نفر انتخاب شده
-                </div>
-            </div>
-
-            <form method="POST" id="step2-form" novalidate>
-                {% csrf_token %}
-                <div class="row g-3" id="influencers-list">
-
-                    {% if rates %}
-                        {% for rate in rates %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="influencer-card-wrapper h-100"
-                                     data-id="{{ rate.id }}"
-                                     data-price="{{ rate.price }}">
-
-                                    <label for="rate_{{ rate.id }}"></label>
-                                    <input type="checkbox"
-                                           name="rates"
-                                           value="{{ rate.id }}"
-                                           class="influencer-checkbox d-none"
-                                           id="rate_{{ rate.id }}">
-
-                                    <div class="influencer-card-inner h-100 p-3">
-                                        <div class="check-badge">✓</div>
-
-                                        <div class="d-flex flex-column align-items-center text-center mb-3 mt-1">
-                                            {% if rate.channel.avatar %}
-                                                <img src="{{ rate.channel.avatar.url }}"
-                                                     alt="{{ rate.channel.channel_name }}"
-                                                     class="influencer-avatar mb-3">
-                                            {% else %}
-                                                <div class="influencer-avatar-placeholder mb-3">👤</div>
-                                            {% endif %}
-
-                                            <h6 class="text-light fw-bold mb-0 influencer-name">
-                                                {{ rate.channel.channel_name }}
-                                            </h6>
-
-                                            <small class="mt-1 influencer-channel">
-                                                {{ rate.channel.channel_id }}
-                                            </small>
-                                        </div>
-
-                                        <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
-                                            {% if rate.channel.category %}
-                                                <span class="badge badge-category">{{ rate.channel.category.name }}</span>
-                                            {% endif %}
-                                            {% if rate.channel.province %}
-                                                <span class="badge badge-province">📍 {{ rate.channel.province.name }}</span>
-                                            {% endif %}
-                                            <span class="badge badge-platform">{{ platform.name }}</span>
-                                        </div>
-
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <div class="stat-box text-center">
-                                                    <div class="stat-value stat-followers">
-                                                        {{ rate.channel.followers_formatted|default:0 }}
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <div class="stat-box text-center">
+                                                        <div class="stat-value stat-followers">
+                                                            {{ rate.channel.followers_formatted|default:0 }}
+                                                        </div>
+                                                        <div class="stat-label">{% if platform.slug == "instagram" %}
+                                                            دنبال کننده{% else %}عضو{% endif %}</div>
                                                     </div>
-                                                    <div class="stat-label">فالوور</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="stat-box text-center">
+                                                        <div class="stat-value stat-rate">
+                                                            {{ rate.ad_type.name }}
+                                                        </div>
+                                                        <div class="stat-label">نوع سرویس</div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-6">
-                                                <div class="stat-box text-center">
-                                                    <div class="stat-value stat-rate">
-                                                        {{ rate.ad_type.name }}
-                                                    </div>
-                                                    <div class="stat-label">نوع سرویس</div>
+
+                                            <div class="mt-2 text-center">
+                                                <span class="text-warning fw-bold">
+                                                    {{ rate.price|default:0 }} تومان
+                                                </span>
+                                                <div class="mt-2">
+                                                    <a href="{% url 'influencers:channel_detail' rate.channel.id %}?select_rate={{ rate.id }}"
+                                                       class="btn-view-profile"
+                                                       onclick="event.stopPropagation();">
+                                                        <i class="fi-arrow-left ms-1"></i>
+                                                        مشاهده پروفایل
+                                                    </a>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div class="mt-2 text-center">
-                                            <span class="text-warning fw-bold">
-                                                {{ rate.price|default:0 }} تومان
-                                            </span>
                                         </div>
                                     </div>
                                 </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <div class="text-center py-5">
+                                    <div style="font-size: 3rem;">😕</div>
+                                    <p class="text-secondary mt-3">
+                                        هیچ اینفلوئنسری برای پلتفرم
+                                        <strong class="text-light">{{ platform.name }}</strong>
+                                        یافت نشد.
+                                    </p>
+                                </div>
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="col-12">
-                            <div class="text-center py-5">
-                                <div style="font-size: 3rem;">😕</div>
-                                <p class="text-secondary mt-3">
-                                    هیچ اینفلوئنسری برای پلتفرم
-                                    <strong class="text-light">{{ platform.name }}</strong>
-                                    یافت نشد.
-                                </p>
+                        {% endif %}
+
+                    </div>
+
+                    {# صفحه‌بندی #}
+                    {% include "partials/pagination.html" with page_obj=rates %}
+
+
+                    <div id="hidden-selected-container"></div>
+
+                    <div class="d-flex justify-content-between mt-5">
+                        <a href="{% url 'campaigns:campaign_create_step3_team' %}" class="btn btn-accent px-4">←
+                            مرحله قبل</a>
+                        <button type="submit" class="btn btn-primary px-5">مرحله بعد ←</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="price-summary-bar" id="price-summary-bar">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <div class="text-secondary small mb-0">جمع هزینه تبلیغات</div>
+                        <div class="total-price-display" id="total-price-display">۰ تومان</div>
+                    </div>
+                </div>
+                <div class="text-secondary small text-start price-breakdown-wrapper">
+                    <div id="price-breakdown" class="text-secondary price-breakdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== مودال فیلتر پیشرفته ========== -->
+    <div class="modal fade filter-modal-glass" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border-0 shadow-lg">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title text-light" id="filterModalLabel">
+                        <i class="fi-filter text-primary me-2"></i>فیلتر{% if campaign.platform.slug == "instagram" %}
+                        پیج ها{% else %}کانال ها{% endif %}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="بستن"></button>
+                </div>
+                <form method="GET" id="filter-form-modal">
+                    <div class="modal-body p-4">
+                        <!-- فیلد جستجو -->
+                        <div class="mb-4">
+                            <label for="name-input" class="form-label text-light fw-semibold">
+                                <i class="fi-search me-1"></i> جستجو
+                            </label>
+                            <input id="name-input" type="text" name="search"
+                                   class="form-control bg-dark text-light border-secondary"
+                                   placeholder="نام یا آیدی کانال..." value="{{ request.GET.search }}">
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-semibold">
+                                    <i class="fi-grid me-1"></i> دسته‌بندی
+                                </label>
+                                {{ filter_form.category }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-semibold">
+                                    <i class="fi-geo me-1"></i> استان
+                                </label>
+                                {{ filter_form.province }}
                             </div>
                         </div>
-                    {% endif %}
 
-                </div>
+                        <!-- محدوده فالوور -->
+                        <div class="mb-4">
+                            <label class="form-label text-light fw-semibold">
+                                <i class="fi-users me-1"></i> محدوده {% if platform.slug == "instagram" %}دنبال
+                                کنندگان{% else %}اعضا{% endif %}
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="d-none" for="followers-min-input"></label>
+                                    <input type="text"
+                                           name="followers_min"
+                                           class="form-control bg-dark text-light border-secondary range-input"
+                                           id="followers-min-input"
+                                           inputmode="numeric"
+                                           placeholder="حداقل"
+                                           value="{{ request.GET.followers_min|default:'' }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="d-none" for="followers-max-input"></label>
+                                    <input type="text"
+                                           name="followers_max"
+                                           class="form-control bg-dark text-light border-secondary range-input"
+                                           id="followers-max-input"
+                                           inputmode="numeric"
+                                           placeholder="حداکثر"
+                                           value="{{ request.GET.followers_max|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="invalid-feedback" id="followers-range-error" style="display: none;">
+                                محدوده فالوور نامعتبر است (حداقل نباید از حداکثر بیشتر باشد).
+                            </div>
+                        </div>
 
-                <div class="d-flex justify-content-between mt-5">
-                    <a href="{% url 'campaigns:campaign_edit_step1' campaign.id %}" class="btn btn-accent px-4">← مرحله قبل</a>
-                    <button type="submit" class="btn btn-primary px-5">مرحله بعد ←</button>
-                </div>
-            </form>
+                        <!-- محدوده قیمت -->
+                        <div class="mb-4">
+                            <label class="form-label text-light fw-semibold">
+                                <i class="fi-cash me-1"></i> محدوده قیمت (تومان)
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="d-none" for="price-min-input"></label>
+                                    <input type="text"
+                                           name="price_min"
+                                           class="form-control bg-dark text-light border-secondary range-input"
+                                           id="price-min-input"
+                                           inputmode="numeric"
+                                           placeholder="حداقل"
+                                           value="{{ request.GET.price_min|default:'' }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="d-none" for="price-max-input"></label>
+                                    <input type="text"
+                                           name="price_max"
+                                           class="form-control bg-dark text-light border-secondary range-input"
+                                           id="price-max-input"
+                                           inputmode="numeric"
+                                           placeholder="حداکثر"
+                                           value="{{ request.GET.price_max|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="invalid-feedback" id="price-range-error" style="display: none;">
+                                محدوده قیمت نامعتبر است (حداقل نباید از حداکثر بیشتر باشد).
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">لغو</button>
+                        <button type="button" class="btn btn-outline-secondary" id="modal-reset-filters">بازنشانی
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">اعمال فیلتر</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-
-    <div class="price-summary-bar" id="price-summary-bar">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-3">
-                <div>
-                    <div class="text-secondary small mb-0">جمع هزینه تبلیغات</div>
-                    <div class="total-price-display" id="total-price-display">۰ تومان</div>
-                </div>
-            </div>
-            <div class="text-secondary small text-start price-breakdown-wrapper">
-                <div id="price-breakdown" class="text-secondary price-breakdown"></div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block script %}
-{{ block.super }}
-<script>
-    window.PREV_SELECTED_RATE_IDS = {{ prev_selected|safe }};
-    
-    window.RATES_PRICES = {
-        {% for rate in rates %}
-            "{{ rate.id }}": {{ rate.price|floatformat:"0"|cut:"," }},
-        {% endfor %}
-    };
-    
-    window.CALCULATE_URL = "{% url 'campaigns:step2_calculate' %}";
-    
-    console.log("PREV_SELECTED_RATE_IDS:", window.PREV_SELECTED_RATE_IDS);
-    console.log("RATES_PRICES:", window.RATES_PRICES);
-</script>
+    {{ block.super }}
+    <script>
+        window.PREV_SELECTED_RATE_IDS = {{ prev_selected|safe }};
 
-<script src="{% static 'campaigns/js/create_step_2.js' %}"></script>
-<script src="{% static 'finder/vendor/nouislider/dist/nouislider.min.js' %}"></script>
-<script src="{% static 'campaigns/js/step2_filter.js' %}"></script>
+        window.RATES_PRICES = {
+            {% for rate in rates %}
+                "{{ rate.id }}": {{ rate.price|floatformat:"0"|cut:"," }},
+            {% endfor %}
+        };
+
+        window.CALCULATE_URL = "{% url 'campaigns:step2_calculate' %}";
+        window.CAMPAIGN_ID = {{ campaign.id }};
+        console.log("PREV_SELECTED_RATE_IDS:", window.PREV_SELECTED_RATE_IDS);
+        console.log("RATES_PRICES:", window.RATES_PRICES);
+    </script>
+
+    <script src="{% static 'campaigns/js/create_step_2.js' %}"></script>
+    <script src="{% static 'campaigns/js/step2_filter.js' %}"></script>
 {% endblock %}

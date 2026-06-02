@@ -1,3 +1,4 @@
+// file-uploader.js (بدون تغییر، همان کد قبلی)
 (function() {
     'use strict';
 
@@ -10,14 +11,12 @@
 
     if (!wrapper || !fileInput) return;
 
-    // کلیک روی کادر => باز کردن فایل منیجر
     wrapper.addEventListener('click', (e) => {
         if (e.target !== removeBtn && !removeBtn.contains(e.target)) {
             fileInput.click();
         }
     });
 
-    // drag & drop
     wrapper.addEventListener('dragover', (e) => {
         e.preventDefault();
         wrapper.classList.add('drag-over');
@@ -30,47 +29,41 @@
         wrapper.classList.remove('drag-over');
         const files = e.dataTransfer.files;
         if (files.length) {
-            fileInput.files = files;       // به input مخفی تزریق می‌کنیم
-            updatePreview(files[0]);       // پیش‌نمایش را آپدیت کن
+            fileInput.files = files;
+            updatePreview(files[0]);
         }
     });
 
-    // وقتی فایل از طریق کلیک انتخاب شد
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if (file) {
             updatePreview(file);
         } else {
-            clearPreview();   // اگر کاربر در کادر انتخاب فایل cancel کرد
+            clearPreview();
         }
     });
 
-    // دکمه حذف
     removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         clearPreview();
-        fileInput.value = '';            // پاک کردن input
+        fileInput.value = '';
     });
 
     function updatePreview(file) {
-        // نمایش نام فایل
         if (fileNameSpan) {
             fileNameSpan.textContent = file.name;
         }
-
-        // اگر فایل تصویر هست، پیش‌نمایش را نشان بده
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 previewImg.src = e.target.result;
                 previewImg.style.display = 'block';
                 placeholder.style.display = 'none';
-                removeBtn.style.display = 'flex';    // دکمه حذف ظاهر شود
+                removeBtn.style.display = 'flex';
                 wrapper.classList.add('has-image');
             };
             reader.readAsDataURL(file);
         } else {
-            // اگر فایل عکس نبود، فقط placeholder پنهان و اسم فایل رو نشون بده (بدون پیش‌نمایش)
             placeholder.style.display = 'none';
             removeBtn.style.display = 'flex';
             wrapper.classList.add('has-image');
@@ -86,5 +79,4 @@
         wrapper.classList.remove('has-image');
         if (fileNameSpan) fileNameSpan.textContent = '';
     }
-
 })();

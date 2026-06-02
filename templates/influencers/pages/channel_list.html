@@ -1,7 +1,7 @@
 {% extends 'parent/base.html' %}
 {% load static %}
 
-{% block title %}لیست اینفلوئنسرها{% endblock %}
+{% block title %}لیست برترین ناشران{% endblock %}
 
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_list.css' %}">
@@ -81,161 +81,143 @@
         <div class="row g-4">
             {% for channel in channels %}
                 <!-- داخل حلقه for channels، جایگزین کارت قبلی کن -->
-
-<div class="col-md-6 col-xl-4" style="--i: {{ forloop.counter0 }}">
-    <div class="card card-light influencer-card h-100 border-0">
-        <div class="card-body p-4">
-            
-            <!-- هدر کارت با آواتار و اطلاعات -->
-            <div class="d-flex gap-3 mb-3">
-                <!-- آواتار با افکت -->
-                {% if channel.avatar %}
-                    <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}" 
-                         class="influencer-avatar flex-shrink-0">
-                {% else %}
-                    <div class="influencer-avatar flex-shrink-0 d-flex align-items-center justify-content-center">
-                        <i class="fi-user fs-1 text-primary opacity-50"></i>
-                    </div>
-                {% endif %}
-                
-                <!-- اطلاعات اصلی -->
-                <div class="flex-grow-1 min-width-0">
-                    <h5 class="text-light mb-1 text-truncate">
-                        {{ channel.channel_name }}
-                    </h5>
-                    <div class="channel-id">
-                        <i class="fi-at-sign"></i>
-                        <span>{{ channel.channel_id }}</span>
-                    </div>
-                    
-                    <!-- امتیاز با ستاره -->
-                    <div class="rating-stars mt-2">
-                        {% with avg=channel.avg_rating|default:0 %}
-                            {% for i in "12345"|make_list %}
-                                {% if forloop.counter <= avg %}
-                                    <i class="fi-star-filled"></i>
-                                {% elif forloop.counter <= avg|add:0.5 %}
-                                    <i class="fi-star-half"></i>
+                <div class="col-md-6 col-xl-4" style="--i: {{ forloop.counter0 }}">
+                    <div class="card card-light influencer-card h-100 border-0">
+                    {# ========== نشان سطح در گوشه بالا سمت چپ ========== #}
+                        {% with status=channel.gamification_status %}
+                            <div class="level-badge position-absolute top-0 end-0 m-3" 
+                                 data-bs-toggle="tooltip" 
+                                 data-bs-placement="bottom" 
+                                 data-bs-title="{{ status.current_badge_name }} ({{ status.current_points }} امتیاز)">
+                                
+                                {% if status.current_badge_icon %}
+                                    {# استفاده از تصویر واقعی Badge.icon #}
+                                    <div class="level-icon-image rounded-circle overflow-hidden d-flex align-items-center justify-content-center"
+                                         style="width: 38px; height: 38px; background-color: #2a2638; border: 2px solid rgba(255,255,255,0.2);">
+                                        <img src="{{ status.current_badge_icon }}" alt="{{ status.current_badge_name }}" 
+                                             style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
                                 {% else %}
-                                    <i class="fi-star inactive"></i>
+                                    {# Fallback: دایره رنگی با آیکون پیش‌فرض #}
+                                    <div class="level-icon rounded-circle d-flex align-items-center justify-content-center"
+                                         style="width: 38px; height: 38px; background-color: 
+                                             {% if status.current_badge_slug == 'bronze' %}#cd7f32
+                                             {% elif status.current_badge_slug == 'silver' %}#c0c0c0
+                                             {% elif status.current_badge_slug == 'gold' %}#ffd700
+                                             {% elif status.current_badge_slug == 'emerald' %}#50c878
+                                             {% else %}#6c757d{% endif %};">
+                                        <i class="fi-award text-white" style="font-size: 1.2rem;"></i>
+                                    </div>
                                 {% endif %}
-                            {% endfor %}
+                            </div>
                         {% endwith %}
-                        {% if channel.avg_rating > 0 %}
-                            <span class="rating-count">({{ channel.total_reviews }} نظر)</span>
-                        {% else %}
-                            <span class="rating-count">بدون نظر</span>
-                        {% endif %}
+                    
+                        <div class="card-body p-4">
+                            <div class="d-flex gap-3 mb-3">
+                                <!-- آواتار با افکت -->
+                                {% if channel.avatar %}
+                                    <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}" 
+                                         class="influencer-avatar flex-shrink-0">
+                                {% else %}
+                                    <div class="influencer-avatar flex-shrink-0 d-flex align-items-center justify-content-center">
+                                        <i class="fi-user fs-1 text-primary opacity-50"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- اطلاعات اصلی -->
+                                <div class="flex-grow-1 min-width-0">
+                                    <h5 class="text-light mb-1 text-truncate">
+                                        {{ channel.channel_name }}
+                                    </h5>
+                                    <div class="channel-id">
+                                        <i class="fi-at-sign"></i>
+                                        <span>{{ channel.channel_id }}</span>
+                                    </div>
+                                    
+                                    <!-- امتیاز با ستاره -->
+                                    <div class="rating-stars mt-2">
+                                        {% with avg=channel.avg_rating|default:0 %}
+                                            {% for i in "12345"|make_list %}
+                                                {% if forloop.counter <= avg %}
+                                                    <i class="fi-star-filled"></i>
+                                                {% elif forloop.counter <= avg|add:0.5 %}
+                                                    <i class="fi-star-half"></i>
+                                                {% else %}
+                                                    <i class="fi-star inactive"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                        {% if channel.avg_rating > 0 %}
+                                            <span class="rating-count">({{ channel.total_reviews }} نظر)</span>
+                                        {% else %}
+                                            <span class="rating-count">بدون نظر</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- پلتفرم + دسته‌بندی -->
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="platform-item">
+                                    {% if channel.platform.logo %}
+                                        <img src="{{ channel.platform.logo.url }}" class="platform-logo" alt="{{ channel.platform.name }}">
+                                    {% else %}
+                                        <i class="fi-device-mobile"></i>
+                                    {% endif %}
+                                    {{ channel.platform.name }}
+                                </span>
+                                {% if channel.category %}
+                                    <span class="category-tag">
+                                        <i class="fi-grid"></i>
+                                        {{ channel.category.name }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- توضیحات مختصر -->
+                            {% if channel.influencer.description %}
+                                <p class="text-muted small mt-2 mb-3" style="line-height: 1.65; min-height: 65px;">
+                                    {{ channel.influencer.description|truncatewords:18 }}
+                                </p>
+                            {% endif %}
+                            
+                            <!-- استاتس‌ها (فالوور + کمپین موفق) -->
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <div class="stat-badge flex-grow-1 justify-content-center">
+                                    <i class="fi-users"></i>
+                                    <strong>{{ channel.followers_formatted }}</strong>
+                                    <span>فالوور</span>
+                                </div>
+                                
+                                <div class="stat-badge flex-grow-1 justify-content-center">
+                                    <i class="fi-check-circle"></i>
+                                    <strong>{{ channel.influencer.completed_campaigns|default:0 }}</strong>
+                                    <span>کمپین موفق</span>
+                                </div>
+                            </div>
+                            
+                            <!-- لوکیشن (اختیاری) -->
+                            {% if channel.province %}
+                                <div class="location-text text-muted small mb-3">
+                                    <i class="fi-geo"></i>
+                                    {{ channel.province.name }}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- دکمه اقدام -->
+                            <div class="mt-2 text-center">
+                                <a href="{% url 'influencers:channel_detail' channel.id %}" 
+                                   class="btn-view w-100 justify-content-center">
+                                    <span>مشاهده پروفایل</span>
+                                    <i class="fi-arrow-left"></i>
+                                </a>
+                            </div>
+                            
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- پلتفرم + دسته‌بندی -->
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="platform-item">
-                    {% if channel.platform.logo %}
-                        <img src="{{ channel.platform.logo.url }}" class="platform-logo" alt="{{ channel.platform.name }}">
-                    {% else %}
-                        <i class="fi-device-mobile"></i>
-                    {% endif %}
-                    {{ channel.platform.name }}
-                </span>
-                {% if channel.category %}
-                    <span class="category-tag">
-                        <i class="fi-grid"></i>
-                        {{ channel.category.name }}
-                    </span>
-                {% endif %}
-            </div>
-            
-            <!-- توضیحات مختصر -->
-            {% if channel.influencer.description %}
-                <p class="text-muted small mt-2 mb-3" style="line-height: 1.65; min-height: 65px;">
-                    {{ channel.influencer.description|truncatewords:18 }}
-                </p>
-            {% endif %}
-            
-            <!-- استاتس‌ها (فالوور + کمپین موفق) -->
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                <div class="stat-badge flex-grow-1 justify-content-center">
-                    <i class="fi-users"></i>
-                    <strong>{{ channel.followers_formatted }}</strong>
-                    <span>فالوور</span>
-                </div>
-                
-                <div class="stat-badge flex-grow-1 justify-content-center">
-                    <i class="fi-check-circle"></i>
-                    <strong>{{ channel.influencer.completed_campaigns|default:0 }}</strong>
-                    <span>کمپین موفق</span>
-                </div>
-            </div>
-            
-            <!-- لوکیشن (اختیاری) -->
-            {% if channel.province %}
-                <div class="location-text text-muted small mb-3">
-                    <i class="fi-geo"></i>
-                    {{ channel.province.name }}
-                    {% if channel.city %} - {{ channel.city.name }}{% endif %}
-                </div>
-            {% endif %}
-            
-            <!-- دکمه اقدام -->
-            <div class="mt-2 text-center">
-                <a href="{% url 'influencers:channel_detail' channel.id %}" 
-                   class="btn-view w-100 justify-content-center">
-                    <span>مشاهده پروفایل</span>
-                    <i class="fi-arrow-left"></i>
-                </a>
-            </div>
-            
-        </div>
-    </div>
-</div>
             {% endfor %}
         </div>
-        
-        <!-- صفحه‌بندی -->
-        {% if channels.has_other_pages %}
-            <div class="d-flex justify-content-center mt-5">
-                <nav>
-                    <ul class="pagination pagination-custom">
-                        {% if channels.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ channels.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                    <i class="fi-chevron-right"></i>
-                                </a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled">
-                                <span class="page-link"><i class="fi-chevron-right"></i></span>
-                            </li>
-                        {% endif %}
-                        
-                        {% for num in channels.paginator.page_range %}
-                            {% if channels.number == num %}
-                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                            {% elif num > channels.number|add:'-3' and num < channels.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if channels.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ channels.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                    <i class="fi-chevron-left"></i>
-                                </a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled">
-                                <span class="page-link"><i class="fi-chevron-left"></i></span>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
-        {% endif %}
         
     {% else %}
         <!-- حالت خالی -->
@@ -250,6 +232,8 @@
             </a>
         </div>
     {% endif %}
+
+    {% include "partials/pagination.html" with page_obj=channels %}
     
 </div>
 
@@ -411,6 +395,12 @@
     document.querySelectorAll('.influencer-card').forEach((card, index) => {
         card.style.animationDelay = `${index * 0.05}s`;
         card.style.opacity = '1';
+    });
+    
+    // فعال‌سازی tooltip برای نشان‌های سطح
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 </script>
 {% endblock %}

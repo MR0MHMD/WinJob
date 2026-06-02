@@ -1,4 +1,5 @@
-from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignContent
+from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignContent, \
+    CampaignInfluencer
 from django.shortcuts import render, get_object_or_404, redirect
 from content_team.models import ContentOrder, ContentTeamMember
 from django.contrib.auth.decorators import login_required
@@ -292,10 +293,25 @@ def advertiser_dashboard(request):
         end_date__lte=now + timedelta(days=3)
     ).order_by('end_date')
 
+    pending_review_bookings = CampaignInfluencer.objects.filter(
+        campaign__advertiser=advertiser,
+        status=CampaignInfluencer.Status.COMPLETED,
+        review__isnull=True
+    ).select_related('campaign', 'channel', 'channel__platform').order_by('-created_at')
+
+    pending_review_orders = ContentOrder.objects.filter(
+        campaign__advertiser=advertiser,
+        status=ContentOrder.Status.COMPLETED,
+        review__isnull=True
+    ).select_related('campaign', 'team').order_by('-created_at')
+
     context = {
         'total_campaigns': total_campaigns,
         'active_campaigns': active_campaigns,
         'completed_campaigns': completed_campaigns,
+        'pending_review_bookings': pending_review_bookings,
+        'pending_review_orders': pending_review_orders,
+        'total_pending_review': pending_review_orders.count() + pending_review_bookings.count(),
         'total_spent': total_spent,
         'total_clicks': total_clicks,
         'total_unique_clicks': total_unique_clicks,
@@ -309,6 +325,7 @@ def advertiser_dashboard(request):
         'top_channels': top_channels,
         'expiring_soon': expiring_soon,
         'advertiser': advertiser,
+        'gamification': advertiser.gamification_status,
     }
 
     return render(request, "advertisers/pages/dashboard.html", context)

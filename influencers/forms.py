@@ -48,7 +48,6 @@ class InfluencerChannelForm(forms.ModelForm):
             "platform",
             "channel_id",
             "province",
-            "city",
             "category",
             "channel_name",
             "url",
@@ -67,12 +66,6 @@ class InfluencerChannelForm(forms.ModelForm):
                 attrs={
                     "class": "form-select bg-dark text-light border-light",
                     "required": False
-                }
-            ),
-
-            "city": forms.Select(
-                attrs={
-                    "class": "form-select bg-dark text-light border-light",
                 }
             ),
 
