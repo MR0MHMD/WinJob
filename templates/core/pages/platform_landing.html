@@ -1,0 +1,310 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}تبلیغات در {{ platform.name }} | وینجاب{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/base.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/hero.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/components.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/testimonials.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/responsive.css' %}">
+    <style>
+        :root {
+            --platform-gradient: {{ theme.gradient }};
+            --platform-primary: {{ theme.primary_color }};
+            --platform-accent: {{ theme.accent_color }};
+        }
+        body {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0b1a 100%);
+        }
+        .btn-gradient, .btn-outline-gradient:hover {
+            background: var(--platform-gradient) !important;
+        }
+        .hero-title {
+            background: linear-gradient(135deg, #fff, var(--platform-accent), var(--platform-primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .hero-gradient-text {
+            background: linear-gradient(135deg, var(--platform-accent), var(--platform-primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        .btn-outline-gradient {
+            border-color: var(--platform-primary);
+            color: var(--platform-primary);
+        }
+        .hero-campaign-card img {
+            width: 100%;
+            display: block;
+            transition: transform 0.5s;
+        }
+        .hero-campaign-card:hover img {
+            transform: scale(1.02);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<!-- هیرو -->
+<section class="hero-section">
+    <div class="hero-bg-particles" id="particles"></div>
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="row align-items-center">
+            <div class="col-lg-5 text-center text-lg-start">
+                <div class="hero-badge mb-4 animate-pulse-glow">
+                    تبلیغات هدفمند در {{ platform.name }}
+                </div>
+                <h1 class="hero-title mb-4">
+                    بازاریابی تأثیرگذار در
+                    <span class="hero-gradient-text">{{ theme.hero_title }}</span>
+                </h1>
+                <p class="text-white-50 mb-4 fs-5">
+                    ارتباط با بیش از {{ total_influencers }} ناشر فعال و {{ total_channels }} {{ theme.stats_label }}
+                </p>
+                <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
+                    <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-gradient btn-lg px-4 rounded-pill">
+                        <i class="fi-plus ms-1"></i> ثبت کمپین جدید
+                    </a>
+                    <a href="{% url 'influencers:channel_list' %}?platform={{ platform.slug }}" class="btn btn-outline-gradient btn-lg px-4 rounded-pill">
+                        <i class="fi-search ms-1"></i> جستجوی ناشر
+                    </a>
+                </div>
+            </div>
+            <div class="col-xl-7 mt-5 mt-5">
+                <img src="{% static theme.hero_image %}" alt="تبلیغات در {{ platform.name }}">
+            </div>
+        </div>
+    </div>
+</section>
+
+    <div class="bg-faded-light">
+<!-- آمار (عنوان‌ها رو پویا کردم) -->
+<section class="py-5">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card scroll-reveal">
+                <div class="stat-number">{{ total_campaigns|default:"۰" }}</div>
+                <div class="stat-label">کمپین موفق در {{ platform.name }}</div>
+            </div>
+            <div class="stat-card scroll-reveal">
+                <div class="stat-number">{{ total_channels|default:"۰" }}</div>
+                <div class="stat-label">{{ theme.stats_label }}</div>
+            </div>
+            <div class="stat-card scroll-reveal">
+                <div class="stat-number">{{ total_influencers|default:"۰" }}</div>
+                <div class="stat-label">اینفلوئنسر فعال</div>
+            </div>
+            <div class="stat-card scroll-reveal">
+                <div class="stat-number">{{ total_clicks|default:"۰"|floatformat:0 }}</div>
+                <div class="stat-label">کلیک و تعامل</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== برندهای همکار (اسلایدر بی‌نهایت دو ردیفه در موبایل) ========== -->
+<section class="py-5" dir="ltr">
+    <div class="container">
+        <div class="brands-ticker-container">
+            <div class="brands-ticker-track brands-track-top" id="brandsTrackTop">
+                <div class="brands-ticker-group">
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/hamrah-aval.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/hamrah-aval.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/astan_ghods_razavi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/astan_ghods_razavi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/sepehr.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/sepehr.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/seda_sima.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/seda_sima.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/digikala.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/digikala.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/snap.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/snap.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/tapsi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/tapsi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ba-salam.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ba-salam.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/saipa.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/saipa.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/filimo.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/filimo.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ali-baba.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ali-baba.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/myket.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/myket.png' %}" alt=""></div></div>
+                </div>
+                <div class="brands-ticker-group">
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/hamrah-aval.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/hamrah-aval.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/astan_ghods_razavi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/astan_ghods_razavi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/sepehr.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/sepehr.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/seda_sima.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/seda_sima.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/digikala.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/digikala.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/snap.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/snap.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/tapsi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/tapsi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ba-salam.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ba-salam.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/saipa.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/saipa.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/filimo.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/filimo.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ali-baba.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ali-baba.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/myket.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/myket.png' %}" alt=""></div></div>
+                </div>
+            </div>
+            <div class="brands-ticker-track brands-track-bottom" id="brandsTrackBottom">
+                <div class="brands-ticker-group">
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/hamrah-aval.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/hamrah-aval.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/astan_ghods_razavi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/astan_ghods_razavi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/sepehr.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/sepehr.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/seda_sima.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/seda_sima.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/digikala.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/digikala.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/snap.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/snap.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/tapsi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/tapsi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ba-salam.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ba-salam.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/saipa.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/saipa.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/filimo.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/filimo.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ali-baba.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ali-baba.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/myket.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/myket.png' %}" alt=""></div></div>
+                </div>
+                <div class="brands-ticker-group">
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/hamrah-aval.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/hamrah-aval.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/astan_ghods_razavi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/astan_ghods_razavi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/sepehr.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/sepehr.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/seda_sima.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/seda_sima.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/digikala.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/digikala.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/snap.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/snap.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/tapsi.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/tapsi.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ba-salam.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ba-salam.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/saipa.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/saipa.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/filimo.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/filimo.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/ali-baba.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/ali-baba.png' %}" alt=""></div></div>
+                    <div class="brand-card"><div class="brand-logo swap-image"><img class="swap-from" src="{% static 'brands/black-and-white/myket.png' %}" alt=""><img class="swap-to" src="{% static 'brands/colors/myket.png' %}" alt=""></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+    </div>
+
+{% if platform.slug == "bale" %}
+	{% include 'core/landing/partials/bale-features.html' %}
+{% elif platform.slug == "instagram" %}
+    {% include 'core/landing/partials/instagram-features.html' %}
+{% elif platform.slug == "eitaa" %}
+    {% include 'core/landing/partials/eitaa-features.html' %}
+{% elif platform.slug == "rubika" %}
+    {% include 'core/landing/partials/rubika-features.html' %}
+{% elif platform.slug == "telegram" %}
+    {% include 'core/landing/partials/telegram-features.html' %}
+{% elif platform.slug == "sorush" %}
+    {% include 'core/landing/partials/sorush-features.html' %}
+{% endif %}
+
+<!-- ========== ۵ کانال برتر  ========== -->
+<section class="py-5  bg-faded-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="hero-badge mb-2">🏆 موثرترین های {{ theme.hero_title }}</span>
+            <h2 class="text-white mb-2">برترین {{ theme.channel_label }}</h2>
+            <p class="text-muted">بر اساس امتیاز و همکاری‌های موفق</p>
+        </div>
+        <div class="channels-grid">
+            {% for channel in top_channels %}
+                <div class="influencer-card-circle scroll-reveal">
+                    <a class="text-decoration-none" href="{% url 'influencers:channel_detail' channel.id %}">
+                        <div class="influencer-avatar-wrapper" data-id="{{ channel.id }}">
+                            {% if channel.avatar %}
+                                <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}" class="influencer-avatar">
+                            {% else %}
+                                <div class="influencer-avatar bg-gradient d-flex align-items-center justify-content-center">
+                                    <i class="fi-user text-white fs-1"></i>
+                                </div>
+                            {% endif %}
+                            <span class="influencer-online-badge"></span>
+                        </div>
+                        <div class="influencer-name">{{ channel.channel_name|truncatechars:20 }}</div>
+                    </a>
+                    <div class="small text-muted mb-1">{{ channel.platform.name }}</div>
+                    <div class="mb-2">
+                        {% if channel.avg_channel_rating %}
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= channel.avg_channel_rating %}
+                                    <i class="fi-star-filled rating-star"></i>
+                                {% elif forloop.counter <= channel.avg_channel_rating|add:0.5 %}
+                                    <i class="fi-star-half rating-star"></i>
+                                {% else %}
+                                    <i class="fi-star rating-star-empty"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {% for i in "12345"|make_list %}
+                                <i class="fi-star rating-star-empty"></i>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <span class="influencer-badge">{{ channel.completed_bookings|default:"۰" }} همکاری موفق</span>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center"><p class="text-muted"> هیچ {{ theme.stats_label }} ای یافت نشد.</p></div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-5">
+            <a href="{% url 'influencers:channel_list' %}?platform={{ platform.slug }}" class="btn btn-outline-gradient rounded-pill px-5">
+                مشاهده همه {{ theme.channel_label }} <i class="fi-arrow-left ms-1"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<!-- ========== نظرات برندها (بدون تغییر) ========== -->
+<section class="testimonials-brand-section py-5" dir="ltr">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="hero-badge mb-2">🏆 افتخار همکاری</span>
+            <h2 class="text-white mb-2">برندهای بزرگ چه می‌گویند؟</h2>
+            <p class="text-muted">اعتماد بزرگترین برندهای ایران به وینجاب</p>
+        </div>
+        <div class="testimonials-brand-slider" id="brandTestimonialsSlider">
+            <div class="testimonials-brand-track" id="testimonialsTrack">
+                {% for brand in brand_testimonials %}
+                <div class="testimonial-brand-card">
+                    <div class="card-3d-inner">
+                        <div class="card-glow-bg"></div>
+                        <div class="card-logo-ring"><img src="{% static 'brands/colors/'|add:brand.logo %}" alt="{{ brand.name }}" class="card-logo-img"></div>
+                        <div class="card-quote-icon"><i class="fi-quote"></i></div>
+                        <p class="card-testimonial-text">{{ brand.text }}</p>
+                        <div class="card-stars">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= brand.rating %}<i class="fi-star-filled rating-star"></i>
+                                {% else %}<i class="fi-star rating-star-empty"></i>{% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="card-brand-name">{{ brand.name }}</div>
+                        <div class="card-shine-effect"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="testimonials-dots" id="testimonialsDots"></div>
+    </div>
+</section>
+
+<!-- ========== CTA (بدون تغییر) ========== -->
+<section class="py-5  bg-faded-light">
+    <div class="container">
+        <div class="cta-section scroll-reveal">
+            <div class="cta-glow"></div>
+            <div class="cta-glow"></div>
+            <div class="position-relative" style="z-index: 2;">
+                <h2 class="text-white mb-3">آماده شروع کمپین تبلیغاتی خود هستید؟</h2>
+                <p class="text-white-50 mb-4">به جمع بیش از {{ total_influencers }} ناشر و {{ total_channels }} کانال بپیوندید</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-gradient btn-lg px-5 rounded-pill"><i class="fi-plus ms-1"></i> ثبت کمپین جدید</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'core/js/pages/index/animations.js' %}"></script>
+    <script src="{% static 'core/js/pages/index/slider_testimonials.js' %}"></script>
+    <script src="{% static 'core/js/pages/index/channels_drag.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const simpleTrack = document.getElementById('simpleTrack');
+            if(simpleTrack) simpleTrack.closest('.simple-slider')?.remove();
+        });
+    </script>
+{% endblock %}
