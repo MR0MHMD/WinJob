@@ -19,15 +19,19 @@ def home(request):
         channels_count=Count('influencer_channels', filter=Q(influencer_channels__is_active=True))
     ).order_by('-channels_count')
 
-    top_channels_raw = InfluencerChannel.objects.filter(
+    top_channels = InfluencerChannel.objects.filter(
         is_active=True,
         influencer__is_active=True
     ).annotate(
-        total_bookings=Count('campaign_bookings', filter=Q(campaign_bookings__status='completed')),
+        completed_bookings=Count(
+            'campaign_bookings',
+            filter=Q(campaign_bookings__status='completed')
+        ),
         avg_channel_rating=Avg('reviews__rating')
-    ).filter(total_bookings__gt=0).order_by('-total_bookings')[:5]
-
-    top_channels = sorted(top_channels_raw, key=lambda x: x.avg_channel_rating or 0, reverse=True)[:8]
+    ).select_related('score').order_by(
+        '-score__points',
+        '-completed_bookings'
+    )[:5]
 
     content_teams_raw = ContentTeam.objects.filter(is_active=True)
     content_teams = sorted(content_teams_raw, key=lambda x: x.avg_rating or 0, reverse=True)[:5]
@@ -46,7 +50,7 @@ def home(request):
          'text': 'سرعت اجرا و شفافیت گزارش‌ها بی‌نظیره. تیم وینجاب واقعاً مفهوم مارکتینگ مدرن رو پیاده کردن.',
          'rating': 5},
         {'name': 'تپسی', 'logo': 'tapsi.png',
-         'text': 'قیمت‌گذاری منصفانه و دسترسی به کانال‌های هدف، هزینه‌های تبلیغاتیمون رو نصف کرد.', 'rating': 4},
+         'text': 'قیمت‌گذاری منصفانه و دسترسی به کانال‌های هدف، هزینه‌های تبلیغاتی مون رو نصف کرد.', 'rating': 4},
         {'name': 'همراه اول', 'logo': 'hamrah-aval.png',
          'text': 'بزرگترین چالش ما پیدا کردن اینفلوئنسر واقعی بود که وینجاب به بهترین شکل حلش کرد.', 'rating': 5},
         {'name': 'فیلیمو', 'logo': 'filimo.png',
@@ -72,13 +76,11 @@ def home(request):
 
 
 def platform_landing_page(request, slug):
-    # بررسی وجود پلتفرم (مثلاً اینستاگرام)
     try:
         platform = Platform.objects.get(slug=slug, is_active=True)
     except Platform.DoesNotExist:
         raise Http404("پلتفرم مورد نظر یافت نشد.")
 
-    # آمار ویژه همین پلتفرم
     total_campaigns = Campaign.objects.filter(
         platform=platform,
         status=Campaign.Status.COMPLETED
@@ -98,25 +100,21 @@ def platform_landing_page(request, slug):
         tracking_link__campaign_influencer__campaign__platform=platform
     ).count()
 
-    # ۵ پیج برتر اینستاگرام (مرتب‌سازی: امتیاز گیمیفیکیشن، سپس تعداد همکاری موفق)
     top_channels = InfluencerChannel.objects.filter(
         platform=platform,
         is_active=True,
         influencer__is_active=True
     ).annotate(
-        # تعداد همکاری‌های موفق (کمپین تمام شده)
         completed_bookings=Count(
             'campaign_bookings',
             filter=Q(campaign_bookings__status='completed')
         ),
-        # میانگین امتیاز نظرات
         avg_channel_rating=Avg('reviews__rating')
     ).select_related('score').order_by(
-        '-score__points',  # اولویت اول: امتیاز گیمیفیکیشن
-        '-completed_bookings'  # اولویت دوم: تعداد همکاری موفق
+        '-score__points',
+        '-completed_bookings'
     )[:5]
 
-    # تیم‌های محتوا (در این لندینگ پیج حذف می‌شه اما برای عدم خطا خالی می‌دیم)
     content_teams = []
 
     brand_testimonials = [
@@ -134,7 +132,6 @@ def platform_landing_page(request, slug):
          'text': 'کمپین معرفی سریال جدیدمون با وینجاب ۲.۵ میلیون بازدید ارگانیک گرفت.', 'rating': 4},
     ]
 
-    # تنظیمات ظاهری بر اساس پلتفرم
     platform_theme = {
         'instagram': {
             'gradient': 'linear-gradient(135deg, #feda77, #f58529, #dd2a7b, #8134af, #515bd4)',

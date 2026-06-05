@@ -3,97 +3,263 @@
 <link rel="stylesheet" href="{% static 'partials/css/footer.css' %}">
 
 {% if request.user.is_authenticated %}
-    <!-- Bottom Navigation Bar - فقط برای کاربران لاگین شده در موبایل -->
-    <div class="bottom-nav d-lg-none">
-        <div class="bottom-nav-container">
-            <a href="{% url 'core:home' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top"
-               title="خانه">
-                <i class="fi-home"></i>
-                <span class="bottom-nav-label">خانه</span>
-            </a>
-            <a href="{% url 'advertisers:my_campaigns' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="تبلیغات">
-                <i class="fi-billboard-house"></i>
-                <span class="bottom-nav-label">تبلیغات</span>
-            </a>
-            <a href="{% url 'campaigns:campaign_create_step1' %}" class="bottom-nav-item bottom-nav-center" data-bs-toggle="tooltip" data-bs-placement="top"
-               title="ساخت تبلیغ">
-                <div class="bottom-nav-center-icon">
-                    <i class="fi-plus"></i>
-                </div>
-                <span class="bottom-nav-label">ساخت تبلیغ</span>
-            </a>
-            <a href="#" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="پشتیبانی">
-                <i class="fi-help"></i>
-                <span class="bottom-nav-label">پشتیبانی</span>
-            </a>
-            <a href="#" class="bottom-nav-item" id="financialNavBtn" data-bs-toggle="tooltip" data-bs-placement="top"
-               title="مالی">
-                <i class="fi-wallet"></i>
-                <span class="bottom-nav-label">مالی</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Bottom Sheet Modal for Financial Section -->
-    <div class="bottom-sheet" id="financialSheet">
-        <div class="bottom-sheet-overlay"></div>
-        <div class="bottom-sheet-content">
-            <div class="bottom-sheet-header">
-                <div class="drag-handle"></div>
-                <h5 class="mb-0 text-light">کیف پول من</h5>
-                <button class="btn-close-bottom-sheet" id="closeFinancialSheet">
-                    <i class="fi-x"></i>
-                </button>
+    {% if request.user.is_advertiser %}
+        <!-- ========== ناوبری پایین تبلیغ‌دهنده ========== -->
+        <div class="bottom-nav d-lg-none">
+            <div class="bottom-nav-container">
+                <a href="{% url 'accounts:dashboard_router' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="خانه">
+                    <i class="bi bi-house-door"></i>
+                    <span class="bottom-nav-label">خانه</span>
+                </a>
+                <a href="{% url 'advertisers:my_campaigns' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="تبلیغات">
+                    <i class="bi bi-megaphone"></i>
+                    <span class="bottom-nav-label">تبلیغات</span>
+                </a>
+                <a href="{% url 'campaigns:campaign_create_step1' %}" class="bottom-nav-item bottom-nav-center" data-bs-toggle="tooltip" data-bs-placement="top" title="ساخت تبلیغ">
+                    <div class="bottom-nav-center-icon">
+                        <i class="bi bi-plus-lg mt-2"></i>
+                    </div>
+                    <span class="bottom-nav-label">ساخت تبلیغ</span>
+                </a>
+                <a href="{% url 'tickets:ticket_list' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="پشتیبانی">
+                    <i class="bi bi-headset"></i>
+                    <span class="bottom-nav-label">پشتیبانی</span>
+                </a>
+                <a href="javascript:void(0);" class="bottom-nav-item" id="financialNavBtn" data-bs-toggle="tooltip" data-bs-placement="top" title="مالی">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="bottom-nav-label">مالی</span>
+                </a>
             </div>
+        </div>
 
-            <div class="bottom-sheet-body">
-                <!-- موجودی کاربر -->
-                <div class="balance-card mb-4">
-                    <span class="balance-label">موجودی</span>
-                    <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span>
+        <!-- شیت مالی تبلیغ‌دهنده -->
+        <div class="bottom-sheet" id="financialSheet">
+            <div class="bottom-sheet-overlay"></div>
+            <div class="bottom-sheet-content">
+                <div class="bottom-sheet-header">
+                    <div class="drag-handle"></div>
+                    <h5 class="mb-0 text-light">کیف پول من</h5>
+                    <button class="btn-close-bottom-sheet" id="closeFinancialSheet">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="bottom-sheet-body">
+                    <div class="balance-card mb-4">
+                        <span class="balance-label">موجودی</span>
+                        <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span></div>
+                    </div>
+                    <div class="financial-options">
+                        <a href="{% url 'accounts:wallet_deposit' %}" class="financial-option" data-option="increase">
+                            <div class="option-icon"><i class="bi bi-plus-circle"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">افزایش موجودی</span>
+                                <span class="option-desc">شارژ کیف پول و خرید اعتبار</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="financial-option" data-option="transactions">
+                            <div class="option-icon"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">تراکنش‌ها</span>
+                                <span class="option-desc">لیست تمام تراکنش‌های مالی</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="#" class="financial-option" data-option="invoices">
+                            <div class="option-icon"><i class="bi bi-file-text"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">فاکتورها</span>
+                                <span class="option-desc">صورتحساب‌های خرید و پرداخت</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- لیست گزینه‌ها -->
-                <div class="financial-options">
-                    <a href="{% url 'accounts:wallet_deposit' %}" class="financial-option" data-option="increase">
-                        <div class="option-icon">
-                            <i class="fi-plus-circle"></i>
-                        </div>
-                        <div class="option-info">
-                            <span class="option-title">افزایش موجودی</span>
-                            <span class="option-desc">شارژ کیف پول و خرید اعتبار</span>
-                        </div>
-                        <i class="fi-chevron-left option-arrow"></i>
-                    </a>
+    {% elif request.user.is_influencer %}
+        <!-- ========== ناوبری پایین مخصوص اینفلوئنسر ========== -->
+        <div class="bottom-nav d-lg-none" id="influencerBottomNav">
+            <div class="bottom-nav-container">
+                <a href="{% url 'influencers:dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="داشبورد">
+                    <i class="bi bi-house-door"></i>
+                    <span class="bottom-nav-label">خانه</span>
+                </a>
+                <a href="{% url 'influencers:order_list' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="سفارشات">
+                    <i class="bi bi-list-ul"></i>
+                    <span class="bottom-nav-label">سفارشات</span>
+                </a>
+                <a href="{% url 'influencers:influencer_channels' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="کانال‌ها">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                    <span class="bottom-nav-label">کانال‌ها</span>
+                </a>
+                <a href="javascript:void(0);" class="bottom-nav-item" id="financialNavBtnInfluencer" data-bs-toggle="tooltip" data-bs-placement="top" title="مالی">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="bottom-nav-label">مالی</span>
+                </a>
+                <a href="{% url 'tickets:ticket_list' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="پشتیبانی">
+                    <i class="bi bi-headset"></i>
+                    <span class="bottom-nav-label">پشتیبانی</span>
+                </a>
+            </div>
+        </div>
 
-                    <a href="{% url 'accounts:wallet_dashboard' %}" class="financial-option" data-option="transactions">
-                        <div class="option-icon">
-                            <i class="fi-switch-horizontal"></i>
-                        </div>
-                        <div class="option-info">
-                            <span class="option-title">تراکنش‌ها</span>
-                            <span class="option-desc">لیست تمام تراکنش‌های مالی</span>
-                        </div>
-                        <i class="fi-chevron-left option-arrow"></i>
-                    </a>
-
-                    <a href="#" class="financial-option" data-option="invoices">
-                        <div class="option-icon">
-                            <i class="fi-file"></i>
-                        </div>
-                        <div class="option-info">
-                            <span class="option-title">فاکتورها</span>
-                            <span class="option-desc">صورتحساب‌های خرید و پرداخت</span>
-                        </div>
-                        <i class="fi-chevron-left option-arrow"></i>
-                    </a>
+        <!-- شیت مالی مخصوص اینفلوئنسر -->
+        <div class="bottom-sheet" id="financialSheetInfluencer">
+            <div class="bottom-sheet-overlay"></div>
+            <div class="bottom-sheet-content">
+                <div class="bottom-sheet-header">
+                    <div class="drag-handle"></div>
+                    <h5 class="mb-0 text-light">کیف پول من</h5>
+                    <button class="btn-close-bottom-sheet" id="closeFinancialSheetInfluencer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="bottom-sheet-body">
+                    <div class="balance-card mb-4">
+                        <span class="balance-label">موجودی</span>
+                        <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span></div>
+                    </div>
+                    <div class="financial-options">
+                        <a href="{% url 'accounts:wallet_deposit' %}" class="financial-option" data-option="increase">
+                            <div class="option-icon"><i class="bi bi-plus-circle"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">افزایش موجودی</span>
+                                <span class="option-desc">شارژ کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="financial-option" data-option="transactions">
+                            <div class="option-icon"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">تراکنش‌ها</span>
+                                <span class="option-desc">لیست تمام تراکنش‌های مالی</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'core:pending' %}" class="financial-option" data-option="withdraw">
+                            <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">درخواست تسویه</span>
+                                <span class="option-desc">برداشت از کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'influencers:coupon_list' %}" class="financial-option" data-option="coupons">
+                            <div class="option-icon"><i class="bi bi-ticket-perforated"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">کدهای تخفیف</span>
+                                <span class="option-desc">مدیریت کدهای تخفیف ناشر</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+
+    {% elif request.user.is_team_member %}
+        <!-- ========== ناوبری پایین مخصوص تیم تولید محتوا ========== -->
+        <div class="bottom-nav d-lg-none" id="teamBottomNav">
+            <div class="bottom-nav-container">
+                <a href="{% url 'content_team:dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="داشبورد">
+                    <i class="bi bi-house-door"></i>
+                    <span class="bottom-nav-label">خانه</span>
+                </a>
+                <a href="{% url 'content_team:team_orders_list' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="سفارشات">
+                    <i class="bi bi-list-ul"></i>
+                    <span class="bottom-nav-label">سفارشات</span>
+                </a>
+                {% if request.user.team_member.role == 'manager' %}
+                    <a href="{% url 'content_team:plans_dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="مدیریت پلن‌ها">
+                        <i class="bi bi-layers"></i>
+                        <span class="bottom-nav-label">پلن‌ها</span>
+                    </a>
+                    <a href="{% url 'content_team:team_manage' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="مدیریت تیم">
+                        <i class="bi bi-people"></i>
+                        <span class="bottom-nav-label">مدیریت تیم</span>
+                    </a>
+                {% endif %}
+                <a href="javascript:void(0);" class="bottom-nav-item" id="financialNavBtnTeam" data-bs-toggle="tooltip" data-bs-placement="top" title="مالی">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="bottom-nav-label">مالی</span>
+                </a>
+                {% if not request.user.team_member.role == 'manager' %}
+                <a href="{% url 'tickets:ticket_list' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="پشتیبانی">
+                    <i class="bi bi-headset"></i>
+                    <span class="bottom-nav-label">پشتیبانی</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- شیت مالی تیم محتوا (کیف پول شخصی) -->
+        <div class="bottom-sheet" id="financialSheetTeam">
+            <div class="bottom-sheet-overlay"></div>
+            <div class="bottom-sheet-content">
+                <div class="bottom-sheet-header">
+                    <div class="drag-handle"></div>
+                    <h5 class="mb-0 text-light">کیف پول من</h5>
+                    <button class="btn-close-bottom-sheet" id="closeFinancialSheetTeam">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="bottom-sheet-body">
+                    <div class="balance-card mb-4">
+                        <span class="balance-label">موجودی</span>
+                        <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span></div>
+                    </div>
+                    <div class="financial-options">
+                        <a href="{% url 'accounts:wallet_deposit' %}" class="financial-option" data-option="increase">
+                            <div class="option-icon"><i class="bi bi-plus-circle"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">افزایش موجودی</span>
+                                <span class="option-desc">شارژ کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="financial-option" data-option="transactions">
+                            <div class="option-icon"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">تراکنش‌ها</span>
+                                <span class="option-desc">لیست تمام تراکنش‌های مالی</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'core:pending' %}" class="financial-option" data-option="withdraw">
+                            <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">درخواست تسویه</span>
+                                <span class="option-desc">برداشت از کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'content_team:team_coupons' %}" class="financial-option" data-option="coupons">
+                            <div class="option-icon"><i class="bi bi-ticket-perforated"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">کدهای تخفیف</span>
+                                <span class="option-desc">مدیریت کدهای تخفیف تیم</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- سایر نقش‌ها (ادمین و ...) -->
+        <div class="bottom-nav d-lg-none">
+            <div class="bottom-nav-container">
+                <a href="{% url 'core:home' %}" class="bottom-nav-item"><i class="bi bi-house-door"></i><span class="bottom-nav-label">خانه</span></a>
+                <a href="#" class="bottom-nav-item"><i class="bi bi-headset"></i><span class="bottom-nav-label">پشتیبانی</span></a>
+                <a href="#" class="bottom-nav-item"><i class="bi bi-wallet2"></i><span class="bottom-nav-label">مالی</span></a>
+            </div>
+        </div>
+    {% endif %}
 {% else %}
-    <!-- فوتر معمولی برای کاربران مهمان -->
+    <!-- ========== فوتر مهمان ========== -->
     <div class="border-bottom border-light py-4">
         <div class="container d-sm-flex align-items-center justify-content-between">
             <a class="d-inline-block" href="{% url 'core:home' %}">
@@ -108,13 +274,13 @@
                 <p class="fs-sm text-light opacity-70">پیشنهادات خوب ما را از دست ندهیذ!</p>
                 <form class="form-group form-group-light w-100">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text"> <i class="fi-mail"></i></span>
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                         <label>
                             <input class="form-control" type="text" placeholder="ایمیل شما">
                         </label>
                     </div>
                     <button class="btn btn-primary btn-icon btn-sm" type="button">
-                        <i class="fi-send"></i>
+                        <i class="bi bi-send"></i>
                     </button>
                 </form>
             </div>
@@ -147,20 +313,16 @@
             </div>
             <div class="col-xl-2 col-lg-3 col-sm-6 col-md-3 mb-2 mb-sm-4">
                 <a class="d-flex align-items-center text-decoration-none mb-2" href="tel:4065550120">
-                    <i class="fi-device-mobile me-2"></i><span class="text-light">(406) 555-0120</span>
+                    <i class="bi bi-phone me-2"></i><span class="text-light">(406) 555-0120</span>
                 </a>
                 <a class="d-flex align-items-center text-decoration-none mb-2" href="mailto:example@email.com">
-                    <i class="fi-mail me-2"></i><span class="text-light">example@email.com</span>
+                    <i class="bi bi-envelope me-2"></i><span class="text-light">example@email.com</span>
                 </a>
                 <div class="d-flex flex-wrap pt-4">
-                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i
-                            class="fi-facebook"></i></a>
-                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i
-                            class="fi-twitter"></i></a>
-                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i
-                            class="fi-telegram"></i></a>
-                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2" href="#"><i
-                            class="fi-messenger"></i></a>
+                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i class="bi bi-facebook"></i></a>
+                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i class="bi bi-twitter"></i></a>
+                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2 me-2" href="#"><i class="bi bi-telegram"></i></a>
+                    <a class="btn btn-icon btn-translucent-light btn-xs rounded-circle mb-2" href="#"><i class="bi bi-messenger"></i></a>
                 </div>
             </div>
         </div>
