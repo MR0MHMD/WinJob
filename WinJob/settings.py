@@ -208,7 +208,6 @@ if not BALE_BOT_TOKEN:
 
 SITE_URL = os.environ.get("SITE_URL", "https://winjob.chbkn.run")
 
-import os
 
 # ========== تنظیمات Celery ==========
 CELERY_ENABLED = os.environ.get('CELERY_ENABLED', 'False') == 'True'

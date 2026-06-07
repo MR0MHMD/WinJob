@@ -98,6 +98,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.phone_number
 
+    def get_full_name(self):
+        return self.nickname
+
     def display_sheba(self):
         if not self.sheba_code:
             return "-"
