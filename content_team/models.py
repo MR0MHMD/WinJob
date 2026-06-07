@@ -417,6 +417,20 @@ class ContentOrder(models.Model):
         null=True, blank=True
     )
 
+    deadline = jmodels.jDateTimeField(
+        verbose_name='ددلاین تحویل',
+        null=True,
+        blank=True,
+        help_text='تاریخ و زمان نهایی تحویل سفارش'
+    )
+
+    deadline_timestamp = models.BigIntegerField(
+        verbose_name='ددلاین تحویل (Unix Timestamp)',
+        null=True,
+        blank=True,
+        help_text='تایم‌استمپ ددلاین به میلی ‌ثانیه'
+    )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

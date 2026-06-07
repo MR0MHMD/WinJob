@@ -59,6 +59,161 @@
             </div>
         </div>
     
+        <!-- ==================== هشدارهای وضعیت تیم ==================== -->
+
+<!-- هشدار تکمیل اطلاعات تیم (فقط برای مدیر) -->
+{% if is_manager and not is_team_info_complete %}
+    <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+        <div class="d-flex align-items-start gap-3">
+            <div class="flex-shrink-0">
+                <i class="fi-alert-triangle fs-4 text-warning"></i>
+            </div>
+            <div class="flex-grow-1">
+                <strong class="d-block text-warning mb-1">⚠️ اطلاعات تیم ناقص است!</strong>
+                <span class="small opacity-75">
+                    برای دریافت سفارش، باید اطلاعات تیم خود را کامل کنید. 
+                    اطلاعات زیر هنور تکمیل نشده‌اند:
+                </span>
+                <ul class="small mt-2 mb-2 text-muted">
+                    {% if not team.name %} <li>نام تیم</li> {% endif %}
+                    {% if not team.slug %} <li>اسلاگ (شناسه)</li> {% endif %}
+                    {% if not team.logo %} <li>لوگو</li> {% endif %}
+                    {% if not team.description %} <li>توضیحات تیم</li> {% endif %}
+                </ul>
+                <div class="d-flex align-items-center gap-3 mt-2">
+                    <div class="flex-grow-1">
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width: {{ completion_percent }}%;"></div>
+                        </div>
+                    </div>
+                    <span class="small text-warning">{{ completion_percent }}%</span>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'content_team:team_manage' %}" class="btn btn-sm btn-outline-warning">
+                        <i class="fi-edit ms-1"></i> تکمیل اطلاعات تیم
+                    </a>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+        </div>
+    </div>
+{% endif %}
+
+<!-- هشدار نداشتن پلن فعال برای هیچ خدمتی (فقط برای مدیر) -->
+{% if is_manager and not has_any_active_plan %}
+    <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+        <div class="d-flex align-items-start gap-3">
+            <div class="flex-shrink-0">
+                <i class="fi-layers fs-4 text-warning"></i>
+            </div>
+            <div class="flex-grow-1">
+                <strong class="d-block text-warning mb-1">⚠️ هیچ پلن خدماتی تعریف نشده است!</strong>
+                <span class="small opacity-75">
+                    شما برای هیچ یک از خدمات، پلن قیمت‌گذاری تعریف نکرده‌اید. 
+                    تا زمانی که حداقل یک پلن فعال برای هر نوع خدمت تعریف نکنید، 
+                    نمی‌توانید سفارش دریافت کنید.
+                </span>
+                <div class="mt-3">
+                    <a href="{% url 'content_team:plans_dashboard' %}" class="btn btn-sm btn-outline-warning">
+                        <i class="fi-plus ms-1"></i> تعریف پلن خدماتی
+                    </a>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+        </div>
+    </div>
+{% endif %}
+
+<!-- هشدار سفارشات در انتظار تایید (فقط برای مدیر) -->
+{% if is_manager and pending_orders_count_for_alert > 0 %}
+    <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+        <div class="d-flex align-items-start gap-3">
+            <div class="flex-shrink-0">
+                <i class="fi-alert-circle fs-4 text-danger"></i>
+            </div>
+            <div class="flex-grow-1">
+                <strong class="d-block text-danger mb-1">⚠️ سفارشات در انتظار تایید!</strong>
+                <span class="small opacity-75">
+                    شما <strong class="text-danger">{{ pending_orders_count_for_alert }}</strong> سفارش در انتظار تایید دارید.
+                    لطفاً در اسرع وقت سفارشات را بررسی کرده و تصمیم بگیرید.
+                    اگر هر سفارش تا <strong class="text-warning">24 ساعت</strong> پس از تاریخ ثبت آن، تایید یا رد نشود،
+                    <strong class="text-danger">80 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
+                </span>
+                
+                {% if all_pending_orders %}
+                    <div class="mt-3">
+                        <div class="small text-muted mb-2">سفارشات نیازمند بررسی:</div>
+                        <ul class="list-unstyled mb-0">
+                            {% for order in all_pending_orders %}
+                                <li class="mb-2">
+                                    <a href="{% url 'content_team:team_order_detail' order.id %}" class="text-decoration-none">
+                                        <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
+                                            <i class="fi-file text-danger fs-6"></i>
+                                            <span class="small text-white">{{ order.campaign.name }}</span>
+                                            <span class="small text-muted mx-2">•</span>
+                                            <span class="small text-muted">تاریخ ثبت: {{ order.created_at|date:"Y/m/d H:i" }}</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <a href="{% url 'content_team:team_orders_list' %}?status=pending" class="btn btn-sm btn-outline-danger">
+                        <i class="fi-list ms-1"></i> مشاهده سفارشات در انتظار
+                    </a>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+        </div>
+    </div>
+{% endif %}
+    
+        <!-- هشدار سفارشات با ددلاین نزدیک (کمتر از 24 ساعت) -->
+{% if near_deadline_count > 0 %}
+<div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+    <div class="d-flex align-items-start gap-3">
+        <div class="flex-shrink-0">
+            <i class="fi-alert-circle fs-4 text-danger"></i>
+        </div>
+        <div class="flex-grow-1">
+            <strong class="d-block text-danger mb-1">⚠️ زمان تحویل سفارشات در حال اتمام است!</strong>
+            <span class="small opacity-75">
+                شما <strong class="text-danger">{{ near_deadline_count }}</strong> سفارش در حال انجام دارید که کمتر از <strong class="text-warning">24 ساعت</strong> تا ددلاین آن‌ها فرصت باقی است.
+                لطفاً در اسرع وقت نسبت به تحویل این سفارشات اقدام کنید، در غیر این صورت <strong class="text-danger">20 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
+            </span>
+            {% if orders_near_deadline %}
+                <div class="mt-3">
+                    <div class="small text-muted mb-2">سفارشات نیازمند تحویل فوری:</div>
+                    <ul class="list-unstyled mb-0">
+                        {% for order in orders_near_deadline %}
+                            <li class="mb-2">
+                                <a href="{% url 'content_team:team_order_detail' order.id %}" class="text-decoration-none">
+                                    <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
+                                        <i class="fi-clock text-danger fs-6"></i>
+                                        <span class="small text-white">{{ order.campaign.name }}</span>
+                                        <span class="small text-muted mx-2">•</span>
+                                        <span class="small text-muted">ددلاین: {{ order.deadline|date:"Y/m/d H:i" }}</span>
+                                    </div>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            <div class="mt-3 d-flex flex-wrap gap-2">
+                <a href="{% url 'content_team:team_orders_list' %}?status=in_progress" class="btn btn-sm btn-outline-danger">
+                    <i class="fi-upload ms-1"></i> مشاهده و تحویل سفارشات
+                </a>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+    </div>
+</div>
+{% endif %}
+    
        <div class="row g-4 mb-5">
     <div class="col-12">
         <div class="dashboard-card h-100">
@@ -398,46 +553,65 @@
                     </div>
                 </div>
 
-                <!-- سفارشات در حال انجام (بدون تغییر) -->
-                {% if active_orders %}
-                    <div class="dashboard-card mb-4">
-                        <div class="dashboard-card-header">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fi-play-circle text-success"></i>
-                                <h5 class="text-white mb-0">سفارشات در حال انجام</h5>
-                                <span class="badge bg-success px-2 py-1">{{ active_orders|length }}</span>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            {% for order in active_orders %}
-                                <div class="booking-item">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <div>
-                                            <div class="text-white fw-bold">
-                                                <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
-                                                    {{ order.campaign.name }}
-                                                </a>
-                                            </div>
-                                            <div class="small text-muted">
-                                                <i class="fi-user ms-1"></i>
-                                                {{ order.campaign.advertiser.business_name }}
-                                                <span class="mx-2">•</span>
-                                                <i class="fi-calendar ms-1"></i>
-                                                {{ order.campaign.start_date|date:"Y/m/d" }} - {{ order.campaign.end_date|date:"Y/m/d" }}
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <span class="status-badge status-in-progress">در حال انجام</span>
-                                            <a href="#" class="btn btn-sm btn-outline-primary">
-                                                آپلود محتوا <i class="fi-upload ms-1"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
+                <!-- سفارشات در حال انجام -->
+{% if active_orders %}
+<div class="dashboard-card mb-4">
+    <div class="dashboard-card-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fi-play-circle text-success"></i>
+            <h5 class="text-white mb-0">سفارشات در حال انجام</h5>
+            <span class="badge bg-success px-2 py-1">{{ active_orders|length }}</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% for order in active_orders %}
+        <div class="booking-item d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <!-- اطلاعات سمت راست (در حالت RTL) -->
+            <div class="order-info">
+                <div class="text-white fw-bold">
+                    <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
+                        {{ order.campaign.name }}
+                    </a>
+                </div>
+                <div class="small text-muted">
+                    <i class="fi-user ms-1"></i> {{ order.campaign.advertiser.business_name }}
+                    <span class="mx-2">•</span>
+                    <i class="fi-calendar ms-1"></i>
+                    {{ order.campaign.start_date|date:"Y/m/d" }} - {{ order.campaign.end_date|date:"Y/m/d" }}
+                </div>
+            </div>
+
+            <!-- تایمر سمت چپ -->
+            <div class="deadline-counter" id="counter-{{ order.id }}" data-deadline-timestamp="{{ order.deadline_timestamp|stringformat:'f' }}">
+                <div class="counter-box">
+                    <span class="counter-value seconds">0</span>
+                    <span class="counter-label">ثانیه</span>
+                </div>
+                
+                <div class="counter-box">
+                    <span class="counter-value minutes">0</span>
+                    <span class="counter-label">دقیقه</span>
+                </div>
+                
+                <div class="counter-box">
+                    <span class="counter-value hours">0</span>
+                    <span class="counter-label">ساعت</span>
+                </div>
+                
+                <div class="counter-box">
+                    <span class="counter-value days">0</span>
+                    <span class="counter-label">روز</span>
+                </div>
+                
+                
+                
+                <span class="remaining-badge">فرصت داری</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
                 <!-- سفارشات در انتظار تایید (فقط مدیر) (بدون تغییر) -->
                 {% if is_manager and pending_approval_orders %}
@@ -452,6 +626,7 @@
                         <div class="card-body p-0">
                             {% for order in pending_approval_orders %}
                                 <div class="booking-item">
+                                    <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <div>
                                             <div class="text-white fw-bold">{{ order.campaign.name }}</div>
@@ -464,6 +639,7 @@
                                             <span class="status-badge status-pending">در انتظار تایید</span>
                                         </div>
                                     </div>
+                                        </a>
                                 </div>
                             {% endfor %}
                         </div>
@@ -486,7 +662,7 @@
                             {% for order in recent_orders %}
                                 <div class="booking-item">
                                     <a class="text-decoration-none" href="{% url 'content_team:team_order_detail' order.id %}">
-                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
                                                 <div class="text-white fw-bold">{{ order.campaign.name }}</div>
                                                 <div class="small text-muted mt-1">
@@ -714,4 +890,66 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const counters = document.querySelectorAll('.deadline-counter');
+
+    function updateAllCounters() {
+        const now = Date.now();
+        counters.forEach(counter => {
+            const ts = counter.getAttribute('data-deadline-timestamp');
+            if (!ts) return;
+            const deadline = parseInt(ts, 10);
+            if (isNaN(deadline)) return;
+
+            const remaining = deadline - now;
+            const daysElem = counter.querySelector('.days');
+            const hoursElem = counter.querySelector('.hours');
+            const minsElem = counter.querySelector('.minutes');
+            const secsElem = counter.querySelector('.seconds');
+
+            if (remaining <= 0) {
+                daysElem.textContent = '0';
+                hoursElem.textContent = '0';
+                minsElem.textContent = '0';
+                secsElem.textContent = '0';
+                counter.classList.add('expired');
+                // حذف کلاس‌های رنگی
+                counter.classList.remove('status-green', 'status-yellow', 'status-red');
+                return;
+            }
+
+            counter.classList.remove('expired');
+            const days = Math.floor(remaining / (1000*60*60*24));
+            const hours = Math.floor((remaining % (86400000)) / (1000*60*60));
+            const mins = Math.floor((remaining % (3600000)) / (1000*60));
+            const secs = Math.floor((remaining % 60000) / 1000);
+
+            daysElem.textContent = days;
+            hoursElem.textContent = hours;
+            minsElem.textContent = mins;
+            secsElem.textContent = secs < 10 ? '0'+secs : secs;
+
+            // ========== تغییر رنگ بر اساس زمان باقی‌مانده ==========
+            const hoursRemaining = remaining / (1000 * 60 * 60);
+            // حذف کلاس‌های قبلی
+            counter.classList.remove('status-green', 'status-yellow', 'status-red');
+            
+            if (hoursRemaining > 72) {
+                counter.classList.add('status-green');
+            } else if (hoursRemaining > 24) {
+                counter.classList.add('status-yellow');
+            } else {
+                counter.classList.add('status-red');
+            }
+        });
+    }
+
+    updateAllCounters();
+    setInterval(updateAllCounters, 1000);
+});
+</script>
 {% endblock %}

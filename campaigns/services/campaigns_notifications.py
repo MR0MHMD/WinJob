@@ -132,13 +132,16 @@ def deliver_content_order_service(order, team_member, notes, file, new_version):
         order.status = 'completed'
         order.save(update_fields=['status'])
 
-        if hasattr(order, 'deadline') and order.deadline:
+        if order.deadline:
             if timezone.now() <= order.deadline:
-                update_score(order.team, 20, 'تحویل قبل از ددلاین', f'تحویل به موقع فایل سفارش #{order.id} قبل از ددلاین')
+                update_score(order.team, 30, 'تحویل به موقع',
+                             f'تحویل به موقع فایل سفارش کمپین{order.campaign.name} قبل از ددلاین')
             else:
-                update_score(order.team, -20, 'تحویل بعد از ددلاین', f'تحویل تاخیری فایل سفارش #{order.id} بعد از ددلاین')
+                update_score(order.team, -20, 'تحویل دیرکرد',
+                             f'تحویل تاخیری فایل سفارش کمپین{order.campaign.name} بعد از ددلاین')
         else:
-            update_score(order.team, 20, 'تحویل فایل سفارش', f'تحویل فایل سفارش کمپین {order.campaign.id}')
+            update_score(order.team, 20, 'تحویل فایل سفارش',
+                         f'تحویل فایل سفارش کمپین {order.campaign.name}')
 
         notify_advertiser_content_delivered(delivery)
         return delivery

@@ -17,16 +17,16 @@
                             {% if influencer.user.avatar %}
                                 <img src="{{ influencer.user.avatar.url }}" alt="آواتار" class="user-avatar">
                             {% else %}
-                                
+
                                 <div class="default-avatar">
                                     <i class="fi-star-filled"></i>
                                 </div>
                             {% endif %}
                         </div>
-                    
+
                         <div>
                             <h1 class="h2 text-white mb-1"> {% now "H" as current_hour %} {% if current_hour|add:"0" < 12 %} صبح بخیر  {% elif current_hour|add:"0" < 17 %} ظهر بخیر  {% elif current_hour|add:"0" < 19 %} عصر بخیر  {% else %} شب بخیر {% endif %} , {{ influencer.user.nickname|default:influencer.full_name }}! 👋 </h1>
-                        
+
                             <p class="text-muted mb-0">
                                 <i class="fi-calendar-alt ms-1"></i>
                                 امروز {{ persian_date }} -
@@ -35,7 +35,7 @@
                         </div>
                     </div>
                 </div>
-            
+
                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
                     <div class="d-flex gap-2 justify-content-md-end">
                         <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline-primary">
@@ -45,6 +45,133 @@
                 </div>
             </div>
         </div>
+    
+        <!-- ==================== هشدارهای وضعیت کانال‌ها ==================== -->
+        {% if channels_count == 0 %}
+            <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3 d-flex align-items-start gap-3" role="alert">
+                <div class="flex-shrink-0">
+                    <i class="fi-alert-triangle fs-4 text-warning"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <strong class="d-block text-warning mb-1">⚠️ هنوز کانالی ثبت نکرده‌اید!</strong>
+                    <span class="small opacity-75">برای دریافت سفارش تبلیغاتی، ابتدا باید حداقل یک کانال یا پیج را ثبت کنید. بدون کانال، امکان همکاری وجود ندارد.</span>
+                    <div class="mt-2">
+                        <a href="{% url 'influencers:influencer_channels' %}" class="btn btn-sm btn-outline-warning">
+                            <i class="fi-plus-circle ms-1"></i> ثبت کانال جدید
+                        </a>
+                    </div>
+                </div>
+            </div>
+        
+        {% elif channels_without_rates_count > 0 %}
+            <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3 d-flex align-items-start gap-3" role="alert">
+                <div class="flex-shrink-0">
+                    <i class="fi-alert-triangle fs-4 text-warning"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {% if channels_without_rates_count == 1 %}
+                        <strong class="d-block text-warning mb-1">⚠️ کانال «{{ first_channel_without_rate.channel_name }}» بدون نرخ!</strong>
+                        <span class="small opacity-75">
+                            کانال «{{ first_channel_without_rate.channel_name }}» با آیدی 
+                            <code class="text-warning bg-dark p-1 rounded">{{ first_channel_without_rate.channel_id }}</code> 
+                            در پلتفرم <strong>{{ first_channel_without_rate.platform.name }}</strong> 
+                            هنوز هیچ نرخی ندارد. تنها در صورتی می‌توانید سفارش بگیرید که حداقل یک نرخ برای این کانال ثبت کنید.
+                        </span>
+                        <div class="mt-2">
+                            <a href="{% url 'influencers:service_rates' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fi-edit ms-1"></i> ثبت نرخ برای این کانال
+                            </a>
+                        </div>
+                    {% else %}
+                        <strong class="d-block text-warning mb-1">⚠️ چندین کانال بدون نرخ تبلیغاتی!</strong>
+                        <span class="small opacity-75">
+                            چندتا از کانال‌های شما هنوز نرخی برای تبلیغات ندارند. تا وقتی که نرخ هر کانال را مشخص نکنید، نمی‌توانید از آن کانال‌ها سفارش بگیرید.
+                        </span>
+                        <div class="mt-2">
+                            <a href="{% url 'influencers:service_rates' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fi-edit ms-1"></i> مدیریت نرخ کانال‌ها
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+            </div>
+        {% endif %}
+            <!-- ==================== هشدار سفارشات در انتظار تایید ==================== -->
+        {% if pending_bookings > 0 %}
+            <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-alert-circle fs-4 text-danger"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="d-block text-danger mb-1">⚠️ سفارشات در انتظار تایید!</strong>
+                        <span class="small opacity-75">
+                            شما <strong class="text-danger">{{ pending_bookings }}</strong> سفارش در انتظار تایید دارید.
+                            لطفاً در اسرع وقت سفارشات را بررسی کرده و تصمیم بگیرید.
+                            اگر هر سفارش تا <strong class="text-warning">24 ساعت</strong> پس از تاریخ ثبت آن، تایید یا رد نشود،
+                            <strong class="text-danger">70 امتیاز</strong> از امتیاز شما کسر خواهد شد.
+                        </span>
+                        <div class="mt-2 d-flex flex-wrap gap-2">
+                            <a href="{% url 'influencers:order_list' %}?status=pending" class="btn btn-sm btn-outline-danger">
+                                <i class="fi-list ms-1"></i> مشاهده سفارشات در انتظار
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+                </div>
+            </div>
+        {% endif %}
+    
+        <!-- ==================== هشدار سفارشات بدون گزارش (زمان تحویل رسیده) ==================== -->
+        {% if has_missing_report %}
+            <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-alert-circle fs-4 text-danger"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="d-block text-danger mb-1">⚠️ گزارش سفارشات در انتظار است!</strong>
+                        <span class="small opacity-75">
+                            شما <strong class="text-danger">{{ orders_due_for_report_count }}</strong> سفارش در حال انجام دارید که هنوز گزارشی برای آن‌ها ثبت نکرده‌اید.
+                            لطفاً در اسرع وقت گزارش سفارش خود را ثبت کنید.
+                            در غیر این صورت <strong class="text-warning">80 امتیاز</strong> از امتیاز شما کسر خواهد شد.
+                            <strong class="text-danger mt-2 d-block">
+                                ⚠️ توجه: چنانچه این عمل سه بار از شما سر بزند، متاسفانه حساب کاربری شما غیر قابل استفاده خواهد شد.
+                            </strong>
+                        </span>
+                        
+                        <!-- نمایش لیست سفارشات بدون گزارش (حداکثر ۵ مورد) -->
+                        {% if orders_due_for_report %}
+                            <div class="mt-3">
+                                <div class="small text-muted mb-2">سفارشات نیازمند گزارش:</div>
+                                <ul class="list-unstyled mb-0">
+                                    {% for order in orders_due_for_report %}
+                                        <li class="mb-2">
+                                            <a href="{% url 'influencers:order_detail' order.id %}" class="text-decoration-none">
+                                                <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
+                                                    <i class="fi-file text-danger fs-6"></i>
+                                                    <span class="small text-white">{{ order.campaign.name }}</span>
+                                                    <span class="small text-muted mx-2">•</span>
+                                                    <span class="small text-muted">تاریخ شروع: {{ order.campaign.start_date|date:"Y/m/d" }}</span>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <a href="{% url 'influencers:order_list' %}?status=accepted&need_report=1" class="btn btn-sm btn-outline-danger">
+                                <i class="fi-upload ms-1"></i> ثبت گزارش سفارشات
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+                </div>
+            </div>
+        {% endif %}
 
         <div class="row g-4 mb-5">
             <div class="col-xl-3 col-md-6">
@@ -53,39 +180,39 @@
                         <div class="stat-icon">
                             <img width="40" src="{% static 'influencers/icons/request.svg' %}" alt="">
                         </div>
-                        
+
                         <span class="badge bg-primary px-3 py-1">درخواست‌ها</span>
                     </div>
-                    
+
                     <div class="stat-value">{{ total_bookings|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">کل درخواست‌های همکاری</div>
-                    
+
                     <div class="small text-muted mt-2">
                         <span class="text-warning">⏳ {{ pending_bookings|default:"۰" }} در انتظار</span>
-                        
+
                         <span class="mx-2">|</span>
-                        
+
                         <span class="text-success">✓ {{ completed_bookings|default:"۰" }} تکمیل شده</span>
-                        
+
                     </div>
                 </div>
             </div>
 
-        
+
             <div class="col-xl-3 col-md-6">
                 <div class="stat-card earnings-card">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div class="stat-icon"><i class="fi-cash"></i></div>
-                        
+
                         <span class="badge bg-success px-3 py-1">درآمد</span>
                     </div>
                     <div class="stat-value text-success">{{ total_earned|floatformat:0|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">کل درآمد (تومان)</div>
-                    
+
                     <div class="small text-muted mt-2">
-                        
+
                         <i class="fi-clock ms-1"></i>
                         {{ pending_earnings|floatformat:0|default:"۰" }} تومان در انتظار تسویه
                     </div>
@@ -98,21 +225,21 @@
                         <div class="stat-icon">
                             <img width="40" src="{% static 'advertisers/icons/click.svg' %}" alt="">
                         </div>
-                        
+
                         <span class="badge bg-accent px-3 py-1">کلیک</span>
                     </div>
-                
+
                     <div class="stat-value">{{ total_clicks|default:"۰" }}</div>
-                
+
                     <div class="stat-label">کل کلیک‌ها</div>
-                
+
                     <div class="small text-muted mt-2">
-                    
+
                         <i class="fi-user-check ms-1"></i>
                         {{ total_unique_clicks|default:"۰" }} کلیک یکتا
                         {% if avg_ctr > 0 %}
                             <span class="mx-2">|</span>
-                            
+
                             <span class="text-info">CTR: {{ avg_ctr }}%</span>
                         {% endif %}
                     </div>
@@ -123,14 +250,14 @@
                 <div class="stat-card">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div class="stat-icon"><i class="fi-wallet"></i></div>
-                        
+
                         <span class="badge bg-accent px-3 py-1">کیف پول</span>
                     </div>
-                    
+
                     <div class="stat-value">{{ wallet_balance|floatformat:0|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">موجودی کیف پول (تومان)</div>
-                    
+
                     <div class="mt-2">
                         <a href="#" class="small text-primary text-decoration-none">
                             درخواست برداشت <i class="fi-arrow-left ms-1"></i>
@@ -146,35 +273,35 @@
                     <div class="dashboard-card-header">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-zap text-primary"></i>
-                            
+
                             <h5 class="text-white mb-0">دسترسی سریع</h5>
                         </div>
                     </div>
-                    
+
                     <div class="card-body p-4">
                         <div class="row g-3">
                             <div class="col-md-4 col-6">
                                 <a href="{% url 'influencers:order_list' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-list"></i>
-                                    
+
                                     <span class="small text-white">درخواست‌های من</span>
                                 </a>
                             </div>
-                            
+
                             <div class="col-md-4 col-6">
                                 <a href="#" class="quick-action-btn d-block text-decoration-none">
                                     <div class="quick-action-icon">
                                         <img width="30" height="30" src="{% static 'influencers/icons/performance.svg' %}" alt="">
                                     </div>
-                                    
+
                                     <span class="small text-white">گزارش عملکرد</span>
                                 </a>
                             </div>
-                            
+
                             <div class="col-md-4 col-6">
                                 <a href="{% url 'accounts:wallet_dashboard' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-wallet"></i>
-                                    
+
                                     <span class="small text-white">کیف پول</span>
                                 </a>
                             </div>
@@ -193,14 +320,14 @@
                                 <div class="chart-header-icon">
                                     <i class="fi-cash"></i>
                                 </div>
-                                
+
                                 <h5 class="text-white mb-0">درآمد روزانه</h5>
                             </div>
-                            
+
                             <span class="badge bg-faded-success">۳۰ روز اخیر</span>
                         </div>
                     </div>
-                    
+
                     <div class="card-body p-4">
                         <div class="chart-container">
                             <canvas id="dailyEarningsChart" width="800" height="400" data-labels='{{ daily_earnings_labels_json|safe }}' data-values='{{ daily_earnings_data_json|safe }}'></canvas>
@@ -208,63 +335,64 @@
                     </div>
                 </div>
 
-                {% if active_orders %}
-                    <div class="dashboard-card mb-4">
-                        <div class="dashboard-card-header">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fi-play-circle text-success"></i>
-                                
-                                <h5 class="text-white mb-0">سفارشات در حال انجام</h5>
-                                
-                                <span class="badge bg-success px-2 py-1">{{ active_orders|length }}</span>
+                {% if pending_report_orders %}
+    <div class="dashboard-card mb-4">
+        <div class="dashboard-card-header">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-play-circle text-success"></i>
+                    <h5 class="text-white mb-0">سفارشات نیازمند گزارش</h5>
+                    <span class="badge bg-danger px-2 py-1">{{ pending_report_orders|length }}</span>
+                </div>
+                {% if orders_due_for_report_count > 5 %}
+                    <a href="{% url 'influencers:order_list' %}?status=accepted&need_report=1" class="small text-primary text-decoration-none">
+                        مشاهده همه ({{ orders_due_for_report_count }}) <i class="fi-arrow-left ms-1"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% for booking in pending_report_orders %}
+                <div class="booking-item">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="text-white fw-bold">
+                                <a class="text-decoration-none" href="{% url 'influencers:order_detail' booking.id %}">{{ booking.campaign.name }}</a>
+                            </div>
+                            <div class="small text-muted">
+                                <i class="fi-user ms-1"></i>
+                                {{ booking.campaign.advertiser.business_name }}
+                                <span class="mx-2">•</span>
+                                <i class="fi-calendar ms-1"></i>
+                                {{ booking.campaign.start_date|date:"Y/m/d" }} - {{ booking.campaign.end_date|date:"Y/m/d" }}
                             </div>
                         </div>
-                    
-                        <div class="card-body p-0">
-                            {% for booking in active_orders %}
-                                <div class="booking-item">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <div>
-                                            <div class="text-white fw-bold">
-                                                <a class="text-decoration-none" href="{% url 'influencers:order_detail' booking.id %}">{{ booking.campaign.name }}</a>
-                                            </div>
-                                            
-                                            <div class="small text-muted">
-                                                <i class="fi-user ms-1"></i>
-                                                {{ booking.campaign.advertiser.business_name }}
-                                                <span class="mx-2">•</span>
-                                                <i class="fi-calendar ms-1"></i>
-                                                {{ booking.campaign.start_date|date:"Y/m/d" }} - {{ booking.campaign.end_date|date:"Y/m/d" }}
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <span class="status-badge status-accepted">پذیرفته شده</span>
-                                            
-                                            <a href="{% url 'influencers:submit_report' booking.id %}" class="btn btn-sm btn-outline-primary">
-                                                آپلود محتوا <i class="fi-upload ms-1"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="status-badge status-accepted">نیاز به گزارش</span>
+                            <a href="{% url 'influencers:submit_report' booking.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fi-upload ms-1"></i> ثبت گزارش
+                            </a>
                         </div>
                     </div>
-                {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
 
                 <div class="dashboard-card">
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-history text-primary"></i>
-                            
+
                             <h5 class="text-white mb-0">آخرین درخواست‌های همکاری</h5>
                         </div>
-                        
+
                         <a href="{% url 'influencers:order_list' %}" class="small text-primary text-decoration-none">
                             مشاهده همه <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-0">
                         {% if recent_bookings %}
                             {% for booking in recent_bookings %}
@@ -273,7 +401,7 @@
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="text-white fw-bold">{{ booking.campaign.name }}</div>
-                                                
+
                                                 <div class="small text-muted mt-1">
                                                     <i class="fi-building ms-1"></i>
                                                     {{ booking.campaign.advertiser.business_name }}
@@ -282,7 +410,7 @@
                                                     {{ booking.price|floatformat:0 }} تومان
                                                 </div>
                                             </div>
-                                        
+
                                             <div>
                                                 <span class="status-badge status-{{ booking.status }}">
                                                     {% if booking.status == 'pending' %}در انتظار
@@ -313,12 +441,12 @@
                             <i class="fi-list text-primary"></i>
                             <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
                         </div>
-                        
+
                         <a href="#" class="small text-primary text-decoration-none">
                             مشاهده همه <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-0">
                         {% if recent_transactions %}
                             {% for transaction in recent_transactions %}
@@ -328,7 +456,7 @@
                                             <div class="transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
                                                 <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
                                             </div>
-                                        
+
                                             <div>
                                                 <div class="text-white fw-bold small">{{ transaction.get_type_display }}</div>
                                                 <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
@@ -337,7 +465,7 @@
                                                 {% endif %}
                                             </div>
                                         </div>
-                                    
+
                                         <div class="fw-bold {% if transaction.is_income %}text-success{% else %}text-danger{% endif %} fs-6">
                                             {{ transaction.sign_display }}
                                         </div>
@@ -364,7 +492,7 @@
                             <i class="fi-ticket text-primary"></i>
                             <h5 class="text-white mb-0">کدهای تخفیف من</h5>
                         </div>
-                        
+
                         <a href="{% url 'influencers:coupon_list' %}" class="small text-primary text-decoration-none">
                             مدیریت <i class="fi-arrow-left ms-1"></i>
                         </a>
@@ -381,9 +509,9 @@
                                                     <img class="rounded-circle" src="{{ coupon.channel.avatar.url }}" alt="{{ coupon.channel.channel_name }}">
                                                 {% else %}
                                                     <i class="fi-ticket text-primary fs-5"></i>
-                                                {% endif %} 
+                                                {% endif %}
                                             </div>
-                                            
+
                                             <div>
                                                 <div class="text-white fw-bold small">{{ coupon.code }}</div>
                                                 <div class="small text-muted">
@@ -397,7 +525,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div>
                                             <span class="badge {% if coupon.is_valid %}bg-success{% else %}bg-danger{% endif %} px-2 py-1">
                                                 {% if coupon.is_valid %}فعال{% else %}منقضی{% endif %}
@@ -428,12 +556,12 @@
                             <i class="fi-star-filled text-warning"></i>
                             <h5 class="text-white mb-0">کانال‌های من</h5>
                         </div>
-                        
+
                         <a href="{% url 'influencers:influencer_channels' %}" class="small text-primary text-decoration-none">
                             مدیریت <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-0">
                         {% if channels %}
                             {% for channel in channels %}
@@ -447,14 +575,14 @@
                                             </div>
                                         {% endif %}
                                     </div>
-                                
+
                                     <div class="flex-grow-1">
                                         <div class="text-white fw-bold">{{ channel.channel_name|truncatechars:25 }}</div>
-                                        
+
                                         <div class="small text-muted">
                                             {{ channel.platform.name }} | {{ channel.channel_id }}
                                         </div>
-                                        
+
                                         <div class="small text-muted mt-1">
                                             <i class="fi-users ms-1"></i>
                                             {{ channel.followers_formatted }} دنبال‌کننده
@@ -480,23 +608,23 @@
                             <i class="fi-ticket text-primary"></i>
                             <h5 class="text-white mb-0">تکمیل تعرفه‌ها</h5>
                         </div>
-                        
+
                         <a href="{% url 'influencers:service_rates' %}" class="small text-primary text-decoration-none">
                             مدیریت <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-3">
                         {% if channels_data %}
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <span class="text-muted small">تکمیل کلی تعرفه‌ها</span>
                                 <span class="text-primary small fw-semibold">{{ global_fill_percent }}%</span>
                             </div>
-                            
+
                             <div class="progress mb-3">
                                 <div class="progress-bar" style="width: {{ global_fill_percent }}%;"></div>
                             </div>
-                            
+
                             {% for item in channels_data %}
                                 <div class="mb-3">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
@@ -510,10 +638,10 @@
                                             {% endif %}
                                             <span class="small text-white">{{ item.channel.channel_name|truncatechars:20 }}</span>
                                         </div>
-                                    
+
                                         <span class="small text-muted">{{ item.filled_count }} از {{ item.total_ad_types }}</span>
                                     </div>
-                                
+
                                     <div class="progress progress-sm">
                                         <div class="progress-bar" style="width: {{ item.fill_percent }}%;"></div>
                                     </div>

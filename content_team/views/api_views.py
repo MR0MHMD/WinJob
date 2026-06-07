@@ -1,6 +1,9 @@
-from content_team.models import TeamJoinRequest, ContentTeam, ContentTeamMember
+from content_team.models import TeamJoinRequest, ContentTeam, ContentTeamMember, ContentOrder, TeamReview
+from campaigns.services.raiting_service import submit_team_review_service
+from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum
@@ -142,11 +145,6 @@ def team_join_request_handle(request, team_slug, request_id):
     return redirect('content_team:team_members_manage', team_slug=team.slug)
 
 
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from ..models import ContentTeam
-
-
 @require_GET
 def check_slug_availability(request):
     slug = request.GET.get('slug', '').strip()
@@ -167,14 +165,6 @@ def check_slug_availability(request):
         'message': 'این اسلاگ قابل استفاده است.' if is_available else 'این اسلاگ قبلاً توسط تیم دیگری استفاده شده است.'
     })
 
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from content_team.models import ContentOrder, TeamReview
-from campaigns.services.raiting_service import submit_team_review_service
-from gamification.services import update_score
 
 @login_required
 @require_POST

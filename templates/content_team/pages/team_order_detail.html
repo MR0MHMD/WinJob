@@ -560,6 +560,101 @@
             margin: 0;
         }
     }
+    
+    /* ========== تایمر معکوس ددلاین ========== */
+.deadline-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 2rem;
+    padding: 0.3rem 0.8rem 0.3rem 1rem;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+}
+.deadline-timer.status-green {
+    background: rgba(7, 201, 139, 0.2);
+    border-color: rgba(7, 201, 139, 0.4);
+}
+.deadline-timer.status-yellow {
+    background: rgba(253, 188, 49, 0.2);
+    border-color: rgba(253, 188, 49, 0.4);
+}
+.deadline-timer.status-red {
+    background: rgba(242, 60, 73, 0.2);
+    border-color: rgba(242, 60, 73, 0.4);
+}
+.deadline-timer.expired {
+    background: rgba(108, 117, 125, 0.15);
+    border-color: rgba(108, 117, 125, 0.3);
+    opacity: 0.6;
+}
+.deadline-timer .counter-box {
+    text-align: center;
+    min-width: 52px;
+}
+.deadline-timer .counter-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+    font-family: 'vazir-bold', monospace;
+    color: #fff;
+}
+.deadline-timer .counter-label {
+    display: block;
+    font-size: 0.6rem;
+    color: #9691a4;
+    margin-top: 0.1rem;
+}
+.deadline-timer .remaining-badge {
+    background: linear-gradient(135deg, #fd5631, #fd5631);
+    padding: 0.25rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #fff;
+    margin-left: 0.25rem;
+    white-space: nowrap;
+    box-shadow: 0 0 8px rgba(253, 86, 49, 0.3);
+}
+.deadline-timer.status-green .remaining-badge {
+    background: linear-gradient(135deg, #07c98b, #07c98b);
+}
+.deadline-timer.status-yellow .remaining-badge {
+    background: linear-gradient(135deg, #fdbc31, #fdbc31);
+}
+.deadline-timer.status-red .remaining-badge {
+    background: linear-gradient(135deg, #f23c49, #f23c49);
+}
+.deadline-timer.expired .remaining-badge {
+    display: none;
+}
+.deadline-timer.expired::after {
+    content: "⏰ منقضی";
+    font-size: 0.7rem;
+    color: #f23c49;
+    padding: 0.2rem 0.6rem;
+    background: rgba(242, 60, 73, 0.15);
+    border-radius: 2rem;
+    white-space: nowrap;
+}
+@media (max-width: 768px) {
+    .deadline-timer {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .deadline-timer .counter-box {
+        min-width: auto;
+        flex: 1;
+        text-align: center;
+    }
+    .deadline-timer .counter-value {
+        font-size: 0.9rem;
+    }
+}
 </style>
 {% endblock %}
 
@@ -913,9 +1008,45 @@
                     </div>
                 {% endif %}
             </div>
+        
+            {% if order.deadline %}
+<div class="glass-card p-4 mb-4 animate-left" style="animation-delay: 0.18s;">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="info-icon">
+            <i class="fi-clock"></i>
+        </div>
+        <h5 class="text-light mb-0">زمان باقی‌مانده تا زمان تحویل</h5>
+    </div>
+    <div class="deadline-timer" id="order-deadline-timer" data-deadline-timestamp="{{ order.deadline_timestamp|stringformat:'f' }}">
+        <div class="counter-box">
+            <span class="counter-value seconds">0</span>
+            <span class="counter-label">ثانیه</span>
+        </div>
+        
+        <div class="counter-box">
+            <span class="counter-value minutes">0</span>
+            <span class="counter-label">دقیقه</span>
+        </div>
+        
+        <div class="counter-box">
+            <span class="counter-value hours">0</span>
+            <span class="counter-label">ساعت</span>
+        </div>
+        
+        <div class="counter-box">
+            <span class="counter-value days">0</span>
+            <span class="counter-label">روز</span>
+        </div>
+        
+        <span class="remaining-badge">فرصت داری</span>
+    </div>
+    <div class="small text-muted mt-2">
+        <i class="fi-calendar"></i> ددلاین تحویل: {{ order.deadline|date:"Y/m/d H:i" }}
+    </div>
+</div>
+{% endif %}
             
             <!-- کارت اقدامات -->
-            <!-- کارت اقدامات - جایگزین دکمه‌ها -->
 <div class="glass-card p-4 animate-right" style="animation-delay: 0.25s;">
     <div class="d-flex align-items-center gap-2 mb-4">
         <div class="info-icon">
@@ -1576,4 +1707,49 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+    <script>
+    // تایمر معکوس برای صفحه جزئیات سفارش
+const deadlineTimer = document.getElementById('order-deadline-timer');
+if (deadlineTimer) {
+    function updateDeadlineTimer() {
+        const ts = deadlineTimer.getAttribute('data-deadline-timestamp');
+        if (!ts) return;
+        const deadline = parseInt(ts, 10);
+        if (isNaN(deadline)) return;
+        const now = Date.now();
+        const remaining = deadline - now;
+        const daysElem = deadlineTimer.querySelector('.days');
+        const hoursElem = deadlineTimer.querySelector('.hours');
+        const minsElem = deadlineTimer.querySelector('.minutes');
+        const secsElem = deadlineTimer.querySelector('.seconds');
+        
+        if (remaining <= 0) {
+            daysElem.textContent = '0';
+            hoursElem.textContent = '0';
+            minsElem.textContent = '0';
+            secsElem.textContent = '0';
+            deadlineTimer.classList.add('expired');
+            deadlineTimer.classList.remove('status-green', 'status-yellow', 'status-red');
+            return;
+        }
+        deadlineTimer.classList.remove('expired');
+        const days = Math.floor(remaining / (1000*60*60*24));
+        const hours = Math.floor((remaining % (86400000)) / (1000*60*60));
+        const mins = Math.floor((remaining % (3600000)) / (1000*60));
+        const secs = Math.floor((remaining % 60000) / 1000);
+        daysElem.textContent = days;
+        hoursElem.textContent = hours;
+        minsElem.textContent = mins;
+        secsElem.textContent = secs < 10 ? '0'+secs : secs;
+        
+        const hoursRemaining = remaining / (1000 * 60 * 60);
+        deadlineTimer.classList.remove('status-green', 'status-yellow', 'status-red');
+        if (hoursRemaining > 72) deadlineTimer.classList.add('status-green');
+        else if (hoursRemaining > 24) deadlineTimer.classList.add('status-yellow');
+        else deadlineTimer.classList.add('status-red');
+    }
+    updateDeadlineTimer();
+    setInterval(updateDeadlineTimer, 1000);
+}
+    </script>
 {% endblock %}

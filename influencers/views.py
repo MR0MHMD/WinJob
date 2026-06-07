@@ -1,11 +1,10 @@
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
-from django.db.models import Sum, Q, Value, IntegerField, FloatField
+from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Avg, Count, Prefetch
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
@@ -364,6 +363,8 @@ def influencer_dashboard(request):
 
     campaign_bookings = CampaignInfluencer.objects.filter(
         channel_id__in=channel_ids
+    ).exclude(
+        campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
     )
     booking_ids = campaign_bookings.values_list('id', flat=True)
 
@@ -493,6 +494,35 @@ def influencer_dashboard(request):
 
     global_fill_percent = round((total_filled_rates / total_possible_rates) * 100) if total_possible_rates > 0 else 0
 
+    channels_without_rates = []
+    for item in channels_data:
+        if item['filled_count'] == 0:
+            channels_without_rates.append(item['channel'])
+
+    channels_without_rates_count = len(channels_without_rates)
+    first_channel_without_rate = channels_without_rates[0] if channels_without_rates else None
+
+    # ========== سفارشات در حال انجام که زمان گزارششان رسیده ==========
+    today_gregorian = timezone.now().date()
+    today_jalali = jdatetime.date.fromgregorian(date=today_gregorian)
+
+    orders_missing_report = campaign_bookings.filter(
+        status='accepted',
+        report__isnull=True
+    ).select_related('campaign').order_by('campaign__start_date')
+
+    orders_due_for_report = []
+    for booking in orders_missing_report:
+        start_date = booking.campaign.start_date
+
+        start_date_gregorian = start_date.togregorian()
+        if start_date_gregorian <= today_gregorian:
+            orders_due_for_report.append(booking)
+
+    orders_due_for_report_count = len(orders_due_for_report)
+
+    pending_report_orders = orders_due_for_report[:5]
+
     context = {
         'total_bookings': total_bookings,
         'pending_bookings': pending_bookings,
@@ -518,6 +548,12 @@ def influencer_dashboard(request):
         'global_fill_percent': global_fill_percent,
         'total_filled_rates': total_filled_rates,
         'total_possible_rates': total_possible_rates,
+        'channels_without_rates_count': channels_without_rates_count,
+        'first_channel_without_rate': first_channel_without_rate,
+        'pending_report_orders': pending_report_orders,
+        'orders_due_for_report_count': orders_due_for_report_count,
+        'orders_due_for_report': orders_due_for_report[:5],
+        'has_missing_report': orders_due_for_report_count > 0,
     }
 
     return render(request, "influencers/pages/dashboard.html", context)

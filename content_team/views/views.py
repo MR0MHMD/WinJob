@@ -8,7 +8,7 @@ from accounts.models import Transaction, CustomUser
 from django.http import JsonResponse
 from datetime import datetime as dt
 from django.contrib import messages
-from campaigns.models import Coupon
+from campaigns.models import Coupon, Campaign
 from ..forms import TeamManageForm
 from content_team.models import *
 from django.utils import timezone
@@ -272,7 +272,9 @@ def content_team_dashboard(request):
     is_manager = (current_member.role == 'manager')
 
     # سفارش‌ها
-    orders = ContentOrder.objects.filter(team=team)
+    orders = ContentOrder.objects.filter(team=team, ).exclude(
+        campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+    )
 
     total_orders = orders.count()
     pending_orders = orders.filter(status='pending').count()
@@ -322,6 +324,24 @@ def content_team_dashboard(request):
         pending_approval_orders = orders.filter(
             status='pending'
         ).select_related('campaign', 'plan__service_type').order_by('created_at')[:5]
+
+    # ========== سفارشات در حال انجام با ددلاین نزدیک (کمتر از 24 ساعت) ==========
+    from django.utils import timezone
+
+    now = timezone.now()
+    orders_near_deadline = []
+
+    for order in active_orders:
+        if order.deadline:
+            # deadline از نوع jdatetime.datetime است، تبدیل به datetime معمولی برای مقایسه
+            deadline_dt = order.deadline.togregorian()
+            if timezone.is_naive(deadline_dt):
+                deadline_dt = timezone.make_aware(deadline_dt)
+            time_left = deadline_dt - now
+            if 0 < time_left.total_seconds() < 24 * 3600:
+                orders_near_deadline.append(order)
+
+    near_deadline_count = len(orders_near_deadline)
 
     recent_reviews = team.reviews.select_related(
         'advertiser', 'order'
@@ -398,6 +418,32 @@ def content_team_dashboard(request):
     for en, fa in months.items():
         persian_date = persian_date.replace(en, fa)
 
+    # ========== محاسبه درصد تکمیل اطلاعات تیم ==========
+    team_info_fields = {
+        'name': bool(team.name and team.name.strip()),
+        'slug': bool(team.slug and team.slug.strip()),
+        'logo': bool(team.logo),
+        'description': bool(team.description and team.description.strip()),
+    }
+    completed_fields = sum(team_info_fields.values())
+    total_fields = len(team_info_fields)
+    completion_percent = int((completed_fields / total_fields) * 100) if total_fields > 0 else 0
+    is_team_info_complete = (completion_percent == 100)
+
+    # ========== بررسی وجود پلن فعال برای هر نوع خدمتی ==========
+    has_any_active_plan = ContentServicePlan.objects.filter(
+        team=team,
+        is_active=True
+    ).exists()
+
+    # ========== سفارشات در انتظار تایید (برای هشدار) ==========
+    # همه سفارشات pending بدون محدودیت
+    all_pending_orders = orders.filter(
+        status='pending'
+    ).select_related('campaign').order_by('created_at')
+
+    pending_orders_count_for_alert = all_pending_orders.count()
+
     context = {
         'current_member': current_member,
         'team': team,
@@ -430,6 +476,13 @@ def content_team_dashboard(request):
         'total_services': total_services,
         'persian_date': persian_date,
         'gamification': team.gamification_status,
+        'completion_percent': completion_percent,
+        'is_team_info_complete': is_team_info_complete,
+        'has_any_active_plan': has_any_active_plan,
+        'pending_orders_count_for_alert': pending_orders_count_for_alert,
+        'all_pending_orders': all_pending_orders[:5],
+        'orders_near_deadline': orders_near_deadline,
+        'near_deadline_count': near_deadline_count,
     }
 
     return render(request, "content_team/pages/dashboard.html", context)
@@ -446,14 +499,18 @@ def team_performance_report(request):
     current_user_nickname = request.user.nickname or request.user.phone_number
 
     # ----- آمار پایه -----
-    total_orders = ContentOrder.objects.filter(team=team).count()
-    completed_orders = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.COMPLETED)
+
+    orders = ContentOrder.objects.filter(team=team).exclude(
+        campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+    )
+    total_orders = orders.count()
+    completed_orders = orders.filter(status=ContentOrder.Status.COMPLETED)
     completed_count = completed_orders.count()
     total_revenue = completed_orders.aggregate(total=Sum('price'))['total'] or 0
     avg_rating = team.avg_rating
-    in_progress_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.IN_PROGRESS).count()
-    pending_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.PENDING).count()
-    review_pending_count = ContentOrder.objects.filter(team=team, status=ContentOrder.Status.REVIEW_PENDING).count()
+    in_progress_count = orders.filter(status=ContentOrder.Status.IN_PROGRESS).count()
+    pending_count = orders.filter(status=ContentOrder.Status.PENDING).count()
+    review_pending_count = orders.filter(status=ContentOrder.Status.REVIEW_PENDING).count()
 
     # میانگین زمان تحویل
     deliveries = ContentDelivery.objects.filter(
@@ -565,7 +622,6 @@ def team_performance_report(request):
 
     from django.conf import settings
 
-
     members_income = (
         Transaction.objects.filter(
             type=Transaction.Type.TEAM_PAYMENT,
@@ -598,9 +654,10 @@ def team_performance_report(request):
     # ----- آمار ماه جاری -----
     now = timezone.now()
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    current_month_orders = ContentOrder.objects.filter(team=team, created_at__gte=current_month_start)
+    current_month_orders = orders.filter(created_at__gte=current_month_start)
     current_month_count = current_month_orders.count()
-    current_month_revenue = current_month_orders.aggregate(total=Sum('price'))['total'] or 0
+    current_month_revenue = \
+    current_month_orders.filter(status=ContentOrder.Status.COMPLETED).aggregate(total=Sum('price'))['total'] or 0
     current_month_completed = current_month_orders.filter(status=ContentOrder.Status.COMPLETED).count()
 
     # آماده‌سازی JSON برای نمودارها
@@ -615,6 +672,8 @@ def team_performance_report(request):
         'daily_orders': daily_orders_count,
         'daily_revenue': daily_revenue,
     }
+
+    print(current_month_count)
 
     context = {
         'team': team,
@@ -850,11 +909,13 @@ def team_orders_list(request):
     price_max = request.GET.get('price_max', '')
     show_current_only = request.GET.get('current') == '1'
 
-
     if show_current_only:
-        orders = ContentOrder.objects.exclude(status__in=['completed', 'cancelled'])
+        orders = ContentOrder.objects.exclude(campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING])
+        orders = orders.exclude(status__in=['completed', 'cancelled'])
     else:
-        orders = ContentOrder.objects.filter(team=user_team)
+        orders = ContentOrder.objects.filter(team=user_team).exclude(
+            campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+        )
 
     orders.select_related(
         'campaign',
@@ -977,10 +1038,6 @@ def team_order_detail(request, order_id):
 
 @login_required
 def accept_order(request, order_id):
-    """
-    قبول سفارش توسط تیم
-    وضعیت سفارش از pending به in_progress تغییر می‌کند
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -989,10 +1046,20 @@ def accept_order(request, order_id):
             user=request.user,
             is_active=True
         )
-        order = ContentOrder.objects.get(id=order_id, team=team_member.team)
+        order = ContentOrder.objects.select_related('plan').get(id=order_id, team=team_member.team)
 
         if order.status != 'pending':
             return JsonResponse({'error': 'این سفارش قابل قبول نیست'}, status=400)
+
+        from django.utils import timezone
+        from datetime import timedelta
+
+        estimated_days = order.plan.estimated_delivery_days
+        deadline = timezone.now() + timedelta(days=estimated_days)   # deadline آگاه (aware)
+
+        order.deadline = deadline
+        order.deadline_timestamp = int(deadline.timestamp() * 1000)   # مستقیم از deadline
+        order.save(update_fields=['deadline', 'deadline_timestamp'])
 
         from campaigns.services.campaigns_notifications import accept_content_order_service
         accept_content_order_service(order)
@@ -1000,7 +1067,8 @@ def accept_order(request, order_id):
         return JsonResponse({
             'success': True,
             'status': 'in_progress',
-            'message': 'سفارش با موفقیت قبول شد'
+            'message': f'سفارش با موفقیت قبول شد.',
+            'deadline': deadline.isoformat()
         })
 
     except ContentTeamMember.DoesNotExist:
