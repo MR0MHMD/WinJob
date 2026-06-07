@@ -2,11 +2,13 @@ from django.db import transaction
 from django.db import models
 from django.utils import timezone
 from collections import defaultdict
+from django.conf import settings
 from accounts.models import Wallet, Transaction
 from content_team.models import ContentOrderRevision, ContentDelivery
 from accounts.services.payment_service import pay_influencer
 from influencers.models import CampaignReport
 from campaigns.models import CampaignInfluencer, CampaignContent, Campaign
+from campaigns.tasks import penalize_unaccepted_content_orders
 from gamification.services import update_score
 from notifications.utils import (
     notify_advertiser_content_order_accepted,
@@ -58,7 +60,15 @@ def submit_campaign_for_review(campaign):
 def approve_campaign_by_admin(campaign):
     if campaign.status == 'pending':
         campaign.status = 'approved'
-        campaign.save(update_fields=['status'])
+        campaign.approved_at = timezone.now()
+        campaign.save()
+        campaign.save(update_fields=['status', "approved_at"])
+
+        if settings.CELERY_ENABLED:
+            penalize_unaccepted_content_orders.apply_async(
+                args=[campaign.id],
+                countdown=60 * 60 * 24
+            )
 
         notify_advertiser_campaign_approved(campaign)
 

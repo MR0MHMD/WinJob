@@ -207,3 +207,19 @@ if not BALE_BOT_TOKEN:
     raise ValueError("متغیر BALE_BOT_TOKEN در فایل .env تنظیم نشده است!")
 
 SITE_URL = os.environ.get("SITE_URL", "https://winjob.chbkn.run")
+
+import os
+
+# ========== تنظیمات Celery ==========
+CELERY_ENABLED = os.environ.get('CELERY_ENABLED', 'False') == 'True'
+
+if CELERY_ENABLED:
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = TIME_ZONE
+else:
+    CELERY_BROKER_URL = None
+    CELERY_RESULT_BACKEND = None

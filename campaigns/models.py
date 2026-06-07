@@ -207,6 +207,13 @@ class Campaign(models.Model):
         verbose_name="آخرین بروزرسانی"
     )
 
+    approved_at = jmodels.jDateTimeField(
+        _('زمان تایید'),
+        null=True,
+        blank=True,
+        help_text=_('زمانی که کمپین از وضعیت pending به approved تغییر کرد')
+    )
+
     class Meta:
         verbose_name = "کمپین"
         verbose_name_plural = "کمپین‌ها"
