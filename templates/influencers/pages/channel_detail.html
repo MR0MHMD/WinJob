@@ -110,13 +110,14 @@
                 <!-- دکمه اقدام با انیمیشن -->
                 <div class="col-md-auto">
                     {% if from_campaign and selectable_rate_id %}
+                        {# حالت انتخاب ناشر از کمپین (بدون تغییر) #}
                         <div class="d-flex flex-column gap-2">
                             <a href="{% url 'campaigns:campaign_create_step2' %}?select_rate={{ selectable_rate_id }}"
                                class="cta-button pulse-animation text-center"
                                style="text-decoration: none;">
-                            <span class="cta-button-text text-center mx-auto">
-                                <i class="fi-plus-circle me-2"></i> انتخاب این ناشر
-                            </span>
+                                <span class="cta-button-text text-center mx-auto">
+                                    <i class="fi-plus-circle me-2"></i> انتخاب این ناشر
+                                </span>
                             </a>
                             <a href="{% url 'campaigns:campaign_create_step2' %}"
                                class="btn btn-accent rounded-pill">
@@ -124,15 +125,44 @@
                             </a>
                         </div>
                     {% else %}
-                        {# حالت عادی: دکمه شروع همکاری #}
-                        <button class="cta-button pulse-animation" id="orderBtn">
-                        <span class="cta-button-text">
-                            <i class="fi-send me-2"></i> شروع همکاری
-                        </span>
-                            <span class="cta-button-icon ">
-                            <i class="fi-arrow-left"></i>
-                        </span>
-                        </button>
+                        {# حالت عادی #}
+                        {% if request.user == channel.influencer.user %}
+                            {# کاربر صاحب کانال است #}
+                            {% if use_n8n %}
+                                {% if channel.status == 'approved' %}
+                                    <div class="text-center text-md-start">
+                                        <span class="badge bg-success rounded-pill px-3 py-2">
+                                            <i class="fi-check-circle me-1"></i> کانال تأیید شده
+                                        </span>
+                                    </div>
+                                {% elif channel.status == 'rejected' and VerificationService.is_cooldown_active %}
+                                    <div class="text-center text-md-start">
+                                        <span class="badge bg-danger rounded-pill px-3 py-2">
+                                            <i class="fi-alert-circle me-1"></i> کانال رد شده - 
+                                            {{ VerificationService.get_cooldown_remaining }} ساعت تا تلاش مجدد
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <button class="cta-button pulse-animation" id="verifyChannelBtn">
+                                        <span class="cta-button-text"><i class="fi-check-circle me-2"></i> تأیید کانال</span>
+                                        <span class="cta-button-icon"><i class="fi-arrow-left"></i></span>
+                                    </button>
+                                {% endif %}
+                            {% else %}
+                                {# سیستم خودکار غیرفعال است – پیام دستی #}
+                                <div class="text-center text-md-start">
+                                    <span class="badge bg-info rounded-pill px-3 py-2">
+                                        <i class="fi-info-circle me-1"></i> کانال شما ثبت شد، به زودی تأیید خواهد شد
+                                    </span>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            {# کاربر معمولی – دکمه شروع همکاری #}
+                            <button class="cta-button pulse-animation" id="orderBtn">
+                                <span class="cta-button-text"><i class="fi-send me-2"></i> شروع همکاری</span>
+                                <span class="cta-button-icon"><i class="fi-arrow-left"></i></span>
+                            </button>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -332,6 +362,7 @@
                                                     data-rating="{{ review.rating }}"
                                                     data-comment="{{ review.comment|escapejs }}"
                                                     data-campaign-name="
+                                                            
                                                             
                                                             
                                                             {% if review.campaign_booking %}{{ review.campaign_booking.campaign.name }}{% else %}نظر عمومی{% endif %}">
@@ -699,6 +730,28 @@
             </div>
         </div>
     </div>
+
+    <!-- مودال تأیید کانال پیشرفته -->
+<div class="modal fade" id="verifyChannelModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-light fs-4">
+                    <i class="fi-check-circle text-primary me-2"></i> تأیید کانال
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4" id="verifyModalBody">
+                <div class="py-5">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">در حال بارگیری...</span>
+                    </div>
+                    <p class="text-muted mt-3">در حال آماده‌سازی...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -717,4 +770,168 @@
     </script>
     <script src="{% static 'influencers/js/pages/channel_detail/channel_detail.js' %}"></script>
     <script src="{% static 'influencers/js/pages/channel_detail/channel_detail_reviews.js' %}"></script>
+    <script>
+        // توابع کمکی
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    
+        let verificationInterval = null;
+    
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text);
+            const btn = document.getElementById('copyCodeBtn');
+            if (btn) {
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="fi-check"></i> کپی شد!';
+                setTimeout(() => btn.innerHTML = original, 1500);
+            }
+        }
+    
+        function openVerificationModal(channelId, channelName) {
+            const modalEl = document.getElementById('verifyChannelModal');
+            const modalBody = document.getElementById('verifyModalBody');
+            const modal = new bootstrap.Modal(modalEl);
+            
+            // نمایش لودینگ
+            modalBody.innerHTML = `
+                <div class="py-5">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">در حال بارگیری...</span>
+                    </div>
+                    <p class="text-muted mt-3">در حال آماده‌سازی...</p>
+                </div>`;
+            modal.show();
+    
+            fetch(`/influencers/channel/${channelId}/verify-modal/`, {
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'already_verified') {
+                    modalBody.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fi-check-circle text-success fs-1 mb-3 d-block"></i>
+                            <div class="alert alert-success">${data.message}</div>
+                            <button class="btn btn-outline-light rounded-pill" data-bs-dismiss="modal">بستن</button>
+                        </div>`;
+                    return;
+                }
+                if (data.status === 'error') {
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">${data.message || 'خطا در دریافت اطلاعات'}</div>
+                        <button class="btn btn-secondary rounded-pill mt-3" data-bs-dismiss="modal">بستن</button>`;
+                    return;
+                }
+                if (data.status !== 'ok') {
+                    modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'خطا در دریافت اطلاعات'}</div>`;
+                    return;
+                }
+    
+                // نمایش کد + دکمه کپی
+                modalBody.innerHTML = `
+                    <p class="text-muted mb-3">لطفاً کد زیر را در بیوگرافی کانال <strong class="text-primary">${escapeHtml(channelName)}</strong> قرار دهید.</p>
+                    <div class="bg-dark-2 p-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" style="background: rgba(255,255,255,0.05);">
+                        <code class="fs-1 text-primary fw-bold" style="letter-spacing: 5px;" id="verificationCode">${data.code}</code>
+                        <button class="btn btn-outline-light rounded-pill" id="copyCodeBtn" onclick="copyToClipboard('verificationCode')">
+                            <i class="fi-copy"></i> کپی
+                        </button>
+                    </div>
+                    <p class="text-muted small">سپس روی دکمه «بررسی کانال» کلیک کنید.</p>
+                    <button id="startVerifyBtn" class="btn btn-primary rounded-pill px-5 py-2 mt-2">بررسی کانال</button>
+                    <div id="verifyResult" class="mt-3"></div>
+                `;
+    
+                // رویداد کلیک دکمه شروع
+                document.getElementById('startVerifyBtn').onclick = () => {
+                    const btn = document.getElementById('startVerifyBtn');
+                    const resultDiv = document.getElementById('verifyResult');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> در حال بررسی...';
+                    resultDiv.innerHTML = '<div class="alert alert-info">درخواست ارسال شد، منتظر پاسخ...</div>';
+    
+                    fetch(`/influencers/channel/${channelId}/start-verify/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                    })
+                    .then(res => res.json())
+                    .then(resData => {
+                        if (resData.status === 'pending') {
+                            resultDiv.innerHTML = `<div class="alert alert-info">${resData.message}</div>`;
+                            // شروع پولینگ وضعیت
+                            if (verificationInterval) clearInterval(verificationInterval);
+                            verificationInterval = setInterval(() => {
+                                fetch(`/influencers/channel/${channelId}/verification-status/`)
+                                .then(r => r.json())
+                                .then(statusData => {
+                                    if (statusData.status === 'approved') {
+                                        clearInterval(verificationInterval);
+                                        resultDiv.innerHTML = `<div class="alert alert-success">✅ کانال شما با موفقیت تأیید شد! صفحه در حال بازآوری...</div>`;
+                                        setTimeout(() => location.reload(), 2000);
+                                    } else if (statusData.status === 'rejected') {
+                                        clearInterval(verificationInterval);
+                                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${statusData.message}</div>`;
+                                        btn.disabled = false;
+                                        btn.innerHTML = 'بررسی کانال';
+                                        setTimeout(() => location.reload(), 4000);
+                                    } else if (statusData.status === 'failed') {
+                                        clearInterval(verificationInterval);
+                                        resultDiv.innerHTML = `<div class="alert alert-warning">⚠️ ${statusData.message}</div>`;
+                                        btn.disabled = false;
+                                        btn.innerHTML = 'بررسی کانال';
+                                    }
+                                }).catch(() => {});
+                            }, 2500);
+                        } else if (resData.status === 'error') {
+                            resultDiv.innerHTML = `<div class="alert alert-danger">${resData.message}</div>`;
+                            btn.disabled = false;
+                            btn.innerHTML = 'بررسی کانال';
+                        }
+                    })
+                    .catch(err => {
+                        resultDiv.innerHTML = '<div class="alert alert-danger">خطا در ارتباط با سرور</div>';
+                        btn.disabled = false;
+                        btn.innerHTML = 'بررسی کانال';
+                    });
+                };
+            })
+            .catch(err => {
+                modalBody.innerHTML = '<div class="alert alert-danger">خطا در ارتباط با سرور</div>';
+            });
+        }
+    
+        // تابع کمکی برای جلوگیری از XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                return c;
+            });
+        }
+    
+        // اتصال دکمه تأیید کانال
+        const verifyBtn = document.getElementById('verifyChannelBtn');
+        if (verifyBtn) {
+            verifyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openVerificationModal({{ channel.id }}, '{{ channel.channel_name|escapejs }}');
+            });
+        }
+    </script>
 {% endblock %}

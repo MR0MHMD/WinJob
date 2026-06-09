@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
@@ -17,6 +19,8 @@ from django.utils import timezone
 from core.models import Category
 import jdatetime
 import json
+
+from .services.verification_service import VerificationService
 
 
 @login_required
@@ -106,7 +110,8 @@ def service_rates_view(request):
             rate = rates_map.get((channel.id, ad_type.id))
             rows.append({
                 'ad_type': ad_type,
-                'rate': rate,  # None اگه ثبت نشده
+                'rate': rate,
+                'channel_status': channel.status,
             })
         channels_data.append({
             'channel': channel,
@@ -456,6 +461,9 @@ def influencer_dashboard(request):
     total_possible_rates = 0
 
     for channel in channels:
+        if channel.status != 'approved':
+            continue
+
         ad_types_for_channel = AdType.objects.filter(
             is_active=True,
             platform=channel.platform
@@ -496,15 +504,15 @@ def influencer_dashboard(request):
 
     channels_without_rates = []
     for item in channels_data:
-        if item['filled_count'] == 0:
-            channels_without_rates.append(item['channel'])
+        channel = item['channel']
+        if channel.status == 'approved' and item['filled_count'] == 0:
+            channels_without_rates.append(channel)
 
     channels_without_rates_count = len(channels_without_rates)
     first_channel_without_rate = channels_without_rates[0] if channels_without_rates else None
 
     # ========== سفارشات در حال انجام که زمان گزارششان رسیده ==========
     today_gregorian = timezone.now().date()
-    today_jalali = jdatetime.date.fromgregorian(date=today_gregorian)
 
     orders_missing_report = campaign_bookings.filter(
         status='accepted',
@@ -744,6 +752,12 @@ def channel_detail(request, channel_id):
         influencer__is_active=True
     )
 
+    cooldown_active = False
+    cooldown_hours = 0
+    if channel.status == 'rejected' and channel.rejected_at:
+        cooldown_active = VerificationService.is_cooldown_active(channel)
+        cooldown_hours = VerificationService.get_cooldown_remaining(channel)
+
     select_rate_param = request.GET.get('select_rate')
     from_campaign = select_rate_param is not None
     selectable_rate_id = int(select_rate_param) if select_rate_param and select_rate_param.isdigit() else None
@@ -799,7 +813,10 @@ def channel_detail(request, channel_id):
         'from_campaign': from_campaign,
         'selectable_rate_id': selectable_rate_id,
         'can_submit_review': can_submit_review,
-        'pending_bookings': pending_bookings,  # لیست به جای یک آیتم
+        'pending_bookings': pending_bookings,
+        'use_n8n': settings.USE_N8N_VERIFICATION,
+        'cooldown_active': cooldown_active,
+        'cooldown_hours': cooldown_hours,
     }
 
     return render(request, 'influencers/pages/channel_detail.html', context)

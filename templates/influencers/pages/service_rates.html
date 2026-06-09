@@ -3,14 +3,22 @@
 {% block content %}
     <div class="container py-5">
         <div class="row">
-            {% include "accounts/partials/account_nav.html" with rates=True %}
             <!-- ستون اصلی -->
-            <div class="col-lg-8 col-md-7 mb-5">
+            <div class="col-lg-12 col-md-12 mb-5">
                 <div class="py-4">
                     <!-- Page Header + راهنما - یه ردیف -->
                     <div class="row align-items-center mb-4">
                         <!-- هدر - سمت چپ -->
-                        <div class="col-lg-7 col-md-6">
+                        <div class="col-lg-7 col-md-6 my-4">
+                            <ol class="breadcrumb breadcrumb-light mb-4">
+                                <li class="breadcrumb-item">
+                                    <a href="{% url 'core:home' %}">خانه</a>
+                                </li>
+                                <li class="breadcrumb-item">
+                                    <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+                                </li>
+                                <li class="breadcrumb-item active text-primary" aria-current="page">مدیریت تعرفه ها</li>
+                            </ol>
                             <h4 class="text-light mb-1 fw-semibold">تعرفه‌های خدمات</h4>
                             <p class="text-muted small mb-0">قیمت هر نوع تبلیغ را برای کانال‌های خود تعیین کنید</p>
                         </div>
@@ -85,120 +93,117 @@
                     <!-- کارت‌های کانال‌ها -->
                     <div class="row g-4">
                         {% for item in channels_data %}
-                            {% with channel=item.channel rows=item.rows total=item.rows|length %}
-                                <div class="col-xl-6 col-12">
-                                    <div class="card border-0 h-100" style="background-color: #1f1b2d;">
-                                        <div class="card-header px-4 pt-3 pb-0"
-                                             style="background-color: rgba(255,255,255,0.04);
-                                                    border-bottom: none;
-                                                    border-radius: 0.75rem 0.75rem 0 0">
-                                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                                <div class="d-flex align-items-center gap-3">
-                                                    {% if channel.avatar %}
-                                                        <img src="{{ channel.avatar.url }}"
-                                                             alt="{{ channel.channel_name }}"
-                                                             class="rounded-circle flex-shrink-0"
-                                                             style="width:42px;
-                                                                    height:42px;
-                                                                    object-fit:cover;
-                                                                    border: 2px solid rgba(99,102,241,0.3)">
-                                                    {% else %}
-                                                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                                             style="width:42px;
-                                                                    height:42px;
-                                                                    background-color: rgba(99,102,241,0.15)">
-                                                            <i class="fi-globe text-primary fs-5"></i>
-                                                        </div>
-                                                    {% endif %}
-                                                    <div>
-                                                        <h6 class="text-light mb-0 fw-semibold">{{ channel.channel_name }}</h6>
-                                                        <span class="text-muted small">{{ channel.platform.name }} &nbsp;·&nbsp; {{ channel.channel_id }}</span>
-                                                    </div>
-                                                </div>
-                                                <span class="badge rounded-pill"
-                                                      style="background-color: rgba(99,102,241,0.15);
-                                                             color: #a78bfa;
-                                                             font-size: 0.72rem"
-                                                      id="badge-{{ channel.id }}">
-                                                    <span id="filled-count-{{ channel.id }}">{{ item.filled_count }}</span> از {{ total }} مشخص شده
-                                                </span>
-                                            </div>
-                                            <div class="progress mb-0"
-                                                 style="height: 3px;
-                                                        background-color: rgba(255,255,255,0.08);
-                                                        border-radius: 0">
-                                                <div class="progress-bar"
-                                                     id="progress-{{ channel.id }}"
-                                                     role="progressbar"
-                                                     style="width: {{ item.fill_percent }}%;
-                                                             background-color: #a78bfa;
-                                                             transition: width 0.4s ease"
-                                                     aria-valuenow="{{ item.fill_percent }}"
-                                                     aria-valuemin="0"
-                                                     aria-valuemax="100"></div>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            {% for row in rows %}
-                                                {% with ad_type=row.ad_type rate=row.rate %}
-                                                    <div class="border-bottom px-4 py-0"
-                                                         style="border-color: rgba(255,255,255,0.06) !important"
-                                                         id="row-{{ channel.id }}-{{ ad_type.id }}">
-                                                        <div class="d-flex align-items-center justify-content-between py-3">
-                                                            <div class="pe-2">
-                                                                <div class="text-light small fw-medium mb-1">{{ ad_type.name }}</div>
-                                                                <div class="fw-semibold"
-                                                                     id="price-display-{{ channel.id }}-{{ ad_type.id }}"
-                                                                     style="{% if rate %}color: #a78bfa;
-                                                                     {% else %}color: #6b7280;
-                                                                     {% endif %} font-size: 0.88rem">
-                                                                    {% if rate %}
-                                                                        {{ rate.formatted_price }}
-                                                                    {% else %}
-                                                                        هنوز مشخص نشده
-                                                                    {% endif %}
-                                                                </div>
-                                                            </div>
-                                                            <a class="nav-link nav-link-light py-0 px-2"
-                                                               href="#edit-{{ channel.id }}-{{ ad_type.id }}"
-                                                               data-bs-toggle="collapse"
-                                                               aria-expanded="false">
-                                                                <i class="fi-edit opacity-70"></i>
-                                                            </a>
-                                                        </div>
-                                                        <div class="collapse pb-3"
-                                                             id="edit-{{ channel.id }}-{{ ad_type.id }}">
-                                                            <div class="d-flex align-items-center gap-2"
-                                                                 style="background-color: rgba(255,255,255,0.03);
-                                                                        border-radius: 0.5rem;
-                                                                        padding: 0.75rem 1rem">
-                                                                <input type="text"
-                                                                       inputmode="numeric"
-                                                                       class="form-control form-control-sm bg-dark text-light border-secondary"
-                                                                       placeholder="قیمت به تومان"
-                                                                       value="{% if rate %}{{ rate.price }}{% endif %}"
-                                                                       id="price-input-{{ channel.id }}-{{ ad_type.id }}"
-                                                                       oninput="formatNumberInput(this)"
-                                                                       style="max-width: 220px">
-                                                                <button type="button"
-                                                                        class="btn btn-sm btn-primary px-3"
-                                                                        onclick="saveRate({{ channel.id }}, {{ ad_type.id }}, {{ total }}, this)">
-                                                                    ذخیره
-                                                                </button>
-                                                                <span id="save-feedback-{{ channel.id }}-{{ ad_type.id }}"
-                                                                      class="text-success small d-none">
-                                                                    <i class="fi-check me-1"></i>ذخیره شد
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% endwith %}
-                                            {% endfor %}
+    {% with channel=item.channel rows=item.rows total=item.rows|length %}
+        <div class="col-xl-4 col-12">
+            <div class="card border-0 h-100 {% if channel.status != 'approved' %}opacity-50 bg-secondary bg-opacity-10{% endif %}"
+                 style="background-color: #1f1b2d;"
+                 {% if channel.status != 'approved' %}
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="top"
+                 title="این کانال هنوز تأیید نشده است. پس از تأیید می‌توانید برای آن تعرفه تعیین کنید."
+                 {% endif %}>
+
+                <!-- هدر کارت -->
+                <div class="card-header px-4 pt-3 pb-0"
+                     style="background-color: rgba(255,255,255,0.04);
+                            border-bottom: none;
+                            border-radius: 0.75rem 0.75rem 0 0">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-3">
+                            {% if channel.avatar %}
+                                <img src="{{ channel.avatar.url }}"
+                                     alt="{{ channel.channel_name }}"
+                                     class="rounded-circle flex-shrink-0"
+                                     style="width:42px; height:42px; object-fit:cover; border: 2px solid rgba(99,102,241,0.3)">
+                            {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                     style="width:42px; height:42px; background-color: rgba(99,102,241,0.15)">
+                                    <i class="fi-globe text-primary fs-5"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <h6 class="text-light mb-0 fw-semibold">{{ channel.channel_name }}</h6>
+                                <span class="text-muted small">{{ channel.platform.name }} &nbsp;·&nbsp; {{ channel.channel_id }}</span>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill"
+                              style="background-color: rgba(99,102,241,0.15); color: #a78bfa; font-size: 0.72rem"
+                              id="badge-{{ channel.id }}">
+                            <span id="filled-count-{{ channel.id }}">{{ item.filled_count }}</span> از {{ total }} مشخص شده
+                        </span>
+                    </div>
+                    <div class="progress mb-0"
+                         style="height: 3px; background-color: rgba(255,255,255,0.08); border-radius: 0">
+                        <div class="progress-bar"
+                             id="progress-{{ channel.id }}"
+                             role="progressbar"
+                             style="width: {{ item.fill_percent }}%; background-color: #a78bfa; transition: width 0.4s ease"
+                             aria-valuenow="{{ item.fill_percent }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100"></div>
+                    </div>
+                </div>
+
+                <!-- بدنه کارت (ردیف‌های تعرفه) -->
+                <div class="card-body p-0">
+                    {% for row in rows %}
+                        {% with ad_type=row.ad_type rate=row.rate %}
+                            <div class="border-bottom px-4 py-0"
+                                 style="border-color: rgba(255,255,255,0.06) !important"
+                                 id="row-{{ channel.id }}-{{ ad_type.id }}">
+                                <div class="d-flex align-items-center justify-content-between py-3">
+                                    <div class="pe-2">
+                                        <div class="text-light small fw-medium mb-1">{{ ad_type.name }}</div>
+                                        <div class="fw-semibold"
+                                             id="price-display-{{ channel.id }}-{{ ad_type.id }}"
+                                             style="{% if rate %}color: #a78bfa;{% else %}color: #6b7280;{% endif %} font-size: 0.88rem">
+                                            {% if rate %}
+                                                {{ rate.formatted_price }}
+                                            {% else %}
+                                                هنوز مشخص نشده
+                                            {% endif %}
                                         </div>
                                     </div>
+                                    <a class="nav-link nav-link-light py-0 px-2 {% if channel.status != 'approved' %}disabled pointer-events-none{% endif %}"
+                                       href="#edit-{{ channel.id }}-{{ ad_type.id }}"
+                                       data-bs-toggle="collapse"
+                                       aria-expanded="false">
+                                        <i class="fi-edit opacity-70"></i>
+                                    </a>
                                 </div>
-                            {% endwith %}
-                        {% endfor %}
+                                <div class="collapse pb-3"
+                                     id="edit-{{ channel.id }}-{{ ad_type.id }}">
+                                    <div class="d-flex align-items-center gap-2"
+                                         style="background-color: rgba(255,255,255,0.03); border-radius: 0.5rem; padding: 0.75rem 1rem">
+                                        <input type="text"
+                                               inputmode="numeric"
+                                               class="form-control form-control-sm bg-dark text-light border-secondary"
+                                               placeholder="قیمت به تومان"
+                                               value="{% if rate %}{{ rate.price }}{% endif %}"
+                                               id="price-input-{{ channel.id }}-{{ ad_type.id }}"
+                                               oninput="formatNumberInput(this)"
+                                               style="max-width: 220px"
+                                               {% if channel.status != 'approved' %}disabled{% endif %}>
+                                        <button type="button"
+                                                class="btn btn-sm btn-primary px-3"
+                                                onclick="saveRate({{ channel.id }}, {{ ad_type.id }}, {{ total }}, this)"
+                                                {% if channel.status != 'approved' %}disabled{% endif %}>
+                                            ذخیره
+                                        </button>
+                                        <span id="save-feedback-{{ channel.id }}-{{ ad_type.id }}"
+                                              class="text-success small d-none">
+                                            <i class="fi-check me-1"></i>ذخیره شد
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endwith %}
+{% endfor %}
                     </div>
                 </div>
             </div>
@@ -290,5 +295,12 @@
             if (bar) bar.style.width = percent + '%';
             if (label) label.textContent = percent + '%';
         }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function(el) {
+                new bootstrap.Tooltip(el);
+            });
+        });
     </script>
 {% endblock %}

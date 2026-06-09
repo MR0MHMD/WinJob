@@ -66,6 +66,10 @@ class InfluencerChannel(GamificationMixin, models.Model):
     followers_count = models.PositiveIntegerField(_('تعداد فالوور/مشترک'), default=0)
     status = models.CharField(_('وضعیت'), max_length=20, choices=STATUS_CHOICES, default='pending', )
     is_active = models.BooleanField(_('فعال'), default=True)
+    verification_code = models.CharField(max_length=6, blank=True, null=True, verbose_name="کد تأیید کانال")
+    verification_code_created_at = jmodels.jDateTimeField(null=True, blank=True, verbose_name="زمان ایجاد کد تأیید")
+    verification_failed_attempts = models.PositiveSmallIntegerField(default=0, verbose_name="تعداد تلاش‌های ناموفق تأیید")
+    rejected_at = jmodels.jDateTimeField(_("زمان رد شدن کانال"), null=True, blank=True)
     created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
 

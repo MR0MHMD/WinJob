@@ -88,8 +88,8 @@
 
 /* ========== SCROLLBAR ========== */
     ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 4px;
+        height: 4px;
     }
 
     ::-webkit-scrollbar-track {
@@ -101,3 +101,100 @@
         background: linear-gradient(135deg, #fd5631, #5d3cf2);
         border-radius: 10px;
     }
+
+/* ========== TOAST NOTIFICATION SYSTEM ========== */
+.toast-notification {
+    min-width: 260px;
+    max-width: 350px;
+    background: rgba(20, 20, 35, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    margin-bottom: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: slideInRight 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    direction: rtl;
+}
+
+.toast-notification.hide {
+    animation: slideOutRight 0.3s forwards;
+}
+
+.toast-content {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.toast-icon.success { color: #07c98b; }
+.toast-icon.error { color: #f23c49; }
+.toast-icon.warning { color: #fdbc31; }
+.toast-icon.info { color: #3c76f2; }
+
+.toast-text {
+    flex: 1;
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.toast-close:hover {
+    color: #fff;
+}
+
+.toast-progress {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 100%;
+    position: relative;
+}
+.toast-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #fd5631, #5d3cf2);
+    transition: width 0.05s linear;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* موقعیت کانتینر toast */
+.toast-container {
+    z-index: 1090;
+}

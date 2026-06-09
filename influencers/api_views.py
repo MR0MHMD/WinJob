@@ -9,6 +9,10 @@ from django.views.decorators.http import require_POST
 from campaigns.models import CampaignInfluencer
 from campaigns.services.raiting_service import submit_influencer_review_service
 import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.urls import reverse
+from .services.verification_service import VerificationService
 
 
 @login_required
@@ -182,3 +186,128 @@ def edit_influencer_review_ajax(request):
         return JsonResponse({'success': False, 'message': 'نظر مورد نظر یافت نشد.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+
+@login_required
+def verify_channel_modal(request, channel_id):
+    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+
+    # ریست خودکار اگر قفل تمام شده باشد
+    VerificationService.reset_if_cooldown_expired(channel)
+
+    if channel.status == 'approved':
+        return JsonResponse({'status': 'already_verified', 'message': 'این کانال قبلاً تأیید شده است.'})
+
+    if channel.status == 'rejected' and VerificationService.is_cooldown_active(channel):
+        remaining = VerificationService.get_cooldown_remaining(channel)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'کانال شما رد شده است. لطفاً {remaining} ساعت دیگر برای تأیید مجدد اقدام کنید.'
+        }, status=403)
+
+    # اگر کد قبلی منقضی شده، کد جدید بساز
+    if VerificationService.is_code_expired(channel):
+        code = VerificationService.set_verification_code(channel)
+    else:
+        code = channel.verification_code
+
+    return JsonResponse({
+        'status': 'ok',
+        'code': code,
+        'target_url': channel.url or '',
+        'channel_id': channel.id,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def start_verification(request, channel_id):
+    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+
+    # ریست خودکار اگر قفل تمام شده باشد
+    VerificationService.reset_if_cooldown_expired(channel)
+
+    if channel.status == 'approved':
+        return JsonResponse({'status': 'error', 'message': 'کانال قبلاً تأیید شده است.'}, status=400)
+
+    if VerificationService.is_cooldown_active(channel):
+        remaining_hours = VerificationService.get_cooldown_remaining(channel)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'کانال شما رد شده است. لطفاً {remaining_hours} ساعت دیگر مجدد تلاش کنید.'
+        }, status=400)
+
+    if not channel.verification_code or VerificationService.is_code_expired(channel):
+        return JsonResponse({'status': 'error', 'message': 'کد منقضی شده است. لطفاً صفحه را دوباره بارگیری کنید.'}, status=400)
+
+    code = channel.verification_code
+    target_url = channel.url
+    if not target_url:
+        return JsonResponse({'status': 'error', 'message': 'آدرس کانال وارد نشده است.'}, status=400)
+
+    callback_url = request.build_absolute_uri(
+        reverse('influencers:verification_callback', args=[channel.id])
+    )
+
+    success, message = VerificationService.start_verification(target_url, code, callback_url)
+    if success:
+        return JsonResponse({'status': 'pending', 'message': message})
+    else:
+        return JsonResponse({'status': 'error', 'message': message}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def verification_callback(request, channel_id):
+    channel = get_object_or_404(InfluencerChannel, id=channel_id)
+
+    try:
+        data = json.loads(request.body)
+    except:
+        return JsonResponse({'status': 'error', 'message': 'JSON نامعتبر'}, status=400)
+
+    status = data.get('status')
+    code = data.get('code')
+
+    if not code or channel.verification_code != code:
+        return JsonResponse({'status': 'error', 'message': 'کد نامعتبر است.'}, status=400)
+
+    if VerificationService.is_code_expired(channel):
+        return JsonResponse({'status': 'error', 'message': 'کد منقضی شده است.'}, status=400)
+
+    if status == 'verified':
+        VerificationService.record_successful_verification(channel)
+        return JsonResponse({'status': 'ok'})
+    else:  # status == 'failed'
+        is_rejected = VerificationService.record_failed_attempt(channel)
+        if is_rejected:
+            message = "کانال شما به دلیل ۳ بار تأیید ناموفق رد شد. لطفاً ۷۲ ساعت بعد دوباره تلاش کنید."
+        else:
+            remaining = 3 - channel.verification_failed_attempts
+            message = f"کد در صفحه پیدا نشد. {remaining} تلاش دیگر دارید."
+        return JsonResponse({'status': 'failed', 'message': message}, status=200)
+
+
+@login_required
+def verification_status(request, channel_id):
+    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+
+    # ریست خودکار اگر قفل تمام شده باشد (برای نمایش وضعیت صحیح)
+    VerificationService.reset_if_cooldown_expired(channel)
+
+    if channel.status == 'approved':
+        return JsonResponse({'status': 'approved'})
+    elif channel.status == 'rejected':
+        remaining_hours = VerificationService.get_cooldown_remaining(channel)
+        return JsonResponse({
+            'status': 'rejected',
+            'message': f'کانال رد شده است. {remaining_hours} ساعت دیگر می‌توانید تلاش کنید.'
+        })
+    elif channel.verification_failed_attempts > 0 and channel.status == 'pending':
+        remaining = 3 - channel.verification_failed_attempts
+        return JsonResponse({
+            'status': 'failed',
+            'message': f'کد پیدا نشد. {remaining} تلاش دیگر دارید.'
+        })
+    else:
+        return JsonResponse({'status': 'pending'})
