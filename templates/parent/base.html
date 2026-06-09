@@ -55,14 +55,11 @@
         
         <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem" >
             {% if messages %}
-                {% for message in messages %}
-                    <div class="container mt-3">
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    </div>
-                {% endfor %}
+                <div id="django-messages-data" style="display: none;">
+                    {% for message in messages %}
+                        <div data-message-tag="{{ message.tags }}" data-message-text="{{ message|escapejs }}"></div>
+                    {% endfor %}
+                </div>
             {% endif %}
             {% block content %} {% endblock %}
         </main>
@@ -70,6 +67,11 @@
         <footer class="footer bg-faded-light mt-3">
             {% include 'partials/footer.html' %}
         </footer>
+        
+        <!-- ==================== کانتینر Toast Notifications ==================== -->
+        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090; direction: ltr;">
+            <!-- Toasts به صورت داینامیک اینجا اضافه می‌شن -->
+        </div>
         
         <!-- Back to top button-->
         <a class="btn-scroll-top" href="#" data-scroll><span class="btn-scroll-top-tooltip text-muted fs-sm ms-2">بالا</span><i class="btn-scroll-top-icon fi-chevron-up"> </i></a>
@@ -185,6 +187,122 @@
                     if (onCancel) onCancel();
                 }
             };
+        </script>
+
+        <script>
+            // ==================== Toast Notification System ====================
+            class ToastManager {
+                constructor(containerSelector = '.toast-container') {
+                    this.container = document.querySelector(containerSelector);
+                    if (!this.container) {
+                        this.container = document.createElement('div');
+                        this.container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                        this.container.style.zIndex = '1090';
+                        document.body.appendChild(this.container);
+                    }
+                    this.defaultDuration = 5000; // 5 ثانیه
+                }
+            
+                show(message, type = 'info', duration = this.defaultDuration) {
+                    const toast = this.createToastElement(message, type);
+                    this.container.appendChild(toast);
+                    
+                    // انیمیشن پیشرفت
+                    const progressBar = toast.querySelector('.toast-progress-bar');
+                    let startTime = null;
+                    
+                    const animateProgress = (timestamp) => {
+                        if (!startTime) startTime = timestamp;
+                        const elapsed = timestamp - startTime;
+                        const percent = Math.min((elapsed / duration) * 100, 100);
+                        progressBar.style.width = `${percent}%`;
+                        if (elapsed < duration) {
+                            requestAnimationFrame(animateProgress);
+                        } else {
+                            this.hideToast(toast);
+                        }
+                    };
+                    requestAnimationFrame(animateProgress);
+                    
+                    // دکمه بستن
+                    const closeBtn = toast.querySelector('.toast-close');
+                    closeBtn.addEventListener('click', () => this.hideToast(toast));
+                    
+                    return toast;
+                }
+                
+                createToastElement(message, type) {
+                    const toastDiv = document.createElement('div');
+                    toastDiv.className = 'toast-notification';
+                    
+                    let iconClass = 'fi-info-circle';
+                    if (type === 'success') iconClass = 'fi-check-circle';
+                    else if (type === 'error') iconClass = 'fi-alert-circle';
+                    else if (type === 'warning') iconClass = 'fi-alert-triangle';
+                    else iconClass = 'fi-info-circle';
+                    
+                    toastDiv.innerHTML = `
+                        <div class="toast-content">
+                            <div class="toast-icon ${type}">
+                                <i class="${iconClass}"></i>
+                            </div>
+                            <div class="toast-text">${escapeHtml(message)}</div>
+                            <button class="toast-close" aria-label="بستن">&times;</button>
+                        </div>
+                        <div class="toast-progress">
+                            <div class="toast-progress-bar"></div>
+                        </div>
+                    `;
+                    return toastDiv;
+                }
+                
+                hideToast(toast) {
+                    toast.classList.add('hide');
+                    toast.addEventListener('animationend', () => {
+                        if (toast.parentNode) toast.parentNode.removeChild(toast);
+                    }, { once: true });
+                }
+            }
+            
+            // تابع کمکی برای جلوگیری از XSS
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                    return c;
+                });
+            }
+            
+            // راه‌اندازی مدیر toast
+            const toastManager = new ToastManager();
+            
+            // تبدیل پیام‌های جنگو به toast به محض لود صفحه
+            document.addEventListener('DOMContentLoaded', function() {
+                const messagesContainer = document.getElementById('django-messages-data');
+                if (messagesContainer) {
+                    const messages = messagesContainer.querySelectorAll('div');
+                    messages.forEach(msg => {
+                        let tag = msg.getAttribute('data-message-tag');
+                        let text = msg.getAttribute('data-message-text');
+                        if (text) {
+                            // تطابق tagهای جنگو با نوع toast
+                            let type = 'info';
+                            if (tag === 'success') type = 'success';
+                            else if (tag === 'error' || tag === 'danger') type = 'error';
+                            else if (tag === 'warning') type = 'warning';
+                            else type = 'info';
+                            
+                            toastManager.show(text, type);
+                        }
+                    });
+                    // پاک کردن دیتا بعد از استفاده (اختیاری)
+                    messagesContainer.remove();
+                }
+            });
         </script>
         
         {% block script %}{% endblock %}

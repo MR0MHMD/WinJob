@@ -24,4 +24,8 @@ urlpatterns = [
     path('coupons/<int:coupon_id>/delete/', views.coupon_delete, name='coupon_delete'),
     path('submit-review/', api_views.submit_influencer_review_ajax, name='submit_review'),
     path('edit-review/', api_views.edit_influencer_review_ajax, name='edit_review'),
+    path('channel/<int:channel_id>/verify-modal/', api_views.verify_channel_modal, name='verify_channel_modal'),
+    path('channel/<int:channel_id>/start-verify/', api_views.start_verification, name='start_verification'),
+    path('channel/<int:channel_id>/callback/', api_views.verification_callback, name='verification_callback'),
+    path('channel/<int:channel_id>/verification-status/', api_views.verification_status, name='verification_status'),
 ]
