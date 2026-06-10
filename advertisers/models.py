@@ -15,6 +15,7 @@ class AdvertiserProfile(GamificationMixin, models.Model):
                                  verbose_name=_('دسته‌بندی'))
     description = models.TextField(_('توضیحات کسب‌وکار'), blank=True)
     website = models.URLField(_('وبسایت'), blank=True)
+    can_create_free_campaign = models.BooleanField(_('میتواند کمپین رایگان بسازد؟'), default=False)
     is_verified = models.BooleanField(_('تأیید شده'), default=True)
     created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)

@@ -1,3 +1,4 @@
+from django.utils.safestring import mark_safe
 from django_jalali.admin.filters import JDateFieldListFilter
 from influencers.inline_admin import CampaignReportInline
 from core.admin_utils import RegionalFilterAdminMixin
@@ -31,13 +32,15 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "name",
         "advertiser_display",
         "status",
-        "influencers_count",  # تعداد اینفلوئنسرهای انتخاب شده
+        "influencers_count",
+        "is_free",
         "payable_amount",
         "formatted_created_at",
     )
 
     list_filter = (
         "status",
+        "is_free",
         ("created_at", JDateFieldListFilter),
         "advertiser__user__province",
     )
@@ -158,10 +161,13 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     influencers_count_display.short_description = "وضعیت اینفلوئنسرها"
 
     def payable_amount(self, obj):
-        """مبلغ قابل پرداخت برای list_display"""
-        if hasattr(obj, "invoice"):
-            return f"{obj.invoice.payable_amount:,} تومان"
-        return "0 تومان"
+        if obj.is_free:
+            return mark_safe('<span class="text-success">💚 رایگان</span>')
+        else:
+            if hasattr(obj, "invoice"):
+                return f"{obj.invoice.payable_amount:,} تومان"
+            else:
+                return "_"
 
     payable_amount.short_description = "مبلغ قابل پرداخت"
     payable_amount.admin_order_field = "invoice__payable_amount"

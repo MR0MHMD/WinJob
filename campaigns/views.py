@@ -4,8 +4,9 @@ from content_team.models import ContentOrder, ContentOrderFile, ContentTeam
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
 from accounts.models import Transaction
-from .services.campaigns_notifications import submit_campaign_for_review
+from .services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
 from .services.create_invoice import create_campaign_invoice
+from .services.free_campaign import create_free_campaign_bookings
 from .utils import _detect_file_type
 from django.db.models import Prefetch, Count
 from django.contrib import messages
@@ -55,6 +56,7 @@ def campaign_create_step1(request, campaign_id=None):
                 editing_campaign.name = cd['name']
                 editing_campaign.start_date = cd['start_date']
                 editing_campaign.end_date = cd['end_date']
+                editing_campaign.is_free = cd["is_free"]
                 editing_campaign.save()
                 campaign = editing_campaign
             else:
@@ -68,6 +70,7 @@ def campaign_create_step1(request, campaign_id=None):
                     start_date=cd['start_date'],
                     end_date=cd['end_date'],
                     status=Campaign.Status.DRAFT,
+                    is_free=cd["is_free"]
                 )
             request.session['content_minutes'] = cd.get('minutes')
             request.session['campaign_draft_id'] = campaign.id
@@ -83,6 +86,7 @@ def campaign_create_step1(request, campaign_id=None):
                 'name': editing_campaign.name,
                 'start_date': editing_campaign.start_date,
                 'end_date': editing_campaign.end_date,
+                'is_free': editing_campaign.is_free
             }
             if minutes_value:
                 initial['minutes'] = minutes_value
@@ -120,6 +124,13 @@ def campaign_create_step2(request):
         id=campaign_id,
         advertiser=request.user.advertiser_profile
     )
+
+    if campaign.is_free:
+        created_count = create_free_campaign_bookings(campaign)
+        if created_count == 0:
+            messages.error(request, "هیچ کانال فعال و معتبری برای این پلتفرم و نوع تبلیغ وجود ندارد. لطفاً با پشتیبانی تماس بگیرید.")
+            return redirect('campaigns:campaign_create_step1')
+        return redirect('campaigns:campaign_create_step3_ready')
 
     platform = campaign.platform
     ad_type = campaign.ad_type
@@ -558,7 +569,15 @@ def campaign_create_step3_ready(request):
 
         if form.is_valid():
             form.save()
-            return redirect("campaigns:campaign_create_step4")
+            if campaign.is_free:
+                approve_campaign_by_admin(campaign)
+
+                del request.session["campaign_draft_id"]
+
+                messages.success(request, "کمپین رایگان شما با موفقیت ثبت و تأیید شد. تمام اینفلوئنسرهای مرتبط به زودی سفارش را دریافت می‌کنند.")
+                return redirect("advertisers:my_campaigns")
+            else:
+                return redirect("campaigns:campaign_create_step4")
         else:
             # برای دیباگ - میتونی خطاها رو لاگ کنی
             print(form.errors)

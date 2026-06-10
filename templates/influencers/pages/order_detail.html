@@ -121,35 +121,33 @@
                             </div>
 
                             {% if content.link %}
-                                <div class="mt-4">
-                                    <div class="destination-link-card p-3">
-                                        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                                            <i class="fi-link text-primary"></i>
-                                            <span class="text-white small fw-bold">لینک مقصد تبلیغ</span>
-                                        </div>
-                                        
+                                <div class="destination-link-card p-3 mt-3">
+                                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                                        <i class="fi-link text-primary"></i>
+                                        <span class="text-white small fw-bold">لینک مقصد تبلیغ</span>
+                                    </div>
+                                    
+                                    {% if order.status == 'accepted' or order.status == 'completed' %}
                                         <div class="link-preview mb-3">
-                                            <code id="destinationLink">{{ order.uniq_url }}</code>
+                                            <code id="destinationLink">{{ request.scheme }}://{{ request.get_host }}{{ order.uniq_url }}</code>
                                         </div>
-                                        
                                         <div class="link-actions">
                                             <button class="btn btn-sm btn-outline-primary copy-btn" onclick="copyToClipboard('destinationLink', this)">
-                                                <i class="fi-copy ms-1"></i>
-                                                کپی لینک
+                                                <i class="fi-copy ms-1"></i> کپی لینک
                                             </button>
-                                            
                                             <a href="{{ content.link }}" target="_blank" class="btn btn-sm btn-primary">
-                                                <i class="fi-external-link ms-1"></i>
-                                                باز کردن
+                                                <i class="fi-external-link ms-1"></i> باز کردن
                                             </a>
-                                            
-                                            <button class="btn btn-sm btn-accent"
-                                                    onclick="shareLink('{{ content.link }}')">
-                                                <i class="fi-share ms-1"></i>
-                                                اشتراک گذاری
+                                            <button class="btn btn-sm btn-accent" onclick="shareLink('{{ content.link }}')">
+                                                <i class="fi-share ms-1"></i> اشتراک گذاری
                                             </button>
                                         </div>
-                                    </div>
+                                    {% else %}
+                                        <div class="alert alert-info bg-transparent text-center py-2">
+                                            <i class="fi-info-circle ms-1"></i>
+                                            لینک مقصد پس از پذیرش سفارش توسط شما نمایش داده می‌شود.
+                                        </div>
+                                    {% endif %}
                                 </div>
                             {% endif %}
 
@@ -206,6 +204,19 @@
                                 </div>
                             </div>
                         </div>
+                    
+                        {# اطلاع‌رسانی مخصوص کمپین رایگان #}
+                        {% if status == 'pending' and campaign.is_free %}
+                            <div class="alert alert-success bg-transparent mb-3 gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fi-heart fs-4"></i>
+                                    <strong class="d-block">کمپین خیریه (رایگان)</strong>
+                                </div>
+                                <div>
+                                    با پذیرش این سفارش، <strong class="text-warning">۷۰ امتیاز</strong> به حساب شما اضافه می‌شود.<br>
+                                </div>
+                            </div>
+                        {% endif %}
 
                         <div class="info-row">
                             <span class="info-label">نوع تبلیغ</span>
@@ -225,6 +236,7 @@
                             
                             <hr class="border-light opacity-25 my-3">
                         {% endif %}
+                    
 
                         <div class="info-row">
                             <span class="info-label">تبلیغ‌دهنده</span>
@@ -240,9 +252,9 @@
                     
                         {% if advertiser.website %}
                             <div class="info-row">
-                                <span class="info-label">وبسایت</span>
+                                <span class="info-label">لینک تبلیغ</span>
                                 <span class="info-value">
-                                    <a href="{{ advertiser.website }}" target="_blank" class="text-primary text-decoration-none small">
+                                    <a href="{{ campaign.content.link }}" target="_blank" class="text-primary text-decoration-none small">
                                         {{ advertiser.website|truncatechars:25 }}
                                     </a>
                                 </span>
@@ -272,105 +284,51 @@
                                 </form>
                             </div>
                             
-                            <div class="alert alert-info mt-3 mb-0 py-2 small">
+                            <div class="alert alert-info bg-transparent text-center mt-3 mb-0 py-2 small">
                                 <i class="fi-info-circle ms-1"></i>
                                 پس از قبول سفارش، لینک ردیابی برای شما فعال می‌شود.
                             </div>
                             
                         {% elif status == 'accepted' %}
-                                <div class="alert alert-success mt-3 mb-0">
+                                <div class="alert alert-success text-center bg-transparent mt-3 mb-0">
                                     <i class="fi-check-circle ms-2"></i>
                                     شما این سفارش را پذیرفته‌اید.
                                 </div>
                             
                             
-                            <div class="card bg-faded-light border-0 mt-4">
-                                <div class="card-header bg-transparent border-light py-3">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fi-upload text-primary"></i>
-                                        <h5 class="text-white mb-0">گزارش انجام کار</h5>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <p class="text-muted mb-3">
-                                        <i class="fi-info-circle ms-1"></i>
-                                        پس از انتشار تبلیغ، می‌توانید گزارش خود را ثبت کنید.
-                                    </p> 
-                                    
-                                    {% if not order.report %}
-                                        {% if start_date <= now %}
-                                            <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary w-100">
-                                                <i class="fi-send ms-2"></i>
-                                                ثبت گزارش انجام کار
-                                            </a>
-                                        {% else %}
-                                            <button class="btn btn-secondary w-100" disabled>
-                                                <i class="fi-clock ms-2"></i>
-                                                از تاریخ {{ start_date|date:"Y/m/d" }} قابل ثبت است
-                                            </button>
-                                        {% endif %}
-                                    {% else %}
-                                        <div class="info-row">
-                                            <span class="info-label">لینک پست</span>
-                                            <span class="info-value">
-                                                <a href="{{ order.report.post_link }}" target="_blank" class="text-primary">{{ order.report.post_link|truncatechars:40 }}</a>
-                                            </span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="info-label">وضعیت بررسی</span>
-                                            <span class="info-value">
-                                                {% if order.report.status == 'pending' %}
-                                                <span class="badge bg-warning text-dark">در انتظار بررسی</span>
-                                                {% elif order.report.status == 'approved' %}
-                                                <span class="badge bg-success">تأیید شده ✓</span>
-                                                {% elif order.report.status == 'rejected' %}
-                                                <span class="badge bg-danger">رد شده ✗</span>
-                                                {% endif %}
-                                            </span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
+                            <!-- بخش ثبت گزارش در order_detail.html -->
+<div class="card bg-faded-light border-0 mt-4">
+    <div class="card-header bg-transparent border-light py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fi-upload text-primary"></i>
+            <h5 class="text-white mb-0">گزارش انجام کار</h5>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">
+            <i class="fi-info-circle ms-1"></i>
+            پس از انتشار تبلیغ، باید گزارش خود را ثبت کنید.
+        </p>
+        
+        <!-- تایمر یا دکمه ثبت گزارش اینجا قرار می‌گیره -->
+        <div id="reportTimerSection"></div>
+    </div>
+</div>
+
+<!-- پاس دادن تایم‌استمپ به جاوااسکریپت -->
+{{ target_timestamp|json_script:"targetTimestamp" }}
+                            
+                            
                         {% elif status == 'completed' %}
-                            <div class="alert alert-accent mt-3 mb-0">
+                            <div class="alert alert-accent text-center bg-transparent mt-3 mb-0">
                                 <i class="fi-star-filled ms-2"></i>
                                 تبریک! این سفارش با موفقیت تکمیل شده است.
                             </div>
                         {% elif status == 'rejected' %}
-                            <div class="alert alert-danger mt-3 mb-0">
+                            <div class="alert alert-danger text-center bg-transparent mt-3 mb-0">
                                 <i class="fi-x-circle ms-2"></i>
                                 شما این سفارش را رد کرده‌اید.
                             </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card bg-faded-light border-0 mb-4">
-                    <div class="card-header bg-transparent border-light py-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fi-link text-primary"></i>
-                            <h5 class="text-white mb-0">لینک ردیابی شما</h5>
-                        </div>
-                    </div>
-                
-                    <div class="card-body">
-                        {% if order.tracking_code %}
-                            <div class="tracking-input-group">
-                                <div class="input-group">
-                                    <label for="trackingLink"></label>
-                                    <input type="text" class="form-control bg-dark border-light text-white" id="trackingLink" value="{{ order.tracking_code }}" readonly dir="ltr">
-                                    <button class="btn btn-primary copy-link-btn" onclick="copyToClipboard('trackingLink', this)" type="button">
-                                        <i class="fi-copy"></i> کپی
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-3 small text-muted">
-                                <i class="fi-info-circle"></i>این کد یکتا فقط برای همین سفارش و همین کانال هست
-                            </div>
-                            
-                        {% else %}
-                            <p class="text-muted mb-0">لینک ردیابی برای این سفارش فعال نشده است.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -444,12 +402,19 @@
                         آیا از رد کردن این سفارش مطمئن هستید؟
                     </p>
                     
-                    <div class="alert alert-danger py-2 small text-center">
-                        <i class="fi-alert-circle ms-1"></i>
-                        توجه: رد کردن هر سفارش <strong>۱ امتیاز منفی</strong> برای شما به همراه خواهد داشت.
-                        <br>
-                        پس از ۳ امتیاز منفی، سطح حساب شما کاهش می‌یابد.
-                    </div>
+                    {% if campaign.is_free %}
+                        <div class="alert alert-danger bg-transparent text-center py-2 small text-center">
+                            <i class="fi-alert-circle ms-1"></i>
+                            در صورت رد کردن کمپین های رایگان شما امتیاز منفی دریافت نخواید کرد
+                            <br>
+                        </div>
+                    {% else %}
+                    	<div class="alert alert-danger bg-transparent text-center py-2 small text-center">
+                            <i class="fi-alert-circle ms-1"></i>
+                            توجه: رد کردن هر سفارش <strong>40 امتیاز منفی</strong> برای شما به همراه خواهد داشت.
+                            <br>
+                        </div>
+                    {% endif %}
                     
                     <p class="text-muted small text-center mb-0">
                         کمپین: <strong class="text-white">{{ campaign.name }}</strong>
@@ -474,4 +439,95 @@
 
 {% block script %}
     <script src="{% static 'influencers/js/pages/order-detail.js' %}"></script>
+    <script>
+        // تابع بروزرسانی تایمر
+        function startTimer(targetTimestamp, reportSection) {
+    const updateTimer = () => {
+        const now = new Date();
+        const difference = targetTimestamp - now;
+
+        if (difference > 0) {
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (86400000)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (3600000)) / (1000 * 60));
+            const seconds = Math.floor((difference % (60000)) / 1000);
+
+            // نمایش تایمر با طراحی جدید
+            reportSection.innerHTML = `
+                <div class="timer-glass-card">
+                    <div class="timer-header">
+                        <i class="fi-hourglass-start"></i>
+                        <span>زمان باقی‌مانده تا ثبت گزارش</span>
+                    </div>
+                    <div class="timer-digits">
+                        <div class="timer-unit">
+                            <div class="timer-number">${seconds.toString().padStart(2, '0')}</div>
+                            <div class="timer-label">ثانیه</div>
+                        </div>
+                        <div class="timer-sep">:</div>
+                        <div class="timer-unit">
+                            <div class="timer-number">${minutes.toString().padStart(2, '0')}</div>
+                            <div class="timer-label">دقیقه</div>
+                        </div>
+                        <div class="timer-sep">:</div>
+                        <div class="timer-unit">
+                            <div class="timer-number">${hours.toString().padStart(2, '0')}</div>
+                            <div class="timer-label">ساعت</div>
+                        </div>
+                        <div class="timer-sep">:</div>
+                        <div class="timer-unit">
+                            <div class="timer-number">${days}</div>
+                            <div class="timer-label">روز</div>
+                        </div>
+                    </div>
+                    <div class="timer-footer">
+                        <i class="fi-calendar-alt"></i> قابل ثبت از ${new Date(targetTimestamp).toLocaleDateString('fa-IR')}
+                    </div>
+                </div>
+            `;
+        } else {
+            reportSection.innerHTML = `
+                <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary btn-glow w-100">
+                    <i class="fi-send ms-2"></i>
+                    ثبت گزارش انجام کار
+                </a>
+            `;
+        }
+    };
+    updateTimer();
+    setInterval(updateTimer, 1000);
+}
+
+        // دریافت تایم‌استمپ از دیتای ارسالی
+        const targetTimestampElement = document.getElementById('targetTimestamp');
+        if (targetTimestampElement) {
+            const targetTimestamp = parseInt(targetTimestampElement.textContent, 10) * 1000; // تبدیل به میلی‌ثانیه
+            const reportSection = document.getElementById('reportTimerSection');
+            const now = new Date();
+
+            // اگه زمان هدف هنور نرسیده، تایمر رو شروع کن
+            if (targetTimestamp > now) {
+                startTimer(targetTimestamp, reportSection);
+            } else {
+                // اگه زمان گذشته، مستقیم دکمه رو نشون بده
+                reportSection.innerHTML = `
+                    <a href="{% url 'influencers:submit_report' order.id %}" class="btn btn-primary w-100">
+                        <i class="fi-send ms-2"></i>
+                        ثبت گزارش انجام کار
+                    </a>
+                `;
+            }
+        }
+    </script>
+    <script>
+    // نمایش پیام‌ها در کنسول برای دیباگ
+    document.addEventListener('DOMContentLoaded', function() {
+        const messagesDiv = document.getElementById('django-messages-data');
+        if (messagesDiv) {
+            console.log('پیام‌ها پیدا شدند:', messagesDiv.innerHTML);
+        } else {
+            console.log('هیچ پیامی وجود ندارد');
+        }
+    });
+</script>
 {% endblock %}

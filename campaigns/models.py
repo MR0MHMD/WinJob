@@ -1,3 +1,5 @@
+from django.urls import reverse
+
 from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -192,6 +194,11 @@ class Campaign(models.Model):
         verbose_name="کد تخفیف پلتفرم"
     )
 
+    is_free = models.BooleanField(
+        default=False,
+        verbose_name=_("عام‌المنفعه")
+    )
+
     discount_amount = models.PositiveBigIntegerField(
         default=0,
         verbose_name="مقدار تخفیف"
@@ -236,6 +243,12 @@ class Campaign(models.Model):
         if self.ad_type and self.platform:
             if self.ad_type.platform_id != self.platform_id:
                 raise ValidationError("نوع تبلیغ با پلتفرم انتخاب شده سازگار نیست.")
+
+        if self.is_free:
+            if not hasattr(self, 'content_type') or self.content_type.slug != "ready-content":
+                raise ValidationError("در کمپین رایگان، تنها نوع محتوای «محتوای آماده» قابل قبول است.")
+            if self.content_service_type:
+                raise ValidationError("کمپین رایگان نمی‌تواند شامل سرویس تولید محتوا باشد.")
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -365,7 +378,9 @@ class CampaignInfluencer(models.Model):
             self.save()
 
     def uniq_url(self):
-        return f"http://127.0.0.1:8000/campaigns/r/{self.tracking_code}"
+        if not self.tracking_code:
+            return "#"   # یا None
+        return reverse('campaigns:track_click', args=[self.tracking_code])
 
 
 class CampaignContent(models.Model):

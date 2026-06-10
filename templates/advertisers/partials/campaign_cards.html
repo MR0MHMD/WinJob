@@ -9,8 +9,10 @@
                             {{ campaign.get_status_display }}
                         </div>
                     
-                        <div class="campaign-payment-status {% if campaign.invoice.is_paid and campaign.invoice %}paid{% else %}unpaid{% endif %}">
-                            {% if campaign.invoice.is_paid and campaign.invoice %}
+                        <div class="campaign-payment-status {% if campaign.is_free %}paid{% elif campaign.invoice.is_paid and campaign.invoice %}paid{% else %}unpaid{% endif %}">
+                            {% if campaign.is_free %}
+                            	<i class="fi-heart me-1"></i>رایگان
+                            {% elif campaign.invoice.is_paid and campaign.invoice %}
                                 پرداخت شده
                             {% else %}
                                 پرداخت نشده
@@ -71,7 +73,7 @@
         
                             <div class="col-6">
                                 <div class="stat-box text-center">
-                                    <div class="stat-value">
+                                    <div class="stat-value text-primary">
                                         {{ campaign.duration_days }}
                                     </div>
                                     <div class="stat-label">مدت کمپین</div>
@@ -80,8 +82,12 @@
         
                             <div class="col-6">
                                 <div class="stat-box text-center">
-                                    <div class="stat-value">
-                                        {{ campaign.invoice.payable_amount_display|default:"-" }}
+                                    <div class="stat-value text-primary">
+                                        {% if campaign.is_free %}
+                                            <span class="text-success"><i class="fi-heart me-1"></i> رایگان</span>
+                                        {% else %}
+                                            {{ campaign.invoice.payable_amount_display|default:"-" }}
+                                        {% endif %}
                                     </div>
                                     <div class="stat-label">هزینه</div>
                                 </div>

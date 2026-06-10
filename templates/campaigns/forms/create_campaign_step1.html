@@ -3,10 +3,10 @@
 
 {% block title %}
     {% if edit_mode %}
-    	ویرایش کمپین | اطلاعات پایه
+        ویرایش کمپین | اطلاعات پایه
     {% else %}
         ساخت کمپین | اطلاعات پایه
-    {% endif %} 
+    {% endif %}
 {% endblock %}
 
 {% block extra_head %}
@@ -15,19 +15,47 @@
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_1/datepicker.css' %}">
 {% endblock %}
 
+{% block extra_style %}
+    <style>
+        .d-flex label svg {
+            display: none;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
     <div class="container mt-4" dir="rtl">
 
         {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
 
         <div class="card border-0 shadow-sm">
-        
+
 
             <div class="card-body p-4 bg-dark">
 
-                <form method="POST" id="step1-form" novalidate action="{% if edit_mode %}{% url 'campaigns:campaign_edit_step1' campaign.id %}{% else %}{% url 'campaigns:campaign_create_step1' %}{% endif %}">
+                <form method="POST" id="step1-form" novalidate action=" {% if edit_mode %}{% url 'campaigns:campaign_edit_step1' campaign.id %}{% else %}{% url 'campaigns:campaign_create_step1' %}{% endif %}">
 
                     {% csrf_token %}
+
+                    <!-- کمپین رایگان -->
+                    {% if user.advertiser_profile.can_create_free_campaign %}
+                        <div class="mb-4" id="free-campaign-section">
+                            <div class="form-check form-switch">
+                                <div class="d-flex">
+                                    {{ form.is_free }}
+                                    <label class="form-check-label text-light" for="id_is_free">
+                                        <i class="fi-heart text-danger me-1"></i>
+                                        کمپین رایگان (عام‌المنفعه)
+                                    </label>
+                                </div>
+                                <div class="form-text text-muted small mt-1">
+                                    با فعال کردن این گزینه، کمپین شما بدون هزینه و فقط با محتوای آماده اجرا می‌شود.
+                                    تمام کانال‌های فعال به صورت خودکار انتخاب خواهند شد.
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
 
                     <!-- پلتفرم -->
                     <div class="mb-4">
@@ -50,7 +78,7 @@
                         {% endif %}
 
                     </div>
-                    
+
                     <!-- نوع تبلیغ -->
                     <div class="mb-4" id="ad-type-section">
 
@@ -91,7 +119,7 @@
 
                         <div id="content-type-hint" class="form-text mt-1" style="color:#adb5bd;">
                             ابتدا نوع تبلیغ را انتخاب کنید
-                            
+
                         </div>
 
                         {% if form.content_type.errors %}
@@ -157,8 +185,10 @@
                             </span>
 
                             <label for="start__date"></label>
-                            <input id="start__date" class="form-control form-control-light range-from {% if form.start_date.errors %}is-invalid{% endif %}" type="text" placeholder="از تاریخ" autocomplete="off" readonly>
-                            
+                            <input id="start__date"
+                                   class="form-control form-control-light range-from {% if form.start_date.errors %}is-invalid{% endif %}"
+                                   type="text" placeholder="از تاریخ" autocomplete="off" readonly>
+
 
                             <input type="hidden" id="id_start_date" name="start_date" value="{{ form.start_date.value|default:'' }}">
 
@@ -188,7 +218,7 @@
                         {% endif %}
 
                     </div>
-                
+
                     <!-- نام کمپین -->
                     <div class="mb-4" id="name-section">
 

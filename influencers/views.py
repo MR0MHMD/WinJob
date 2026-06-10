@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
 from accounts.models import Transaction
 from plat_form.models import Platform
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime, time
 from location.models import Province
 from django.contrib import messages
 from django.utils import timezone
@@ -132,10 +132,6 @@ def service_rates_view(request):
 
 @login_required
 def order_list(request):
-    template_name = "influencers/pages/orders_list.html"
-    context_object_name = "orders"
-    paginate_by = 10
-
     user = request.user
 
     if not hasattr(user, "influencer_profile"):
@@ -161,11 +157,7 @@ def order_list(request):
     page_number = request.GET.get('page')
     orders = paginator.get_page(page_number)
 
-    context = {
-        "orders": orders,
-    }
-
-    return render(request, template_name, context)
+    return render(request, 'influencers/pages/orders_list.html', {'orders': orders})
 
 
 @login_required
@@ -212,11 +204,13 @@ def order_detail(request, order_id):
     advertiser = campaign.advertiser
     content = campaign.content
 
-    clicks = None
-    unique_clicks = None
-    if order.tracking_link:
-        clicks = order.tracking_link.clicks
-        unique_clicks = order.tracking_link.unique_clicks
+    try:
+        tracking_link = order.tracking_link
+        clicks = tracking_link.clicks
+        unique_clicks = tracking_link.unique_clicks
+    except CampaignTrackingLink.DoesNotExist:
+        clicks = None
+        unique_clicks = None
 
     utm_link = None
     if content and content.utm_enabled and content.link:
@@ -230,7 +224,16 @@ def order_detail(request, order_id):
         'campaign'
     )[:5]
 
-    print(campaign.start_date)
+    target_timestamp = None
+    if order.status == 'accepted' and not hasattr(order, 'report'):
+        # تبدیل تاریخ جلالی به میلادی (به دست آوردن datetime.date معمولی)
+        gregorian_date = campaign.start_date.togregorian()
+        # ترکیب با ساعت 00:00:00
+        start_datetime = datetime.combine(gregorian_date, time.min)
+        # منطقه‌دار کردن با زمان تهران
+        start_datetime = timezone.make_aware(start_datetime, timezone.get_current_timezone())
+        # تایم‌استمپ بر حسب ثانیه (نه میلی‌ثانیه)
+        target_timestamp = int(start_datetime.timestamp())
 
     context = {
         "order": order,
@@ -249,6 +252,7 @@ def order_detail(request, order_id):
         "end_date": campaign.end_date,
         "status": order.status,
         "campaign_status": campaign.status,
+        "target_timestamp": target_timestamp,
         "is_campaign_editable": campaign.is_editable,
         "channel_location": channel.get_full_location() if hasattr(channel, "get_full_location") else None,
         "advertiser_location": advertiser.get_full_location() if hasattr(advertiser, "get_full_location") else None,
@@ -297,6 +301,8 @@ def influencer_respond(request, order_id):
 
 @login_required
 def submit_report(request, order_id):
+    from datetime import datetime, time
+
     order = get_object_or_404(
         CampaignInfluencer.objects.select_related(
             'campaign',
@@ -324,11 +330,22 @@ def submit_report(request, order_id):
         messages.error(request, "این کمپین به پایان رسیده و دیگر قابلیت ثبت گزارش ندارد.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    if request.method == 'POST':
-        if now < campaign.start_date:
-            messages.error(request, f"زمان ثبت گزارش از {campaign.start_date | date:'Y/m/d H:i'} شروع می‌شود.")
-            return redirect('influencers:order_detail', order_id=order.id)
+    # ========== درست کردن مقایسه زمان ==========
+    # تبدیل تاریخ جلالی به میلادی
+    gregorian_date = campaign.start_date.togregorian()
+    # ترکیب با ساعت 00:00:00
+    start_datetime = datetime.combine(gregorian_date, time.min)
+    # منطقه‌دار کردن با زمان تهران
+    start_datetime = timezone.make_aware(start_datetime, timezone.get_current_timezone())
 
+    # اگر زمان شروع فرا نرسیده، برگردان با پیام خطا
+    if now < start_datetime:
+        messages.error(request,
+                       f"امکان ثبت گزارش از ساعت ۰۰:۰۰ روز {campaign.start_date.strftime('%Y/%m/%d')} فراهم می‌شود.")
+        return redirect('influencers:order_detail', order_id=order.id)
+
+    # حالا که به اینجا رسیدیم، یعنی زمان شروع گذشته یا الان هست
+    if request.method == 'POST':
         post_link = request.POST.get('post_link')
         screenshot = request.FILES.get('screenshot')
 
@@ -342,14 +359,13 @@ def submit_report(request, order_id):
         messages.success(request, "گزارش شما با موفقیت ثبت شد. پس از بررسی، نتیجه به شما اطلاع داده می‌شود.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    else:  # GET
-        can_submit = now >= campaign.start_date
+    else:
         context = {
             'order': order,
             'campaign': campaign,
             'advertiser': campaign.advertiser,
             'channel': order.channel,
-            'can_submit': can_submit,
+            'can_submit': True,
         }
         return render(request, "influencers/forms/submit_report.html", context)
 

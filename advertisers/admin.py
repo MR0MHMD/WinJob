@@ -13,6 +13,7 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         'user_phone_display',
         'get_user_type',
         'user_province',
+        'can_create_free_campaign',
         'is_verified',
         'formatted_created_at'
     ]
@@ -51,7 +52,7 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('وضعیت', {
-            'fields': ('is_verified',),
+            'fields': ('is_verified', "can_create_free_campaign"),
             'classes': ('collapse',)
         }),
         ('تاریخچه', {
