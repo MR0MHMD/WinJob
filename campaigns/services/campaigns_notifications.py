@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import transaction
 from django.db import models
 from django.utils import timezone
@@ -7,7 +9,7 @@ from accounts.models import Wallet, Transaction
 from content_team.models import ContentOrderRevision, ContentDelivery
 from accounts.services.payment_service import pay_influencer
 from influencers.models import CampaignReport
-from campaigns.models import CampaignInfluencer, CampaignContent, Campaign
+from campaigns.models import CampaignInfluencer, CampaignContent, Campaign, CampaignTrackingLink
 from campaigns.tasks import penalize_unaccepted_content_orders
 from gamification.services import update_score
 from notifications.utils import (
@@ -58,7 +60,7 @@ def submit_campaign_for_review(campaign):
 
 
 def approve_campaign_by_admin(campaign):
-    if campaign.status == 'pending':
+    if campaign.status == 'pending' or campaign.is_free:
         campaign.status = 'approved'
         campaign.approved_at = timezone.now()
         campaign.save()
@@ -246,9 +248,24 @@ def respond_to_influencer_order_service(order, action):
             order.status = 'accepted'
             order.save(update_fields=['status'])
 
-            # --- سیستم گیمیفیکیشن ---
-            update_score(order.channel, 20, 'قبول کردن تبلیغ', f'قبول سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
+            # ساخت لینک ردیابی اگر وجود نداشت
+            if not hasattr(order, 'tracking_link'):
+                if not order.tracking_code:
+                    order.tracking_code = uuid.uuid4().hex[:8]
+                    order.save(update_fields=['tracking_code'])
+                CampaignTrackingLink.objects.create(campaign_influencer=order)
 
+            # امتیازدهی بر اساس نوع کمپین
+            if order.campaign.is_free:
+                points = 70
+                action_key = 'قبول کردن کمپین رایگان'
+                description = f'قبول سفارش کمپین رایگان {order.campaign.name} در کانال {order.channel.channel_name}'
+            else:
+                points = 20
+                action_key = 'قبول کردن تبلیغ'
+                description = f'قبول سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}'
+
+            update_score(order.channel, points, action_key, description)
             from notifications.utils import notify_advertiser_influencer_accepted
             notify_advertiser_influencer_accepted(order)
 
@@ -256,8 +273,23 @@ def respond_to_influencer_order_service(order, action):
             order.status = 'rejected'
             order.save(update_fields=['status'])
 
-            # --- سیستم گیمیفیکیشن ---
-            update_score(order.channel, -40, 'رد کردن تبلیغ', f'رد سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
+            # برای کمپین رایگان، امتیاز منفی نده
+            if not order.campaign.is_free:
+                update_score(order.channel, -40, 'رد کردن تبلیغ',
+                             f'رد سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
+
+            # می‌توان یک نوتیفیکیشن ساده با ممنونیت فرستاد (اختیاری)
+            else:
+                # اختیاری: ثبت یک لاگ یا نوتیفیکیشن بدون امتیاز
+                from notifications.models import Notification
+                Notification.objects.create(
+                    user=order.channel.influencer.user,
+                    type='info',
+                    title='رد سفارش رایگان',
+                    message=f'شما سفارش کمپین خیریه {order.campaign.name} را رد کردید. امتیازی کسر نشد.',
+                    related_object_id=order.id,
+                    related_content_type='campaign_influencer'
+                )
 
 
 def approve_influencer_report_service(report):

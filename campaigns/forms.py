@@ -84,6 +84,16 @@ class CampaignStep1Form(forms.Form):
         })
     )
 
+    is_free = forms.BooleanField(
+        required=False,
+        label='کمپین رایگان (عام‌المنفعه)',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'id': 'id_is_free',
+            'name': 'is_free'
+        })
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -156,6 +166,7 @@ class CampaignStep1Form(forms.Form):
         ad_type = cleaned_data.get('ad_type')
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')
+        is_free = cleaned_data.get('is_free')
         service_type = cleaned_data.get("content_service_type")
         minutes = cleaned_data.get("minutes")
 
@@ -188,6 +199,20 @@ class CampaignStep1Form(forms.Form):
         else:
             cleaned_data["content_service_type"] = None
             cleaned_data["minutes"] = None
+
+        if is_free:
+            # فقط نوع محتوای آماده مجاز است
+            if not content_type or content_type.slug != "ready-content":
+                raise forms.ValidationError("در کمپین رایگان، تنها نوع محتوای «محتوای آماده» قابل قبول است.")
+            # حتماً هیچ سرویس تولید محتوایی نباشد
+            if service_type:
+                raise forms.ValidationError("کمپین رایگان نمی‌تواند شامل سرویس تولید محتوا باشد.")
+            # مقدار minutes را پاک می‌کنیم (در صورت وجود)
+            cleaned_data['minutes'] = None
+        else:
+            # کمپین عادی: قوانین قبلی اعمال می‌شود (مثل قبل)
+            # ... (همان کدهایی که برای content-production-team داری)
+            pass
 
         return cleaned_data
 

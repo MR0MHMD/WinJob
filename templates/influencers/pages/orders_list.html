@@ -63,6 +63,11 @@
                             <div class="card-body">
                                 <h3 class="h5 text-center text-light mb-3">
                                     {{ order.campaign.name }}
+                                    {% if order.campaign.is_free %}
+                                        <span class="badge bg-success ms-2">
+                                            <i class="fi-heart me-1"></i> رایگان
+                                        </span>
+                                    {% endif %}
                                 </h3>
                     
                                 <div class="row text-light mb-3">
@@ -100,9 +105,15 @@
                                 </div>
                     
                                 <div class="text-center mb-3">
-                                    <span class="text-primary fw-bold" style="font-size:18px">
-                                        {{ order.price }} تومان
-                                    </span>
+                                    {% if order.campaign.is_free %}
+                                        <span class="text-success fw-bold" style="font-size:18px">
+                                            <i class="fi-heart me-1"></i> رایگان
+                                        </span>
+                                    {% else %}
+                                        <span class="text-primary fw-bold" style="font-size:18px">
+                                            {{ order.price }} تومان
+                                        </span>
+                                    {% endif %}
                                 </div>
                     
                                 <div class="border-top border-light pt-3">

@@ -35,6 +35,10 @@ document.addEventListener("DOMContentLoaded", function () {
             buildCards(dom.adTypeSelect, dom.adCards);
             showContentType();
 
+            if (CampaignDOM.freeCheckbox) {
+                window.toggleFreeCampaign();
+            }
+
             // تعیین مقدار از پیش انتخاب شده برای نوع محتوا
             var presetContentType = CampaignData.PREV_CONTENT || (window.EDIT_MODE ? window.EDIT_CONTENT_TYPE_ID : '');
             if (presetContentType) {

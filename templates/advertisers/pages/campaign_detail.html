@@ -28,6 +28,15 @@
         <!-- ==================== هدر اصلی ==================== -->
         <div class="card glass-box bg-dark border-light mb-4 animate-up">
             <div class="card-body p-4">
+                {% if campaign.is_free %}
+                    <div class="alert alert-success bg-dark mb-4 d-flex align-items-center gap-2">
+                        <i class="fi-heart fs-3"></i>
+                        <div>
+                            <strong class="d-block fs-6">کمپین خیریه (رایگان)</strong>
+                            این کمپین بدون هیچ هزینه‌ای اجرا می‌شود. تمام کانال‌های فعال به طور خودکار انتخاب شده‌اند.
+                        </div>
+                    </div>
+                {% endif %}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div>
                         <h1 class="text-light mb-2">{{ campaign.name }}</h1>
@@ -56,10 +65,13 @@
 
                     <div class="text-center text-md-end">
                         <div class="h2 text-primary mb-0">
-                            {{ campaign.invoice.payable_amount|floatformat:0|default:0 }}
-                            <small class="fs-6 text-muted">تومان</small>
+                            {% if campaign.is_free %}
+                                <span class="text-success">رایگان</span>
+                            {% else %}
+                                {{ campaign.invoice.payable_amount|floatformat:0|default:0 }}
+                                <small class="fs-6 text-muted">تومان</small>
+                            {% endif %}
                         </div>
-
                         <div class="small text-muted">قابل پرداخت</div>
                     </div>
                 </div>
@@ -121,12 +133,17 @@
             </div>
 
             <div class="col-6 col-md-3">
-                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-right"
-                     style="animation-delay: 0.15s;">
-                    <i class="fi-wallet fs-2 {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %} mb-2 d-block"></i>
+                <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100">
+                    <i class="fi-wallet fs-2 {% if campaign.is_free %}text-success{% elif campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %} mb-2 d-block"></i>
                     <div class="small text-muted">وضعیت پرداخت</div>
-                    <div class="fw-bold {% if campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %}">
-                        {% if campaign.invoice and campaign.invoice.is_paid %}پرداخت شده{% else %}پرداخت نشده{% endif %}
+                    <div class="fw-bold {% if campaign.is_free %}text-success{% elif campaign.invoice and campaign.invoice.is_paid %}text-success{% else %}text-danger{% endif %}">
+                        {% if campaign.is_free %}
+                            رایگان
+                        {% elif campaign.invoice and campaign.invoice.is_paid %}
+                            پرداخت شده
+                        {% else %}
+                            پرداخت نشده
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -210,22 +227,33 @@
                             هزینه‌ها
                         </h5>
 
-                        {% if campaign.invoice %}
+                        {% if campaign.is_free %}
+                            <div class="text-center py-4">
+                                <i class="fi-heart fs-1 text-success opacity-50 mb-2 d-block"></i>
+                                <p class="text-success fw-bold">کمپین رایگان – بدون هزینه</p>
+                                <p class="text-muted small">هزینه اینفلوئنسرها و حق‌العمل صفر می‌باشد.</p>
+                            </div>
+                        {% elif campaign.invoice %}
+
                             <ul class="list-unstyled mb-0">
+
                                 <li class="mb-3 d-flex justify-content-between">
                                     <span class="text-muted">هزینه اینفلوئنسر</span>
                                     <span class="text-light">{{ campaign.invoice.influencer_cost }} تومان</span>
                                 </li>
+
                                 {% if campaign.invoice.content_cost %}
                                     <li class="mb-3 d-flex justify-content-between">
                                         <span class="text-muted">تولید محتوا</span>
                                         <span class="text-light">{{ campaign.invoice.content_cost }} تومان</span>
                                     </li>
                                 {% endif %}
+
                                 <li class="mb-3 d-flex justify-content-between">
                                     <span class="text-muted">حق العمل</span>
                                     <span class="text-light">{{ campaign.invoice.commission }} تومان</span>
                                 </li>
+
                                 {% if campaign.invoice.discount_amount %}
                                     <li class="mb-3 d-flex justify-content-between">
                                         <span class="text-muted text-success">تخفیف</span>
@@ -237,6 +265,7 @@
                                         <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
                                     </li>
                                 {% endif %}
+
                                 <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
                                     <span class="fw-bold text-light">مبلغ قابل پرداخت</span>
                                     <span class="fw-bold text-light">{{ campaign.invoice.payable_amount }} تومان</span>
@@ -382,20 +411,27 @@
         </div>
 
         {% if has_click_data %}
-            <!-- ==================== نمودار کلیک‌های روزانه به تفکیک کانال ==================== -->
+            <!-- ==================== نمودار کلیک‌های روزانه ==================== -->
             <div class="card glass-box bg-dark border-light my-4 animate-up">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-mouse text-accent"></i>
-                            <h5 class="text-white mb-0">کلیک‌های روزانه به تفکیک کانال</h5>
+                            <h5 class="text-white mb-0">
+                                {% if campaign.is_free %}
+                                    کلیک‌های روزانه (مجموع)
+                                {% else %}
+                                    کلیک‌های روزانه به تفکیک کانال
+                                {% endif %}
+                            </h5>
                         </div>
                         <span class="badge bg-faded-primary">۳۰ روز اخیر</span>
                     </div>
                     <div class="chart-container" style="position: relative;">
-                        <canvas class="p-3" id="dailyClicksByChannelChart" width="800" height="400"
+                        <canvas class="p-3" id="dailyClicksChart" width="800" height="400"
                                 data-labels='{{ daily_labels_json|safe }}'
                                 data-datasets='{{ daily_datasets_json|safe }}'
+                                data-is-free='{{ campaign.is_free|yesno:"true,false" }}'
                                 data-hasdata='{{ has_click_data|yesno:"true,false" }}'>
                         </canvas>
                     </div>
@@ -417,7 +453,14 @@
                         <span class="badge bg-faded-primary rounded-pill ms-2">{{ channels_count }}</span>
                     </h5>
                 </div>
-                {% if channels %}
+                {% if campaign.is_free %}
+                    {# نمایش ساده برای کمپین رایگان #}
+                    <div class="text-center py-5">
+                        <i class="fi-heart fs-1 text-success opacity-50 mb-3 d-block"></i>
+                        <p class="text-light fw-semibold mb-1">تعداد کل کانال‌های انتخاب شده: {{ channels_count }}</p>
+                        <p class="text-muted small">در کمپین رایگان، تمام کانال‌های فعال واجد شرایط به صورت خودکار انتخاب شده‌اند.</p>
+                    </div>
+                {% elif channels %}
                     <div class="table-responsive">
                         <table class="table table-dark table-hover align-middle mb-0">
                             <thead>
@@ -1049,6 +1092,7 @@
         </div>
     </div>
 
+    
     <!-- ==================== مودال حذف کمپین (جایگزین confirm) ==================== -->
     <div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-labelledby="deleteCampaignModalLabel"
          aria-hidden="true">

@@ -33,6 +33,10 @@ window.updateContentType = function (platformId) {
 
     buildCards(dom.contentTypeSelect, dom.contentCards);
 
+    if (window.toggleFreeCampaign) {
+        window.toggleFreeCampaign();
+    }
+
 };
 
 window.updateAdType = function (platformId) {
@@ -227,5 +231,105 @@ window.validateForm = function () {
         if (!nameInput || !nameInput.value.trim()) isValid = false;
     }
 
+    const isFree = CampaignDOM.freeCheckbox && CampaignDOM.freeCheckbox.checked;
+
+    // برای کمپین رایگان، سرویس‌ها و دقیقه اجباری نیستند
+    if (!isFree) {
+        // اعتبارسنجی معمولی (همان کد قبلی)
+        if (dom.serviceWrapper && dom.serviceWrapper.style.display !== "none") {
+            if (dom.serviceSelect && !dom.serviceSelect.value) isValid = false;
+        }
+        if (dom.minutesWrapper && dom.minutesWrapper.style.display !== "none") {
+            if (!dom.minutesInput || !dom.minutesInput.value.trim()) isValid = false;
+        }
+    }
+
     submitBtn.disabled = !isValid;
+};
+
+
+window.toggleFreeCampaign = function() {
+    const isFree = CampaignDOM.freeCheckbox && CampaignDOM.freeCheckbox.checked;
+    const contentTypeSelect = CampaignDOM.contentTypeSelect;
+    const contentTypeCards = CampaignDOM.contentCards;
+
+    if (!contentTypeSelect) return;
+
+    if (isFree) {
+        // محدود کردن گزینه‌های سلکت و کارت‌ها
+        Array.from(contentTypeSelect.options).forEach(opt => {
+            const optionValue = opt.value;
+            if (optionValue) {
+                const meta = CampaignData.CONTENT_TYPE_META[optionValue];
+                const isReady = meta && meta.slug === "ready-content";
+                opt.disabled = !isReady;
+                // غیرفعال کردن کارت متناظر
+                if (contentTypeCards) {
+                    const card = contentTypeCards.querySelector(`.option-card-inner[data-value="${optionValue}"]`);
+                    if (card) {
+                        if (!isReady) {
+                            card.style.opacity = '0.5';
+                            card.style.pointerEvents = 'none';
+                            card.classList.add('disabled-card');
+                        } else {
+                            card.style.opacity = '';
+                            card.style.pointerEvents = '';
+                            card.classList.remove('disabled-card');
+                        }
+                    }
+                }
+            }
+        });
+        // اگر مقدار فعلی نامعتبر شد، ریست کن
+        if (contentTypeSelect.value) {
+            const selectedMeta = CampaignData.CONTENT_TYPE_META[contentTypeSelect.value];
+            if (selectedMeta && selectedMeta.slug !== "ready-content") {
+                contentTypeSelect.value = "";
+                if (contentTypeCards) {
+                    contentTypeCards.querySelectorAll('.option-card-inner').forEach(c => c.classList.remove('selected'));
+                }
+                // ریست کردن سرویس‌ها و دقیقه
+                window.hideServiceType();
+                window.hideMinutes();
+            }
+        } else {
+            // اگر هیچکدام انتخاب نشده، سرویس‌ها را مخفی کن
+            window.hideServiceType();
+            window.hideMinutes();
+        }
+        // تغییر هینت
+        if (CampaignDOM.contentHint) {
+            CampaignDOM.contentHint.textContent = "در حالت رایگان فقط «محتوای آماده» قابل انتخاب است.";
+        }
+    } else {
+        // حالت عادی: همه گزینه‌ها را فعال کن
+        Array.from(contentTypeSelect.options).forEach(opt => {
+            opt.disabled = false;
+        });
+        if (contentTypeCards) {
+            contentTypeCards.querySelectorAll('.option-card-inner').forEach(card => {
+                card.style.opacity = '';
+                card.style.pointerEvents = '';
+                card.classList.remove('disabled-card');
+            });
+        }
+        if (CampaignDOM.contentHint) {
+            CampaignDOM.contentHint.textContent = "ابتدا نوع تبلیغ را انتخاب کنید";
+        }
+        // اگر نوع محتوا انتخاب شده و سرویس دارد، سرویس‌ها را نمایش بده
+        const selectedContent = contentTypeSelect.value;
+        if (selectedContent) {
+            const meta = CampaignData.CONTENT_TYPE_META[selectedContent];
+            if (meta && meta.slug === "content-production-team") {
+                if (CampaignDOM.adTypeSelect && CampaignDOM.adTypeSelect.value) {
+                    window.updateServiceTypes(CampaignDOM.adTypeSelect.value);
+                    window.showServiceType();
+                }
+            } else {
+                window.hideServiceType();
+                window.hideMinutes();
+            }
+        }
+    }
+    validateForm();
 };

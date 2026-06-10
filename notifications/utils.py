@@ -265,10 +265,15 @@ def notify_advertiser_revision_rejected(revision):
 def notify_influencer_new_campaign_orders(user, campaign, channels_count):
     type_name = "پیج" if campaign.platform.slug == "instagram" else "کانال"
     if channels_count == 1:
-        message = f'یکی از {type_name}‌های شما برای کمپین «{campaign.name}» انتخاب شده است. لطفاً در اسرع وقت بررسی کنید.'
+        if campaign.is_free:
+            message = f'یکی از {type_name}‌های شما برای کمپین عام المنفعه«{campaign.name}» انتخاب شده است. لطفاً در اسرع وقت بررسی کنید.'
+        else:
+            message = f'یکی از {type_name}‌های شما برای کمپین «{campaign.name}» انتخاب شده است. لطفاً در اسرع وقت بررسی کنید.'
     else:
-        message = f'تعداد {channels_count} {type_name} از شما برای کمپین «{campaign.name}» انتخاب شده‌اند. وارد پنل شوید و سفارش‌ها را تأیید کنید.'
-
+        if campaign.is_free:
+            message = f'تعداد {channels_count} {type_name} از شما برای کمپین عام المنفعه«{campaign.name}» انتخاب شده‌اند. وارد پنل شوید و سفارش‌ها را تأیید کنید.'
+        else:
+            message = f'تعداد {channels_count} {type_name} از شما برای کمپین «{campaign.name}» انتخاب شده‌اند. وارد پنل شوید و سفارش‌ها را تأیید کنید.'
     return create_notification(
         user=user,
         notification_type='new_order',

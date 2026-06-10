@@ -5,6 +5,7 @@ window.CampaignDOM = {
     platformSelect: document.getElementById("id_platform"),
     contentTypeSelect: document.getElementById("id_content_type"),
     adTypeSelect: document.getElementById("id_ad_type"),
+    freeCheckbox: document.getElementById("id_is_free"),
 
     serviceSelect: document.getElementById("id_content_service_type"),
     minutesInput: document.getElementById("id_minutes"),

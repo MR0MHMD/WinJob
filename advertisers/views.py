@@ -73,7 +73,6 @@ def campaigns_list(request):
 
     return render(request, "advertisers/pages/campaign_list.html", context)
 
-
 @login_required
 def campaign_detail(request, campaign_id):
     campaign = get_object_or_404(
@@ -101,99 +100,112 @@ def campaign_detail(request, campaign_id):
         "completed": 100,
         "cancelled": 0,
     }
-
     progress_percent = progress_map.get(campaign.status, 0)
-
-    # dynamic color from red to green
     r = int(255 - (progress_percent * 2.55))
     g = int(progress_percent * 2.55)
-    b = 0
-
-    progress_color = f"rgb({r}, {g}, {b})"
-
-    # وضعیت پرداخت
-    payment_status = False
-    try:
-        payment_status = campaign.invoice.is_paid
-    except:
-        pass
+    progress_color = f"rgb({r}, {g}, 0)"
 
     now = timezone.now()
     last_30_days = now - timedelta(days=30)
 
-    # گرفتن کلیک‌های ۳۰ روز اخیر این کمپین
-    clicks_qs = CampaignClick.objects.filter(
-        tracking_link__campaign_influencer__campaign=campaign,
-        created_at__gte=last_30_days
-    ).annotate(
-        day=TruncDate('created_at')
-    ).values(
-        'day',
-        'tracking_link__campaign_influencer__channel__channel_name'
-    ).annotate(
-        count=Count('id')
-    ).order_by('day')
+    # ========== کلیک‌های ۳۰ روز اخیر ==========
+    if campaign.is_free:
+        # کمپین رایگان: فقط مجموع کلیک‌های روزانه (بدون تفکیک کانال)
+        total_clicks_per_day = CampaignClick.objects.filter(
+            tracking_link__campaign_influencer__campaign=campaign,
+            created_at__gte=last_30_days
+        ).annotate(
+            day=TruncDate('created_at')
+        ).values('day').annotate(
+            total=Count('id')
+        ).order_by('day')
 
-    data_by_day = {}
-    channels_set = set()
+        daily_labels = []
+        daily_data = []
+        for item in total_clicks_per_day:
+            d = item['day']
+            jalali_date = convert_to_jalali(d)
+            if jalali_date:
+                daily_labels.append(jalali_date.strftime('%d/%m'))
+            else:
+                daily_labels.append(d.strftime('%d/%m'))
+            daily_data.append(item['total'])
 
-    for item in clicks_qs:
-        day = item['day']
-        channel_name = item['tracking_link__campaign_influencer__channel__channel_name']
-        count = item['count']
-
-        channels_set.add(channel_name)
-        if day not in data_by_day:
-            data_by_day[day] = {}
-        data_by_day[day][channel_name] = count
-
-    sorted_days = sorted(data_by_day.keys())
-    daily_labels = []
-    for d in sorted_days:
-        jalali_date = convert_to_jalali(d)
-        if jalali_date:
-            daily_labels.append(jalali_date.strftime('%d/%m'))
-        else:
-            daily_labels.append(d.strftime('%d/%m'))
-
-    channels_list = sorted(channels_set)
-    datasets = []
-    color_palette = [
-        '#fd5631', '#5d3cf2', '#ffc107', '#28a745', '#17a2b8',
-        '#6f42c1', '#e83e8c', '#20c997', '#fd7e14', '#6610f2'
-    ]
-
-    for idx, channel in enumerate(channels_list):
-        color = color_palette[idx % len(color_palette)]
-        data_array = []
-        for day in sorted_days:
-            data_array.append(data_by_day.get(day, {}).get(channel, 0))
-        datasets.append({
-            'label': channel,
-            'data': data_array,
-            'borderColor': color,
-            'backgroundColor': f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.1)',
+        datasets = [{
+            'label': 'کلیک کل',
+            'data': daily_data,
+            'borderColor': '#fd5631',
+            'backgroundColor': 'rgba(253, 86, 49, 0.1)',
             'borderWidth': 2,
             'fill': True,
             'tension': 0.3,
-            'pointBackgroundColor': color,
-            'pointBorderColor': '#fff',
-            'pointRadius': 3,
-            'pointHoverRadius': 5,
-        })
+        }]
+        has_click_data = len(daily_data) > 0
+
+    else:
+        # کمپین عادی: کلیک‌های روزانه به تفکیک کانال (مانند قبل)
+        clicks_qs = CampaignClick.objects.filter(
+            tracking_link__campaign_influencer__campaign=campaign,
+            created_at__gte=last_30_days
+        ).annotate(
+            day=TruncDate('created_at')
+        ).values(
+            'day',
+            'tracking_link__campaign_influencer__channel__channel_name'
+        ).annotate(
+            count=Count('id')
+        ).order_by('day')
+
+        data_by_day = {}
+        channels_set = set()
+        for item in clicks_qs:
+            day = item['day']
+            channel_name = item['tracking_link__campaign_influencer__channel__channel_name']
+            count = item['count']
+            channels_set.add(channel_name)
+            if day not in data_by_day:
+                data_by_day[day] = {}
+            data_by_day[day][channel_name] = count
+
+        sorted_days = sorted(data_by_day.keys())
+        daily_labels = []
+        for d in sorted_days:
+            jalali_date = convert_to_jalali(d)
+            daily_labels.append(jalali_date.strftime('%d/%m') if jalali_date else d.strftime('%d/%m'))
+
+        channels_list = sorted(channels_set)
+        color_palette = ['#fd5631', '#5d3cf2', '#ffc107', '#28a745', '#17a2b8',
+                         '#6f42c1', '#e83e8c', '#20c997', '#fd7e14', '#6610f2']
+        datasets = []
+        for idx, ch_name in enumerate(channels_list):
+            color = color_palette[idx % len(color_palette)]
+            data_array = [data_by_day.get(day, {}).get(ch_name, 0) for day in sorted_days]
+            datasets.append({
+                'label': ch_name,
+                'data': data_array,
+                'borderColor': color,
+                'backgroundColor': f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.1)',
+                'borderWidth': 2,
+                'fill': True,
+                'tension': 0.3,
+                'pointBackgroundColor': color,
+                'pointBorderColor': '#fff',
+                'pointRadius': 3,
+                'pointHoverRadius': 5,
+            })
+        has_click_data = len(datasets) > 0 and len(daily_labels) > 0
 
     context = {
         "campaign": campaign,
         "channels": channels,
         "channels_count": channels_count,
         "progress_percent": progress_percent,
-        "payment_status": payment_status,
         "progress_color": progress_color,
-        'daily_labels_json': json.dumps(daily_labels, ensure_ascii=False),
-        'daily_datasets_json': json.dumps(datasets, ensure_ascii=False),
-        'has_click_data': len(datasets) > 0 and len(daily_labels) > 0,
+        "daily_labels_json": json.dumps(daily_labels, ensure_ascii=False),
+        "daily_datasets_json": json.dumps(datasets, ensure_ascii=False),
+        "has_click_data": has_click_data,
+        "is_free_campaign": campaign.is_free,  # ارسال به تمپلیت برای نمایش شرطی جدول
     }
-
     return render(request, "advertisers/pages/campaign_detail.html", context)
 
 
