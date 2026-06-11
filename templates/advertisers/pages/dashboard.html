@@ -467,80 +467,79 @@
                     </div>
                 </div>
             
-                <!-- در dashboard.html، بعد از کارت آخرین تراکنش‌ها یا جایی مناسب -->
-{% if pending_review_bookings %}
-<div class="dashboard-card my-4">
-    <div class="dashboard-card-header">
-        <div class="d-flex align-items-center gap-2">
-            <i class="fi-star-filled text-warning"></i>
-            <h5 class="text-white mb-0">ثبت نظر برای همکاری‌های انجام شده</h5>
-            <span class="badge bg-primary">{{ total_pending_review }}</span>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        {% for booking in pending_review_orders %}
-        <div class="campaign-item-team m-3 mb-2">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex gap-lg-2">
-                    <div class="avatar-wrapper-review-team">
-                    <img class="rounded-circle" src="{{ booking.team.logo.url }}" alt="{{ booking.team.name }}">
-                        </div>
-                    <div>
-                        <div class="text-white fw-bold">{{ booking.team.name }}</div>
-                        <div class="small text-muted">
-                            <i class="fi-calendar ms-1"></i>
-                            کمپین: {{ booking.campaign.name }}
+                {% if pending_review_bookings %}
+                <div class="dashboard-card my-4">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fi-star-filled text-warning"></i>
+                            <h5 class="text-white mb-0">ثبت نظر برای همکاری‌های انجام شده</h5>
+                            <span class="badge bg-primary">{{ total_pending_review }}</span>
                         </div>
                     </div>
-                </div>
-                <div>
-                    <a href="{% url 'content_team:team_detail' booking.team.slug %}?review_order_id={{ booking.id }}" 
-                       class="btn btn-sm btn-outline-accent">
-                        <i class="fi-star-filled ms-1"></i>
-                        ثبت نظر
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-        {% for booking in pending_review_bookings %}
-        <div class="campaign-item m-3 mb-2">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex gap-lg-2">
-                    <div class="avatar-wrapper-review">
-                    <img class="rounded-circle" src="{{ booking.channel.avatar.url }}" alt="{{ booking.channel.channel_name }}">
+                    <div class="review-required p-0">
+                        {% for booking in pending_review_orders %}
+                        <div class="campaign-item-team m-3 mb-2">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div class="d-flex gap-lg-2">
+                                    <div class="avatar-wrapper-review-team">
+                                    <img class="rounded-circle" src="{{ booking.team.logo.url }}" alt="{{ booking.team.name }}">
+                                        </div>
+                                    <div>
+                                        <div class="text-white fw-bold">{{ booking.team.name }}</div>
+                                        <div class="small text-muted">
+                                            <i class="fi-calendar ms-1"></i>
+                                            کمپین: {{ booking.campaign.name }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{% url 'content_team:team_detail' booking.team.slug %}?review_order_id={{ booking.id }}" 
+                                       class="btn btn-sm btn-outline-accent">
+                                        <i class="fi-star-filled ms-1"></i>
+                                        ثبت نظر
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                    <div>
-                        <div class="text-white fw-bold">{{ booking.channel.channel_name }}</div>
-                        <div class="small text-muted">
-                            <i class="fi-calendar ms-1"></i>
-                            کمپین: {{ booking.campaign.name }}
+                        {% endfor %}
+                        {% for booking in pending_review_bookings %}
+                        <div class="campaign-item m-3 mb-2">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div class="d-flex gap-lg-2">
+                                    <div class="avatar-wrapper-review">
+                                    <img class="rounded-circle" src="{{ booking.channel.avatar.url }}" alt="{{ booking.channel.channel_name }}">
+                                        </div>
+                                    <div>
+                                        <div class="text-white fw-bold">{{ booking.channel.channel_name }}</div>
+                                        <div class="small text-muted">
+                                            <i class="fi-calendar ms-1"></i>
+                                            کمپین: {{ booking.campaign.name }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{% url 'influencers:channel_detail' booking.channel.id %}?review_booking_id={{ booking.id }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fi-star-filled ms-1"></i>
+                                        ثبت نظر
+                                    </a>
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
-                <div>
-                    <a href="{% url 'influencers:channel_detail' booking.channel.id %}?review_booking_id={{ booking.id }}" 
-                       class="btn btn-sm btn-outline-primary">
-                        <i class="fi-star-filled ms-1"></i>
-                        ثبت نظر
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+                {% endif %}
 
                 <div class="dashboard-card">
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-list text-primary"></i>
                             
-                            <h5 class="text-white mb-0">آخرین تراکنش‌ها</h5>
+                            <h5 class="text-white mb-0">آخرین تراکنش‌ ها</h5>
                         </div>
                         
-                        <a href="#" class="small text-primary text-decoration-none">
+                        <a href="{% url 'accounts:wallet_dashboard' %}" class="small text-primary text-decoration-none">
                             مشاهده همه
                             <i class="fi-arrow-left ms-1"></i>
                         </a>

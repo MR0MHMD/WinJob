@@ -142,12 +142,13 @@ class InfluencerServiceRate(models.Model):
     formatted_price.short_description = _('قیمت')
 
 
+# influencers/models.py
+
 class CampaignReport(models.Model):
     class Status(models.TextChoices):
         PENDING = 'pending', 'در انتظار بررسی'
         APPROVED = 'approved', 'تأیید شد'
         REJECTED = 'rejected', 'رد شد'
-        PARTIAL = 'partial', 'تأیید جزئی'
 
     campaign_influencer = models.OneToOneField(
         "campaigns.CampaignInfluencer",
@@ -156,20 +157,10 @@ class CampaignReport(models.Model):
         verbose_name='سفارش'
     )
 
-    post_link = models.URLField(
-        verbose_name='لینک پست',
-        help_text='لینک مستقیم پست منتشر شده'
-    )
+    post_link = models.URLField(verbose_name='لینک پست')
+    screenshot = models.ImageField(upload_to='campaign_reports/screenshots/')
 
-    screenshot = models.ImageField(
-        upload_to='campaign_reports/screenshots/',
-        verbose_name='اسکرین‌شات پست'
-    )
-
-    link_valid = models.BooleanField(default=False)
-    hashtag_match_percent = models.FloatField(default=0)
-    text_match_percent = models.FloatField(default=0)
-
+    # وضعیت نهایی گزارش (بعد از بررسی خودکار یا دستی)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -177,10 +168,14 @@ class CampaignReport(models.Model):
         verbose_name='وضعیت بررسی'
     )
 
-    admin_notes = models.TextField(
+    # نتایج بررسی خودکار (توسط n8n پر می‌شه)
+    auto_check_details = models.JSONField(
+        default=dict,
         blank=True,
-        verbose_name='یادداشت ادمین'
+        verbose_name='جزئیات بررسی خودکار'
     )
+
+    admin_notes = models.TextField(blank=True, verbose_name='یادداشت ادمین')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,5 +1,5 @@
 {% extends 'parent/base.html' %}
-{% load static %}
+{% load static blog_tags%}
 
 {% block title %}{{ channel.channel_name }} | پروفایل اینفلوئنسر | WinJob{% endblock %}
 
@@ -321,7 +321,7 @@
                                         <div class="reviewer-info">
                                             <div class="reviewer-avatar">
                                                 {% if review.advertiser.user.avatar %}
-                                                    <img src="{{ review.advertiser.user.avatar.url }}" alt="">
+                                                    <img src="{{ review.advertiser.user.avatar.url }}" alt="{{ reviews.advertiser.user.nickname }}">
                                                 {% else %}
                                                     <i class="fi-user"></i>
                                                 {% endif %}
@@ -347,7 +347,7 @@
                                     </div>
 
                                     {% if review.comment %}
-                                        <p class="review-body">{{ review.comment }}</p>
+                                        <p class="review-body">{{ review.comment|markdown }}</p>
                                     {% endif %}
 
                                     <div class="review-footer">

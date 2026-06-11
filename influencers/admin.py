@@ -39,7 +39,7 @@ class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "user",
     )
 
-    inlines = [InfluencerChannelInline,]
+    inlines = [InfluencerChannelInline, ]
 
     readonly_fields = (
         "formatted_created_at",
@@ -157,7 +157,7 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             )
         }),
         ("موقعیت مکانی کانال", {
-            "fields": ("province", ),
+            "fields": ("province",),
             "classes": ("collapse",)
         }),
         ("دسته‌بندی", {
@@ -458,13 +458,12 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "influencer_link",
         "advertiser_link",
         "status_badge",
-        "match_percentage",
+        "auto_check_summary",
         "formatted_created_at",
     )
 
     list_filter = (
         "status",
-        "link_valid",
         ("created_at", JDateFieldListFilter),
         "campaign_influencer__channel__province",
     )
@@ -488,6 +487,7 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "campaign_details",
         "influencer_details",
         "advertiser_details",
+        "auto_check_details_display",
     )
 
     fieldsets = (
@@ -497,22 +497,22 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ("گزارش ارسالی", {
             "fields": ("post_link_display", "screenshot_preview",)
         }),
-        ("بررسی خودکار", {
-            "fields": ("link_valid", "hashtag_match_percent", "text_match_percent",),
+        ("بررسی خودکار (n8n)", {
+            "fields": ("auto_check_details_display",),
             "classes": ("collapse",)
         }),
         ("بررسی دستی", {
             "fields": ("status", "admin_notes",),
-            "classes": ("collapse",)
         }),
         ("تاریخ ها", {
             "fields": ("formatted_created_at", "formatted_updated_at",),
-            "classes": ("collapse",)
+            "classes": ("collapse",),
         }),
     )
 
     actions = ["mark_as_approved", "mark_as_rejected", "mark_as_pending"]
 
+    # ---------- ستون‌های لیست ----------
     def campaign_link(self, obj):
         campaign = obj.campaign_influencer.campaign
         url = reverse("admin:campaigns_campaign_change", args=[campaign.id])
@@ -535,25 +535,29 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     advertiser_link.short_description = "تبلیغ‌دهنده"
 
     def status_badge(self, obj):
-        colors = {'pending': '#fdbc31', 'approved': '#07c98b', 'rejected': '#f23c49', 'partial': '#17a2b8'}
+        colors = {'pending': '#fdbc31', 'approved': '#07c98b', 'rejected': '#f23c49'}
         color = colors.get(obj.status, '#6c757d')
         return format_html(
             '<span style="background-color: {}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px;">{}</span>',
-            color, obj.get_status_display())
+            color, obj.get_status_display()
+        )
 
     status_badge.short_description = "وضعیت"
 
-    def match_percentage(self, obj):
-        if obj.link_valid and obj.text_match_percent > 0:
-            total = (obj.text_match_percent + obj.hashtag_match_percent) / 2
-            color = "#07c98b" if total >= 70 else "#fdbc31" if total >= 40 else "#f23c49"
-            return format_html('<span style="color: {}; font-weight: bold;">{}%</span>', color, int(total))
-        elif obj.link_valid:
-            return mark_safe('<span style="color: #fdbc31;">لینک OK</span>')
-        return mark_safe('<span style="color: #f23c49;">نامعتبر</span>')
+    def auto_check_summary(self, obj):
+        """خلاصه بررسی خودکار برای نمایش در لیست"""
+        details = obj.auto_check_details or {}
+        if not details:
+            return mark_safe('<span style="color: #6c757d;">—</span>')
+        score = details.get('overall_score')
+        if score is not None:
+            color = "#07c98b" if score >= 70 else "#fdbc31" if score >= 40 else "#f23c49"
+            return format_html('<span style="color: {}; font-weight: bold;">{}%</span>', color, score)
+        return "✔️" if details.get('approved') else "❌"
 
-    match_percentage.short_description = "تطابق"
+    auto_check_summary.short_description = "نتیجه خودکار"
 
+    # ---------- فیلدهای فقط خواندنی در فرم ----------
     def post_link_display(self, obj):
         return format_html('<a href="{}" target="_blank" style="word-break: break-all;">{}</a>', obj.post_link,
                            obj.post_link)
@@ -563,8 +567,12 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     def screenshot_preview(self, obj):
         if obj.screenshot:
             return format_html(
-                '<div style="background: #1a1a2e; padding: 10px; border-radius: 12px; display: inline-block;"><a href="{}" target="_blank"><img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #333;" /></a><div style="margin-top: 8px;"><a href="{}" download class="button" style="background: #fd5631; color: #fff; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px;">📥 دانلود فایل</a></div></div>',
-                obj.screenshot.url, obj.screenshot.url, obj.screenshot.url)
+                '<div style="background: #1a1a2e; padding: 10px; border-radius: 12px; display: inline-block;">'
+                '<a href="{}" target="_blank"><img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #333;" /></a>'
+                '<div style="margin-top: 8px;"><a href="{}" download class="button" style="background: #fd5631; color: #fff; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px;">📥 دانلود فایل</a></div>'
+                '</div>',
+                obj.screenshot.url, obj.screenshot.url, obj.screenshot.url
+            )
         return "-"
 
     screenshot_preview.short_description = "اسکرین‌شات"
@@ -572,41 +580,61 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     def campaign_details(self, obj):
         campaign = obj.campaign_influencer.campaign
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>نام:</strong> {}<br><strong>شروع:</strong> {}<br><strong>پایان:</strong> {}<br><strong>وضعیت:</strong> {}</div>',
-            campaign.name, obj.campaign_influencer.campaign.start_date.strftime("%Y/%m/%d %H:%M"),
-            obj.campaign_influencer.campaign.end_date.strftime("%Y/%m/%d %H:%M"), campaign.get_status_display())
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
+            '<strong>نام:</strong> {}<br><strong>شروع:</strong> {}<br><strong>پایان:</strong> {}<br><strong>وضعیت:</strong> {}</div>',
+            campaign.name,
+            campaign.start_date.strftime("%Y/%m/%d"),
+            campaign.end_date.strftime("%Y/%m/%d"),
+            campaign.get_status_display()
+        )
 
     campaign_details.short_description = "جزئیات کمپین"
 
     def influencer_details(self, obj):
         channel = obj.campaign_influencer.channel
+        province_name = channel.province.name if channel.province else "-"
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>کانال:</strong> {}<br><strong>آیدی:</strong> {}<br><strong>پلتفرم:</strong> {}<br><strong>فالوور:</strong> {}<br><strong>استان کانال:</strong> {}</div>',
-            channel.channel_name, channel.channel_id, channel.platform.name, channel.followers_formatted(),
-            channel.province.name if channel.province else "-")
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
+            '<strong>کانال:</strong> {}<br><strong>آیدی:</strong> {}<br><strong>پلتفرم:</strong> {}<br><strong>فالوور:</strong> {}<br><strong>استان:</strong> {}</div>',
+            channel.channel_name, channel.channel_id, channel.platform.name,
+            channel.followers_formatted(), province_name
+        )
 
     influencer_details.short_description = "جزئیات اینفلوئنسر"
 
     def advertiser_details(self, obj):
         advertiser = obj.campaign_influencer.campaign.advertiser
         return format_html(
-            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><strong>کسب‌وکار:</strong> {}<br><strong>وبسایت:</strong> {}</div>',
-            advertiser.business_name, advertiser.website or "-")
+            '<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">'
+            '<strong>کسب‌وکار:</strong> {}<br><strong>وبسایت:</strong> {}</div>',
+            advertiser.business_name, advertiser.website or "-"
+        )
 
     advertiser_details.short_description = "جزئیات تبلیغ‌دهنده"
 
+    def auto_check_details_display(self, obj):
+        import json
+        details = obj.auto_check_details or {}
+        if not details:
+            return "هنوز بررسی خودکاری انجام نشده است."
+        html = '<pre style="background:#2d2d2d; padding:10px; border-radius:8px; color:#f8f8f2; overflow-x:auto;">'
+        html += json.dumps(details, indent=2, ensure_ascii=False)
+        html += '</pre>'
+        return mark_safe(html)
+
+    auto_check_details_display.short_description = "جزئیات بررسی خودکار"
+
     def formatted_created_at(self, obj):
-        from core.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ثبت"
 
     def formatted_updated_at(self, obj):
-        from core.admin_utils import format_datetime
         return format_datetime(obj.updated_at)
 
     formatted_updated_at.short_description = "آخرین بروزرسانی"
 
+    # ---------- اکشن‌ها ----------
     def mark_as_approved(self, request, queryset):
         updated = 0
         for report in queryset:
@@ -621,7 +649,6 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         updated = 0
         for report in queryset:
             if report.status != 'rejected':
-                # دلیل رد شدن رو فعلاً خالی می‌ذاریم برای اکشن‌های گروهی
                 reject_influencer_report_service(report, reason="رد شده توسط ادمین")
                 updated += 1
         self.message_user(request, f"{updated} گزارش رد و نوتیفیکیشن ارسال شد.")
@@ -634,12 +661,11 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     mark_as_pending.short_description = "برگشت به حالت در انتظار"
 
+    # ---------- مدیریت دسترسی منطقه‌ای ----------
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-
         if request.user.is_regional_manager and request.user.province:
             qs = qs.filter(campaign_influencer__channel__province=request.user.province)
-
         return qs.select_related(
             'campaign_influencer',
             'campaign_influencer__campaign',
@@ -664,13 +690,9 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if change:
-            # بررسی تغییر وضعیت
             old_status = CampaignReport.objects.get(pk=obj.pk).status
             new_status = obj.status
-
-            # ابتدا آبجکت رو ذخیره می‌کنیم
             super().save_model(request, obj, form, change)
-
             if old_status != new_status:
                 if new_status == 'approved':
                     approve_influencer_report_service(obj)
