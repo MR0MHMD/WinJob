@@ -1,26 +1,27 @@
-from django.conf import settings
-
 from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, Coupon
-from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
+from campaigns.services.campaigns_notifications import submit_influencer_report_service
+from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.shortcuts import render, get_object_or_404, redirect
+from .services.verification_service import VerificationService
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from .api_views import trigger_n8n_verification
+from datetime import timedelta, datetime, time
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
 from accounts.models import Transaction
 from plat_form.models import Platform
-from datetime import timedelta, date, datetime, time
 from location.models import Province
 from django.contrib import messages
 from django.utils import timezone
 from core.models import Category
+from django.conf import settings
+from threading import Thread
 import jdatetime
 import json
-
-from .services.verification_service import VerificationService
 
 
 @login_required
@@ -77,7 +78,7 @@ def delete_channel_view(request, pk):
         channel = get_object_or_404(InfluencerChannel, pk=pk, influencer__user=request.user)
         name = channel.channel_name
         channel.delete()
-        messages.success(request, f"کانال '{name}' با موفقیت حذف شد.")
+        messages.success(request, f"کانال {name} با موفقیت حذف شد.")
 
     return redirect('influencers:influencer_channels')
 
@@ -133,31 +134,69 @@ def service_rates_view(request):
 @login_required
 def order_list(request):
     user = request.user
-
     if not hasattr(user, "influencer_profile"):
         orders = CampaignInfluencer.objects.none()
     else:
         influencer = user.influencer_profile
-        orders = (
-            CampaignInfluencer.objects.select_related(
-                "campaign",
-                "channel",
-                "campaign__content",
-                "service_rate",
-                "campaign__advertiser",
-            )
-            .filter(channel__influencer=influencer)
-            .exclude(
-                campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
-            )
-            .order_by("-created_at")
-        )
+        orders = CampaignInfluencer.objects.select_related(
+            "campaign",
+            "channel",
+            "campaign__content",
+            "service_rate",
+            "campaign__advertiser",
+        ).filter(channel__influencer=influencer).exclude(
+            campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+        ).filter(
+            Q(campaign__content_type__slug__isnull=True) |
+            ~Q(campaign__content_type__slug='content-production-team') |
+            Q(campaign__content_orders__delivery__status='final_accepted')
+        ).distinct()
 
+        # ========== فیلترها ==========
+        # فیلتر بر اساس نام کمپین
+        q = request.GET.get('q')
+        if q:
+            orders = orders.filter(campaign__name__icontains=q)
+
+        # فیلتر بر اساس پلتفرم
+        platform_slug = request.GET.get('platform')
+        if platform_slug:
+            orders = orders.filter(channel__platform__slug=platform_slug)
+
+        # فیلتر بر اساس رایگان بودن
+        free_filter = request.GET.get('free')
+        if free_filter == 'yes':
+            orders = orders.filter(campaign__is_free=True)
+        elif free_filter == 'no':
+            orders = orders.filter(campaign__is_free=False)
+
+        # فیلتر بر اساس وضعیت سفارش
+        status_filter = request.GET.get('status')
+        if status_filter in ['pending', 'accepted', 'completed', 'rejected']:
+            orders = orders.filter(status=status_filter)
+
+        # ========== مرتب‌سازی ==========
+        sort_by = request.GET.get('sort')
+        if sort_by == 'oldest':
+            orders = orders.order_by('created_at')
+        else:  # پیش‌فرض جدیدترین
+            orders = orders.order_by('-created_at')
+
+    # صفحه‌بندی
     paginator = Paginator(orders, 20)
     page_number = request.GET.get('page')
     orders = paginator.get_page(page_number)
 
-    return render(request, 'influencers/pages/orders_list.html', {'orders': orders})
+    context = {
+        'orders': orders,
+        'filter_q': request.GET.get('q', ''),
+        'filter_platform': request.GET.get('platform', ''),
+        'filter_free': request.GET.get('free', ''),
+        'filter_status': request.GET.get('status', ''),
+        'filter_sort': request.GET.get('sort', 'newest'),
+        'platforms': Platform.objects.filter(is_active=True),
+    }
+    return render(request, 'influencers/pages/orders_list.html', context)
 
 
 @login_required
@@ -299,10 +338,9 @@ def influencer_respond(request, order_id):
     return redirect('influencers:order_detail', order_id=order.id)
 
 
+
 @login_required
 def submit_report(request, order_id):
-    from datetime import datetime, time
-
     order = get_object_or_404(
         CampaignInfluencer.objects.select_related(
             'campaign',
@@ -330,21 +368,16 @@ def submit_report(request, order_id):
         messages.error(request, "این کمپین به پایان رسیده و دیگر قابلیت ثبت گزارش ندارد.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    # ========== درست کردن مقایسه زمان ==========
-    # تبدیل تاریخ جلالی به میلادی
+    # بررسی زمان شروع
     gregorian_date = campaign.start_date.togregorian()
-    # ترکیب با ساعت 00:00:00
     start_datetime = datetime.combine(gregorian_date, time.min)
-    # منطقه‌دار کردن با زمان تهران
     start_datetime = timezone.make_aware(start_datetime, timezone.get_current_timezone())
 
-    # اگر زمان شروع فرا نرسیده، برگردان با پیام خطا
     if now < start_datetime:
         messages.error(request,
                        f"امکان ثبت گزارش از ساعت ۰۰:۰۰ روز {campaign.start_date.strftime('%Y/%m/%d')} فراهم می‌شود.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    # حالا که به اینجا رسیدیم، یعنی زمان شروع گذشته یا الان هست
     if request.method == 'POST':
         post_link = request.POST.get('post_link')
         screenshot = request.FILES.get('screenshot')
@@ -353,10 +386,45 @@ def submit_report(request, order_id):
             messages.error(request, "لطفاً تمام فیلدها را پر کنید.")
             return redirect('influencers:submit_report', order_id=order.id)
 
-        from campaigns.services.campaigns_notifications import submit_influencer_report_service
+        # ۱. در هر دو حالت گزارش باید در دیتابیس ثبت بشه
         submit_influencer_report_service(order, post_link, screenshot)
 
-        messages.success(request, "گزارش شما با موفقیت ثبت شد. پس از بررسی، نتیجه به شما اطلاع داده می‌شود.")
+        # ۲. بررسی فلگ ستینگ برای استفاده از اتوماسیون n8n
+        if getattr(settings, 'USE_N8N_VERIFICATION', False):
+            # گرفتن گزارش ثبت شده
+            report = order.report
+
+            # گرفتن متن مورد انتظار (کپشن کمپین)
+            expected_caption = ""
+            if hasattr(campaign, 'content') and campaign.content:
+                expected_caption = campaign.content.caption or ""
+
+            # اضافه کردن لینک ردیابی به انتهای متن انتظاری
+            tracking_link = order.uniq_url() or ""
+            if tracking_link:
+                expected_caption = expected_caption.rstrip() + "\r\n\r\n" + tracking_link
+
+            # لینک ردیابی اختصاصی اینفلوئنسر
+            tracking_link = order.uniq_url() or ""
+
+            # تریگر n8n در ترد جداگانه (به همراه اسلاگ پلتفرم که اضافه کرده بودیم)
+            Thread(
+                target=trigger_n8n_verification,
+                args=(
+                    report.id,
+                    post_link,
+                    expected_caption,
+                    tracking_link,
+                    order.channel.platform.slug
+                ),
+                daemon=True
+            ).start()
+
+            messages.success(request, "گزارش شما با موفقیت ثبت شد. در حال بررسی خودکار، نتیجه به زودی اعلام می‌شود.")
+        else:
+            # ۳. فلو قدیمی: بررسی دستی توسط ادمین
+            messages.success(request, "گزارش شما با موفقیت ثبت شد و در انتظار بررسی توسط مدیریت است.")
+
         return redirect('influencers:order_detail', order_id=order.id)
 
     else:
@@ -386,7 +454,12 @@ def influencer_dashboard(request):
         channel_id__in=channel_ids
     ).exclude(
         campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
-    )
+    ).filter(
+        Q(campaign__content_type__slug__isnull=True) |
+        ~Q(campaign__content_type__slug='content-production-team') |
+        Q(campaign__content_orders__delivery__status='final_accepted')
+    ).distinct()
+
     booking_ids = campaign_bookings.values_list('id', flat=True)
 
     total_bookings = campaign_bookings.count()
@@ -547,6 +620,91 @@ def influencer_dashboard(request):
 
     pending_report_orders = orders_due_for_report[:5]
 
+    free_orders = campaign_bookings.filter(campaign__is_free=True)
+    free_total_orders = free_orders.count()
+    free_pending_orders = free_orders.filter(status='pending').count()
+    free_completed_orders = free_orders.filter(status='completed').count()
+
+    # ========== میانگین امتیازات گیمیفیکیشن کانال‌ها ==========
+    from gamification.models import Badge  # اضافه کردن import در ابتدای فایل
+
+    total_points = 0
+    active_channels_count = 0
+
+    for channel in channels:
+        if channel.status == 'approved' and channel.is_active:
+            # دریافت امتیاز کانال (در صورت وجود)
+            if hasattr(channel, 'score') and channel.score:
+                points = channel.score.points
+            else:
+                points = 0
+            total_points += points
+            active_channels_count += 1
+
+    avg_points = total_points // active_channels_count if active_channels_count > 0 else 0
+
+    # پیدا کردن نشان متناسب با میانگین امتیاز
+    badges = Badge.objects.filter(is_active=True).order_by('min_points')
+    current_badge = None
+    next_badge = None
+
+    if badges.exists():
+        # نشان فعلی: بزرگترین min_points که کمتر یا مساوی avg_points باشد
+        for badge in badges:
+            if badge.min_points <= avg_points:
+                current_badge = badge
+            else:
+                next_badge = badge
+                break
+        # اگر همه نشان‌ها کوچک‌تر بودند (به آخر رسیدیم)
+        if next_badge is None and current_badge:
+            # در بالاترین سطح هستیم
+            pass
+    else:
+        # اگر هیچ نشان فعالی وجود نداشت، یک نشان پیش‌فرض
+        current_badge = None
+
+    # محاسبه درصد پیشرفت به سمت نشان بعدی
+    progress_percent = 0
+    points_needed = 0
+    is_max_level = False
+
+    if current_badge and next_badge:
+        points_for_current = current_badge.min_points
+        points_for_next = next_badge.min_points
+        range_size = points_for_next - points_for_current
+        if range_size > 0:
+            progress = avg_points - points_for_current
+            progress_percent = (progress / range_size) * 100
+        points_needed = points_for_next - avg_points
+    elif current_badge and not next_badge:
+        is_max_level = True
+        progress_percent = 100
+    else:
+        # اگر هیچ نشان فعلی نبود (امتیاز کمتر از پایین‌ترین نشان)
+        if badges.exists():
+            first_badge = badges.first()
+            points_needed = first_badge.min_points - avg_points
+            progress_percent = (avg_points / first_badge.min_points) * 100 if first_badge.min_points > 0 else 0
+            current_badge = None
+            next_badge = first_badge
+        else:
+            points_needed = 0
+            progress_percent = 0
+
+    # ساخت دیکشنری اطلاعات گیمیفیکیشن برای قالب
+    gamification_data = {
+        'current_points': avg_points,
+        'current_badge_name': current_badge.name if current_badge else 'بدون سطح',
+        'current_badge_icon': current_badge.icon.url if current_badge and current_badge.icon else None,
+        'current_badge_code': current_badge.slug if current_badge else None,
+        'next_badge_name': next_badge.name if next_badge else 'بالاترین سطح',
+        'points_needed_for_next': points_needed,
+        'progress_percent': round(progress_percent, 2),
+        'is_max_level': is_max_level,
+        'active_channels_count': active_channels_count,
+    }
+
     context = {
         'total_bookings': total_bookings,
         'pending_bookings': pending_bookings,
@@ -578,6 +736,10 @@ def influencer_dashboard(request):
         'orders_due_for_report_count': orders_due_for_report_count,
         'orders_due_for_report': orders_due_for_report[:5],
         'has_missing_report': orders_due_for_report_count > 0,
+        'free_total_orders': free_total_orders,
+        'free_pending_orders': free_pending_orders,
+        'free_completed_orders': free_completed_orders,
+        'gamification': gamification_data,
     }
 
     return render(request, "influencers/pages/dashboard.html", context)

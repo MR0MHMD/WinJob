@@ -17,28 +17,17 @@
                 <li class="breadcrumb-item active" aria-current="page">مدیریت کمپین ها</li>
             </ol>
         </nav>
-        <div class="page-header d-flex justify-content-between align-items-center">
-            <div style="width: 100%">
-                <h1 class="page-title text-primary text-center">لیست تبلیغات</h1>
-                <p class="page-sub text-light text-center">نمایش و مدیریت کمپین‌ها</p>
-            </div>
 
-            <div class="d-flex align-items-center gap-3">
-                {% if statuses|length > 1 %}
-                    <div class="filter-bar">
-                        <a href="?status=all" class="filter-item {% if status_filter == 'all' %}active{% endif %}">
-                            همه
-                        </a>
-
-                        {% for value,label in statuses %}
-                            <a href="?status={{ value }}"
-                               class="filter-item {% if status_filter == value %}active{% endif %}">
-                                {{ label }}
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+        <div class="col-lg-12-12 mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="text-light mb-0">کمپین های من</h3>
+                <button type="button" class="btn btn-outline-primary mt-3" data-bs-toggle="modal" data-bs-target="#filterCampaignModal">
+                    <i class="fi-filter me-1"></i> فیلتر
+                </button>
             </div>
+            <a class="btn btn-primary" href="{% url 'campaigns:campaign_create_step1' %}">
+                <i class="fi-plus me-1"></i> افزودن کمپین جدید
+            </a>
         </div>
 
         {% if campaigns.paginator.count == 0 %}
@@ -53,6 +42,137 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- ========== مودال فیلتر پیشرفته کمپین‌ها ========== -->
+<div class="modal fade" id="filterCampaignModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark glass-modal border-0">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="filter-icon-wrapper">
+                        <i class="fi-filter fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title text-white mb-0">فیلتر کمپین‌ها</h5>
+                        <p class="text-muted small mb-0 mt-1">جستجو را دقیق کنید</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <form method="get" action="{% url 'advertisers:my_campaigns' %}" id="filterCampaignForm">
+                <div class="modal-body pt-2">
+                    <!-- جستجو در نام کمپین -->
+                    <div class="search-field mb-4">
+                        <label for="cam_name" class="form-label text-white-50 small fw-semibold mb-2">
+                            <i class="fi-search me-1"></i> نام کمپین
+                        </label>
+                        <div class="position-relative">
+                            <input type="text" name="q" id="cam_name" value="{{ search_query }}"
+                                   class="form-control form-control-li bg-dark-alt text-light py-2 pe-5"
+                                   placeholder="مثال: تخفیف نوروزی ...">
+                            <i class="fi-search position-absolute top-50 translate-middle-y text-muted"
+                               style="left: 16px; font-size: 1.1rem;"></i>
+                        </div>
+                    </div>
+
+                    <!-- ردیف دو ستونه -->
+                    <div class="row g-3 mb-4">
+                        <!-- پلتفرم (dropdown سفارشی) -->
+                        <div class="col-md-6">
+                            <label class="form-label text-white-50 small fw-semibold mb-2">
+                                <i class="fi-device-desktop me-1"></i> پلتفرم
+                            </label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select-trigger">
+                                    <span class="selected-option-text">
+                                        {% if platform_slug %}
+                                            {% for p in platforms %}
+                                                {% if p.slug == platform_slug %}{{ p.name }}{% endif %}
+                                            {% endfor %}
+                                        {% else %}همه پلتفرم‌ها{% endif %}
+                                    </span>
+                                    <i class="fi-chevron-down"></i>
+                                </div>
+                                <div class="custom-options">
+                                    <div class="custom-option" data-value="">
+                                        <span class="option-icon">🌐</span>
+                                        <span>همه پلتفرم‌ها</span>
+                                    </div>
+                                    {% for p in platforms %}
+                                        <div class="custom-option" data-value="{{ p.slug }}" data-logo="{{ p.logo.url }}">
+                                            <img width="20" src="{{ p.logo.url }}" alt="{{ p.name }}">
+                                            <span>{{ p.name }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <input type="hidden" name="platform" id="platformInput" value="{{ platform_slug }}">
+                        </div>
+                    </div>
+
+                    <!-- ردیف دو ستونه دوم: نوع کمپین (رایگان/غیر) و وضعیت -->
+                    {% if request.user.advertiser_profile.can_create_free_campaign %}
+                        <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="cam_type" class="form-label text-white-50 small fw-semibold mb-2">
+                                <i class="fi-gift me-1"></i> نوع کمپین
+                            </label>
+                            <div class="styled-select-wrapper">
+                                <select name="free" class="styled-select" id="cam_type">
+                                    <option value="">همه</option>
+                                    <option value="yes" {% if free_filter == 'yes' %}selected{% endif %}>🎁 فقط رایگان</option>
+                                    <option value="no" {% if free_filter == 'no' %}selected{% endif %}>💰 فقط غیر رایگان</option>
+                                </select>
+                                <i class="fi-chevron-down select-arrow"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-md-6">
+                        <label for="status" class="form-label text-white-50 small fw-semibold mb-2">
+                            <i class="fi-check-circle me-1"></i> وضعیت کمپین
+                        </label>
+                        <div class="styled-select-wrapper">
+                            <select name="status" class="styled-select" id="status">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>همه</option>
+                                {% for value, label in statuses %}
+                                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <i class="fi-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+
+
+                    <!-- مرتب‌سازی با دکمه‌های دو حالته -->
+                    <div class="my-3">
+                        <label class="form-label text-white-50 small fw-semibold mb-2">
+                            <i class="fi-arrow-up-down me-1"></i> مرتب‌سازی بر اساس
+                        </label>
+                        <div class="sort-toggle d-flex gap-2">
+                            <button type="button" class="sort-btn w-50 {% if sort_by == 'newest' %}active{% endif %}" data-sort="newest">
+                                <i class="fi-clock me-1"></i> جدیدترین
+                            </button>
+                            <button type="button" class="sort-btn w-50 {% if sort_by == 'oldest' %}active{% endif %}" data-sort="oldest">
+                                <i class="fi-history me-1"></i> قدیمی‌ترین
+                            </button>
+                        </div>
+                        <input type="hidden" name="sort" id="sortInput" value="{{ sort_by }}">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="reset" class="btn btn-outline-secondary px-4" id="resetCampaignFiltersBtn">
+                        <i class="fi-rotate-right me-1"></i> بازنشانی همه
+                    </button>
+                    <button type="submit" class="btn btn-gradient px-5">
+                        <i class="fi-check me-1"></i> اعمال فیلتر
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block script %}

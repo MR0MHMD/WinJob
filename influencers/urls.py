@@ -28,4 +28,5 @@ urlpatterns = [
     path('channel/<int:channel_id>/start-verify/', api_views.start_verification, name='start_verification'),
     path('channel/<int:channel_id>/callback/', api_views.verification_callback, name='verification_callback'),
     path('channel/<int:channel_id>/verification-status/', api_views.verification_status, name='verification_status'),
+    path('report/<int:report_id>/n8n-callback/', api_views.n8n_report_callback, name='n8n_report_callback'),
 ]

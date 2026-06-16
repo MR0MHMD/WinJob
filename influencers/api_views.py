@@ -1,18 +1,22 @@
+from campaigns.services.campaigns_notifications import approve_influencer_report_service, reject_influencer_report_service
+from campaigns.services.raiting_service import submit_influencer_review_service
 from .models import InfluencerServiceRate, InfluencerReview, InfluencerChannel
+from .services.verification_service import VerificationService
+from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from campaigns.models import CampaignInfluencer
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from .forms import InfluencerProfileForm
 from django.http import JsonResponse
 from campaigns.models import AdType
-from django.views.decorators.http import require_POST
-from campaigns.models import CampaignInfluencer
-from campaigns.services.raiting_service import submit_influencer_review_service
-import json
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from .models import CampaignReport
+from django.conf import settings
 from django.urls import reverse
-from .services.verification_service import VerificationService
+import requests
+import json
 
 
 @login_required
@@ -311,3 +315,82 @@ def verification_status(request, channel_id):
         })
     else:
         return JsonResponse({'status': 'pending'})
+
+
+def trigger_n8n_verification(report_id, post_link, expected_caption, expected_tracking_link, platform_slug):
+    webhook_url = settings.N8N_CAMPAIGN_REPORT_WEBHOOK
+    payload = {
+        "report_id": report_id,
+        "post_link": post_link,
+        "expected_caption": expected_caption,
+        "expected_tracking_link": expected_tracking_link,
+        "platform_slug": platform_slug,
+        "callback_url": f"{settings.SITE_URL}/influencers/report/{report_id}/n8n-callback/"
+    }
+    headers = {"X-Callback-Token": settings.N8N_CALLBACK_SECRET}
+    try:
+        requests.post(webhook_url, json=payload, headers=headers, timeout=10)
+    except Exception as e:
+        print(f"❌ Failed to trigger n8n: {e}")
+
+
+# ========== ویوی برگشت نتیجه از n8n ==========
+@csrf_exempt
+@require_http_methods(["POST"])
+def n8n_report_callback(request, report_id):
+    """
+    n8n بعد از بررسی کامل، نتیجه رو به این آدرس POST می‌کنه.
+    نمونه body:
+    {
+        "status": "approved",  // یا "rejected"
+        "auto_check_details": {
+            "link_found": true,
+            "text_match_score": 92.5,
+            "image_match_score": 87.0,
+            "checked_at": "2025-01-15T12:00:00Z",
+            "errors": []
+        },
+        "admin_notes": "متن تبلیغ کامل تطابق داشت ولی تصویر کمی تغییر کرده بود."
+    }
+    """
+    # 1. بررسی توکن امنیتی (اختیاری اما توصیه میشه)
+    auth_header = request.headers.get("X-Callback-Token")
+    if auth_header != settings.N8N_CALLBACK_SECRET:
+        return JsonResponse({"status": "error", "message": "Unauthorized"}, status=401)
+
+    # 2. گرفتن گزارش
+    try:
+        report = CampaignReport.objects.select_related('campaign_influencer').get(id=report_id)
+    except CampaignReport.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Report not found"}, status=404)
+
+    # 3. اگر قبلاً تایید یا رد شده، دیگه تغییری نکن
+    if report.status != CampaignReport.Status.PENDING:
+        return JsonResponse({"status": "error", "message": f"Report already {report.status}"}, status=400)
+
+    # 4. خوندن داده‌های ارسالی از n8n
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    new_status = data.get("status")
+    auto_details = data.get("auto_check_details", {})
+    admin_notes = data.get("admin_notes", "")
+
+    if new_status not in ["approved", "rejected"]:
+        return JsonResponse({"status": "error", "message": "Invalid status"}, status=400)
+
+    # 5. به‌روزرسانی گزارش
+    report.auto_check_details = auto_details
+    report.admin_notes = admin_notes  # می‌تونه یادداشت n8n یا دلیل رد باشه
+
+    # 6. فراخوانی سرویس‌های تأیید/رد (که نوتیفیکیشن و پرداخت رو انجام می‌دن)
+    if new_status == "approved":
+        approve_influencer_report_service(report)
+    else:
+        # دلیل رد رو از فیلد admin_notes می‌گیریم
+        reason = admin_notes or "بررسی خودکار: مغایرت محتوا"
+        reject_influencer_report_service(report, reason=reason)
+
+    return JsonResponse({"status": "ok", "message": f"Report {new_status} successfully"})

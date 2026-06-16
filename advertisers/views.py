@@ -16,53 +16,81 @@ from datetime import timedelta
 import json
 
 
+from django.db.models import Q
+from plat_form.models import Platform
+from campaigns.models import AdType
+
 @login_required
 def campaigns_list(request):
     advertiser = request.user.advertiser_profile
 
+    # ----- دریافت پارامترهای فیلتر از GET -----
     status_filter = request.GET.get("status", "all")
+    search_query = request.GET.get("q", "").strip()
+    platform_slug = request.GET.get("platform", "")
+    ad_type_slug = request.GET.get("ad_type", "")
+    free_filter = request.GET.get("free", "")  # yes / no
+    sort_by = request.GET.get("sort", "newest")  # newest / oldest
 
-    # campaigns base queryset
-    campaigns_qs = Campaign.objects.filter(
-        advertiser=advertiser
-    ).select_related(
-        "platform",
-        "content_type",
-        "ad_type",
-        "content_service_type",
-        "invoice"
+    # base queryset
+    campaigns_qs = Campaign.objects.filter(advertiser=advertiser).select_related(
+        "platform", "content_type", "ad_type", "content_service_type", "invoice"
     )
 
-    available_statuses = (
-        campaigns_qs
-        .values_list("status", flat=True)
-        .distinct()
-    )
+    # ---- اعمال فیلترها ----
+    if status_filter != "all":
+        campaigns_qs = campaigns_qs.filter(status=status_filter)
 
-    # convert to structure compatible with template
+    if search_query:
+        campaigns_qs = campaigns_qs.filter(name__icontains=search_query)
+
+    if platform_slug:
+        campaigns_qs = campaigns_qs.filter(platform__slug=platform_slug)
+
+    if ad_type_slug:
+        campaigns_qs = campaigns_qs.filter(ad_type__slug=ad_type_slug)
+
+    if free_filter == "yes":
+        campaigns_qs = campaigns_qs.filter(is_free=True)
+    elif free_filter == "no":
+        campaigns_qs = campaigns_qs.filter(is_free=False)
+
+    # مرتب‌سازی
+    if sort_by == "oldest":
+        campaigns_qs = campaigns_qs.order_by("created_at")
+    else:  # newest
+        campaigns_qs = campaigns_qs.order_by("-created_at")
+
+    # استخراج وضعیت‌های موجود برای نمایش در فیلتر
+    available_statuses = campaigns_qs.values_list("status", flat=True).distinct()
     filtered_status_choices = [
         (value, label)
         for value, label in Campaign.Status.choices
         if value in available_statuses
     ]
 
-    campaigns = campaigns_qs
-    if status_filter != "all":
-        campaigns = campaigns.filter(status=status_filter)
-
-    campaigns = campaigns.order_by("-created_at")
-
-    # paginator
-    paginator = Paginator(campaigns, 10)
+    # صفحه‌بندی
+    paginator = Paginator(campaigns_qs, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
+
+    # داده‌های مورد نیاز برای پر کردن مجدد فرم مودال
+    platforms = Platform.objects.filter(is_active=True)
+    ad_types = AdType.objects.filter(is_active=True)
 
     context = {
         "campaigns": page_obj,
         "status_filter": status_filter,
         "statuses": filtered_status_choices,
+        "search_query": search_query,
+        "platform_slug": platform_slug,
+        "ad_type_slug": ad_type_slug,
+        "free_filter": free_filter,
+        "sort_by": sort_by,
+        "platforms": platforms,
+        "ad_types": ad_types,
     }
 
-    # AJAX response
+    # پاسخ AJAX (برای بارگذاری مجدد بدون رفرش صفحه - اختیاری)
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         html = render_to_string(
             "advertisers/partials/campaign_cards.html",

@@ -74,15 +74,16 @@ def approve_campaign_by_admin(campaign):
 
         notify_advertiser_campaign_approved(campaign)
 
-        influencer_counts = defaultdict(int)
-        bookings = campaign.influencer_bookings.select_related('channel__influencer__user')
+        if campaign.content_type.slug != 'content-production-team':
+            influencer_counts = defaultdict(int)
+            bookings = campaign.influencer_bookings.select_related('channel__influencer__user')
 
-        for booking in bookings:
-            user = booking.channel.influencer.user
-            influencer_counts[user] += 1
+            for booking in bookings:
+                user = booking.channel.influencer.user
+                influencer_counts[user] += 1
 
-        for user, count in influencer_counts.items():
-            notify_influencer_new_campaign_orders(user, campaign, count)
+            for user, count in influencer_counts.items():
+                notify_influencer_new_campaign_orders(user, campaign, count)
 
         content_order = campaign.content_orders.select_related(
             'team', 'plan', 'plan__service_type'
@@ -393,5 +394,18 @@ def accept_content_order_delivery(order, content_cost, team_members):
         order.delivery.status = 'final_accepted'
         order.delivery.accepted_at = timezone.now()
         order.delivery.save(update_fields=['status', 'accepted_at'])
+
+
+        campaign = order.campaign
+        if campaign.content_type.slug == 'content-production-team':
+            influencer_counts = defaultdict(int)
+            bookings = campaign.influencer_bookings.select_related('channel__influencer__user')
+
+            for booking in bookings:
+                user = booking.channel.influencer.user
+                influencer_counts[user] += 1
+
+            for user, count in influencer_counts.items():
+                notify_influencer_new_campaign_orders(user, campaign, count)
 
     return True

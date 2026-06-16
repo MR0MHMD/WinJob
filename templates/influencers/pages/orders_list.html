@@ -5,28 +5,22 @@
     سفارشات من
 {% endblock %}
 
-{% block extra_style %}
-    <style>
-        .order-cover {
-            background-size: cover;
-            background-position: center;
-        }
-        .video-card .img-overlay {
-            display: none;
-            pointer-events: none;
-        }
-
-
-    </style>
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/order_list.css' %}">
 {% endblock %}
 
 {% block content %}
 
     <div class="container mt-5 pt-5 pb-5">
 
-        <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 text-light">سفارشات تبلیغاتی من</h1>
+
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fi-filter me-1"></i> فیلتر
+            </button>
         </div>
+
 
         <div class="row g-4">
             {% for order in orders %}
@@ -41,9 +35,9 @@
                             {% else %}
                                 <div style="background-image:url({{ order.campaign.content.media.url }});width:100%;height:100%;background-size:cover;background-position:center;"></div>
                             {% endif %}
-                    
+
                             <a href="{{ order.campaign.content.media.url }}" target="blank" class="img-overlay"></a>
-                    
+
                             <div class="position-absolute start-0 top-0 pt-3 ps-3">
                                 {% if not order.is_seen %}
                                     <span class="badge bg-info">جدید</span>
@@ -58,8 +52,9 @@
                                 {% endif %}
                             </div>
                         </div>
-                    
-                        <a href="{% url 'influencers:order_detail' order.id %}" class="text-decoration-none text-light d-block w-100">
+
+                        <a href="{% url 'influencers:order_detail' order.id %}"
+                           class="text-decoration-none text-light d-block w-100">
                             <div class="card-body">
                                 <h3 class="h5 text-center text-light mb-3">
                                     {{ order.campaign.name }}
@@ -69,41 +64,42 @@
                                         </span>
                                     {% endif %}
                                 </h3>
-                    
+
                                 <div class="row text-light mb-3">
                                     <div class="col-6">
                                         <div class="opacity-50" style="font-size:10px">
                                             شروع کمپین
                                         </div>
-                    
+
                                         <div class="fs-sm">
                                             {{ order.campaign.start_date|date:"Y/m/d" }}
                                         </div>
                                     </div>
-                    
+
                                     <div class="col-6 text-end">
                                         <div class="opacity-50" style="font-size:10px">
                                             پایان کمپین
                                         </div>
-                    
+
                                         <div class="fs-sm">
                                             {{ order.campaign.end_date|date:"Y/m/d" }}
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row fs-sm text-light opacity-75 mb-3">
                                     <div class="col-6">
-                                        <img width="20" class="me-1" src="{{ order.campaign.platform.logo.url }}" alt="{{ order.campaign.platform.name }}">
+                                        <img width="20" class="me-1" src="{{ order.campaign.platform.logo.url }}"
+                                             alt="{{ order.campaign.platform.name }}">
                                         {{ order.campaign.platform.name }}
                                     </div>
-                    
+
                                     <div class="col-6 text-end">
                                         <i class="fi-grid me-1"></i>
                                         {{ order.campaign.advertiser.category.name }}
                                     </div>
                                 </div>
-                    
+
                                 <div class="text-center mb-3">
                                     {% if order.campaign.is_free %}
                                         <span class="text-success fw-bold" style="font-size:18px">
@@ -115,31 +111,32 @@
                                         </span>
                                     {% endif %}
                                 </div>
-                    
+
                                 <div class="border-top border-light pt-3">
                                     <div class="row g-2">
                                         <div class="col">
                                             <div class="bg-dark rounded text-center p-2 h-100">
                                                 <i class="fi-calendar d-block text-light mb-1"></i>
-                    
+
                                                 <span class="fs-xs text-light"> {{ order.campaign.duration_days }} روز </span>
                                             </div>
                                         </div>
-                    
+
                                         <div class="col">
                                             <div class="bg-dark rounded text-center p-2 h-100">
-                                                <img width="20" src="{% static 'influencers/icons/channel.svg' %}" alt="کانال">
-                    
+                                                <img width="20" src="{% static 'influencers/icons/channel.svg' %}"
+                                                     alt="کانال">
+
                                                 <div class="fs-xs text-light mt-1">
                                                     {{ order.channel.channel_name }}
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="col">
                                             <div class="bg-dark rounded text-center p-2 h-100">
                                                 <i class="fi-user text-light d-block mb-1"></i>
-                    
+
                                                 <span class="fs-xs text-light">
                                                     {{ order.campaign.advertiser.business_name }}
                                                 </span>
@@ -151,7 +148,7 @@
                         </a>
                     </div>
                 </div>
-                
+
             {% empty %}
                 <div class="col-12 text-center mt-5">
                     <h4 class="text-light opacity-70">
@@ -160,11 +157,159 @@
                 </div>
             {% endfor %}
         </div>
-        
+
         {% include 'partials/pagination.html' with page_obj=orders %}
+    </div>
+
+    <!-- مودال فیلتر پیشرفته - نسخه شیک -->
+    <div class="modal fade" id="filterModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark glass-modal border-0">
+                <div class="modal-header d-flex justify-content-between border-0 pb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="filter-icon-wrapper">
+                            <i class="fi-filter fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title text-white mb-0">فیلتر و مرتب‌سازی سفارشات</h5>
+                            <p class="text-muted small mb-0 mt-1">با استفاده از گزینه‌های زیر جستجو را دقیق کنید</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="بستن"></button>
+                </div>
+
+                <form method="get" action="{% url 'influencers:order_list' %}" id="filterForm">
+                    <div class="modal-body pt-2">
+                        <!-- جستجوی نام کمپین با آیکون -->
+                        <!-- جستجوی نام کمپین با آیکون داخلی -->
+                        <div class="search-field mb-4">
+                            <label for="name_inp" class="form-label text-white-50 small fw-semibold mb-2">
+                                <i class="fi-search me-1"></i> نام کمپین
+                            </label>
+                            <div class="position-relative">
+                                <input type="text" id="name_inp" name="q" value="{{ filter_q }}"
+                                       class="form-control form-control-lg bg-dark-alt border-secondary text-light py-2 pe-5"
+                                       placeholder="مثال: تخفیف نوروزی ...">
+                                <i class="fi-search position-absolute top-50 translate-middle-y text-muted"
+                                   style="left: 16px; font-size: 1.1rem;"></i>
+                            </div>
+                        </div>
+
+                        <!-- ردیف دو ستونه -->
+                        <div class="row g-3 mb-4">
+                            <!-- پلتفرم (همان dropdown سفارشی) -->
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small fw-semibold mb-2">
+                                    <i class="fi-device-desktop me-1"></i> پلتفرم
+                                </label>
+                                <div class="custom-select-wrapper">
+                                    <div class="custom-select-trigger">
+                                        <span class="selected-option-text">همه پلتفرم‌ها</span>
+                                        <i class="fi-chevron-down"></i>
+                                    </div>
+                                    <div class="custom-options">
+                                        {% for p in platforms %}
+                                            <div class="custom-option" data-value="{{ p.slug }}"
+                                                 data-logo="{{ p.logo.url }}">
+                                                <img src="{{ p.logo.url }}" alt="{{ p.name }}" class="platform-logo">
+                                                <span>{{ p.name }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <input type="hidden" name="platform" id="platformInput" value="{{ filter_platform }}">
+                            </div>
+
+                            <!-- نوع کمپین (select استایل‌شده) -->
+                            <div class="col-md-6">
+                                <label for="cam_type" class="form-label text-white-50 small fw-semibold mb-2">
+                                    <i class="fi-tag me-1"></i> نوع کمپین
+                                </label>
+                                <div class="styled-select-wrapper">
+                                    <select id="cam_type" name="free" class="styled-select">
+                                        <option value="">همه</option>
+                                        <option value="yes" {% if filter_free == 'yes' %}selected{% endif %}>🎁 فقط
+                                            رایگان
+                                        </option>
+                                        <option value="no" {% if filter_free == 'no' %}selected{% endif %}>💰 فقط غیر
+                                            رایگان
+                                        </option>
+                                    </select>
+                                    <i class="fi-chevron-down select-arrow"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- وضعیت سفارش با دکمه‌های رنگی (رادیو استایل) -->
+                        <div class="mb-4">
+                            <label class="form-label text-white-50 small fw-semibold mb-3">
+                                <i class="fi-check-circle me-1"></i> وضعیت سفارش
+                            </label>
+                            <div class="status-options d-flex flex-wrap gap-2">
+                                <label class="status-option {% if filter_status == '' %}active{% endif %}">
+                                    <input type="radio" name="status" value=""
+                                           {% if filter_status == '' %}checked{% endif %} hidden>
+                                    <span>همه</span>
+                                </label>
+                                <label class="status-option status-pending {% if filter_status == 'pending' %}active{% endif %}">
+                                    <input type="radio" name="status" value="pending"
+                                           {% if filter_status == 'pending' %}checked{% endif %} hidden>
+                                    <span>⏳ در انتظار</span>
+                                </label>
+                                <label class="status-option status-accepted {% if filter_status == 'accepted' %}active{% endif %}">
+                                    <input type="radio" name="status" value="accepted"
+                                           {% if filter_status == 'accepted' %}checked{% endif %} hidden>
+                                    <span>✅ پذیرفته شده</span>
+                                </label>
+                                <label class="status-option status-completed {% if filter_status == 'completed' %}active{% endif %}">
+                                    <input type="radio" name="status" value="completed"
+                                           {% if filter_status == 'completed' %}checked{% endif %} hidden>
+                                    <span>✔️ تکمیل شده</span>
+                                </label>
+                                <label class="status-option status-rejected {% if filter_status == 'rejected' %}active{% endif %}">
+                                    <input type="radio" name="status" value="rejected"
+                                           {% if filter_status == 'rejected' %}checked{% endif %} hidden>
+                                    <span>❌ رد شده</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- مرتب‌سازی با دکمه‌های دو حالته -->
+                        <div class="mb-3">
+                            <label class="form-label text-white-50 small fw-semibold mb-2">
+                                <i class="fi-arrow-up-down me-1"></i> مرتب‌سازی بر اساس
+                            </label>
+                            <div class="sort-toggle d-flex gap-2">
+                                <button type="button"
+                                        class="sort-btn w-50 {% if filter_sort == 'newest' %}active{% endif %}"
+                                        data-sort="newest">
+                                    <i class="fi-clock me-1"></i> جدیدترین
+                                </button>
+                                <button type="button"
+                                        class="sort-btn w-50 {% if filter_sort == 'oldest' %}active{% endif %}"
+                                        data-sort="oldest">
+                                    <i class="fi-history me-1"></i> قدیمی‌ترین
+                                </button>
+                            </div>
+                            <input type="hidden" name="sort" id="sortInput" value="{{ filter_sort }}">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="reset" class="btn btn-outline-secondary px-4" id="resetFiltersBtn">
+                            <i class="fi-rotate-right me-1"></i> بازنشانی همه
+                        </button>
+                        <button type="submit" class="btn btn-gradient px-5 text-light">
+                            <i class="fi-check me-1"></i> اعمال فیلتر
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
 {% block script %}
-    
+    <script src="{% static 'influencers/js/pages/order_list.js' %}"></script>
 {% endblock %}
