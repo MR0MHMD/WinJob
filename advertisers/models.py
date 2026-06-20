@@ -1,10 +1,10 @@
-from django.db import models
 from django.utils.translation import gettext_lazy as _
+from gamification.mixins import GamificationMixin
 from django_jalali.db import models as jmodels
 from accounts.models import CustomUser
-from core.models import Category
-from gamification.mixins import GamificationMixin
 from location.models import Province
+from core.models import Category
+from django.db import models
 
 
 class AdvertiserProfile(GamificationMixin, models.Model):

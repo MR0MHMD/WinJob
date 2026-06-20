@@ -1,17 +1,19 @@
 from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile
-from campaigns.models import CampaignClick, Campaign
+from campaigns.models import CampaignClick, Campaign, CampaignInfluencer
+from django.views.generic import TemplateView
+from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
 from django.db.models import Count, Q, Avg
-from content_team.models import ContentTeam
 from plat_form.models import Platform
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import Http404
 from blog.models import Post
 
+
 def home(request):
     total_influencers = InfluencerProfile.objects.filter(is_active=True).count()
     total_campaigns = Campaign.objects.filter(status=Campaign.Status.COMPLETED).count()
-    total_channels = InfluencerChannel.objects.filter(is_active=True).count()
+    total_channels = InfluencerChannel.objects.filter(is_active=True, status="approved").count()
     total_teams = ContentTeam.objects.filter(is_active=True).count()
     total_clicks = CampaignClick.objects.count()
 
@@ -73,6 +75,43 @@ def home(request):
     }
 
     return render(request, 'core/pages/index.html', context)
+
+
+class AboutView(TemplateView):
+    template_name = "core/pages/about.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # ========== آمارهای واقعی ==========
+        context['successful_campaigns'] = Campaign.objects.filter(
+            status=Campaign.Status.COMPLETED
+        ).count()
+
+        context['active_approved_channels'] = InfluencerChannel.objects.filter(
+            status='approved',
+            is_active=True
+        ).count()
+
+        context['active_content_teams'] = ContentTeam.objects.filter(
+            is_active=True
+        ).count()
+
+        context['total_clicks'] = CampaignClick.objects.count()
+
+        context["completed_bookings"] = CampaignInfluencer.objects.filter(
+            status=CampaignInfluencer.Status.COMPLETED
+        ).count()
+
+        context["portfolio_count"] = ContentPortfolio.objects.filter(
+            is_active=True
+        ).count()
+
+        context["completed_content_orders"] = ContentOrder.objects.filter(
+            status=ContentOrder.Status.COMPLETED
+        ).count()
+
+        return context
 
 
 def platform_landing_page(request, slug):
@@ -191,7 +230,6 @@ def platform_landing_page(request, slug):
 
     theme = platform_theme.get(platform.slug, platform_theme['instagram'])
 
-
     context = {
         'platform': platform,
         'total_campaigns': total_campaigns,
@@ -205,6 +243,7 @@ def platform_landing_page(request, slug):
         'now': timezone.now(),
     }
     return render(request, 'core/pages/platform_landing.html', context)
+
 
 def pending(request):
     return render(request, "core/pages/pending.html")

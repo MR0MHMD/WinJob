@@ -11,13 +11,12 @@ urlpatterns = [
     path('verify-otp/', auth_views.verify_otp_view, name='verify_otp'),
 
     # views
-    path('edit/', views.advertiser_profile_edit_view, name='edit'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('wallet/', views.wallet_dashboard, name='wallet_dashboard'),
     path('wallet/deposit/', views.wallet_deposit, name='wallet_deposit'),
     path('wallet/transactions/load-more/', views.load_more_transactions, name='load_more_transactions'),
 
     # api_views
-    path('update/', api_views.user_update, name='update'),
     path('delete_account/', api_views.delete_account, name='delete_account'),
     path('dashboard/router/', api_views.dashboard_router, name='dashboard_router'),
 

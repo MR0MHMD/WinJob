@@ -1,10 +1,10 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from gamification.mixins import GamificationMixin
 from django_jalali.db import models as jmodels
 from django_resized import ResizedImageField
 from core.utils import generate_random_slug
-from gamification.mixins import GamificationMixin
 from .utils import content_order_file_path
 from django.db.models import Sum
 from django.db import models

@@ -1,0 +1,494 @@
+<!-- pages/templates/pages/about.html -->
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}درباره ما | سامانه وینجاب{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ========== استایل‌های اختصاصی ========== */
+    .about-hero {
+        position: relative;
+        padding: 6rem 0 4rem;
+        background: linear-gradient(135deg, #1a1625 0%, #0f0c14 100%);
+        overflow: hidden;
+    }
+    .about-hero::before {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -20%;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(253,86,49,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .about-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -40%;
+        left: -10%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(93,60,242,0.08) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .about-hero .container {
+        position: relative;
+        z-index: 1;
+    }
+    .about-hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .about-hero .lead {
+        color: rgba(255,255,255,0.8);
+        font-size: 1.2rem;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .stat-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 1.25rem;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+        height: 100%;
+    }
+    .stat-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(253,86,49,0.25);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        background: rgba(255,255,255,0.06);
+    }
+    .stat-card .stat-number {
+        font-size: 2.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: inline-block;
+        font-variant-numeric: tabular-nums;
+    }
+    .stat-card .stat-label {
+        color: rgba(255,255,255,0.65);
+        font-size: 1rem;
+        margin-top: 0.3rem;
+    }
+
+    .mission-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 1.25rem;
+        padding: 2rem 1.8rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    .mission-card:hover {
+        border-color: rgba(93,60,242,0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .mission-card .icon-wrapper {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.15));
+        color: #fd5631;
+        margin-bottom: 1.2rem;
+    }
+    .mission-card h5 {
+        color: #fff;
+        font-weight: 600;
+    }
+    .mission-card p {
+        color: rgba(255,255,255,0.7);
+        line-height: 1.7;
+        font-size: 0.95rem;
+    }
+
+    .team-member-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 1.25rem;
+        padding: 1.8rem 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    .team-member-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(253,86,49,0.2);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    }
+    .team-member-card .avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(253,86,49,0.3);
+        margin-bottom: 1rem;
+    }
+    .team-member-card .name {
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .team-member-card .role {
+        color: rgba(255,255,255,0.5);
+        font-size: 0.85rem;
+    }
+    .team-member-card .bio {
+        color: rgba(255,255,255,0.65);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+        line-height: 1.6;
+    }
+    .team-member-card .prompt-hint {
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.2);
+        margin-top: 0.5rem;
+        border-top: 1px dashed rgba(255,255,255,0.05);
+        padding-top: 0.5rem;
+    }
+
+    .section-title {
+        position: relative;
+        display: inline-block;
+        font-weight: 700;
+        color: #fff;
+    }
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        right: 0;
+        width: 50px;
+        height: 3px;
+        background: linear-gradient(90deg, #fd5631, #5d3cf2);
+        border-radius: 10px;
+    }
+    .section-title-center::after {
+        right: 50%;
+        transform: translateX(50%);
+    }
+
+    .values-grid .value-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .values-grid .value-item:last-child {
+        border-bottom: none;
+    }
+    .values-grid .value-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(253,86,49,0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fd5631;
+        font-size: 1.2rem;
+    }
+    .values-grid .value-text h6 {
+        color: #fff;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+    .values-grid .value-text p {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.9rem;
+        margin-bottom: 0;
+        line-height: 1.5;
+    }
+
+    .cta-box {
+        background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.08));
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 1.5rem;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    .cta-box h3 {
+        color: #fff;
+        font-weight: 700;
+    }
+    .cta-box p {
+        color: rgba(255,255,255,0.7);
+        max-width: 600px;
+        margin: 0.5rem auto 1.5rem;
+    }
+
+    .illustration-wrapper {
+        border-radius: 1.25rem;
+        overflow: hidden;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .illustration-wrapper img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .about-hero h1 {
+            font-size: 2.2rem;
+        }
+        .stat-card .stat-number {
+            font-size: 2.2rem;
+        }
+        .mission-card {
+            padding: 1.5rem 1.2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ==================== هیرو ==================== -->
+<section class="about-hero">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="mb-3">
+                    <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill">
+                        <i class="bi bi-info-circle me-1"></i> درباره وینجاب
+                    </span>
+                </div>
+                <h1 class="mb-3">سامانه هوشمند<br>تبلیغات اینفلوئنسری</h1>
+                <p class="lead mb-4">
+                    وینجاب پلی است که برندها، اینفلوئنسرها و تیم‌های تولید محتوا را در یک اکوسیستم حرفه‌ای گرد هم آورده است.
+                    ما با ترکیب تکنولوژی و خلاقیت، مسیر تبلیغات هدفمند را هموار می‌کنیم.
+                </p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <a href="{% url 'accounts:dashboard_router' %}" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-send me-1"></i> شروع همکاری
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== آمارهای واقعی با انیمیشن ==================== -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number" data-count="{{ successful_campaigns }}">۰</div>
+                    <div class="stat-label">کمپین موفق</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number" data-count="{{ active_approved_channels }}">۰</div>
+                    <div class="stat-label">کانال/پیج</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number" data-count="{{ active_content_teams }}">۰</div>
+                    <div class="stat-label">تیم تولید محتوا</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number" data-count="{{ total_clicks }}">۰</div>
+                    <div class="stat-label">تعامل با کاربر</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== ماموریت و چشم‌انداز ==================== -->
+<section class="py-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="mission-card">
+                    <div class="icon-wrapper"><i class="bi bi-rocket-takeoff"></i></div>
+                    <h5>ماموریت ما</h5>
+                    <p>
+                        توانمندسازی برندها در استفاده از پتانسیل بازاریابی اینفلوئنسری با شفافیت، داده‌محوری و عدالت.
+                        ما به دنبال ایجاد پلی امن و کارآمد بین صاحبان کسب‌وکار و تولیدکنندگان محتوا هستیم تا هر دو طرف
+                        به بهترین نتیجه برسند.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mission-card">
+                    <div class="icon-wrapper"><i class="bi bi-eye"></i></div>
+                    <h5>چشم‌انداز ما</h5>
+                    <p>
+                        تبدیل شدن به بزرگترین و معتبرترین پلتفرم مدیریت کمپین‌های تبلیغاتی در خاورمیانه، با تکیه بر
+                        نوآوری مستمر، شفافیت کامل و ایجاد ارزش واقعی برای همه بازیگران اکوسیستم بازاریابی محتوایی.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== چرا وینجاب (ارزش‌ها) با پرامپت تصویر ==================== -->
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill mb-3">
+                    <i class="bi bi-star me-1"></i> ارزش‌های ما
+                </span>
+                <h3 class="section-title mb-4">چرا وینجاب؟</h3>
+                <p class="text-muted mb-4" style="color: rgba(255,255,255,0.6) !important;">
+                    ما باور داریم که تبلیغات مؤثر زمانی شکل می‌گیرد که اعتماد، داده و خلاقیت در کنار هم قرار گیرند.
+                    به همین دلیل وینجاب را بر پایه اصول زیر بنا کرده‌ایم:
+                </p>
+                <div class="values-grid">
+                    <div class="value-item">
+                        <div class="value-icon"><i class="bi bi-shield-check"></i></div>
+                        <div class="value-text">
+                            <h6>شفافیت کامل</h6>
+                            <p>همه فرآیندها از ثبت سفارش تا گزارش‌دهی نهایی، شفاف و قابل پیگیری هستند.</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                        <div class="value-text">
+                            <h6>داده‌محوری</h6>
+                            <p>تصمیم‌گیری‌ها بر اساس تحلیل داده‌های واقعی و بازخوردهای دقیق انجام می‌شود.</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon"><i class="bi bi-people"></i></div>
+                        <div class="value-text">
+                            <h6>ارزش‌آفرینی برای همه</h6>
+                            <p>طراحی شده تا برندها، اینفلوئنسرها و تیم‌های محتوا به طور عادلانه از همکاری بهره‌مند شوند.</p>
+                        </div>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon"><i class="bi bi-lightbulb"></i></div>
+                        <div class="value-text">
+                            <h6>نوآوری مستمر</h6>
+                            <p>با به‌روزترین ابزارها و متدهای روز دنیا، تجربه‌ای بی‌نظیر خلق می‌کنیم.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="illustration-wrapper">
+                    <img src="{% static 'core/images/about/why-winjob.png' %}" 
+                         alt="تصویر شاخص وینجاب" 
+                         class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== تیم ما با پرامپت هر نفر ==================== -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill">
+                <i class="bi bi-people me-1"></i> تیم وینجاب
+            </span>
+            <h3 class="section-title section-title-center mt-3">افراد پشت صحنه</h3>
+            <p class="text-muted" style="color: rgba(255,255,255,0.6) !important; max-width: 600px; margin: 0.5rem auto 0;">
+                تیم ما متشکل از متخصصان بازاریابی، توسعه‌دهندگان و خلاقانی است که با عشق به کار خود،
+                وینجاب را به بهترین نسخه ممکن تبدیل می‌کنند.
+            </p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-3 col-sm-6">
+                <div class="team-member-card">
+                    {# در صورت وجود عکس واقعی از static استفاده کن، فعلاً placeholder #}
+                    <img src="{% static 'core/images/about/members/takbitgoo.png' %}" 
+                         alt="محمدرضا تکبیرگو" 
+                         class="avatar">
+                    <div class="name">محمدرضا تکبیرگو</div>
+                    <div class="role">مدیرعامل و بنیان‌گذار</div>
+                    <p class="bio">با بیش از ۱۰ سال تجربه در حوزه دیجیتال مارکتینگ و رهبری تیم‌های خلاق.</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="team-member-card">
+                    <img src="{% static 'core/images/about/members/sheikhali.png' %}" 
+                         alt="محمد شیخعلی" 
+                         class="avatar">
+                    <div class="name">محمد شیخعلی</div>
+                    <div class="role">توسعه‌دهنده ارشد</div>
+                    <p class="bio">عاشق کدنویسی پاک و معماری سیستم‌های مقیاس‌پذیر با جنگو و فناوری‌های مدرن.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    // ========== انیمیشن شمارش آمار ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        const counters = document.querySelectorAll('.stat-number');
+
+        const animateCounter = (el) => {
+            const target = parseInt(el.getAttribute('data-count')) || 0;
+            const duration = 1500; // میلی‌ثانیه
+            const startTime = performance.now();
+
+            const update = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // تابع easeOutCubic برای نرم‌تر شدن
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(eased * target);
+
+                // نمایش عدد با جداکننده هزارگان (فارسی)
+                el.textContent = current.toLocaleString('fa-IR');
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    el.textContent = target.toLocaleString('fa-IR');
+                }
+            };
+
+            requestAnimationFrame(update);
+        };
+
+        // شروع انیمیشن وقتی المان در viewport قرار گرفت
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        counters.forEach(counter => observer.observe(counter));
+    });
+</script>
+{% endblock %}

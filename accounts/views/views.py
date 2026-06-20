@@ -1,98 +1,51 @@
+from ..forms import CustomUserForm, AdvertiserProfileForm, InfluencerProfileForm
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
 from django.views.decorators.http import require_GET
 from influencers.forms import InfluencerProfileForm
 from advertisers.forms import AdvertiserProfileForm
 from django.shortcuts import render, redirect
-from accounts.forms import ProfileUpdateForm
+from accounts.models import Transaction
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
-from accounts.models import Transaction
 
 
-def advertiser_profile_edit_view(request):
+@login_required
+def edit_profile(request):
     user = request.user
-    user_form = ProfileUpdateForm(instance=user)
 
+    user_form = CustomUserForm(instance=user)
     profile_form = None
-    profile = None
 
-    if hasattr(user, "advertiser_profile"):
-        profile = user.advertiser_profile
-        profile_form = AdvertiserProfileForm(instance=profile)
+    if user.is_advertiser:
+        profile_form = AdvertiserProfileForm(instance=user.advertiser_profile)
+    elif user.is_influencer:
+        profile_form = InfluencerProfileForm(instance=user.influencer_profile)
 
-    elif hasattr(user, "influencer_profile"):
-        profile = user.influencer_profile
-        profile_form = InfluencerProfileForm(instance=profile)
+    if request.method == 'POST':
+        user_form = CustomUserForm(request.POST, request.FILES, instance=user)
 
-    user_fields_filled = 0
-    total_user_fields = 3
+        if user.is_advertiser:
+            profile_form = AdvertiserProfileForm(request.POST, instance=user.advertiser_profile)
+        elif user.is_influencer:
+            profile_form = InfluencerProfileForm(request.POST, instance=user.influencer_profile)
 
-    if user.nickname:
-        user_fields_filled += 1
+        if user_form.is_valid() and (not profile_form or profile_form.is_valid()):
+            user_form.save()
+            if profile_form:
+                profile_form.save()
 
-    if user.avatar:
-        user_fields_filled += 1
-
-    if user.email:
-        user_fields_filled += 1
-
-    profile_fields_filled = 0
-    total_profile_fields = 0
-
-    if profile:
-
-        if hasattr(user, "advertiser_profile"):
-
-            fields = [
-                profile.business_name,
-                profile.category,
-                profile.description,
-                profile.website
-            ]
-
-            total_profile_fields = len(fields)
-
-            for f in fields:
-                if f:
-                    profile_fields_filled += 1
-
-        elif hasattr(user, "influencer_profile"):
-
-            fields = [
-                profile.full_name,
-                profile.description,
-            ]
-
-            total_profile_fields = len(fields)
-
-            for f in fields:
-                if f:
-                    profile_fields_filled += 1
-
-            # بررسی داشتن کانال
-            if profile.channels.exists():
-                profile_fields_filled += 1
-            total_profile_fields += 1
-
-            # بررسی داشتن نرخ
-            if profile.channels.filter(service_rates__isnull=False).exists():
-                profile_fields_filled += 1
-            total_profile_fields += 1
-
-    total_fields = total_user_fields + total_profile_fields
-    filled_fields = user_fields_filled + profile_fields_filled
-
-    completion_percentage = int((filled_fields / total_fields) * 100) if total_fields else 0
+            messages.success(request, 'اطلاعات پروفایل با موفقیت بروزرسانی شد!')
+            return redirect('accounts:edit_profile')
+        else:
+            messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
 
     context = {
-        "user_form": user_form,
-        "profile_form": profile_form,
-        "percentage": completion_percentage
+        'user_form': user_form,
+        'profile_form': profile_form,
     }
-
-    return render(request, "accounts/forms/edit_profile.html", context)
+    return render(request, 'accounts/forms/edit_profile.html', context)
 
 
 @login_required
@@ -102,7 +55,6 @@ def wallet_dashboard(request):
     """
     wallet = request.user.wallet
 
-    # فقط 10 تراکنش اول رو نشون بده
     recent_transactions = Transaction.objects.filter(
         user=request.user
     ).order_by('-created_at')[:5]
@@ -125,15 +77,12 @@ def load_more_transactions(request):
         page = int(request.GET.get('page', 1))
         per_page = 5
 
-        # گرفتن کل تراکنش‌ها
         all_transactions = Transaction.objects.filter(
             user=request.user
         ).order_by('-created_at')
 
-        # ایجاد Paginator
         paginator = Paginator(all_transactions, per_page)
 
-        # بررسی وجود صفحه
         if page > paginator.num_pages:
             return JsonResponse({
                 'transactions': [],
@@ -141,13 +90,10 @@ def load_more_transactions(request):
                 'error': False
             })
 
-        # گرفتن تراکنش‌های صفحه مورد نظر
         current_page = paginator.page(page)
 
-        # ساخت دیتا برای JSON
         transactions_data = []
         for transaction_ in current_page:
-            # تعیین نوع آیکون
             trans_type = 'other'
             if transaction_.type == 'deposit':
                 trans_type = 'deposit'

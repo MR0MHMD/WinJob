@@ -1,8 +1,13 @@
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from django.utils.safestring import mark_safe
+from advertisers.models import AdvertiserProfile
+from influencers.models import InfluencerProfile
 from .models import CustomUser
 from django import forms
 
+
+COMMON_WIDGETS = {
+    'class': 'form-control bg-transparent text-light',
+}
 
 class LoginForm(forms.Form):
     phone_number = forms.CharField(
@@ -130,105 +135,6 @@ class RegistrationForm(forms.Form):
         return phone
 
 
-class ProfileUpdateForm(forms.ModelForm):
-    """فرم ویرایش پروفایل کاربر (فقط ایمیل و نام مستعار)."""
-
-    class Meta:
-        model = CustomUser
-        fields = ("nickname", "email", "avatar", 'sheba_code', "province",)
-        labels = {
-            "nickname": "نام کامل",
-            "email": "پست الکترونیکی",
-            "avatar": "تصویر پروفایل",
-            'sheba_code': 'شماره شبا'
-        }
-        widgets = {
-            "email": forms.EmailInput(
-                attrs={
-                    "class": "form-control form-control-light mt-3",
-                    "placeholder": "example@mail.com",
-                    "data-bs-binded-element": "#email-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "id": "email-input",
-                }
-            ),
-            "nickname": forms.TextInput(
-                attrs={
-                    "class": "form-control form-control-light mt-3",
-                    "placeholder": "نام مستعار",
-                    "data-bs-binded-element": "#name-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "id": "name-input",
-                }
-            ),
-            "province": forms.Select(
-                attrs={
-                    "class": "form-select form-select-light mt-3",
-                    "data-bs-binded-element": "#province-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "id": "province-input",
-                }
-            ),
-            "avatar": forms.FileInput(
-                attrs={
-                    "class": "file-uploader border-light bg-faded-light",
-                    "name": "image",
-                    "accept": "image/png, image/jpeg",
-                    "data-label-idle": mark_safe(
-                        "<i class='d-inline-block fi-camera-plus fs-2 text-light text-muted mb-2'></i>"
-                        "<br><span class='text-light opacity-70'>تغییر تصویر</span>"
-                    ),
-                    "data-style-panel-layout": "compact",
-                    "data-image-preview-height": "160",
-                    "data-image-crop-aspect-ratio": "1:1",
-                    "data-image-resize-target-width": "200",
-                    "data-image-resize-target-height": "200",
-                }
-            ),
-            'sheba_code': forms.TextInput(
-                attrs={
-                    "class": "form-control form-control-light mt-3",
-                    "placeholder": "شماره شبا بدون IR",
-                    "id": "sheba-input",
-                    "data-bs-binded-element": "#sheba-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "maxlength": "24",
-                    "inputmode": "numeric",
-                }
-            ),
-        }
-
-
-    def clean_nickname(self):
-        nickname = (self.cleaned_data.get("nickname") or "").strip()
-        return nickname or None
-
-    def clean_email(self):
-        email = (self.cleaned_data.get("email") or "").strip().lower()
-        return email or None
-
-    def clean_sheba_code(self):
-        sheba = self.cleaned_data.get("sheba_code", "")
-
-        if not sheba:
-            return None
-
-        sheba = sheba.replace(" ", "").replace("-", "").replace("_", "").strip()
-
-        sheba = sheba.upper()
-
-        if sheba.startswith("IR"):
-            sheba = sheba[2:]
-
-        import re
-        sheba = re.sub(r"[^0-9]", "", sheba)
-
-        if len(sheba) != 24:
-            raise forms.ValidationError("شماره شبا باید دقیقاً 24 رقم باشد.")
-
-        return sheba
-
-
 class CustomUserCreationForm(forms.ModelForm):
     """فرم ساخت کاربر در ادمین"""
 
@@ -269,3 +175,67 @@ class CustomUserChangeForm(forms.ModelForm):
 
     def clean_password(self):
         return self.initial["password"]
+
+
+class CustomUserForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ['nickname', 'email', 'avatar', 'sheba_code', 'province']
+        widgets = {
+            'nickname': forms.TextInput(attrs=COMMON_WIDGETS),
+            'email': forms.EmailInput(attrs=COMMON_WIDGETS),
+            'sheba_code': forms.TextInput(attrs={**COMMON_WIDGETS, 'dir': 'ltr', 'placeholder': 'شماره شبا بدون IR'}),
+            'province': forms.Select(attrs={'class': 'form-select form-select-dark text-light border-secondary'}),
+            'avatar': forms.FileInput(attrs={'class': 'd-none', 'id': 'avatar-upload', 'accept': 'image/*'}),
+        }
+
+    def clean_nickname(self):
+        nickname = (self.cleaned_data.get("nickname") or "").strip()
+        return nickname or None
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        return email or None
+
+    def clean_sheba_code(self):
+        sheba = self.cleaned_data.get("sheba_code", "")
+
+        if not sheba:
+            return None
+
+        sheba = sheba.replace(" ", "").replace("-", "").replace("_", "").strip()
+
+        sheba = sheba.upper()
+
+        if sheba.startswith("IR"):
+            sheba = sheba[2:]
+
+        import re
+        sheba = re.sub(r"[^0-9]", "", sheba)
+
+        if len(sheba) != 24:
+            raise forms.ValidationError("شماره شبا باید دقیقاً 24 رقم باشد.")
+
+        return sheba
+
+
+class AdvertiserProfileForm(forms.ModelForm):
+    class Meta:
+        model = AdvertiserProfile
+        fields = ['business_name', 'category', 'description', 'website']
+        widgets = {
+            'business_name': forms.TextInput(attrs=COMMON_WIDGETS),
+            'category': forms.Select(attrs={'class': 'form-select form-select-dark text-light border-secondary'}),
+            'description': forms.Textarea(attrs={**COMMON_WIDGETS, 'rows': 4}),
+            'website': forms.URLInput(attrs={**COMMON_WIDGETS, 'dir': 'ltr'}),
+        }
+
+
+class InfluencerProfileForm(forms.ModelForm):
+    class Meta:
+        model = InfluencerProfile
+        fields = ['full_name', 'description']
+        widgets = {
+            'full_name': forms.TextInput(attrs=COMMON_WIDGETS),
+            'description': forms.Textarea(attrs={**COMMON_WIDGETS, 'rows': 4}),
+        }
