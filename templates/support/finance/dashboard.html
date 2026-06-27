@@ -1,0 +1,438 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    داشبورد مالی
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/finance/finance.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container pt-5">
+
+        <!-- ===== هدر صفحه ===== -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h1 class="h4 text-light mb-1 finance-title">
+                    <i class="fi-wallet me-2 text-primary"></i>
+                    داشبورد مالی
+                </h1>
+                <p class="text-muted small mb-0">
+                    <i class="fi-calendar me-1"></i>
+                    {{ jalali_weekday }} {{ jalali_date }}
+                </p>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="date-badge">
+                    <i class="fi-clock me-1"></i>
+                    {{ paid_invoices_count }} فاکتور پرداخت شده
+                </div>
+                <button class="btn-action" onclick="location.reload()">
+                    <i class="fi-refresh"></i>
+                    بروزرسانی
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== کارت‌های آماری ===== -->
+        <div class="row g-3 g-md-4 mb-4">
+
+            <!-- 💰 کل درآمد ناخالص (فاکتورها) -->
+            <div class="col-6 col-md-3">
+                <div class="stats-card border-success h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="stat-label">کل درآمد ناخالص</span>
+                        <div class="icon-box success">
+                            <i class="fi-cash"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value text-success">{{ total_gross_income|floatformat:0|default:"0" }}</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted">تومان</small>
+                        <span class="stat-change positive">
+                            <i class="fi-file me-1"></i>
+                            {{ paid_invoices_count }} فاکتور
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔥 سود خالص سامانه (کمیسیون ۱۵٪) -->
+            <div class="col-6 col-md-3">
+                <div class="stats-card border-gold h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="stat-label">🔥 سود خالص سامانه</span>
+                        <div class="icon-box gold">
+                            <i class="fi-star-filled"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value gold">{{ total_commission|floatformat:0|default:"0" }}</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted">تومان</small>
+                        <span class="stat-change gold">
+                            <i class="fi-pie-chart me-1"></i>
+                            {{ commission_percent }}% از کل درآمد
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📊 هزینه ناشران -->
+            <div class="col-6 col-md-3">
+                <div class="stats-card border-info h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="stat-label">هزینه ناشران</span>
+                        <div class="icon-box info">
+                            <i class="fi-user"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ total_influencer_cost|floatformat:0|default:"0" }}</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted">تومان</small>
+                        <span class="stat-change neutral">
+                            <i class="fi-pie-chart me-1"></i>
+                            {{ influencer_percent }}% از کل
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📊 هزینه تولید محتوا -->
+            <div class="col-6 col-md-3">
+                <div class="stats-card border-purple h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="stat-label">هزینه تولید محتوا</span>
+                        <div class="icon-box purple">
+                            <i class="fi-users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ total_content_cost|floatformat:0|default:"0" }}</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted">تومان</small>
+                        <span class="stat-change neutral">
+                            <i class="fi-pie-chart me-1"></i>
+                            {{ content_percent }}% از کل
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ردیف دوم: موجودی کیف پول + آمار روزانه ===== -->
+        <div class="row g-3 g-md-4 mb-4">
+
+            <!-- 💼 موجودی کیف پول کاربران (اطلاعاتی) -->
+            <div class="col-md-4">
+                <div class="stats-card border-primary h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="stat-label">💰 موجودی کیف پول کاربران</span>
+                        <span class="text-muted small">(اطلاعاتی)</span>
+                    </div>
+                    <div class="stat-value">{{ total_wallet_balance|floatformat:0|default:"0" }}</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted">تومان</small>
+                        <span class="stat-change neutral">
+                            <i class="fi-user me-1"></i>
+                            {{ users_with_wallet }} کاربر
+                        </span>
+                    </div>
+                    <div class="text-muted small mt-2" style="font-size:0.7rem;">
+                        <i class="fi-info-circle me-1"></i>
+                        این پول متعلق به کاربران است، نه سود سامانه
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📈 آمار روزانه/هفتگی/ماهانه سود -->
+            <div class="col-md-8">
+                <div class="row g-3 h-100">
+                    <div class="col-sm-4">
+                        <div class="stats-card border-cyan h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="stat-label">سود امروز</span>
+                                <span class="text-muted small">{{ jalali_weekday }}</span>
+                            </div>
+                            <div class="stat-value gold">{{ today_commission|floatformat:0|default:"0" }}</div>
+                            <small class="text-muted">تومان</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="stats-card border-pink h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="stat-label">سود ۷ روز اخیر</span>
+                                <span class="text-muted small">هفتگی</span>
+                            </div>
+                            <div class="stat-value gold">{{ week_commission|floatformat:0|default:"0" }}</div>
+                            <small class="text-muted">تومان</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="stats-card border-warning h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="stat-label">سود ۳۰ روز اخیر</span>
+                                <span class="text-muted small">ماهانه</span>
+                            </div>
+                            <div class="stat-value gold">{{ month_commission|floatformat:0|default:"0" }}</div>
+                            <small class="text-muted">تومان</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== نمودارها ===== -->
+        <div class="row g-3 g-md-4 mb-4">
+
+            <!-- نمودار درآمد و سود ۷ روز اخیر -->
+            <div class="col-xl-8">
+                <div class="chart-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="chart-title mb-0">نمودار درآمد و سود سامانه</h5>
+                            <span class="chart-subtitle">۷ روز اخیر</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 small">
+                                <span class="d-inline-block rounded-circle me-1" style="width:8px;height:8px;background:#07c98b;"></span>
+                                درآمد ناخالص
+                            </span>
+                            <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-1 small">
+                                <span class="d-inline-block rounded-circle me-1" style="width:8px;height:8px;background:#f59e0b;"></span>
+                                سود خالص (کمیسیون)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- نمودار دایره‌ای سهم‌بندی درآمد -->
+            <div class="col-xl-4">
+                <div class="chart-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="chart-title mb-0">سهم‌بندی درآمد</h5>
+                            <span class="chart-subtitle">از کل فاکتورها</span>
+                        </div>
+                    </div>
+                    <div class="chart-container-sm">
+                        <canvas id="revenuePieChart"></canvas>
+                    </div>
+                    <!-- لیست سهم‌ها -->
+                    <div class="mt-3">
+                        <div class="share-item">
+                            <span class="share-label">
+                                <span class="color-dot" style="background:#3c76f2;"></span>
+                                هزینه ناشران
+                            </span>
+                            <span>
+                                <span class="share-value">{{ influencer_percent }}%</span>
+                                <span class="share-percent">({{ total_influencer_cost|floatformat:0|default:"0" }})</span>
+                            </span>
+                        </div>
+                        <div class="share-item">
+                            <span class="share-label">
+                                <span class="color-dot" style="background:#8b5cf6;"></span>
+                                هزینه تولید محتوا
+                            </span>
+                            <span>
+                                <span class="share-value">{{ content_percent }}%</span>
+                                <span class="share-percent">({{ total_content_cost|floatformat:0|default:"0" }})</span>
+                            </span>
+                        </div>
+                        <div class="share-item">
+                            <span class="share-label">
+                                <span class="color-dot" style="background:#f59e0b;"></span>
+                                🔥 کمیسیون سامانه
+                            </span>
+                            <span>
+                                <span class="share-value gold">{{ commission_percent }}%</span>
+                                <span class="share-percent">({{ total_commission|floatformat:0|default:"0" }})</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== آمار بدهکاری‌ها و کمپین‌ها ===== -->
+        <div class="row g-3 g-md-4 mb-4">
+            <div class="col-md-6">
+                <div class="row g-3 h-100">
+                    <div class="col-sm-6">
+                        <div class="debt-card h-100" style="background:rgba(242,60,73,0.05);border:1px solid rgba(242,60,73,0.15);border-radius:1rem;padding:1.25rem 1.5rem;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small">بدهکاری به اینفلوئنسرها</span>
+                                <i class="fi-user text-danger opacity-50"></i>
+                            </div>
+                            <div class="debt-value mt-2" style="color:#f23c49;font-size:1.25rem;font-weight:700;font-family:'vazir-bold',sans-serif;">
+                                {{ influencer_debts|floatformat:0|default:"0" }}
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <small class="text-muted">تومان</small>
+                                <span class="stat-change negative">
+                                    <i class="fi-alert-circle me-1"></i>
+                                    {{ influencer_debt_count }} سفارش
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="debt-card h-100" style="background:rgba(253,188,49,0.05);border:1px solid rgba(253,188,49,0.15);border-radius:1rem;padding:1.25rem 1.5rem;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-muted small">بدهکاری به تیم‌های محتوا</span>
+                                <i class="fi-users text-warning opacity-50"></i>
+                            </div>
+                            <div class="debt-value mt-2" style="color:#fdbc31;font-size:1.25rem;font-weight:700;font-family:'vazir-bold',sans-serif;">
+                                {{ team_debts|floatformat:0|default:"0" }}
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <small class="text-muted">تومان</small>
+                                <span class="stat-change neutral">
+                                    <i class="fi-clock me-1"></i>
+                                    در انتظار تسویه
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="chart-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="chart-title mb-0">آمار کمپین ها</h5>
+                            <span class="chart-subtitle">وضعیت کلی</span>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.02);flex:1;">
+                            <div class="text-muted small">کل کمپین‌ها</div>
+                            <div class="text-light fs-4 fw-bold">{{ total_campaigns }}</div>
+                        </div>
+                        <div class="p-3 rounded-3" style="background:rgba(7,201,139,0.05);flex:1;">
+                            <div class="text-muted small">فاکتور پرداخت شده</div>
+                            <div class="text-success fs-4 fw-bold">{{ paid_invoices_count }}</div>
+                        </div>
+                        <div class="p-3 rounded-3" style="background:rgba(245,158,11,0.05);flex:1;">
+                            <div class="text-muted small">میانگین هزینه</div>
+                            <div class="text-warning fs-4 fw-bold">{{ avg_campaign_cost|floatformat:0|default:"0" }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex gap-3 flex-wrap">
+                        <span class="badge bg-warning bg-opacity-15 text-dark px-3 py-2">
+                            <i class="fi-gift me-1"></i>
+                            کمپین رایگان: {{ free_campaigns }}
+                        </span>
+                        <span class="badge bg-danger bg-opacity-15  px-3 py-2">
+                            <i class="fi-arrow-down me-1"></i>
+                            تخفیف اعمال شده: {{ total_discount|floatformat:0|default:"0" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== جدول تراکنش‌های اخیر ===== -->
+        <div class="row">
+            <div class="col-12">
+                <div class="chart-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="chart-title mb-0">تراکنش‌های اخیر</h5>
+                            <span class="chart-subtitle">۱۰ تراکنش آخر</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 small">
+                                <i class="fi-check-circle me-1"></i>
+                                {{ total_transactions|add:"-"|add:failed_transactions }} موفق
+                            </span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-1 small">
+                                <i class="fi-x-circle me-1"></i>
+                                {{ failed_transactions }} ناموفق
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="table-scroll">
+                        <table class="transactions-table table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>کاربر</th>
+                                    <th>نوع تراکنش</th>
+                                    <th>مبلغ</th>
+                                    <th>وضعیت</th>
+                                    <th>تاریخ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_transactions %}
+                                    {% for tx in recent_transactions %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    {% if tx.user.avatar %}
+                                                        <img width="32" class="rounded-circle" src="{{ tx.user.avatar.url }}" alt="">
+                                                    {% else %}
+                                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:12px;background:rgba(255,255,255,0.05);">
+                                                            {{ tx.user.nickname|default:tx.user.phone_number|slice:":2"|upper }}
+                                                        </div>
+                                                    {% endif %}
+                                                    <span>{{ tx.user.nickname|default:tx.user.phone_number }}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="small">{{ tx.get_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="tx-amount {% if tx.type == 'commission' %}gold{% elif tx.is_income %}positive{% else %}negative{% endif %}">
+                                                    {% if tx.is_income %}+{% else %}-{% endif %}
+                                                    {{ tx.amount|floatformat:0|default:"0" }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge-status {% if tx.status == 'success' %}success{% elif tx.status == 'pending' %}pending{% else %}failed{% endif %}">
+                                                    {{ tx.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ tx.created_at|date:"Y/m/d H:i" }}</small>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            <i class="fi-inbox me-2"></i>
+                                            هیچ تراکنشی یافت نشد
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+    <script src="{% static 'support/finance/finance.js' %}"></script>
+    <script>
+        window.FINANCE_CHART_DATA = {
+            dailyLabels: {{ chart_daily_labels|safe }},
+            dailyIncome: {{ chart_daily_income|safe }},
+            dailyCommission: {{ chart_daily_commission|safe }},
+            revenueLabels: {{ revenue_breakdown.labels|safe }},
+            revenueData: {{ revenue_breakdown.data|safe }}
+        };
+    </script>
+{% endblock %}

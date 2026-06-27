@@ -233,13 +233,7 @@ class Campaign(models.Model):
         """
         اعتبارسنجی منطق تاریخ‌های کمپین
         """
-
-        if self.start_date:
-            validate_start_date(self.start_date)
-
-        if self.start_date and self.end_date:
-            validate_end_date(self.start_date, self.end_date)
-
+        # ولیدیشن‌های ساختاری که همیشه باید چک بشن
         if self.ad_type and self.platform:
             if self.ad_type.platform_id != self.platform_id:
                 raise ValidationError("نوع تبلیغ با پلتفرم انتخاب شده سازگار نیست.")
@@ -249,6 +243,23 @@ class Campaign(models.Model):
                 raise ValidationError("در کمپین رایگان، تنها نوع محتوای «محتوای آماده» قابل قبول است.")
             if self.content_service_type:
                 raise ValidationError("کمپین رایگان نمی‌تواند شامل سرویس تولید محتوا باشد.")
+
+        # ولیدیشن زمان - فقط برای کمپین‌های جدید یا تغییر تاریخ
+        if not self.pk or self._state.adding:
+            # کمپین جدید
+            if self.start_date:
+                validate_start_date(self.start_date)
+        else:
+            # کمپین موجود - فقط اگه تاریخ شروع تغییر کرده باشه
+            try:
+                old = Campaign.objects.get(pk=self.pk)
+                if old.start_date != self.start_date:
+                    validate_start_date(self.start_date)
+            except Campaign.DoesNotExist:
+                validate_start_date(self.start_date)
+
+        if self.start_date and self.end_date:
+            validate_end_date(self.start_date, self.end_date)
 
     def save(self, *args, **kwargs):
         self.full_clean()

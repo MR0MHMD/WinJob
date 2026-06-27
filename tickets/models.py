@@ -183,7 +183,6 @@ class Ticket(models.Model):
     """تیکت پشتیبانی"""
 
     class Status(models.TextChoices):
-        OPEN = 'open', _('باز')
         WAITING_USER = 'waiting_user', _('منتظر پاسخ کاربر')
         WAITING_ADMIN = 'waiting_admin', _('منتظر پاسخ پشتیبانی')
         IN_PROGRESS = 'in_progress', _('در حال بررسی')
@@ -231,7 +230,7 @@ class Ticket(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.OPEN,
+        default=Status.WAITING_ADMIN,
         db_index=True,
         verbose_name=_('وضعیت')
     )

@@ -1,0 +1,337 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}رزروهای کمپین {{ campaign.name }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/campaigns/booking_list.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4">
+
+        <!-- ============================================================ -->
+        <!-- HEADER -->
+        <!-- ============================================================ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="text-light mb-1">
+                    <i class="fi-users text-primary me-2"></i> رزروهای کمپین
+                </h2>
+                <span class="text-muted">
+                <a href="#" class="text-primary text-decoration-none">
+                    {{ campaign.name }}
+                </a>
+                <span class="mx-2">•</span>
+                {{ campaign.advertiser.business_name }}
+            </span>
+            </div>
+            <div>
+                <a href="#"
+                   class="btn btn-outline-light rounded-pill px-4">
+                    <i class="fi-arrow-forward me-1"></i> بازگشت به کمپین
+                </a>
+            </div>
+        </div>
+
+        <!-- هشدار فیلتر اینفلوئنسر -->
+        {% if request.GET.influencer and filtered_influencer_name %}
+            <div class="filter-alert mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-filter text-primary"></i>
+                    <span class="text-light">نمایش سفارشات اینفلوئنسر:</span>
+                    <strong class="text-primary">{{ filtered_influencer_name }}</strong>
+                </div>
+                <a href="{% url 'support:booking_list' %}" class="btn btn-sm btn-outline-light rounded-pill">
+                    <i class="fi-x me-1"></i> حذف فیلتر
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- هشدار فیلتر کمپین -->
+        {% if request.GET.campaign and filtered_campaign_name %}
+            <div class="filter-alert mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-filter text-primary"></i>
+                    <span class="text-light">نمایش رزروهای کمپین:</span>
+                    <strong class="text-primary">{{ filtered_campaign_name }}</strong>
+                </div>
+                <a href="{% url 'support:booking_list' %}" class="btn btn-sm btn-outline-light rounded-pill">
+                    <i class="fi-x me-1"></i> حذف فیلتر
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- هشدار فیلتر کانال -->
+        {% if request.GET.channel and filtered_channel_name %}
+            <div class="filter-alert mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-filter text-primary"></i>
+                    <span class="text-light">نمایش سفارشات کانال:</span>
+                    <strong class="text-primary">{{ filtered_channel_name }}</strong>
+                </div>
+                <a href="{% url 'support:booking_list' %}" class="btn btn-sm btn-outline-light rounded-pill">
+                    <i class="fi-x me-1"></i> حذف فیلتر
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- ============================================================ -->
+        <!-- آمار -->
+        <!-- ============================================================ -->
+        <div class="booking-stats row g-2 mb-4">
+            <div class="col-md-2 col-4">
+                <div class="stat-card">
+                    <div class="number">{{ total_count }}</div>
+                    <div class="label">کل رزروها</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-warning">
+                    <div class="number text-warning">{{ pending_count }}</div>
+                    <div class="label">در انتظار</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-success">
+                    <div class="number text-success">{{ accepted_count }}</div>
+                    <div class="label">پذیرفته شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-danger">
+                    <div class="number text-danger">{{ rejected_count }}</div>
+                    <div class="label">رد شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-secondary">
+                    <div class="number text-secondary">{{ completed_count }}</div>
+                    <div class="label">انجام شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-info">
+                    <div class="number text-info">{{ paid_count }}</div>
+                    <div class="label">تسویه شده</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- فیلترها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <!-- جستجو -->
+                    <div class="col-md-2">
+                        <label for="q" class="text-muted form-label mb-1" style="font-size:0.75rem;">جستجو</label>
+                        <input id="q" type="text" name="q" class="form-control form-control-sm bg-dark text-light border-light"
+                               placeholder="نام کانال، اینفلوئنسر..." value="{{ current_search }}">
+                    </div>
+
+                    <!-- وضعیت -->
+                    <div class="col-md-2">
+                        <label for="status" class="text-muted form-label mb-1" style="font-size:0.75rem;">وضعیت</label>
+                        <select id="status" name="status" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- وضعیت پرداخت -->
+                    <div class="col-md-2">
+                        <label for="payment_status" class="text-muted form-label mb-1" style="font-size:0.75rem;">تسویه</label>
+                        <select id="payment_status" name="payment_status"
+                                class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            <option value="paid" {% if current_payment_status == 'paid' %}selected{% endif %}>تسویه
+                                شده
+                            </option>
+                            <option value="unpaid" {% if current_payment_status == 'unpaid' %}selected{% endif %}>تسویه
+                                نشده
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- پلتفرم -->
+                    <div class="col-md-2">
+                        <label for="platform" class="text-muted form-label mb-1" style="font-size:0.75rem;">پلتفرم</label>
+                        <select id="platform" name="platform" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for platform in platforms %}
+                                <option value="{{ platform.id }}"
+                                        {% if current_platform == platform.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ platform.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- استان -->
+                    <div class="col-md-2">
+                        <label for="province" class="text-muted form-label mb-1" style="font-size:0.75rem;">استان</label>
+                        <select id="province" name="province" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for province in provinces %}
+                                <option value="{{ province.id }}"
+                                        {% if current_province == province.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ province.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- مرتب‌سازی -->
+                    <div class="col-md-2">
+                        <label for="sort" class="text-muted form-label mb-1" style="font-size:0.75rem;">مرتب‌سازی</label>
+                        <select id="sort" name="sort" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">جدیدترین</option>
+                            <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>قدیمی‌ترین
+                            </option>
+                            <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>قیمت (کم
+                                به زیاد)
+                            </option>
+                            <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>قیمت
+                                (زیاد به کم)
+                            </option>
+                            <option value="followers_asc" {% if current_sort == 'followers_asc' %}selected{% endif %}>
+                                فالوور (کم به زیاد)
+                            </option>
+                            <option value="followers_desc" {% if current_sort == 'followers_desc' %}selected{% endif %}>
+                                فالوور (زیاد به کم)
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- دکمه‌ها -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="fi-search me-1"></i> اعمال فیلتر
+                            </button>
+                            <a href="{% url 'support:booking_list' %}"
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                                <i class="fi-refresh me-1"></i> ریست
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- لیست رزروها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-booking mb-0">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>کانال</th>
+                            <th>اینفلوئنسر</th>
+                            <th>نوع تبلیغ</th>
+                            <th>قیمت</th>
+                            <th>کد ردیابی</th>
+                            <th>وضعیت</th>
+                            <th>تسویه</th>
+                            <th>عملیات</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for booking in bookings %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if booking.channel.avatar %}
+                                            <img src="{{ booking.channel.avatar.url }}" class="rounded-circle"
+                                                 width="30" height="30" alt="{{ booking.channel.channel_name }}">
+                                        {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width:30px; height:30px; font-size:0.7rem; color:#fff;">
+                                                <i class="fi-user"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="text-light"
+                                                 style="font-size:0.85rem;">{{ booking.channel.channel_name }}</div>
+                                            <small class="text-muted">{{ booking.channel.platform.name }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-light">{{ booking.channel.influencer.full_name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ booking.channel.followers_formatted }} فالوور</small>
+                                </td>
+                                <td>
+                                    <span class="text-light"
+                                          style="font-size:0.85rem;">{{ booking.service_rate.ad_type.name }}</span>
+                                </td>
+                                <td class="text-success fw-bold" style="direction:ltr;">
+                                    {{ booking.price|floatformat:0|default:0 }} تومان
+                                </td>
+                                <td>
+                                    <code class="text-light"
+                                          style="font-size:0.7rem; background:rgba(255,255,255,0.05); padding:0.15rem 0.4rem; border-radius:4px;">
+                                        {{ booking.tracking_code|default:"-" }}
+                                    </code>
+                                </td>
+                                <td>
+                                <span class="badge status-badge
+                                    {% if booking.status == 'accepted' %}bg-success
+                                    {% elif booking.status == 'pending' %}bg-warning
+                                    {% elif booking.status == 'rejected' %}bg-danger
+                                    {% elif booking.status == 'completed' %}bg-accent
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ booking.get_status_display }}
+                                </span>
+                                </td>
+                                <td>
+                                    {% if booking.is_paid %}
+                                        <span class="badge bg-success"> پرداخت شده</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"> پرداخت نشده</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        {% if booking.report %}
+                                            <a href="{% url 'support:report_detail' booking.report.id %}"
+                                               class="btn btn-primary btn-sm rounded-pill" title="مشاهده کانال">
+                                                مشاهده گزارش
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-warning">هنوز گزارشی ثبت نشده است</span>
+                                        {% endif %}
+
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-5">
+                                    <i class="fi-info-circle fs-2 d-block mb-2"></i>
+                                    <p class="mb-0">هیچ رزروی با فیلترهای انتخاب شده یافت نشد.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Pagination -->
+        <!-- ============================================================ -->
+        {% include 'partials/pagination.html' %}
+
+    </div>
+{% endblock %}

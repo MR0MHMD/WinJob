@@ -1,0 +1,273 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}مدیریت کانال‌های اینفلوئنسر{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/channels/channel_list.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4">
+
+        <!-- ============================================================ -->
+        <!-- HEADER -->
+        <!-- ============================================================ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="text-light mb-1">
+                    <i class="fi-device-desktop text-primary me-2"></i> کانال‌های اینفلوئنسر
+                </h2>
+                <span class="text-muted">مدیریت تمام کانال‌های اینفلوئنسرهای پلتفرم</span>
+            </div>
+            <span class="badge bg-primary fs-6">{{ total_count }} کانال</span>
+        </div>
+
+        <!-- توی channel_list.html، بعد از HEADER و قبل از آمار -->
+        {% if request.GET.influencer and filtered_influencer_name %}
+            <div class="filter-alert mb-4"
+                 style="background:rgba(60,118,242,0.08); border:1px solid rgba(60,118,242,0.2); border-radius:0.5rem; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-filter text-primary"></i>
+                    <span class="text-light">نمایش کانال‌های اینفلوئنسر:</span>
+                    <strong class="text-primary">{{ filtered_influencer_name }}</strong>
+                </div>
+                <a href="{% url 'support:channel_list' %}" class="btn btn-sm btn-outline-light rounded-pill">
+                    <i class="fi-x me-1"></i> حذف فیلتر
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- ============================================================ -->
+        <!-- آمار -->
+        <!-- ============================================================ -->
+        <div class="channel-stats row g-2 mb-4">
+            <div class="col-md-2 col-6">
+                <div class="stat-card">
+                    <div class="number">{{ total_count }}</div>
+                    <div class="label">کل کانال‌ها</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-warning">
+                    <div class="number text-warning">{{ pending_count }}</div>
+                    <div class="label">در انتظار</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-success">
+                    <div class="number text-success">{{ approved_count }}</div>
+                    <div class="label">تأیید شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-danger">
+                    <div class="number text-danger">{{ rejected_count }}</div>
+                    <div class="label">رد شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-info">
+                    <div class="number text-info">{{ active_count }}</div>
+                    <div class="label">فعال</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-primary">
+                    <div class="number text-primary">{{ approved_count|add:pending_count }}</div>
+                    <div class="label">در جریان</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- فیلترها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <!-- جستجو -->
+                    <div class="col-md-3">
+                        <label class="text-muted form-label mb-1" style="font-size:0.75rem;">جستجو</label>
+                        <input type="text" name="q" class="form-control form-control-sm bg-dark text-light border-light"
+                               placeholder="نام کانال، اینفلوئنسر، شماره..." value="{{ current_search }}">
+                    </div>
+
+                    <!-- وضعیت -->
+                    <div class="col-md-2">
+                        <label class="text-muted form-label mb-1" style="font-size:0.75rem;">وضعیت</label>
+                        <select name="status" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- پلتفرم -->
+                    <div class="col-md-2">
+                        <label class="text-muted form-label mb-1" style="font-size:0.75rem;">پلتفرم</label>
+                        <select name="platform" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for platform in platforms %}
+                                <option value="{{ platform.id }}"
+                                        {% if current_platform == platform.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ platform.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- استان -->
+                    <div class="col-md-2">
+                        <label class="text-muted form-label mb-1" style="font-size:0.75rem;">استان</label>
+                        <select name="province" class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for province in provinces %}
+                                <option value="{{ province.id }}"
+                                        {% if current_province == province.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ province.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- مرتب‌سازی -->
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100">
+                                <i class="fi-search me-1"></i> فیلتر
+                            </button>
+                            <a href="{% url 'support:channel_list' %}"
+                               class="btn btn-outline-secondary btn-sm rounded-pill w-100">
+                                <i class="fi-refresh me-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- لیست کانال‌ها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light">
+            <div class="card-body p-0">
+                <div class="table-responsive-custom">
+                    <table class="table table-dark table-hover table-channels">
+                        <thead>
+                        <tr>
+                            <th class="col-avatar"></th>
+                            <th class="col-channel">کانال</th>
+                            <th class="col-influencer">اینفلوئنسر</th>
+                            <th class="col-platform">پلتفرم</th>
+                            <th class="col-followers">فالوور</th>
+                            <th class="col-rating">امتیاز</th>
+                            <th class="col-bookings">سفارشات</th>
+                            <th class="col-revenue">درآمد</th>
+                            <th class="col-status">وضعیت</th>
+                            <th class="col-actions">عملیات</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for channel in channels %}
+                            <tr>
+                                <td class="col-avatar">
+                                    {% if channel.avatar %}
+                                        <img src="{{ channel.avatar.url }}" class="rounded-circle" alt="">
+                                    {% else %}
+                                        <span class="avatar-placeholder">
+                                        <i class="fi-user"></i>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-channel">
+                                    <span class="text-light">{{ channel.channel_name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ channel.channel_id }}</small>
+                                </td>
+                                <td class="col-influencer">
+                                    <span class="text-light">{{ channel.influencer.full_name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ channel.influencer.user.phone_number }}</small>
+                                </td>
+                                <td class="col-platform">
+                                    <img width="30" class="rounded-circle" src="{{ channel.platform.logo.url }}" alt="">
+                                </td>
+                                <td class="col-followers">
+                                    <span class="text-light">{{ channel.followers_formatted }}</span>
+                                </td>
+                                <td class="col-rating">
+                                    {% if channel.avg_rating %}
+                                        <div class="d-flex flex-column align-items-center">
+                                        <span class="text-light" style="font-size:0.85rem; font-weight:600;">
+                                            {{ channel.avg_rating_|floatformat:1 }}
+                                        </span>
+                                            <span class="rating-stars">
+                                            {% with rating=channel.avg_rating_|floatformat:"0"|add:0 %}
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= rating %}
+                                                        <i class="fi-star-filled"></i>
+                                                    {% else %}
+                                                        <i class="fi-star empty"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endwith %}
+                                        </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-bookings">
+                                    <span class="text-light">{{ channel.completed_bookings_count_|default:0 }}</span>
+                                </td>
+                                <td class="col-revenue">
+                                <span class="text-info" style="font-weight:500;">
+                                    {{ channel.total_revenue_|default:0|floatformat:0 }} تومان
+                                </span>
+                                </td>
+                                <td class="col-status">
+                                <span class="badge status-badge
+                                    {% if channel.status == 'approved' %}bg-success
+                                    {% elif channel.status == 'pending' %}bg-warning
+                                    {% elif channel.status == 'rejected' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ channel.get_status_display }}
+                                </span>
+                                    {% if not channel.is_active %}
+                                        <br>
+                                        <span class="badge bg-danger" style="font-size:0.55rem;">غیرفعال</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-actions">
+                                    <a href="{% url 'support:channel_detail' channel.pk %}"
+                                       class="btn btn-sm btn-primary rounded-pill"
+                                       style="font-size:0.7rem; padding:0.2rem 0.6rem;">
+                                        <i class="fi-eye-on me-1"></i> مشاهده
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="10" class="text-center text-muted py-5">
+                                    <i class="fi-info-circle fs-2 d-block mb-2"></i>
+                                    <p class="mb-0">هیچ کانالی با فیلترهای انتخاب شده یافت نشد.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Pagination -->
+        <!-- ============================================================ -->
+        {% include 'partials/pagination.html' %}
+
+    </div>
+{% endblock %}

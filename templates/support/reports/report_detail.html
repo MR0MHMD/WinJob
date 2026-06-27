@@ -1,0 +1,288 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}جزئیات گزارش{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/reports/report_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 report-detail">
+
+        <!-- ============================================================ -->
+        <!-- HEADER -->
+        <!-- ============================================================ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="text-light mb-1">
+                    <i class="fi-file-clean text-primary me-2"></i> جزئیات گزارش
+                </h2>
+                <span class="text-muted">
+                <a href="{% url 'support:campaign_detail' campaign.id %}" class="text-primary text-decoration-none">
+                    {{ campaign.name }}
+                </a>
+                <span class="mx-2">•</span>
+                {{ channel.channel_name }}
+            </span>
+            </div>
+            <div>
+                <a href="{% url 'support:booking_list' %}"
+                   class="btn btn-outline-light rounded-pill px-4">
+                    <i class="fi-arrow-forward me-1"></i> بازگشت
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ============================================================ -->
+            <!-- ستون اول: اطلاعات اصلی -->
+            <!-- ============================================================ -->
+            <div class="col-lg-4">
+
+                <!-- کارت وضعیت گزارش -->
+                <div class="card bg-dark border-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-light mb-3">وضعیت گزارش</h5>
+
+                        <div class="mb-3">
+                        <span class="badge 
+                            {% if report.status == 'approved' %}bg-success
+                            {% elif report.status == 'pending' %}bg-warning
+                            {% elif report.status == 'rejected' %}bg-danger
+                            {% else %}bg-secondary{% endif %}"
+                              style="font-size:1.2rem; padding:0.5rem 1.5rem;">
+                            {{ report.get_status_display }}
+                        </span>
+                        </div>
+
+                        {% if overall_score is not None %}
+                            <div class="mb-3">
+                        <span class="score-circle 
+                            {% if overall_score >= 70 %}high
+                            {% elif overall_score >= 40 %}medium
+                            {% else %}low{% endif %}">
+                            {{ overall_score }}%
+                        </span>
+                                <div class="text-muted mt-1">امتیاز خودکار</div>
+                            </div>
+                        {% endif %}
+
+                        <hr class="border-secondary">
+
+                        <div class="text-start">
+                            <div class="info-item">
+                                <span class="label">تاریخ ارسال</span>
+                                <span class="value">{{ report.created_at|date:"Y/m/d H:i" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">آخرین بروزرسانی</span>
+                                <span class="value">{{ report.updated_at|date:"Y/m/d H:i" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">وضعیت رزرو</span>
+                                <span class="value">
+                                <span class="badge 
+                                    {% if booking.status == 'accepted' %}bg-success
+                                    {% elif booking.status == 'pending' %}bg-warning
+                                    {% elif booking.status == 'rejected' %}bg-danger
+                                    {% elif booking.status == 'completed' %}bg-secondary
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ booking.get_status_display }}
+                                </span>
+                            </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">تسویه شده</span>
+                                <span class="value">
+                                {% if booking.is_paid %}
+                                    <span class="badge bg-success">✅ بله</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">❌ خیر</span>
+                                {% endif %}
+                            </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- عملیات (فقط در صورت pending بودن) -->
+                {% if report.status == 'pending' %}
+                    <div class="card bg-dark border-light mt-4">
+                        <div class="card-body">
+                            <h5 class="text-light mb-3">
+                                <i class="fi-settings text-primary me-1"></i> عملیات
+                            </h5>
+
+                            <!-- دکمه تأیید -->
+                            <form method="post" action="{% url 'support:report_approve' report.pk %}" class="mb-3">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100 rounded-pill py-2">
+                                    <i class="fi-check-circle me-1"></i> تأیید گزارش
+                                </button>
+                            </form>
+
+                            <!-- فرم رد با دلیل -->
+                            <form method="post" action="{% url 'support:report_reject' report.pk %}">
+                                {% csrf_token %}
+                                <div class="mb-2">
+                                    <label class="text-muted form-label" style="font-size:0.8rem;">دلیل رد
+                                        (اختیاری)</label>
+                                    <textarea name="reason" rows="2"
+                                              class="form-control form-control-sm bg-dark text-light border-light"
+                                              placeholder="دلیل رد گزارش را وارد کنید..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger w-100 rounded-pill py-2">
+                                    <i class="fi-x-circle me-1"></i> رد گزارش
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- ستون دوم: اطلاعات تکمیلی -->
+            <!-- ============================================================ -->
+            <div class="col-lg-8">
+
+                <!-- ===== اطلاعات کمپین ===== -->
+                <div class="card bg-dark border-light">
+                    <div class="card-body">
+                        <h5 class="text-light mb-3">
+                            <i class="fi-flag text-primary me-1"></i> اطلاعات کمپین
+                        </h5>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="label">نام کمپین</span>
+                                <span class="value">{{ campaign.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">وضعیت کمپین</span>
+                                <span class="value">
+                                <span class="badge 
+                                    {% if campaign.status == 'pending' %}bg-warning
+                                    {% elif campaign.status == 'approved' %}bg-success
+                                    {% elif campaign.status == 'running' %}bg-primary
+                                    {% elif campaign.status == 'completed' %}bg-secondary
+                                    {% elif campaign.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ campaign.get_status_display }}
+                                </span>
+                            </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">تبلیغ‌دهنده</span>
+                                <span class="value">{{ campaign.advertiser.business_name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">پلتفرم</span>
+                                <span class="value">{{ campaign.platform.name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== اطلاعات اینفلوئنسر و کانال ===== -->
+                <div class="card bg-dark border-light mt-4">
+                    <div class="card-body">
+                        <h5 class="text-light mb-3">
+                            <i class="fi-user text-primary me-1"></i> اطلاعات اینفلوئنسر و کانال
+                        </h5>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="label">اینفلوئنسر</span>
+                                <span class="value">{{ influencer.full_name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">کانال</span>
+                                <span class="value">{{ channel.channel_name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">پلتفرم</span>
+                                <span class="value">{{ channel.platform.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">فالوور</span>
+                                <span class="value">{{ channel.followers_formatted }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">نوع تبلیغ</span>
+                                <span class="value">{{ booking.service_rate.ad_type.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">قیمت</span>
+                                <span class="value text-success fw-bold">{{ booking.price|floatformat:0|default:0 }} تومان</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== لینک پست و اسکرین‌شات ===== -->
+                <div class="card bg-dark border-light mt-4">
+                    <div class="card-body">
+                        <h5 class="text-light mb-3">
+                            <i class="fi-image text-primary me-1"></i> محتوای گزارش
+                        </h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <div class="info-item">
+                                    <span class="label">لینک پست</span>
+                                    <span class="value">
+                                    <a href="{{ report.post_link }}" target="_blank" class="text-primary"
+                                       style="word-break:break-all;">
+                                        {{ report.post_link }}
+                                    </a>
+                                </span>
+                                </div>
+                                {% if report.admin_notes %}
+                                    <div class="info-item">
+                                        <span class="label">یادداشت ادمین</span>
+                                        <span class="value"
+                                              style="font-size:0.8rem; color:#ddd;">{{ report.admin_notes }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <div class="screenshot-box">
+                                    {% if report.screenshot %}
+                                        <a href="{{ report.screenshot.url }}" target="_blank">
+                                            <img src="{{ report.screenshot.url }}" alt="اسکرین‌شات گزارش">
+                                        </a>
+                                        <div class="mt-2">
+                                            <a href="{{ report.screenshot.url }}" target="_blank"
+                                               class="btn btn-sm btn-outline-info rounded-pill">
+                                                <i class="fi-download-file me-1"></i> مشاهده کامل
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">اسکرین‌شاتی وجود ندارد</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== بررسی خودکار ===== -->
+                {% if auto_details %}
+                    <div class="card bg-dark border-light mt-4">
+                        <div class="card-body">
+                            <h5 class="text-light mb-3">
+                                <i class="fi-code text-primary me-1"></i> بررسی خودکار (n8n)
+                            </h5>
+                            <div class="auto-check-box">
+                                <pre>{{ auto_details_json }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+            
+            </div><!-- /col-lg-8 -->
+        </div><!-- /row -->
+    </div>
+{% endblock %}
