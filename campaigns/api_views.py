@@ -1,12 +1,15 @@
-from django.contrib import messages
+from campaigns.services.create_invoice import create_campaign_invoice
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-import json
-
-from campaigns.models import Campaign
+from influencers.models import InfluencerServiceRate
 from content_team.models import ContentServicePlan
+from campaigns.models import Campaign, Coupon
+from django.http import JsonResponse
+from django.contrib import messages
+from django.urls import reverse
+import traceback
+import json
 
 
 @require_POST
@@ -26,7 +29,6 @@ def campaign_step2_calculate_price(request):
                 'formatted': '۰'
             })
 
-        from influencers.models import InfluencerServiceRate
 
         rates = (
             InfluencerServiceRate.objects
@@ -58,8 +60,6 @@ def campaign_step2_calculate_price(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
-
-from django.urls import reverse
 
 @login_required
 def campaign_create_step3_router(request):
@@ -136,6 +136,8 @@ def apply_discount_code(request):
         code = body.get("code", "").strip()
         scope = body.get("scope", "")
 
+        print(f"🔍 دریافت درخواست: code={code}, scope={scope}")  # لاگ
+
         if not code:
             return JsonResponse(
                 {"success": False, "message": "کد تخفیف وارد نشده است."},
@@ -156,10 +158,6 @@ def apply_discount_code(request):
                 status=400
             )
 
-        from campaigns.models import Campaign, Coupon
-        from campaigns.services import create_campaign_invoice
-        from django.utils import timezone
-
         campaign = Campaign.objects.filter(
             id=campaign_id,
             advertiser=request.user.advertiser_profile
@@ -171,13 +169,13 @@ def apply_discount_code(request):
                 status=404
             )
 
-        # Check if already has coupon for this scope
         scope_field_map = {
             'influencer': 'influencer_coupon_id',
             'content_team': 'content_team_coupon_id',
             'platform': 'platform_coupon_id'
         }
 
+        # ✅ بررسی اینکه قبلاً کوپن برای این scope استفاده شده
         existing_coupon = getattr(campaign, scope_field_map[scope])
         if existing_coupon:
             return JsonResponse({
@@ -187,27 +185,29 @@ def apply_discount_code(request):
 
         try:
             coupon = Coupon.objects.get(code__iexact=code, scope=scope)
+            print(f"✅ کوپن پیدا شد: {coupon.code}, scope={coupon.scope}")  # لاگ
         except Coupon.DoesNotExist:
             return JsonResponse(
                 {"success": False, "message": "کد تخفیف معتبر نیست."},
                 status=404
             )
 
-        # Basic validation
+        # ✅ اعتبارسنجی کوپن
         if not coupon.is_valid():
             return JsonResponse(
-                {"success": False, "message": "این کد تخفیف قابل استفاده نیست."},
+                {"success": False, "message": "این کد تخفیف قابل استفاده نیست (منقضی شده یا استفاده شده)."},
                 status=400
             )
 
-        # Check if user has used this coupon in other campaigns
+        # ✅ بررسی استفاده قبلی در کمپین‌های پرداخت شده یا در انتظار
+        # فقط کمپین‌هایی که پرداخت شدن یا تایید شدن رو چک کن
         user_coupon_used = Campaign.objects.filter(
             advertiser=request.user.advertiser_profile,
             **{f"{scope_field_map[scope]}": coupon}
         ).exclude(
             id=campaign_id
         ).exclude(
-            status__in=[Campaign.Status.CANCELLED]
+            status__in=[Campaign.Status.DRAFT, Campaign.Status.CANCELLED]
         ).exists()
 
         if user_coupon_used:
@@ -216,7 +216,7 @@ def apply_discount_code(request):
                 "message": "شما قبلاً در یک کمپین دیگر از این کد تخفیف استفاده کرده‌اید."
             }, status=400)
 
-        # Scope-specific validation
+        # اعتبارسنجی scope-specific
         influencer_bookings = campaign.influencer_bookings.select_related(
             "channel__influencer"
         )
@@ -227,7 +227,6 @@ def apply_discount_code(request):
                 exists = influencer_bookings.filter(
                     channel_id=coupon.channel_id
                 ).exists()
-
                 if not exists:
                     return JsonResponse({
                         "success": False,
@@ -239,25 +238,28 @@ def apply_discount_code(request):
                 exists = content_orders.filter(
                     team_id=coupon.team_id
                 ).exists()
-
                 if not exists:
                     return JsonResponse({
                         "success": False,
                         "message": "این کد تخفیف مربوط به تیم محتوای دیگری است."
                     }, status=400)
 
-        # Apply coupon to campaign
+        # اعمال کوپن به کمپین
         if scope == 'influencer':
             campaign.influencer_coupon = coupon
         elif scope == 'content_team':
             campaign.content_team_coupon = coupon
-        else:  # platform
+        else:
             campaign.platform_coupon = coupon
 
         campaign.save(update_fields=[scope_field_map[scope]])
 
-        # Recalculate invoice
+        # محاسبه مجدد فاکتور
         invoice = create_campaign_invoice(campaign)
+
+        # ✅ دیباگ: لاگ کردن مقادیر
+        print(f"📊 فاکتور جدید: payable={invoice.payable_amount}, discount={invoice.discount_amount}")
+
         discount_breakdown = getattr(invoice, 'discount_breakdown', {
             'influencer_discount': 0,
             'content_discount': 0,
@@ -295,11 +297,11 @@ def apply_discount_code(request):
         })
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
+        print(f"❌ خطا: {str(e)}")  # لاگ
 
         return JsonResponse(
-            {"error": str(e)},
+            {"success": False, "error": str(e)},
             status=500
         )
 

@@ -1,0 +1,217 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}مدیریت کمپین‌ها{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/campaigns/campaign_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- ============================================================ -->
+    <!-- HEADER -->
+    <!-- ============================================================ -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="text-light mb-1">
+                <i class="fi-flag text-primary me-2"></i> مدیریت کمپین‌ها
+            </h2>
+            <span class="text-muted">مدیریت و بررسی تمام کمپین‌های سیستم</span>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-warning fs-6">{{ total_count }} کمپین</span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- آمار کلی -->
+    <!-- ============================================================ -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-light mb-0">{{ total_count }}</h6>
+                    <small class="text-muted">کل کمپین‌ها</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-warning mb-0">{{ pending_count }}</h6>
+                    <small class="text-muted">در انتظار</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-success mb-0">{{ running_count }}</h6>
+                    <small class="text-muted">در حال اجرا</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-secondary mb-0">{{ completed_count }}</h6>
+                    <small class="text-muted">تمام شده</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-secondary mb-0">{{ draft_count }}</h6>
+                    <small class="text-muted">پیش‌نویس</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-dark border-light text-center">
+                <div class="card-body py-2">
+                    <h6 class="text-danger mb-0">{{ cancelled_count }}</h6>
+                    <small class="text-muted">لغو شده</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بعد از بخش آمار کلی، قبل از فیلترها -->
+{% if current_advertiser and filtered_advertiser_name %}
+<div class="alert alert-info bg-dark border-primary text-light mb-4">
+    <i class="fi-info-circle me-2"></i>
+    نمایش کمپین‌های تبلیغ‌دهنده: <strong>{{ filtered_advertiser_name }}</strong>
+    <a href="{% url 'support:campaign_list' %}" class="btn btn-sm btn-outline-light ms-3 rounded-pill">
+        <i class="fi-x me-1"></i> حذف فیلتر
+    </a>
+</div>
+{% endif %}
+
+    <!-- ============================================================ -->
+    <!-- فیلترها -->
+    <!-- ============================================================ -->
+    <div class="card bg-dark border-light mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <!-- جستجو -->
+                <div class="col-md-3">
+                    <label class="text-muted form-label mb-1">جستجو</label>
+                    <input type="text" name="q" class="form-control bg-dark text-light border-light" 
+                           placeholder="نام کمپین، کسب‌وکار، شماره..." value="{{ current_search }}">
+                </div>
+
+                <!-- فیلتر وضعیت -->
+                <div class="col-md-2">
+                    <label class="text-muted form-label mb-1">وضعیت</label>
+                    <select name="status" class="form-select bg-dark text-light border-light">
+                        <option value="">همه</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- فیلتر تاریخ -->
+                <div class="col-md-2">
+                    <label class="text-muted form-label mb-1">بازه زمانی</label>
+                    <select name="date_filter" class="form-select bg-dark text-light border-light">
+                        <option value="">همه</option>
+                        <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>امروز</option>
+                        <option value="week" {% if current_date_filter == 'week' %} selected{% endif %}>۷ روز</option>
+                        <option value="month" {% if current_date_filter == 'month' %}selected{% endif %}>۳۰ روز</option>
+                        <option value="year" {% if current_date_filter == 'year' %}selected{% endif %}>سال</option>
+                    </select>
+                </div>
+
+                <!-- دکمه‌ها -->
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                        <i class="fi-search me-1"></i> اعمال فیلتر
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'support:campaign_list' %}" class="btn btn-outline-secondary w-100 rounded-pill">
+                        <i class="fi-refresh me-1"></i> ریست
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- لیست کمپین‌ها با اسکرول افقی -->
+    <!-- ============================================================ -->
+    <div class="card bg-dark border-light">
+        <div class="card-body p-0">
+            <div class="table-responsive-custom">
+                <table class="table table-dark table-hover table-campaign">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th class="col-name">نام کمپین</th>
+                            <th class="col-business">تبلیغ‌دهنده</th>
+                            <th class="col-phone">شماره تماس</th>
+                            <th class="col-platform">پلتفرم</th>
+                            <th class="col-content-type">نوع محتوا</th>
+                            <th class="col-date">تاریخ شروع</th>
+                            <th class="col-status">وضعیت</th>
+                            <th class="col-actions">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in campaigns %}
+                        <tr>
+                            <td class="col-name">
+                                <span class="text-light">{{ campaign.name|truncatechars:30 }}</span>
+                                {% if campaign.is_free %}
+                                    <span class="badge bg-success badge-free ms-1">رایگان</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-business text-light">{{ campaign.advertiser.business_name }}</td>
+                            <td class="col-phone text-light">{{ campaign.advertiser.user.phone_number }}</td>
+                            <td class="col-platform text-light">{{ campaign.platform.name }}</td>
+                            <td class="col-content-type text-light">{{ campaign.content_type.name }}</td>
+                            <td class="col-date text-light">{{ campaign.start_date|date:"Y/m/d" }}</td>
+                            <td class="col-status">
+                                <span class="badge status-badge 
+                                    {% if campaign.status == 'pending' %}bg-warning
+                                    {% elif campaign.status == 'draft' %}bg-secondary
+                                    {% elif campaign.status == 'approved' %}bg-success
+                                    {% elif campaign.status == 'running' %}bg-primary
+                                    {% elif campaign.status == 'completed' %}bg-secondary
+                                    {% elif campaign.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ campaign.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="col-actions">
+                                <a href="{% url 'support:campaign_detail' campaign.pk %}" 
+                                   class="btn btn-sm btn-primary rounded-pill btn-sm-action">
+                                   <i class="fi-eye-on me-1"></i> مشاهده
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="fi-info-circle fs-2 d-block mb-2"></i>
+                                <p class="mb-0">هیچ کمپینی با فیلترهای انتخاب شده یافت نشد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Pagination -->
+    <!-- ============================================================ -->
+    {% include 'partials/pagination.html' with page_obj=page_obj %}
+</div>
+{% endblock %}

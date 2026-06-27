@@ -26,7 +26,6 @@ def validate_end_date(start_date, end_date):
     تاریخ پایان باید بین 2 تا 14 روز بعد از تاریخ شروع باشد.
     start_date, end_date: jdatetime.date یا jdatetime.datetime
     """
-    # تبدیل به jdatetime.date اگر datetime بودند
     if isinstance(start_date, jdatetime.datetime):
         start_date = start_date.date()
     if isinstance(end_date, jdatetime.datetime):

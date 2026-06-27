@@ -2,7 +2,7 @@
 {% load i18n static jformat %}
 
 {% block title %}
-	ساخت کمپین | تایید و پرداخت
+    ساخت کمپین | تایید و پرداخت
 {% endblock %}
 
 {% block extra_head %}
@@ -89,12 +89,12 @@
                                     <div class="price-tag">{{ booking.price|floatformat:0 }} تومان</div>
                                 </div>
                             {% endfor %}
-                            
+
                         </div>
-                    <div class="list-item-row subtotal-row">
-                                <span class="text-secondary">جمع هزینه اینفلوئنسرها</span>
-                                <span class="fw-bold text-info">{{ influencer_cost|floatformat:0 }} تومان</span>
-                            </div>
+                        <div class="list-item-row subtotal-row">
+                            <span class="text-secondary">جمع هزینه اینفلوئنسرها</span>
+                            <span class="fw-bold text-info">{{ influencer_cost|floatformat:0 }} تومان</span>
+                        </div>
                     </div>
                 {% endif %}
 
@@ -292,7 +292,7 @@
 
                                 <label for="uni-discount-input" style="display: none"></label>
                                 <input type="text" id="uni-discount-input" class="uni-discount-input"
-                                                                               placeholder="کد تخفیف خود را وارد کنید" autocomplete="off">
+                                       placeholder="کد تخفیف خود را وارد کنید" autocomplete="off">
                                 <button id="uni-discount-apply" class="uni-discount-btn">اعمال تخفیف</button>
                             </div>
                             <div id="discount-feedback" class="discount-message d-none mt-2"></div>
@@ -492,6 +492,7 @@
                 for (let scope of scopes) {
                     if (appliedScopes[scope]) continue;
                     try {
+                        console.log(`🔍 تلاش برای اعمال کد ${code} روی scope ${scope}`);
                         const response = await fetch("{% url 'campaigns:apply_discount' %}", {
                             method: 'POST',
                             headers: {
@@ -501,6 +502,8 @@
                             body: JSON.stringify({code: code, scope: scope})
                         });
                         const data = await response.json();
+                        console.log(`📦 پاسخ دریافتی:`, data);
+
                         if (data.success) {
                             appliedScopes[scope] = true;
                             addAppliedBadge(scope, data.coupon_code);
@@ -508,12 +511,27 @@
                             showMessage(`✅ کد تخفیف ${scopeMeta[scope].label} با موفقیت اعمال شد.`, 'success');
                             uniInput.value = '';
                             uniInput.focus();
-                            // پس از اعمال، بررسی کن که آیا هر سه نوع پر شده است
                             checkAndDisableUniDiscount();
                             return true;
+                        } else {
+                            // ✅ نمایش پیام خطای دقیق از سرور
+                            const errorMsg = data.message || data.error || 'خطای ناشناخته';
+                            console.log(`❌ خطا از سرور: ${errorMsg}`);
+                            showMessage(`❌ ${errorMsg}`, 'error');
+                            // اگر خطا مربوط به این scope بود، scope بعدی رو امتحان نکن
+                            if (data.message && (
+                                data.message.includes('قبلاً از یک کد تخفیف') ||
+                                data.message.includes('قبلاً در یک کمپین دیگر')
+                            )) {
+                                return false;
+                            }
+                            // برای خطاهای دیگه، scope بعدی رو امتحان کن
+                            continue;
                         }
                     } catch (e) {
-                        console.error(e);
+                        console.error('❌ خطای شبکه:', e);
+                        showMessage('❌ خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+                        return false;
                     }
                 }
                 showMessage('❌ کد تخفیف معتبر نیست یا قبلاً استفاده شده است.', 'error');

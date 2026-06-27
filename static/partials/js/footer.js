@@ -126,6 +126,49 @@
                     if (diff > 50 && sheetContent.scrollTop === 0) closeSheet();
                 }, {passive: true});
             }
+        } else if (role === 'admin' || role === 'user') {
+            // ========== شیت مالی برای ادمین (یا کاربر بدون نقش) ==========
+            const financialBtn = document.getElementById('financialNavBtnAdmin');
+            const sheet = document.getElementById('financialSheetAdmin');
+            if (!financialBtn || !sheet) return;
+
+            const closeBtn = sheet.querySelector('#closeFinancialSheetAdmin');
+            const overlay = sheet.querySelector('.bottom-sheet-overlay');
+
+            // دکمه مالی ممکنه وجود نداشته باشه، پس باگ نزنیم
+            if (financialBtn) {
+                function openSheet(e) {
+                    if (e) e.preventDefault();
+                    sheet.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closeSheet() {
+                    sheet.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+
+                financialBtn.removeEventListener('click', openSheet);
+                financialBtn.addEventListener('click', openSheet);
+                if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+                if (overlay) overlay.addEventListener('click', closeSheet);
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+                });
+
+                const sheetContent = sheet.querySelector('.bottom-sheet-content');
+                let startY = 0;
+                if (sheetContent) {
+                    sheetContent.addEventListener('touchstart', function (e) {
+                        startY = e.touches[0].clientY;
+                    }, {passive: true});
+                    sheetContent.addEventListener('touchmove', function (e) {
+                        const diff = e.touches[0].clientY - startY;
+                        if (diff > 50 && sheetContent.scrollTop === 0) closeSheet();
+                    }, {passive: true});
+                }
+            }
         }
     }
 
@@ -204,6 +247,36 @@
                 activeNav = 'مالی';
             } else if (currentPath.startsWith('/tickets')) {
                 activeNav = 'پشتیبانی';
+            }
+
+            if (activeNav) {
+                items.forEach(item => {
+                    const label = item.querySelector('.bottom-nav-label');
+                    if (label && label.innerText.trim() === activeNav) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+        } else if (role === 'admin' || role === 'user') {
+            // ========== هایلایت ناوبری ادمین ==========
+            const navContainer = document.getElementById('adminBottomNav');
+            if (!navContainer) return;
+            const items = navContainer.querySelectorAll('.bottom-nav-item');
+            items.forEach(item => item.classList.remove('active'));
+
+            let activeNav = null;
+            if (currentPath === '/support/' || currentPath.startsWith('/support/dashboard')) {
+                activeNav = 'داشبورد';
+            } else if (currentPath.startsWith('/support/users')) {
+                activeNav = 'کاربران';
+            } else if (currentPath.startsWith('/support/tickets')) {
+                activeNav = 'تیکت‌ها';
+            } else if (currentPath.startsWith('/support/campaigns')) {
+                activeNav = 'کمپین‌ها';
+            } else if (currentPath.startsWith('/support/channels')) {
+                activeNav = 'کانال‌ها';
+            } else if (currentPath.startsWith('/support/reports')) {
+                activeNav = 'گزارشات';
             }
 
             if (activeNav) {

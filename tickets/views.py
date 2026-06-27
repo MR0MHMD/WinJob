@@ -1,9 +1,15 @@
-# views.py
+from .models import Ticket, TicketMessage, TicketAttachment, TicketCategory, TicketTitle
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views import View
-from django.views.generic import ListView
 from django.db.models import Q, Count, Prefetch
-from .models import Ticket, TicketMessage, TicketCategory
+from django.views.generic import DetailView
+from django.views.generic import CreateView
+from django.views.generic import ListView
+from support.utils import is_support_user
+from django.shortcuts import redirect
+from django.http import JsonResponse
+from django.urls import reverse_lazy
+from django.contrib import messages
+from django.views import View
 
 
 class TicketListView(LoginRequiredMixin, ListView):
@@ -25,7 +31,7 @@ class TicketListView(LoginRequiredMixin, ListView):
         )
 
         # کاربر عادی فقط تیکت‌های خودش
-        if not self.request.user.is_staff:
+        if not is_support_user(self.request.user):
             queryset = queryset.filter(user=self.request.user)
 
         # اعمال فیلترها
@@ -91,7 +97,7 @@ class TicketListView(LoginRequiredMixin, ListView):
         context.update({
             # آمار کلی
             'total_count': base_qs.count(),
-            'open_count': base_qs.filter(status=Ticket.Status.OPEN).count(),
+            'open_count': base_qs.exclude(status=Ticket.Status.CLOSED).count(),
             'in_progress_count': base_qs.filter(status=Ticket.Status.IN_PROGRESS).count(),
             'closed_count': base_qs.filter(status=Ticket.Status.CLOSED).count(),
 
@@ -114,16 +120,6 @@ class TicketListView(LoginRequiredMixin, ListView):
         })
 
         return context
-
-
-# views.py - اضافه کن به فایل views موجود
-
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import CreateView
-from django.urls import reverse_lazy
-from django.contrib import messages
-from django.http import JsonResponse
-from .models import Ticket, TicketMessage, TicketAttachment, TicketCategory, TicketTitle
 
 
 class TicketCreateView(LoginRequiredMixin, CreateView):
@@ -225,7 +221,8 @@ class TicketCreateView(LoginRequiredMixin, CreateView):
                 })
 
             messages.success(request, '✅ تیکت شما با موفقیت ثبت شد. همکاران ما در اسرع وقت پاسخگو خواهند بود.')
-            return JsonResponse({'success': True, 'redirect_url': reverse_lazy('tickets:ticket_detail', kwargs={'pk': ticket.pk})})
+            return JsonResponse(
+                {'success': True, 'redirect_url': reverse_lazy('tickets:ticket_detail', kwargs={'pk': ticket.pk})})
 
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -268,15 +265,6 @@ class TicketTitleAPIView(LoginRequiredMixin, View):
         return JsonResponse({'titles': titles_data})
 
 
-# views.py - اضافه کن
-
-from django.views.generic import DetailView
-from django.shortcuts import get_object_or_404, redirect
-from django.http import JsonResponse
-from django.contrib import messages
-from django.db.models import Prefetch
-
-
 class TicketDetailView(LoginRequiredMixin, DetailView):
     """
     نمایش جزئیات تیکت + لیست پیام‌ها + فرم ارسال پیام جدید
@@ -312,6 +300,7 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         """ارسال پیام جدید در تیکت"""
+
         self.object = self.get_object()
         ticket = self.object
 
@@ -350,12 +339,14 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
             return self.render_to_response(self.get_context_data())
 
         try:
+            is_support = is_support_user(request.user)
+
             # ایجاد پیام
             ticket_message = TicketMessage.objects.create(
                 ticket=ticket,
                 sender=request.user,
                 message=message_text,
-                is_admin_reply=request.user.is_staff
+                is_admin_reply=is_support
             )
 
             # آپلود فایل‌ها
@@ -375,12 +366,10 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
                     'extension': attachment.file_extension
                 })
 
-            # آپدیت وضعیت تیکت
-            if request.user.is_staff:
-                # اگه ادمین پاسخ میده
+            # تغییر وضعیت تیکت
+            if is_support:
                 ticket.status = Ticket.Status.WAITING_USER
             else:
-                # اگه کاربر عادی پاسخ میده
                 ticket.status = Ticket.Status.WAITING_ADMIN
 
             ticket.save()

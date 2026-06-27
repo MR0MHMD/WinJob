@@ -1,0 +1,352 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}جزئیات کانال {{ channel.channel_name }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/channels/channel_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 channel-detail">
+
+        <!-- ============================================================ -->
+        <!-- HEADER -->
+        <!-- ============================================================ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div class="d-flex align-items-center gap-3">
+                {% if channel.avatar %}
+                    <img src="{{ channel.avatar.url }}" class="channel-detail avatar-lg" alt="">
+                {% else %}
+                    <div class="channel-detail avatar-lg d-flex align-items-center justify-content-center bg-secondary"
+                         style="font-size:3rem;">
+                        <i class="fi-user text-light"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <h2 class="text-light mb-0 d-flex align-items-center gap-2">
+                        {{ channel.channel_name }}
+                        {% if not channel.is_active %}
+                            <span class="badge bg-danger">غیرفعال</span>
+                        {% endif %}
+                    </h2>
+                    <span class="text-muted">{{ channel.channel_id }}</span>
+                    <span class="mx-2">•</span>
+                    <span class="text-muted">{{ channel.platform.name }}</span>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+            <span class="badge 
+                {% if channel.status == 'approved' %}bg-success
+                {% elif channel.status == 'pending' %}bg-warning
+                {% elif channel.status == 'rejected' %}bg-danger
+                {% else %}bg-secondary{% endif %} rounded-pill px-3 py-2 fs-6">
+                {{ channel.get_status_display }}
+            </span>
+                <a href="{% url 'support:channel_list' %}" class="btn btn-outline-light rounded-pill px-4">
+                    <i class="fi-arrow-forward me-1"></i> بازگشت
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ============================================================ -->
+            <!-- ستون اول: اطلاعات اصلی -->
+            <!-- ============================================================ -->
+            <div class="col-lg-4">
+
+                <!-- کارت اطلاعات کانال -->
+                <div class="card bg-dark border-light">
+                    <div class="card-body">
+                        <h5 class="text-light mb-3">
+                            <i class="fi-info-circle text-primary me-1"></i> اطلاعات کانال
+                        </h5>
+
+                        <div class="info-row">
+                            <span class="label">نام کانال</span>
+                            <span class="value">{{ channel.channel_name }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">آیدی کانال</span>
+                            <span class="value">{{ channel.channel_id }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">اینفلوئنسر</span>
+                            <span class="value">{{ influencer.full_name }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">شماره تماس</span>
+                            <span class="value">{{ influencer.user.phone_number }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">پلتفرم</span>
+                            <span class="value">{{ channel.platform.name }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">استان</span>
+                            <span class="value">{{ channel.province.name|default:"-" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">دسته‌بندی</span>
+                            <span class="value">{{ channel.category.name|default:"-" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">فالوور</span>
+                            <span class="value">{{ channel.followers_formatted }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">امتیاز</span>
+                            <span class="value">{{ channel.score.points|default:"-" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">نشان</span>
+                            <span class="value">
+                            {% if channel.score.badge %}
+                                <span class="badge-icon">
+                                    <img src="{{ channel.score.badge.icon.url }}" width="20" height="20"
+                                         style="border-radius:50%;" alt="{{ channel.score.badge.name }}">
+                                    {{ channel.score.badge.name }}
+                                </span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+                        </div>
+                        {% if channel.url %}
+                            <div class="info-row">
+                                <span class="label">آدرس کانال</span>
+                                <span class="value">
+                            <a href="{{ channel.url }}" target="_blank"
+                               class="text-primary">{{ channel.url|truncatechars:30 }}</a>
+                        </span>
+                            </div>
+                        {% endif %}
+
+                        <hr class="border-secondary">
+
+                        <!-- آمار سریع -->
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="stat-box">
+                                    <div class="number text-primary">{{ bookings_count }}</div>
+                                    <span class="label">سفارشات</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-box">
+                                    <div class="number text-success">{{ completed_bookings }}</div>
+                                    <span class="label">تکمیل</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-box">
+                                    <div class="number text-warning">{{ avg_rating|default:"-" }}</div>
+                                    <span class="label">امتیاز</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- جمع درآمد -->
+                        <hr class="border-secondary">
+                        <div class="d-flex justify-content-between align-items-center px-2 py-2 rounded-3"
+                             style="background:rgba(7,201,139,0.06); border:1px solid rgba(7,201,139,0.15);">
+                            <span class="text-muted">جمع درآمد</span>
+                            <span class="text-success fw-bold fs-5">{{ total_revenue|floatformat:0|default:0 }} تومان</span>
+                        </div>
+
+                        <!-- دکمه‌های عملیات -->
+                        {% if channel.status == 'pending' %}
+                            <hr class="border-secondary">
+                            <div class="d-grid gap-2 mt-4">
+                                <form method="post" action="{% url 'support:channel_approve' channel.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success w-100 rounded-pill py-2">
+                                        <i class="fi-check-circle me-1"></i> تأیید کانال
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'support:channel_reject' channel.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger w-100 rounded-pill py-2">
+                                        <i class="fi-x-circle me-1"></i> رد کانال
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+
+                        <!-- کوپن‌ها -->
+                        {% if coupons %}
+                            <hr class="border-secondary">
+                            <div>
+                                <span class="text-muted d-block mb-1">کوپن‌های فعال</span>
+                                <div class="d-flex flex-wrap">
+                                    {% for coupon in coupons %}
+                                        <span class="coupon-item">{{ coupon.code }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- ستون دوم: اطلاعات تکمیلی -->
+            <!-- ============================================================ -->
+            <div class="col-lg-8">
+
+                <!-- ===== نرخ‌های خدمات ===== -->
+                <div class="card bg-dark border-light">
+                    <div class="section-header px-3 pt-2">
+                        <span class="title"><i class="fi-tag"></i> نرخ‌های خدمات</span>
+                        <span class="badge-count">{{ service_rates|length }} نرخ</span>
+                    </div>
+                    <div class="card-body pt-0">
+                        {% if service_rates %}
+                            {% for rate in service_rates %}
+                                <div class="rate-item">
+                                    <span class="rate-name">{{ rate.ad_type.name }}</span>
+                                    <span class="rate-price">{{ rate.formatted_price }}</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center py-2 mb-0">هیچ نرخی ثبت نشده است.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ===== سفارش‌های اخیر ===== -->
+                <div class="card bg-dark border-light mt-4">
+                    <div class="section-header px-3 pt-2">
+                        <span class="title"><i class="fi-cart"></i> سفارش‌های اخیر</span>
+                        <span class="badge-count">{{ bookings_count }} سفارش</span>
+                    </div>
+                    <div class="card-body pt-0">
+                        {% if recent_bookings %}
+                            <div class="scrollable">
+                                {% for booking in recent_bookings %}
+                                    <div class="booking-item">
+                                        <div class="booking-info">
+                                            <div class="campaign">{{ booking.campaign.name|truncatechars:30 }}</div>
+                                            <div class="advertiser">{{ booking.campaign.advertiser.business_name }}</div>
+                                        </div>
+                                        <div class="booking-meta">
+                                            <span class="price">{{ booking.price|floatformat:0|default:0 }} تومان</span>
+                                            <span class="badge 
+                                        {% if booking.status == 'completed' %}bg-success
+                                        {% elif booking.status == 'accepted' %}bg-info
+                                        {% elif booking.status == 'pending' %}bg-warning
+                                        {% elif booking.status == 'rejected' %}bg-danger
+                                        {% else %}bg-secondary{% endif %} rounded-pill">
+                                        {{ booking.get_status_display }}
+                                    </span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if bookings_count > 5 %}
+                                <div class="mt-3 text-center">
+                                    <a href="{% url 'support:booking_list' %}?channel={{ channel.id }}"
+                                       class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                                        مشاهده همه <i class="fi-arrow-left me-1"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted text-center py-2 mb-0">هیچ سفارشی ثبت نشده است.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ===== نظرات ===== -->
+                <div class="card bg-dark border-light mt-4">
+                    <div class="section-header px-3 pt-2">
+                        <span class="title"><i class="fi-star"></i> نظرات</span>
+                        <span class="badge-count">{{ reviews_count }} نظر</span>
+                    </div>
+                    <div class="card-body pt-0">
+                        {% if recent_reviews %}
+                            <div class="scrollable">
+                                {% for review in recent_reviews %}
+                                    <div class="review-item  my-3">
+                                        <div class="review-header">
+                                    <span class="reviewer">
+                                        {% if review.advertiser.user.avatar %}
+                                            <img src="{{ review.advertiser.user.avatar.url }}"
+                                                 style="width:28px; height:28px; border-radius:50%; object-fit:cover;"
+                                                 alt="">
+                                        {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width:28px; height:28px;">
+                                                <i class="fi-user text-light" style="font-size:0.7rem;"></i>
+                                            </div>
+                                        {% endif %}
+                                        {{ review.advertiser.business_name }}
+                                    </span>
+                                            <span class="rating">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= review.rating %}
+                                                <i class="fi-star-filled"></i>
+                                            {% else %}
+                                                <i class="fi-star" style="color:#444;"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                        </div>
+                                        <div class="review-text">{{ review.comment|linebreaks }}</div>
+                                        <span class="review-date">{{ review.created_at|date:"Y/m/d" }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if reviews_count > 5 %}
+                                <div class="mt-3 text-center">
+                                    <a href="#" class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                                        مشاهده همه <i class="fi-arrow-left me-1"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted text-center py-2 mb-0">هیچ نظری ثبت نشده است.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ===== آمار سفارشات ===== -->
+                <div class="card bg-dark border-light mt-4">
+                    <div class="section-header px-3 pt-2">
+                        <span class="title"><i class="fi-dashboard"></i> آمار سفارشات</span>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <div class="stat-box border-success">
+                                    <div class="number text-success">{{ completed_bookings }}</div>
+                                    <span class="label">تکمیل شده</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-box border-warning">
+                                    <div class="number text-warning">{{ pending_bookings }}</div>
+                                    <span class="label">در انتظار</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-box border-info">
+                                    <div class="number text-info">{{ accepted_bookings }}</div>
+                                    <span class="label">پذیرفته</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-box border-danger">
+                                    <div class="number text-danger">{{ rejected_bookings }}</div>
+                                    <span class="label">رد شده</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /col-lg-8 -->
+        </div><!-- /row -->
+    </div><!-- /container -->
+{% endblock %}

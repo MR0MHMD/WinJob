@@ -1,0 +1,273 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}مدیریت سفارش‌های تولید محتوا{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/content_team/order_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4">
+
+        <!-- ============================================================ -->
+        <!-- HEADER -->
+        <!-- ============================================================ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="text-light mb-1">
+                    <i class="fi-file-clean text-primary me-2"></i> سفارش‌های تولید محتوا
+                </h2>
+                <span class="text-muted">مدیریت تمام سفارش‌های تولید محتوای پلتفرم</span>
+            </div>
+            <span class="badge bg-primary fs-6">{{ total_count }} سفارش</span>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- هشدار فیلتر تیم -->
+        <!-- ============================================================ -->
+        {% if current_team and filtered_team_name %}
+            <div class="filter-alert mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fi-filter text-primary"></i>
+                    <span class="text-light">نمایش سفارش‌های تیم:</span>
+                    <strong class="text-primary">{{ filtered_team_name }}</strong>
+                </div>
+                <a href="{% url 'support:content_order_list' %}" class="btn btn-sm btn-outline-light rounded-pill">
+                    <i class="fi-x me-1"></i> حذف فیلتر
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- ============================================================ -->
+        <!-- آمار -->
+        <!-- ============================================================ -->
+        <div class="order-stats row g-2 mb-4">
+            <div class="col-md-2 col-6">
+                <div class="stat-card">
+                    <div class="number">{{ total_count }}</div>
+                    <div class="label">کل سفارش‌ها</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-warning">
+                    <div class="number text-warning">{{ pending_count }}</div>
+                    <div class="label">در انتظار</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-primary">
+                    <div class="number text-primary">{{ in_progress_count }}</div>
+                    <div class="label">در حال انجام</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-success">
+                    <div class="number text-success">{{ completed_count }}</div>
+                    <div class="label">انجام شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-danger">
+                    <div class="number text-danger">{{ cancelled_count }}</div>
+                    <div class="label">لغو شده</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-card border-info">
+                    <div class="number text-info">{{ completed_count|add:in_progress_count }}</div>
+                    <div class="label">در جریان</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- فیلترها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <!-- جستجو -->
+                    <div class="col-md-3">
+                        <label for="q" class="text-muted form-label mb-1" style="font-size:0.75rem;">جستجو</label>
+                        <input id="q" type="text" name="q"
+                               class="form-control form-control-sm bg-dark text-light border-light"
+                               placeholder="کمپین، کسب‌وکار، تیم..." value="{{ current_search }}">
+                    </div>
+
+                    <!-- وضعیت -->
+                    <div class="col-md-2">
+                        <label for="status" class="text-muted form-label mb-1" style="font-size:0.75rem;">وضعیت</label>
+                        <select id="status" name="status"
+                                class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- بازه زمانی -->
+                    <div class="col-md-2">
+                        <label for="date_filter" class="text-muted form-label mb-1" style="font-size:0.75rem;">بازه
+                            زمانی</label>
+                        <select id="date_filter" name="date_filter"
+                                class="form-select form-select-sm bg-dark text-light border-light">
+                            <option value="">همه</option>
+                            <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>امروز
+                            </option>
+                            <option value="week" {% if current_date_filter == 'week' %}selected{% endif %}>۷ روز
+                            </option>
+                            <option value="month" {% if current_date_filter == 'month' %}selected{% endif %}>۳۰ روز
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- دکمه‌ها -->
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100">
+                                <i class="fi-search me-1"></i> فیلتر
+                            </button>
+                            <a href="
+                                    {% url 'support:content_order_list' %}{% if current_team %}?team={{ current_team }}{% endif %}"
+                               class="btn btn-outline-secondary btn-sm rounded-pill w-100">
+                                <i class="fi-refresh me-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- لیست سفارش‌ها -->
+        <!-- ============================================================ -->
+        <div class="card bg-dark border-light">
+            <div class="card-body p-0">
+                <div class="table-responsive-custom">
+                    <table class="table table-dark table-hover table-orders">
+                        <thead>
+                        <tr>
+                            <th class="col-id">#</th>
+                            <th class="col-campaign">کمپین</th>
+                            <th class="col-advertiser">تبلیغ‌دهنده</th>
+                            <th class="col-team">تیم</th>
+                            <th class="col-plan">پلن</th>
+                            <th class="col-price">قیمت</th>
+                            <th class="col-deadline">ددلاین</th>
+                            <th class="col-status">وضعیت</th>
+                            <th class="col-actions">عملیات</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for order in orders %}
+                            <tr>
+                                <td class="col-id text-muted">{{ order.id }}</td>
+                                <td class="col-campaign">
+                                    <span class="text-light">{{ order.campaign.name|truncatechars:30 }}</span>
+                                </td>
+                                <td class="col-advertiser">
+                                    <span class="text-light">{{ order.campaign.advertiser.business_name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ order.campaign.advertiser.user.phone_number }}</small>
+                                </td>
+                                <td class="col-team">
+                                    <span class="text-light">{{ order.team.name }}</span>
+                                </td>
+                                <td class="col-plan">
+                                    <span class="text-light">{{ order.plan.name }}</span>
+                                    <br>
+                                    <small class="text-muted">{{ order.plan.service_type.name }}</small>
+                                </td>
+                                <td class="col-price text-success fw-bold">
+                                    {{ order.price|floatformat:0|default:0 }} تومان
+                                </td>
+                                <td class="col-deadline">
+                                    {% if order.deadline %}
+                                        <span class="text-light">{{ order.deadline|date:"Y/m/d H:i" }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-status">
+                                <span class="badge status-badge
+                                    {% if order.status == 'completed' %}bg-success
+                                    {% elif order.status == 'pending' %}bg-warning
+                                    {% elif order.status == 'in_progress' %}bg-primary
+                                    {% elif order.status == 'review_pending' %}bg-info
+                                    {% elif order.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ order.get_status_display }}
+                                </span>
+                                </td>
+                                <td class="col-actions">
+                                    <a href="{% url 'support:content_order_detail' order.pk %}"
+                                       class="btn btn-sm btn-primary rounded-pill"
+                                       style="font-size:0.7rem; padding:0.2rem 0.6rem;">
+                                        <i class="fi-eye-on me-1"></i> مشاهده
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-5">
+                                    <i class="fi-info-circle fs-2 d-block mb-2"></i>
+                                    <p class="mb-0">هیچ سفارشی با فیلترهای انتخاب شده یافت نشد.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Pagination -->
+        <!-- ============================================================ -->
+        {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-light">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.previous_page_number }}&q={{ current_search }}&status={{ current_status }}&team={{ current_team }}&date_filter={{ current_date_filter }}"
+                                   aria-label="قبلی">
+                                    <i class="fi-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ num }}&q={{ current_search }}&status={{ current_status }}&team={{ current_team }}&date_filter={{ current_date_filter }}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.next_page_number }}&q={{ current_search }}&status={{ current_status }}&team={{ current_team }}&date_filter={{ current_date_filter }}"
+                                   aria-label="بعدی">
+                                    <i class="fi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+
+    </div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}جزییات تیکت #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-light">📩 تیکت #{{ ticket.id }}</h2>
+        <a href="{% url 'support:ticket_list' %}" class="btn btn-outline-light rounded-pill px-4">
+            <i class="fi-arrow-forward me-1"></i> بازگشت
+        </a>
+    </div>
+
+    <!-- اطلاعات تیکت -->
+    <div class="card bg-dark border-light mb-4">
+        <div class="card-body">
+            <h5 class="card-title text-light">{{ ticket.get_display_title }}</h5>
+            <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                    <span class="text-muted">کاربر:</span>
+                    <span class="text-light">{{ ticket.user.phone_number }}</span>
+                </div>
+                <div class="col-md-6">
+                    <span class="text-muted">وضعیت:</span>
+                    <span class="badge 
+                        {% if ticket.status == 'open' %}bg-warning
+                        {% elif ticket.status == 'waiting_user' %}bg-info
+                        {% elif ticket.status == 'closed' %}bg-secondary
+                        {% else %}bg-primary{% endif %}">
+                        {{ ticket.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-6">
+                    <span class="text-muted">دسته‌بندی:</span>
+                    <span class="text-light">{{ ticket.category.name }}</span>
+                </div>
+                {% if ticket.campaign %}
+                <div class="col-md-6">
+                    <span class="text-muted">کمپین مرتبط:</span>
+                    <span class="text-light">{{ ticket.campaign.name }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- پیام‌ها -->
+    <div class="card bg-dark border-light mb-4">
+        <div class="card-body">
+            <h5 class="text-light mb-3">پیام‌ها</h5>
+            <div class="messages-container">
+                {% for msg in messages %}
+                <div class="card mb-3 {% if msg.is_admin_reply %}border-primary{% else %}border-secondary{% endif %} bg-dark">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong class="{% if msg.is_admin_reply %}text-primary{% else %}text-light{% endif %}">
+                                <i class="{% if msg.is_admin_reply %}fi-user-check{% else %}fi-user{% endif %} me-1"></i>
+                                {{ msg.sender_name }}
+                            </strong>
+                            <small class="text-muted">{{ msg.created_at|date:"Y/m/d H:i" }}</small>
+                        </div>
+                        <p class="card-text text-light mt-2">{{ msg.message|linebreaks }}</p>
+                        {% if msg.attachments.exists %}
+                        <div class="mt-2">
+                            {% for att in msg.attachments.all %}
+                            <a href="{{ att.file.url }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill">
+                                <i class="fi-paperclip me-1"></i> {{ att.file_name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3">هنوز پیامی وجود ندارد.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- فرم پاسخ (فقط در صورت باز بودن تیکت) -->
+    {% if ticket.status != 'closed' %}
+    <div class="card bg-dark border-light">
+        <div class="card-body">
+            <h5 class="text-light mb-3">✏️ پاسخ به تیکت</h5>
+            <form method="post" action="{% url 'support:ticket_reply' ticket.pk %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <textarea name="message" rows="5" class="form-control bg-dark text-light border-light" 
+                              placeholder="متن پاسخ خود را وارد کنید..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-success rounded-pill px-5">
+                    <i class="fi-send me-1"></i> ارسال پاسخ
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-secondary text-center">
+        <i class="fi-info-circle me-1"></i> این تیکت بسته شده است و امکان ارسال پاسخ وجود ندارد.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
