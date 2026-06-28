@@ -96,7 +96,7 @@ class InfluencerChannelForm(forms.ModelForm):
                 }
             ),
 
-            "followers_count": forms.NumberInput(
+            "followers_count": forms.TextInput(
                 attrs={
                     "class": "form-control bg-dark text-light border-light",
                 }

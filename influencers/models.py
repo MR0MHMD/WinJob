@@ -68,7 +68,8 @@ class InfluencerChannel(GamificationMixin, models.Model):
     is_active = models.BooleanField(_('فعال'), default=True)
     verification_code = models.CharField(max_length=6, blank=True, null=True, verbose_name="کد تأیید کانال")
     verification_code_created_at = jmodels.jDateTimeField(null=True, blank=True, verbose_name="زمان ایجاد کد تأیید")
-    verification_failed_attempts = models.PositiveSmallIntegerField(default=0, verbose_name="تعداد تلاش‌های ناموفق تأیید")
+    verification_failed_attempts = models.PositiveSmallIntegerField(default=0,
+                                                                    verbose_name="تعداد تلاش‌های ناموفق تأیید")
     rejected_at = jmodels.jDateTimeField(_("زمان رد شدن کانال"), null=True, blank=True)
     created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
@@ -141,8 +142,6 @@ class InfluencerServiceRate(models.Model):
 
     formatted_price.short_description = _('قیمت')
 
-
-# influencers/models.py
 
 class CampaignReport(models.Model):
     class Status(models.TextChoices):

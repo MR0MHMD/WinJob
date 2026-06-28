@@ -48,9 +48,9 @@ def influencer_channels_view(request, pk=None):
                 channel.save()
 
                 if pk:
-                    messages.success(request, f"کانال '{channel.channel_name}' با موفقیت ویرایش شد.")
+                    messages.success(request, f"کانال ({channel.channel_name}) با موفقیت ویرایش شد.")
                 else:
-                    messages.success(request, "کانال جدید با موفقیت اضافه شد.")
+                    messages.success(request, f"کانال ({channel.channel_name}) با موفقیت اضافه شد.")
 
                 return redirect('influencers:influencer_channels')
 
