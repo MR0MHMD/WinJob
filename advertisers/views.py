@@ -1,12 +1,15 @@
-from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignInfluencer
+from django.db import transaction
+
+from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignInfluencer, \
+    ContentType
 from django.shortcuts import render, get_object_or_404, redirect
-from content_team.models import ContentOrder, ContentTeamMember
+from content_team.models import ContentOrder, ContentTeamMember, ContentServicePlan, ContentTeam
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from django.db.models.functions import TruncDate
-from influencers.models import InfluencerChannel
+from django.db.models.functions import TruncDate, Coalesce
+from influencers.models import InfluencerChannel, InfluencerServiceRate
 from accounts.models import Transaction
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count, Avg, Value, Q, IntegerField, Prefetch
 from django.core.paginator import Paginator
 from core.utils import convert_to_jalali
 from django.http import JsonResponse
@@ -14,30 +17,25 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
 import json
-
-
-from django.db.models import Q
 from plat_form.models import Platform
 from campaigns.models import AdType
+
 
 @login_required
 def campaigns_list(request):
     advertiser = request.user.advertiser_profile
 
-    # ----- دریافت پارامترهای فیلتر از GET -----
     status_filter = request.GET.get("status", "all")
     search_query = request.GET.get("q", "").strip()
     platform_slug = request.GET.get("platform", "")
     ad_type_slug = request.GET.get("ad_type", "")
-    free_filter = request.GET.get("free", "")  # yes / no
-    sort_by = request.GET.get("sort", "newest")  # newest / oldest
+    free_filter = request.GET.get("free", "")
+    sort_by = request.GET.get("sort", "newest")
 
-    # base queryset
     campaigns_qs = Campaign.objects.filter(advertiser=advertiser).select_related(
         "platform", "content_type", "ad_type", "content_service_type", "invoice"
     )
 
-    # ---- اعمال فیلترها ----
     if status_filter != "all":
         campaigns_qs = campaigns_qs.filter(status=status_filter)
 
@@ -55,13 +53,11 @@ def campaigns_list(request):
     elif free_filter == "no":
         campaigns_qs = campaigns_qs.filter(is_free=False)
 
-    # مرتب‌سازی
     if sort_by == "oldest":
         campaigns_qs = campaigns_qs.order_by("created_at")
     else:  # newest
         campaigns_qs = campaigns_qs.order_by("-created_at")
 
-    # استخراج وضعیت‌های موجود برای نمایش در فیلتر
     available_statuses = campaigns_qs.values_list("status", flat=True).distinct()
     filtered_status_choices = [
         (value, label)
@@ -69,11 +65,9 @@ def campaigns_list(request):
         if value in available_statuses
     ]
 
-    # صفحه‌بندی
-    paginator = Paginator(campaigns_qs, 10)
+    paginator = Paginator(campaigns_qs, 12)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # داده‌های مورد نیاز برای پر کردن مجدد فرم مودال
     platforms = Platform.objects.filter(is_active=True)
     ad_types = AdType.objects.filter(is_active=True)
 
@@ -90,7 +84,6 @@ def campaigns_list(request):
         "ad_types": ad_types,
     }
 
-    # پاسخ AJAX (برای بارگذاری مجدد بدون رفرش صفحه - اختیاری)
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         html = render_to_string(
             "advertisers/partials/campaign_cards.html",
@@ -100,6 +93,9 @@ def campaigns_list(request):
         return JsonResponse({"html": html})
 
     return render(request, "advertisers/pages/campaign_list.html", context)
+
+
+# advertisers/views.py
 
 @login_required
 def campaign_detail(request, campaign_id):
@@ -119,6 +115,34 @@ def campaign_detail(request, campaign_id):
     channels = campaign.influencer_bookings.all()
     channels_count = channels.count()
 
+    # ==== وضعیت‌های جدید برای نمایش ====
+    rejected_influencers = channels.filter(status=CampaignInfluencer.Status.REJECTED)
+    has_rejected = rejected_influencers.exists()
+    can_replace_influencer = (
+            campaign.status == Campaign.Status.PENDING and
+            has_rejected and
+            not campaign.replacement_mode
+    )
+
+    # بررسی وضعیت تیم محتوا
+    content_order = campaign.content_orders.first()
+    content_team_rejected = False
+    can_replace_team = False
+    can_switch_to_ready = False
+
+    if content_order:
+        # اگر تیم محتوا کنسل کرده باشه
+        if content_order.status == ContentOrder.Status.CANCELLED:
+            content_team_rejected = True
+            can_replace_team = (
+                    campaign.status == Campaign.Status.PENDING and
+                    not campaign.replacement_mode
+            )
+            can_switch_to_ready = (
+                    campaign.status == Campaign.Status.PENDING and
+                    not campaign.replacement_mode
+            )
+
     # progress based on campaign status
     progress_map = {
         "draft": 10,
@@ -127,6 +151,7 @@ def campaign_detail(request, campaign_id):
         "running": 70,
         "completed": 100,
         "cancelled": 0,
+        "revision_needed": 15,
     }
     progress_percent = progress_map.get(campaign.status, 0)
     r = int(255 - (progress_percent * 2.55))
@@ -138,7 +163,6 @@ def campaign_detail(request, campaign_id):
 
     # ========== کلیک‌های ۳۰ روز اخیر ==========
     if campaign.is_free:
-        # کمپین رایگان: فقط مجموع کلیک‌های روزانه (بدون تفکیک کانال)
         total_clicks_per_day = CampaignClick.objects.filter(
             tracking_link__campaign_influencer__campaign=campaign,
             created_at__gte=last_30_days
@@ -232,7 +256,15 @@ def campaign_detail(request, campaign_id):
         "daily_labels_json": json.dumps(daily_labels, ensure_ascii=False),
         "daily_datasets_json": json.dumps(datasets, ensure_ascii=False),
         "has_click_data": has_click_data,
-        "is_free_campaign": campaign.is_free,  # ارسال به تمپلیت برای نمایش شرطی جدول
+        "is_free_campaign": campaign.is_free,
+        # فیلدهای جدید
+        "has_rejected": has_rejected,
+        "rejected_influencers": rejected_influencers,
+        "can_replace_influencer": can_replace_influencer,
+        "content_team_rejected": content_team_rejected,
+        "can_replace_team": can_replace_team,
+        "can_switch_to_ready": can_switch_to_ready,
+        "content_order": content_order,
     }
     return render(request, "advertisers/pages/campaign_detail.html", context)
 

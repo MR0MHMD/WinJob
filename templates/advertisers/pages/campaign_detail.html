@@ -108,6 +108,100 @@
             </div>
         </div>
 
+        <!-- ==================== هشدار رد شدن توسط اینفلوئنسر ==================== -->
+        <!-- ==================== هشدار رد شدن توسط اینفلوئنسر ==================== -->
+<!-- ==================== هشدار رد شدن توسط اینفلوئنسر ==================== -->
+{% if has_rejected and campaign.status == 'revision_needed' %}
+    <div class="card glass-box bg-dark border-danger mb-4 animate-up">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="fi-alert-triange fs-1 text-danger"></i>
+                <div class="flex-grow-1">
+                    <h5 class="text-danger mb-2">⚠️ سفارش توسط برخی کانال‌ها رد شده است</h5>
+                    <p class="text-muted mb-2">
+                        کانال‌های زیر سفارش شما را رد کرده‌اند:
+                    </p>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        {% for rejected in rejected_influencers %}
+                            <span class="badge bg-faded-danger rounded-pill px-3 py-2">
+                                <i class="fi-user me-1"></i>
+                                {{ rejected.channel.channel_name }}
+                                <span class="text-muted small me-1">({{ rejected.channel.platform.name }})</span>
+                                {% if rejected.rejection_reason %}
+                                    <i class="fi-info-circle ms-1" 
+                                       data-bs-toggle="tooltip" 
+                                       title="{{ rejected.rejection_reason }}"></i>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-warning bg-faded-warning text-warning mb-3">
+                        <i class="fi-clock me-2"></i>
+                        <strong>توجه:</strong> در صورت عدم اقدام تا ۲۴ ساعت، کمپین به طور خودکار 
+                        بدون ناشران رد شده ادامه خواهد یافت.
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'campaigns:campaign_select_replacement' campaign.id %}" 
+                           class="btn btn-primary rounded-pill px-4">
+                            <i class="fi-refresh me-2"></i>
+                            انتخاب کانال‌های جایگزین
+                        </a>
+                        
+                        <button type="button" 
+                                class="btn btn-outline-success rounded-pill px-4"
+                                onclick="showContinueWithoutReplacementModal({{ campaign.id }})">
+                            <i class="fi-check me-2"></i>
+                            ادامه بدون جایگزینی
+                        </button>
+                    </div>
+                    
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="fi-info-circle me-1"></i>
+                        مبلغ مربوط به کانال‌های رد شده به کیف پول شما برگشت داده شده است.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+
+        <!-- ==================== هشدار رد شدن توسط تیم محتوا ==================== -->
+        {% if content_team_rejected and campaign.status == 'pending' %}
+            <div class="card glass-box bg-dark border-warning mb-4 animate-up">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="fi-alert-triange fs-1 text-warning"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="text-warning mb-2">⚠️ تیم تولید محتوا سفارش را لغو کرده است</h5>
+                            <p class="text-muted mb-3">
+                                تیم <strong>{{ content_order.team.name }}</strong> سفارش تولید محتوا را لغو کرده است.
+                                لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+                            </p>
+                            <div class="d-flex flex-wrap gap-3">
+                                <a href="{% url 'campaigns:campaign_switch_to_ready' campaign.id %}"
+                                   class="btn btn-outline-info rounded-pill px-4">
+                                    <i class="fi-upload me-2"></i>
+                                    آپلود محتوای آماده
+                                </a>
+                                <a href="{% url 'campaigns:campaign_replace_team' campaign.id %}"
+                                   class="btn btn-warning rounded-pill px-4">
+                                    <i class="fi-refresh me-2"></i>
+                                    انتخاب تیم جایگزین
+                                </a>
+                            </div>
+                            <p class="text-muted small mt-3 mb-0">
+                                <i class="fi-info-circle me-1"></i>
+                                در صورت انتخاب تیم جدید، مابه‌التفاوت قیمت از کیف پول شما کسر خواهد شد.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
         <!-- ==================== آمار سریع ==================== -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
@@ -458,7 +552,8 @@
                     <div class="text-center py-5">
                         <i class="fi-heart fs-1 text-success opacity-50 mb-3 d-block"></i>
                         <p class="text-light fw-semibold mb-1">تعداد کل کانال‌های انتخاب شده: {{ channels_count }}</p>
-                        <p class="text-muted small">در کمپین رایگان، تمام کانال‌های فعال واجد شرایط به صورت خودکار انتخاب شده‌اند.</p>
+                        <p class="text-muted small">در کمپین رایگان، تمام کانال‌های فعال واجد شرایط به صورت خودکار
+                            انتخاب شده‌اند.</p>
                     </div>
                 {% elif channels %}
                     <div class="table-responsive">
@@ -498,14 +593,20 @@
                                     <td>{{ ch.channel.followers_formatted }}</td>
                                     <td class="text-success fw-semibold">{{ ch.price }}</td>
                                     <td>
-                                            <span class="badge
-                                                {% if ch.status == 'pending' %}bg-faded-warning text-warning
-                                                {% elif ch.status == 'accepted' %}bg-faded-success text-success
-                                                {% elif ch.status == 'rejected' %}bg-faded-danger text-danger
-                                                {% elif ch.status == 'completed' %}bg-faded-info text-info
-                                                {% endif %} rounded-pill">
-                                                {{ ch.get_status_display }}
-                                            </span>
+                                        <span class="badge
+                                            {% if ch.status == 'pending' %}bg-faded-warning text-warning
+                                            {% elif ch.status == 'accepted' %}bg-faded-success text-success
+                                            {% elif ch.status == 'rejected' %}bg-faded-danger text-danger
+                                            {% elif ch.status == 'completed' %}bg-faded-info text-info
+                                            {% elif ch.status == 'replaced' %}bg-faded-accent text-accent
+                                            {% endif %} rounded-pill">
+                                            {{ ch.get_status_display }}
+                                            {% if ch.status == 'rejected' and ch.rejection_reason %}
+                                                <i class="fi-info-circle ms-1"
+                                                   data-bs-toggle="tooltip"
+                                                   title="{{ ch.rejection_reason }}"></i>
+                                            {% endif %}
+                                        </span>
                                     </td>
                                     <td>{{ ch.tracking_link.clicks|default:0 }}</td>
                                     <td>
@@ -617,13 +718,15 @@
                                             <div class="col-md-8">
                                                 <div class="row g-3">
                                                     <div class="col-6">
-                                                        <div class="p-3 rounded-2 bg-faded-dark">
-                                                            <div class="text-muted small mb-1">وضعیت سفارش</div>
+                                                        <!-- داخل بخش تیم تولید محتوا (در مودال) -->
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <span class="text-muted small">وضعیت سفارش</span>
                                                             <span class="badge
                                                                 {% if order.status == 'pending' %}bg-faded-warning text-warning
                                                                 {% elif order.status == 'in_progress' %}bg-faded-info text-info
                                                                 {% elif order.status == 'completed' %}bg-faded-success text-success
-                                                                {% else %}bg-faded-danger text-danger{% endif %} fs-6">
+                                                                {% elif order.status == 'cancelled' %}bg-faded-danger text-danger
+                                                                {% else %}bg-faded-secondary{% endif %} rounded-pill">
                                                                 {{ order.get_status_display }}
                                                             </span>
                                                         </div>
@@ -1092,7 +1195,7 @@
         </div>
     </div>
 
-    
+
     <!-- ==================== مودال حذف کمپین (جایگزین confirm) ==================== -->
     <div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-labelledby="deleteCampaignModalLabel"
          aria-hidden="true">
@@ -1131,6 +1234,150 @@
 
 {% block script %}
     <script>
+        // ==================== تابع نمایش مودال ادامه بدون جایگزینی ====================
+        function showContinueWithoutReplacementModal(campaignId) {
+            // ساخت CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // استفاده از مودال نوتیفیکیشن موجود
+            const modalElement = document.getElementById('globalNotificationModal');
+            const modalTitle = document.getElementById('notificationModalTitle');
+            const modalIcon = document.getElementById('notificationModalIcon');
+            const modalMessage = document.getElementById('notificationModalMessage');
+            const modalBtn = document.getElementById('notificationModalBtn');
+
+            // تنظیم عنوان
+            modalTitle.innerHTML = `<i class="fi-alert-triange me-2 text-warning"></i> ادامه بدون جایگزینی`;
+
+            // تنظیم آیکون
+            modalIcon.className = 'notification-icon warning';
+            modalIcon.innerHTML = `<i class="fi-alert-triange"></i>`;
+
+            // تنظیم متن پیام
+            modalMessage.innerHTML = `
+                <div class="text-start">
+                    <p class="text-light mb-3">
+                        آیا از ادامه کمپین <strong class="text-warning">بدون انتخاب ناشر جایگزین</strong> مطمئن هستید؟
+                    </p>
+                    <div class="alert alert-warning bg-faded-warning text-warning text-start">
+                        <i class="fi-info-circle me-2"></i>
+                        <strong>نکته:</strong> ناشران رد شده نادیده گرفته خواهند شد و 
+                        <span class="text-danger fw-bold">قابل بازگشت نیستند</span>.
+                    </div>
+                    <p class="text-muted small mb-0">
+                        <i class="fi-clock me-1"></i>
+                        در صورت انتخاب این گزینه، کمپین شما به حالت تایید شده بازمی‌گردد.
+                    </p>
+                </div>
+            `;
+
+            // تنظیم دکمه‌ها
+            modalBtn.innerHTML = `<i class="fi-check me-1"></i> بله، ادامه می‌دم`;
+            modalBtn.className = 'btn btn-success rounded-pill px-4';
+            
+            // حذف رویدادهای قبلی
+            const newBtn = modalBtn.cloneNode(true);
+            modalBtn.parentNode.replaceChild(newBtn, modalBtn);
+
+            // رویداد برای دکمه تأیید
+            newBtn.addEventListener('click', function() {
+                // بستن مودال
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+
+                // ایجاد فرم و ارسال
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/campaigns/continue-without-replacement/${campaignId}/`;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = getCookie('csrftoken');
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            });
+
+            // دکمه انصراف (با تغییر دکمه موجود)
+            const cancelBtn = document.querySelector('#globalNotificationModal .btn-close');
+            // حذف رویدادهای قبلی و اضافه کردن جدید
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            newCancelBtn.addEventListener('click', function() {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+            });
+
+            // نمایش مودال
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+
+            // وقتی مودال با کلیک خارج بسته میشه
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                // پاک کردن رویدادها
+            }, { once: true });
+        }
+
+        // ==================== تابع کمکی برای confirm ساده (در صورت نیاز) ====================
+        function showConfirmModal(title, message, onConfirm, onCancel = null) {
+            const modalElement = document.getElementById('globalNotificationModal');
+            const modalTitle = document.getElementById('notificationModalTitle');
+            const modalIcon = document.getElementById('notificationModalIcon');
+            const modalMessage = document.getElementById('notificationModalMessage');
+            const modalBtn = document.getElementById('notificationModalBtn');
+
+            modalTitle.innerHTML = `<i class="fi-info-circle me-2 text-primary"></i> ${title}`;
+            modalIcon.className = 'notification-icon info';
+            modalIcon.innerHTML = `<i class="fi-info-circle"></i>`;
+            modalMessage.innerHTML = message;
+
+            modalBtn.innerHTML = `<i class="fi-check me-1"></i> تأیید`;
+            modalBtn.className = 'btn btn-primary rounded-pill px-4';
+
+            const newBtn = modalBtn.cloneNode(true);
+            modalBtn.parentNode.replaceChild(newBtn, modalBtn);
+
+            newBtn.addEventListener('click', function() {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+                if (onConfirm && typeof onConfirm === 'function') onConfirm();
+            });
+
+            const cancelBtn = document.querySelector('#globalNotificationModal .btn-close');
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            newCancelBtn.addEventListener('click', function() {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+                if (onCancel && typeof onCancel === 'function') onCancel();
+            });
+
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                // پاک کردن رویدادها
+            }, { once: true });
+        }
+
+        // ==================== کدهای قبلی ====================
         document.getElementById('confirmDeleteBtn')?.addEventListener('click', function () {
             document.getElementById('deleteCampaignForm').submit();
         });

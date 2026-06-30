@@ -2,11 +2,14 @@
 {% load i18n static %}
 
 {% block title %}
-    ساخت کمپین | انتخاب ناشران
+    {% if is_replacement_mode %}
+        انتخاب کانال‌های جایگزین
+    {% else %}
+        ساخت کمپین | انتخاب ناشران
+    {% endif %}
 {% endblock %}
 
 {% block extra_head %}
-    <!--suppress JSDeprecatedSymbols -->
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_2.css' %}">
     <style>
         .level-badge {
@@ -16,24 +19,201 @@
         .level-badge:hover {
             transform: scale(1.08);
         }
+
+        /* ========== استایل‌های جدید برای کارت‌های بهتر ========== */
+        .influencer-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 0.75rem;
+        }
+
+        .influencer-stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .influencer-stat-item i {
+            font-size: 0.7rem;
+        }
+
+        .influencer-stat-item .value {
+            color: #fd5631;
+            font-weight: 600;
+        }
+
+        .influencer-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            justify-content: center;
+            margin: 0.5rem 0;
+        }
+
+        /* ========== هدر جایگزینی ========== */
+        .replacement-header {
+            background: rgba(253, 86, 49, 0.1);
+            border: 1px solid rgba(253, 86, 49, 0.2);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .replacement-header .info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .replacement-header .info i {
+            font-size: 1.5rem;
+            color: #fd5631;
+        }
+
+        .replacement-header .info .title {
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .replacement-header .info .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+        }
+
+        .replacement-header .price-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .replacement-header .price-box .label {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .replacement-header .price-box .amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #07c98b;
+        }
+
+        /* ========== دکمه بازگشت ========== */
+        .btn-back-to-campaign {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .btn-back-to-campaign:hover {
+            color: #fff;
+        }
     </style>
 {% endblock %}
 
 {% block content %}
     <div class="container mt-4 pb-5" dir="rtl">
-        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+
+        <!-- بخش هدر جایگزینی - اضافه کردن موجودی کیف پول -->
+
+        {% if is_replacement_mode %}
+            {# ===== حالت جایگزینی - هدر مخصوص ===== #}
+            <div class="replacement-header">
+                <div class="info">
+                    <i class="fi-refresh"></i>
+                    <div>
+                        <div class="title">انتخاب کانال‌های جایگزین</div>
+                        <div class="subtitle">
+                            کانال‌های زیر سفارش شما را رد کرده‌اند. لطفاً کانال‌های جدید انتخاب کنید.
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    {# ===== نمایش موجودی کیف پول ===== #}
+                    <div class="price-box wallet-box">
+                        <div class="label">💰 موجودی کیف پول</div>
+                        <div class="amount wallet-amount">{{ wallet_balance|floatformat:0|default:0 }} تومان</div>
+                    </div>
+                    <div class="price-box">
+                        <div class="label">مبلغ قابل استفاده</div>
+                        <div class="amount">{{ total_rejected_price|floatformat:0|default:0 }} تومان</div>
+                    </div>
+                    <a href="{% url 'advertisers:campaign_detail' campaign.id %}" class="btn-back-to-campaign">
+                        <i class="fi-arrow-right"></i>
+                        بازگشت به کمپین
+                    </a>
+                </div>
+            </div>
+
+            {# ===== هشدار محدودیت کیف پول ===== #}
+            <div class="alert alert-info bg-faded-info text-info mb-3 d-flex align-items-center gap-2">
+                <i class="fi-info-circle fs-5"></i>
+                <div>
+                    <strong>توجه:</strong>
+                    شما می‌توانید کانال‌هایی با قیمت <strong>کمتر یا مساوی {{ wallet_balance|floatformat:0|default:0 }}
+                    تومان</strong> انتخاب کنید.
+                    مجموع قیمت کانال‌های انتخاب شده نباید از موجودی کیف پول شما بیشتر شود.
+                </div>
+            </div>
+
+            {# نمایش کانال‌های رد شده به صورت برچسب #}
+            {% if rejected_bookings %}
+                <div class="mb-3 d-flex flex-wrap gap-2">
+                    <span class="text-muted small">کانال‌های رد شده:</span>
+                    {% for rejected in rejected_bookings %}
+                        <span class="badge bg-faded-danger rounded-pill px-3 py-2">
+                    <i class="fi-user me-1"></i>
+                    {{ rejected.channel.channel_name }}
+                    <span class="text-muted small me-1">({{ rejected.price|floatformat:0 }} تومان)</span>
+                    <span class="badge bg-faded-secondary ms-1">رد شده</span>
+                </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+        {% else %}
+            {# ===== حالت عادی - استپ‌های فرم ===== #}
+            {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% endif %}
 
         <div class="card border-0 shadow-sm page-card bg-dark">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                     <div>
-                        <h5 class="text-light fw-bold mb-1">انتخاب {% if platform.slug == "instagram" %}پیج ها{% else %}
-                            کانال ها{% endif %}</h5>
+                        <h5 class="text-light fw-bold mb-1">
+                            {% if is_replacement_mode %}
+                                انتخاب کانال‌های جایگزین
+                            {% else %}
+                                انتخاب {% if platform.slug == "instagram" %}پیج ها{% else %}کانال ها{% endif %}
+                            {% endif %}
+                        </h5>
                         <p class="text-secondary small mb-0">
-                            {% if platform.slug == "instagram" %}پیج{% else %}کانال{% endif %} های فعال برای پلتفرم
-                            <span class="badge ms-1 platform-badge"><img class="me-2" width="15"
-                                                                         src="{{ platform.logo.url }}"
-                                                                         alt="{{ platform.name }}">{{ platform.name }}</span>
+                            {% if is_replacement_mode %}
+                                کانال‌های فعال برای جایگزینی در پلتفرم
+                            {% else %}
+                                {% if platform.slug == "instagram" %}پیج{% else %}کانال{% endif %} های فعال برای پلتفرم
+                            {% endif %}
+                            <span class="badge ms-1 platform-badge">
+                                <img class="me-2" width="15" src="{{ platform.logo.url }}" alt="{{ platform.name }}">
+                                {{ platform.name }}
+                            </span>
                         </p>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
@@ -66,7 +246,6 @@
                                                value="{{ rate.id }}"
                                                class="influencer-checkbox d-none"
                                                id="rate_{{ rate.id }}">
-
 
                                         <div class="influencer-card-inner h-100 p-3 pb-0">
                                             {% with status=rate.channel.gamification_status %}
@@ -111,43 +290,48 @@
                                                 </small>
                                             </div>
 
-                                            <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
+                                            {# ===== برچسب‌های جدید ===== #}
+                                            <div class="influencer-badges">
                                                 {% if rate.channel.category %}
-                                                    <span class="badge badge-category text-success"> <i
-                                                            class="fi-grid me-1"></i> {{ rate.channel.category.name }}</span>
+                                                    <span class="badge badge-category">
+                                                        <i class="fi-grid me-1"></i> {{ rate.channel.category.name }}
+                                                    </span>
                                                 {% endif %}
                                                 {% if rate.channel.province %}
-                                                    <span class="badge badge-province"> <i
-                                                            class="fi-geo me-1"></i> {{ rate.channel.province.name }}</span>
+                                                    <span class="badge badge-province">
+                                                        <i class="fi-geo me-1"></i> {{ rate.channel.province.name }}
+                                                    </span>
                                                 {% endif %}
-                                                <span class="badge badge-platform"><img class="me-2" width="15"
-                                                                                        src="{{ platform.logo.url }}"
-                                                                                        alt="{{ platform.name }}">{{ platform.name }}</span>
+                                                <span class="badge badge-platform">
+                                                    <img class="me-2" width="15" src="{{ platform.logo.url }}"
+                                                         alt="{{ platform.name }}">
+                                                    {{ platform.name }}
+                                                </span>
                                             </div>
 
-                                            <div class="row g-2">
-                                                <div class="col-6">
-                                                    <div class="stat-box text-center">
-                                                        <div class="stat-value stat-followers">
-                                                            {{ rate.channel.followers_formatted|default:0 }}
-                                                        </div>
-                                                        <div class="stat-label">{% if platform.slug == "instagram" %}
-                                                            دنبال کننده{% else %}عضو{% endif %}</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="stat-box text-center">
-                                                        <div class="stat-value stat-rate">
-                                                            {{ rate.ad_type.name }}
-                                                        </div>
-                                                        <div class="stat-label">نوع سرویس</div>
-                                                    </div>
-                                                </div>
+                                            {# ===== آمارهای جدید ===== #}
+                                            <div class="influencer-stats">
+                                                <span class="influencer-stat-item">
+                                                    <i class="fi-users"></i>
+                                                    <span class="value">{{ rate.channel.followers_formatted|default:0 }}</span>
+                                                    دنبال‌کننده
+                                                </span>
+                                                <span class="influencer-stat-item">
+                                                    <i class="fi-star"></i>
+                                                    <span class="value">{{ rate.channel.avg_rating|default:"-" }}</span>
+                                                    امتیاز
+                                                </span>
+                                                <span class="influencer-stat-item">
+                                                    <i class="fi-settings"></i>
+                                                    <span class="value">{{ rate.ad_type.name }}</span>
+                                                    سرویس
+                                                </span>
                                             </div>
 
-                                            <div class="mt-2 text-center">
-                                                <span class="text-warning fw-bold">
-                                                    {{ rate.price|default:0 }} تومان
+                                            {# ===== قیمت ===== #}
+                                            <div class="mt-3 text-center">
+                                                <span class="text-warning fw-bold fs-5">
+                                                    {{ rate.price|default:0|floatformat:0 }} تومان
                                                 </span>
                                                 <div class="mt-2">
                                                     <a href="{% url 'influencers:channel_detail' rate.channel.id %}?select_rate={{ rate.id }}"
@@ -165,12 +349,25 @@
                         {% else %}
                             <div class="col-12">
                                 <div class="text-center py-5">
-                                    <div style="font-size: 3rem;">😕</div>
+                                    <div style="font-size: 3rem;">
+                                        {% if is_replacement_mode %}😕{% else %}😕{% endif %}
+                                    </div>
                                     <p class="text-secondary mt-3">
-                                        هیچ اینفلوئنسری برای پلتفرم
-                                        <strong class="text-light">{{ platform.name }}</strong>
-                                        یافت نشد.
+                                        {% if is_replacement_mode %}
+                                            هیچ کانال جایگزینی برای این پلتفرم یافت نشد.
+                                            else
+                                            هیچ اینفلوئنسری برای پلتفرم
+                                            <strong class="text-light">{{ platform.name }}</strong>
+                                            یافت نشد.
+                                        {% endif %}
                                     </p>
+                                    {% if is_replacement_mode %}
+                                        <a href="{% url 'advertisers:campaign_detail' campaign.id %}"
+                                           class="btn btn-outline-light rounded-pill px-4 mt-2">
+                                            <i class="fi-arrow-right me-2"></i>
+                                            بازگشت به کمپین
+                                        </a>
+                                    {% endif %}
                                 </div>
                             </div>
                         {% endif %}
@@ -180,13 +377,28 @@
                     {# صفحه‌بندی #}
                     {% include "partials/pagination.html" with page_obj=rates %}
 
-
                     <div id="hidden-selected-container"></div>
 
                     <div class="d-flex justify-content-between mt-5">
-                        <a href="{% url 'campaigns:campaign_create_step3_team' %}" class="btn btn-accent px-4">←
-                            مرحله قبل</a>
-                        <button type="submit" class="btn btn-primary px-5">مرحله بعد ←</button>
+                        {% if is_replacement_mode %}
+                            <a href="{% url 'advertisers:campaign_detail' campaign.id %}"
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fi-arrow-right me-2"></i>
+                                انصراف و بازگشت
+                            </a>
+                        {% else %}
+                            <a href="{% url 'campaigns:campaign_create_step3_team' %}" class="btn btn-accent px-4">
+                                ← مرحله قبل
+                            </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary px-5">
+                            {% if is_replacement_mode %}
+                                <i class="fi-check me-2"></i>
+                                انتخاب کانال‌های جایگزین
+                            {% else %}
+                                مرحله بعد ←
+                            {% endif %}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -196,26 +408,53 @@
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-3">
                     <div>
-                        <div class="text-secondary small mb-0">جمع هزینه تبلیغات</div>
+                        <div class="text-secondary small mb-0">
+                            {% if is_replacement_mode %}
+                                جمع هزینه کانال‌های جدید
+                            {% else %}
+                                جمع هزینه تبلیغات
+                            {% endif %}
+                        </div>
                         <div class="total-price-display" id="total-price-display">۰ تومان</div>
                     </div>
+                    {% if is_replacement_mode %}
+                        <div class="text-muted small">
+                            <i class="fi-info-circle me-1"></i>
+                            مبلغ از کیف پول شما کسر خواهد شد
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="text-secondary small text-start price-breakdown-wrapper">
                     <div id="price-breakdown" class="text-secondary price-breakdown"></div>
                 </div>
             </div>
+        {% if is_replacement_mode %}
+    <div class="wallet-status-bar mt-2" id="wallet-status-display">
+        <span class="text-muted small">
+            موجودی باقی‌مانده: <strong class="text-success">{{ wallet_balance|floatformat:0|default:0 }} تومان</strong>
+        </span>
+    </div>
+{% endif %}
         </div>
+        
+        <!-- بعد از price-summary-bar، یک بخش برای نمایش وضعیت کیف پول اضافه کن -->
+
+
     </div>
 
-    <!-- ========== مودال فیلتر پیشرفته ========== -->
+    <!-- ========== مودال فیلتر ========== -->
     <div class="modal fade filter-modal-glass" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel"
          aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-dark border-0 shadow-lg">
                 <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title text-light" id="filterModalLabel">
-                        <i class="fi-filter text-primary me-2"></i>فیلتر{% if campaign.platform.slug == "instagram" %}
-                        پیج ها{% else %}کانال ها{% endif %}
+                        <i class="fi-filter text-primary me-2"></i>
+                        {% if is_replacement_mode %}
+                            فیلتر کانال‌های جایگزین
+                        {% else %}
+                            فیلتر{% if campaign.platform.slug == "instagram" %} پیج ها{% else %}کانال ها{% endif %}
+                        {% endif %}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                             aria-label="بستن"></button>
@@ -328,19 +567,68 @@
     {{ block.super }}
     <script>
         window.PREV_SELECTED_RATE_IDS = {{ prev_selected|safe }};
-
         window.RATES_PRICES = {
             {% for rate in rates %}
                 "{{ rate.id }}": {{ rate.price|floatformat:"0"|cut:"," }},
             {% endfor %}
         };
-
         window.CALCULATE_URL = "{% url 'campaigns:step2_calculate' %}";
         window.CAMPAIGN_ID = {{ campaign.id }};
+        window.IS_REPLACEMENT_MODE = {{ is_replacement_mode|yesno:"true,false" }};
+        
+        // ========== WALLET_BALANCE برای حالت جایگزینی (بدون کاما) ==========
+        // |floatformat:"0" -> عدد رو بدون اعشار میده
+        // |cut:"," -> کاماها رو حذف میکنه
+        window.WALLET_BALANCE = {{ wallet_balance|floatformat:"0"|cut:","|default:"0" }};
+        
         console.log("PREV_SELECTED_RATE_IDS:", window.PREV_SELECTED_RATE_IDS);
         console.log("RATES_PRICES:", window.RATES_PRICES);
+        console.log("IS_REPLACEMENT_MODE:", window.IS_REPLACEMENT_MODE);
+        console.log("WALLET_BALANCE:", window.WALLET_BALANCE);
     </script>
 
-    <script src="{% static 'campaigns/js/create_step_2.js' %}"></script>
-    <script src="{% static 'campaigns/js/step2_filter.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_2/create_step_2.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_2/step2_filter.js' %}"></script>
+
+    <script>
+        // ===== در حالت جایگزینی، اگه تعداد انتخاب شده با تعداد رد شده برابر شد، پیام بده =====
+        (function () {
+            if (!window.IS_REPLACEMENT_MODE) return;
+
+            const rejectedCount = {{ rejected_bookings|length|default:0 }};
+            const checkboxes = document.querySelectorAll('input[name="rates"]');
+
+            function checkSelection() {
+                const checked = document.querySelectorAll('input[name="rates"]:checked');
+                if (checked.length === rejectedCount && rejectedCount > 0) {
+                    const submitBtn = document.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fi-check me-2"></i> تایید و ادامه';
+                    }
+                }
+            }
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', checkSelection);
+            });
+
+            // اجرای اولیه
+            checkSelection();
+        })();
+    </script>
+    
+    <script>
+        // ===== پاک کردن localStorage در حالت جایگزینی =====
+        (function () {
+            if (window.IS_REPLACEMENT_MODE) {
+                const keys = Object.keys(localStorage);
+                keys.forEach(key => {
+                    if (key.startsWith('selected_rates_') && !key.startsWith('selected_rates_replacement_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                console.log('🧹 localStorage در حالت جایگزینی پاک شد');
+            }
+        })();
+    </script>
 {% endblock %}

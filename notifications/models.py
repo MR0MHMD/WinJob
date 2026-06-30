@@ -32,6 +32,9 @@ class Notification(models.Model):
         FINAL_ACCEPTED = 'final_accepted', 'تایید نهایی سفارش'
         CONTENT_WALLET_DEPOSIT = 'content_wallet_deposit', 'واریز به حساب تیم'
         CONTENT_WITHDRAWAL_SUCCESS = 'content_withdrawal_success', 'برداشت موفق تیم'
+        INFLUENCER_REJECTED = 'influencer_rejected', 'رد سفارش توسط اینفلوئنسر'
+        CAMPAIGN_NEEDS_REVISION = 'campaign_needs_revision', 'کمپین نیاز به اصلاح دارد'
+        CAMPAIGN_AUTO_APPROVED = 'campaign_auto_approved', 'ادامه خودکار کمپین'
 
     user = models.ForeignKey(
         CustomUser,

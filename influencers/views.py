@@ -317,7 +317,7 @@ def influencer_respond(request, order_id):
         messages.error(request, "شما دسترسی به این عملیات ندارید.")
         return redirect('influencers:order_detail', order_id=order.id)
 
-    if order.status != 'pending':  # اینجا از استرینگ استفاده کردم طبق مدل‌ها
+    if order.status != 'pending':
         messages.error(request, "این سفارش قبلاً پاسخ داده شده است و قابل تغییر نیست.")
         return redirect('influencers:order_detail', order_id=order.id)
 
@@ -330,7 +330,11 @@ def influencer_respond(request, order_id):
         if action == 'accept':
             messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ‌دهنده باشید.")
         else:
-            messages.success(request, "❌ سفارش رد شد. در صورت تمایل می‌توانید در کمپین‌های دیگر شرکت کنید.")
+            # ========== پیام اختصاصی برای رد ==========
+            if order.campaign.is_free:
+                messages.info(request, "❌ سفارش کمپین خیریه رد شد. امتیازی کسر نشد.")
+            else:
+                messages.success(request, "❌ سفارش رد شد. مبلغ مربوطه به کیف پول تبلیغ‌دهنده برگشت داده شد.")
     else:
         messages.error(request, "عملیات نامعتبر است.")
         return redirect('influencers:order_detail', order_id=order.id)

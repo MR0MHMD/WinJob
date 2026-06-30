@@ -1,3 +1,5 @@
+from django.urls import reverse
+
 from .models import CampaignClick, CampaignInfluencer, Campaign, Payment
 from django.shortcuts import redirect, get_object_or_404, render
 from content_team.models import ContentOrder, ContentOrderFile, ContentTeam
@@ -8,7 +10,7 @@ from .services.campaigns_notifications import submit_campaign_for_review, approv
 from .services.create_invoice import create_campaign_invoice
 from .services.free_campaign import create_free_campaign_bookings
 from .utils import _detect_file_type
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Sum
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
@@ -116,24 +118,46 @@ def campaign_create_step1(request, campaign_id=None):
 def campaign_create_step2(request):
     campaign_id = request.session.get('campaign_draft_id')
 
-    if not campaign_id:
-        return redirect('campaigns:campaign_create_step1')
+    # ========== بررسی حالت جایگزینی ==========
+    is_replacement_mode = request.GET.get('replacement_mode') == 'true'
+    replacement_campaign_id = request.GET.get('campaign_id')
 
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile
-    )
+    # اگه حالت جایگزینی فعال باشه، کمپین رو از پارامتر میگیریم
+    if is_replacement_mode and replacement_campaign_id:
+        campaign = get_object_or_404(
+            Campaign,
+            id=replacement_campaign_id,
+            advertiser=request.user.advertiser_profile,
+            status=Campaign.Status.REVISION_NEEDED,  # تغییر: بررسی وضعیت REVISION_NEEDED
+            replacement_mode=True  # تغییر: بررسی replacement_mode
+        )
+        request.session['replacement_campaign_id'] = campaign.id
+        request.session['replacement_mode'] = True
+    else:
+        campaign_id = request.session.get('campaign_draft_id')
+        if not campaign_id:
+            return redirect('campaigns:campaign_create_step1')
+        campaign = get_object_or_404(
+            Campaign,
+            id=campaign_id,
+            advertiser=request.user.advertiser_profile
+        )
+        request.session.pop('replacement_campaign_id', None)
+        request.session.pop('replacement_mode', None)
 
-    if campaign.is_free:
+    # ========== اگر کمپین رایگان باشه ==========
+    if campaign.is_free and not is_replacement_mode:
         created_count = create_free_campaign_bookings(campaign)
         if created_count == 0:
-            messages.error(request, "هیچ کانال فعال و معتبری برای این پلتفرم و نوع تبلیغ وجود ندارد. لطفاً با پشتیبانی تماس بگیرید.")
+            messages.error(request, "هیچ کانال فعال و معتبری برای این پلتفرم و نوع تبلیغ وجود ندارد.")
             return redirect('campaigns:campaign_create_step1')
         return redirect('campaigns:campaign_create_step3_ready')
 
     platform = campaign.platform
     ad_type = campaign.ad_type
+
+    # ========== موجودی کیف پول کاربر ==========
+    wallet_balance = request.user.wallet.balance
 
     base_queryset = (
         InfluencerServiceRate.objects
@@ -157,8 +181,25 @@ def campaign_create_step2(request):
 
     rates = base_queryset
 
-    if filter_form.is_valid():
+    # ========== در حالت جایگزینی ==========
+    if is_replacement_mode:
+        # 1. کانال‌های رد شده رو از لیست حذف کن (اونا رو جایگزین میکنیم)
+        rejected_ids = campaign.influencer_bookings.filter(
+            status=CampaignInfluencer.Status.REJECTED
+        ).values_list('service_rate_id', flat=True)
+        rates = rates.exclude(id__in=rejected_ids)
 
+        # 2. کانال‌هایی که قبلاً انتخاب شدن (و رد نشدن) رو هم حذف کن
+        existing_ids = campaign.influencer_bookings.exclude(
+            status=CampaignInfluencer.Status.REJECTED
+        ).values_list('service_rate_id', flat=True)
+        rates = rates.exclude(id__in=existing_ids)
+
+        # 3. **فقط کانال‌هایی که قیمتشون <= موجودی کیف پول باشه**
+        rates = rates.filter(price__lte=wallet_balance)
+
+    # ========== اعمال فیلترها ==========
+    if filter_form.is_valid():
         search = filter_form.cleaned_data.get("search")
         category = filter_form.cleaned_data.get("category")
         province = filter_form.cleaned_data.get("province")
@@ -191,12 +232,11 @@ def campaign_create_step2(request):
         if price_max is not None:
             rates = rates.filter(price__lte=price_max)
 
-    # ========== اولویت بندی بر اساس تطابق با تبلیغ‌دهنده ==========
+    # ========== اولویت بندی ==========
     advertiser = request.user.advertiser_profile
     advertiser_category_id = advertiser.category_id if advertiser.category_id else None
     advertiser_province_id = request.user.province_id if request.user.province_id else None
 
-    # تعیین اولویت: 1=هم دسته هم استان، 2=فقط دسته، 3=فقط استان، 4=هیچکدام
     priority_case = Case(
         When(
             Q(channel__category_id=advertiser_category_id) & Q(channel__province_id=advertiser_province_id),
@@ -218,7 +258,6 @@ def campaign_create_step2(request):
         priority=priority_case
     )
 
-    # مرتب‌سازی: اولویت، سپس امتیاز (نزولی)، سپس فالوور (نزولی)
     rates = rates.order_by('priority', '-channel_points', '-channel__followers_count')
 
     # ========== صفحه‌بندی ==========
@@ -226,39 +265,125 @@ def campaign_create_step2(request):
     page_number = request.GET.get('page')
     rates = paginator.get_page(page_number)
 
+    # ========== انتخاب‌های قبلی ==========
+    if is_replacement_mode:
+        # فقط کانال‌های رد شده رو به عنوان قبلی در نظر بگیر
+        prev_selected = list(
+            campaign.influencer_bookings.filter(
+                status=CampaignInfluencer.Status.REJECTED
+            ).values_list('service_rate_id', flat=True)
+        )
+        rejected_bookings = campaign.influencer_bookings.filter(
+            status=CampaignInfluencer.Status.REJECTED
+        )
+        total_rejected_price = rejected_bookings.aggregate(
+            total=Sum('price')
+        )['total'] or 0
+    else:
+        prev_selected = list(
+            campaign.influencer_bookings
+            .values_list('service_rate_id', flat=True)
+        )
+        rejected_bookings = None
+        total_rejected_price = 0
 
-    prev_selected = list(
-        campaign.influencer_bookings
-        .values_list('service_rate_id', flat=True)
-    )
-
+    # ========== پردازش POST ==========
     if request.method == "POST":
-
         selected_rates = request.POST.getlist("rates")
 
         if not selected_rates:
             messages.error(request, "حداقل یک سرویس اینفلوئنسر انتخاب کنید.")
         else:
-
             selected_rates_qs = base_queryset.filter(id__in=selected_rates)
+
+            # محاسبه مجموع قیمت انتخاب‌ها
+            total_selected_price = selected_rates_qs.aggregate(
+                total=Sum('price')
+            )['total'] or 0
+
+            # بررسی اینکه مجموع قیمت از موجودی کیف پول بیشتر نباشه
+            if is_replacement_mode and total_selected_price > wallet_balance:
+                messages.error(
+                    request,
+                    f"مجموع قیمت کانال‌های انتخاب شده ({total_selected_price:,} تومان) از موجودی کیف پول شما ({wallet_balance:,} تومان) بیشتر است."
+                )
+                return redirect(request.path)
 
             if not selected_rates_qs.exists():
                 messages.error(request, "انتخاب نامعتبر است.")
                 return redirect(request.path)
 
-            CampaignInfluencer.objects.filter(
-                campaign=campaign
-            ).delete()
+            with transaction.atomic():
+                if is_replacement_mode:
+                    # ========== حالت جایگزینی ==========
+                    # 1. رزروهای رد شده رو به REPLACED تغییر بده (نه حذف)
+                    rejected_bookings.update(
+                        status=CampaignInfluencer.Status.REPLACED
+                    )
 
-            for rate in selected_rates_qs:
-                CampaignInfluencer.objects.create(
-                    campaign=campaign,
-                    channel=rate.channel,
-                    service_rate=rate,
-                    price=rate.price
-                )
+                    # 2. رزروهای جدید رو اضافه کن
+                    for rate in selected_rates_qs:
+                        CampaignInfluencer.objects.create(
+                            campaign=campaign,
+                            channel=rate.channel,
+                            service_rate=rate,
+                            price=rate.price,
+                            status=CampaignInfluencer.Status.PENDING
+                        )
 
-            return redirect('campaigns:campaign_create_step3')
+                    # 3. کم کردن مبلغ از کیف پول
+                    if total_selected_price > 0:
+                        wallet = request.user.wallet
+                        wallet.balance -= total_selected_price
+                        wallet.save(update_fields=['balance'])
+
+                        Transaction.objects.create(
+                            user=request.user,
+                            amount=total_selected_price,
+                            type=Transaction.Type.CAMPAIGN_PAYMENT,
+                            status=Transaction.Status.SUCCESS,
+                            campaign=campaign,
+                            description=f"پرداخت کانال‌های جایگزین در کمپین {campaign.name} (جمعاً {selected_rates_qs.count()} کانال)",
+                            reference_id=f"REPLACEMENT_{campaign.id}_{timezone.now().timestamp()}"
+                        )
+
+                    # 4. بررسی اینکه آیا همه کانال‌ها قبول کردن؟
+                    pending_count = campaign.influencer_bookings.filter(
+                        status=CampaignInfluencer.Status.PENDING
+                    ).count()
+
+                    # ========== تغییر: کمپین رو به APPROVED برگردون ==========
+                    campaign.status = Campaign.Status.APPROVED  # <-- تغییر مهم
+                    campaign.replacement_mode = False
+                    campaign.save()
+
+                    if pending_count == 0:
+                        messages.success(request, "✅ همه کانال‌ها سفارش را قبول کردند! کمپین شما تایید شد.")
+                    else:
+                        messages.success(
+                            request,
+                            f"✅ کانال‌های جایگزین با موفقیت انتخاب شدند. مبلغ {total_selected_price:,} تومان از کیف پول شما کسر شد."
+                        )
+
+                    request.session.pop('replacement_campaign_id', None)
+                    request.session.pop('replacement_mode', None)
+
+                    return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+                else:
+                    # ========== حالت عادی ساخت کمپین ==========
+                    CampaignInfluencer.objects.filter(
+                        campaign=campaign
+                    ).delete()
+
+                    for rate in selected_rates_qs:
+                        CampaignInfluencer.objects.create(
+                            campaign=campaign,
+                            channel=rate.channel,
+                            service_rate=rate,
+                            price=rate.price
+                        )
+
+                    return redirect('campaigns:campaign_create_step3')
 
     context = {
         "campaign": campaign,
@@ -268,6 +393,10 @@ def campaign_create_step2(request):
         "filter_form": filter_form,
         "step": 2,
         "total_steps": 4,
+        "is_replacement_mode": is_replacement_mode,
+        "rejected_bookings": rejected_bookings,
+        "total_rejected_price": total_rejected_price,
+        "wallet_balance": wallet_balance,
     }
 
     return render(request, "campaigns/forms/create_campaign_step2.html", context)
@@ -574,7 +703,8 @@ def campaign_create_step3_ready(request):
 
                 del request.session["campaign_draft_id"]
 
-                messages.success(request, "کمپین رایگان شما با موفقیت ثبت و تأیید شد. تمام اینفلوئنسرهای مرتبط به زودی سفارش را دریافت می‌کنند.")
+                messages.success(request,
+                                 "کمپین رایگان شما با موفقیت ثبت و تأیید شد. تمام اینفلوئنسرهای مرتبط به زودی سفارش را دریافت می‌کنند.")
                 return redirect("advertisers:my_campaigns")
             else:
                 return redirect("campaigns:campaign_create_step4")
@@ -794,3 +924,276 @@ def track_click(request, code):
     destination_url = content.get_utm_link(influencer)
 
     return redirect(destination_url)
+
+
+# campaigns/views.py
+
+@login_required
+def campaign_select_replacement(request, campaign_id):
+    """صفحه انتخاب کانال جایگزین بعد از رد شدن - هدایت به استپ ۲"""
+
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile,
+        status=Campaign.Status.REVISION_NEEDED,  # تغییر: از APPROVED به REVISION_NEEDED
+        replacement_mode=True  # تغییر: چک کردن replacement_mode
+    )
+
+    rejected_bookings = campaign.influencer_bookings.filter(
+        status=CampaignInfluencer.Status.REJECTED
+    )
+
+    if not rejected_bookings.exists():
+        messages.info(request, "هیچ کانال رد شده‌ای برای جایگزینی وجود ندارد.")
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    return redirect(f"{reverse('campaigns:campaign_create_step2')}?replacement_mode=true&campaign_id={campaign.id}")
+
+
+# campaigns/views.py
+
+@login_required
+def campaign_replace_team(request, campaign_id):
+    """انتخاب تیم تولید محتوای جایگزین"""
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile,
+        status=Campaign.Status.REVISION_NEEDED  # تغییر: از PENDING به REVISION_NEEDED
+    )
+
+    existing_order = campaign.content_orders.first()
+    if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
+        messages.error(request, "سفارش تیم محتوا قابل جایگزینی نیست.")
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    service_type = campaign.content_service_type
+    if not service_type:
+        messages.error(request, "نوع خدمت تولید محتوا مشخص نشده است.")
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    minutes = request.session.get("content_minutes") or existing_order.minutes
+
+    # تیم‌های موجود
+    teams_with_plans = (
+        ContentTeam.objects.filter(
+            service_plans__service_type=service_type,
+            service_plans__is_active=True,
+            is_active=True
+        )
+        .exclude(id=existing_order.team_id)  # حذف تیم قبلی
+        .distinct()
+        .prefetch_related(
+            Prefetch(
+                'service_plans',
+                queryset=ContentServicePlan.objects.filter(
+                    service_type=service_type, is_active=True
+                ).select_related('service_type').order_by('price_per_unit'),
+                to_attr='active_plans_for_service'
+            )
+        )
+        .annotate(
+            total_points=Coalesce('score__points', Value(0, output_field=IntegerField())),
+            total_completed_orders=Count('orders', filter=Q(orders__status='completed'), distinct=True)
+        )
+        .order_by('-total_points', '-total_completed_orders')
+    )
+
+    if request.method == 'POST':
+        selected_plan_id = request.POST.get('selected_plan')
+
+        if not selected_plan_id:
+            messages.error(request, "لطفاً یک پلن انتخاب کنید.")
+            return redirect(request.path)
+
+        try:
+            selected_plan = ContentServicePlan.objects.get(
+                id=selected_plan_id,
+                is_active=True
+            )
+        except ContentServicePlan.DoesNotExist:
+            messages.error(request, "پلن انتخاب شده معتبر نیست.")
+            return redirect(request.path)
+
+        # محاسبه قیمت جدید
+        if service_type.unit == "minute" and minutes:
+            new_price = int(selected_plan.price_per_unit) * int(minutes)
+        else:
+            new_price = int(selected_plan.price_per_unit)
+
+        old_price = existing_order.price
+        difference = new_price - old_price
+
+        with transaction.atomic():
+            # به‌روزرسانی سفارش
+            existing_order.team = selected_plan.team
+            existing_order.plan = selected_plan
+            existing_order.price = new_price
+            existing_order.status = ContentOrder.Status.PENDING
+            existing_order.save()
+
+            # اگه قیمت جدید بیشتر بود، مابه‌التفاوت رو از کیف پول کم کن
+            if difference > 0:
+                wallet = request.user.wallet
+                if wallet.balance < difference:
+                    messages.error(request,
+                                   f"موجودی کیف پول برای پرداخت مابه‌التفاوت ({difference:,} تومان) کافی نیست.")
+                    return redirect(request.path)
+
+                wallet.balance -= difference
+                wallet.save()
+
+                Transaction.objects.create(
+                    user=request.user,
+                    amount=difference,
+                    type=Transaction.Type.CAMPAIGN_PAYMENT,
+                    status=Transaction.Status.SUCCESS,
+                    campaign=campaign,
+                    description=f"مابه‌التفاوت تغییر تیم تولید محتوا از {old_price:,} به {new_price:,} تومان",
+                    reference_id=f"TEAM_DIFF_{campaign.id}_{timezone.now().timestamp()}"
+                )
+            elif difference < 0:
+                # اگه قیمت جدید کمتر بود، مابه‌التفاوت به کیف پول برگرده
+                wallet = request.user.wallet
+                wallet.balance += abs(difference)
+                wallet.save()
+
+                Transaction.objects.create(
+                    user=request.user,
+                    amount=abs(difference),
+                    type=Transaction.Type.CAMPAIGN_REFUND,
+                    status=Transaction.Status.SUCCESS,
+                    campaign=campaign,
+                    description=f"برگشت مابه‌التفاوت تغییر تیم تولید محتوا از {old_price:,} به {new_price:,} تومان",
+                    reference_id=f"TEAM_REFUND_{campaign.id}_{timezone.now().timestamp()}"
+                )
+
+            # به‌روزرسانی فاکتور
+            if hasattr(campaign, 'invoice'):
+                from campaigns.services.create_invoice import create_campaign_invoice
+                create_campaign_invoice(campaign)
+
+            # ========== کمپین رو به APPROVED برگردون ==========
+            campaign.status = Campaign.Status.APPROVED  # <-- تغییر مهم
+            campaign.replacement_mode = False
+            campaign.save()
+
+            messages.success(request, f"✅ تیم تولید محتوا با موفقیت تغییر کرد. قیمت جدید: {new_price:,} تومان")
+            return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    context = {
+        'campaign': campaign,
+        'teams': teams_with_plans,
+        'service_type': service_type,
+        'minutes': minutes,
+        'existing_order': existing_order,
+        'step': 'replace_team',
+    }
+    return render(request, 'campaigns/forms/replace_team.html', context)
+
+
+# campaigns/views.py
+
+@login_required
+def campaign_switch_to_ready(request, campaign_id):
+    """تبدیل کمپین به حالت محتوای آماده (وقتی تیم محتوا کنسل می‌کنه)"""
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile,
+        status=Campaign.Status.REVISION_NEEDED  # تغییر: از PENDING به REVISION_NEEDED
+    )
+
+    existing_order = campaign.content_orders.first()
+    if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
+        messages.error(request, "امکان تبدیل به محتوای آماده وجود ندارد.")
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    # برگشت کامل هزینه تیم محتوا به کیف پول
+    content_cost = existing_order.price
+    wallet = request.user.wallet
+    wallet.balance += content_cost
+    wallet.save()
+
+    Transaction.objects.create(
+        user=request.user,
+        amount=content_cost,
+        type=Transaction.Type.CAMPAIGN_REFUND,
+        status=Transaction.Status.SUCCESS,
+        campaign=campaign,
+        description=f"برگشت کامل هزینه تیم محتوا ({content_cost:,} تومان) به دلیل لغو سفارش",
+        reference_id=f"TEAM_CANCEL_REFUND_{campaign.id}_{timezone.now().timestamp()}"
+    )
+
+    with transaction.atomic():
+        # حذف سفارش تیم محتوا
+        existing_order.delete()
+
+        # تغییر نوع محتوا به آماده
+        ready_content_type = ContentType.objects.filter(slug='ready-content').first()
+        if ready_content_type:
+            campaign.content_type = ready_content_type
+            campaign.content_service_type = None
+
+        # ========== کمپین به DRAFT برمیگرده برای تکمیل محتوا ==========
+        campaign.status = Campaign.Status.DRAFT  # بدون تغییر
+        campaign.replacement_mode = False
+        campaign.save()
+
+    messages.success(
+        request,
+        f"✅ هزینه تیم محتوا ({content_cost:,} تومان) به کیف پول شما برگشت. "
+        "لطفاً محتوای تبلیغ را آپلود کنید و کمپین را مجدداً ارسال کنید."
+    )
+
+    # هدایت به مرحله آپلود محتوای آماده
+    return redirect('campaigns:campaign_create_step3_ready')
+
+
+# campaigns/views.py
+
+@login_required
+def campaign_continue_without_replacement(request, campaign_id):
+    """
+    ادامه کمپین بدون انتخاب ناشر جایگزین
+    ناشران رد شده نادیده گرفته می‌شوند و کمپین به APPROVED برمی‌گردد
+    """
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile,
+        status=Campaign.Status.REVISION_NEEDED,
+        replacement_mode=True
+    )
+
+    if request.method != 'POST':
+        messages.warning(request, "این عملیات تنها از طریق فرم قابل انجام است.")
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+
+    with transaction.atomic():
+        # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
+        rejected_bookings = campaign.influencer_bookings.filter(
+            status=CampaignInfluencer.Status.REJECTED
+        )
+        rejected_count = rejected_bookings.count()
+
+        rejected_bookings.update(
+            status=CampaignInfluencer.Status.REPLACED
+        )
+
+        # ========== کمپین رو به APPROVED برگردون ==========
+        campaign.status = Campaign.Status.APPROVED
+        campaign.replacement_mode = False
+        campaign.save(update_fields=['status', 'replacement_mode'])
+
+        # ========== نوتیف به کاربر ==========
+        from notifications.utils import notify_advertiser_campaign_auto_approved
+        notify_advertiser_campaign_auto_approved(campaign)
+
+        messages.success(
+            request,
+            f"✅ کمپین با موفقیت ادامه یافت. {rejected_count} ناشر رد شده نادیده گرفته شدند."
+        )
+
+        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)

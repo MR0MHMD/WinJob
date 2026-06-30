@@ -17,4 +17,8 @@ urlpatterns = [
     path('campaign_create_step4/apply_discount', apply_discount_code, name='apply_discount'),
     path('delete/<int:campaign_id>/', campaign_delete, name='campaign_delete'),
     path("r/<str:code>/", track_click, name="track_click"),
+    path('select/replacement/<int:campaign_id>/', campaign_select_replacement, name='campaign_select_replacement'),
+    path('replace-team/<int:campaign_id>/', campaign_replace_team, name='campaign_replace_team'),
+    path('switch-to-ready/<int:campaign_id>/', campaign_switch_to_ready, name='campaign_switch_to_ready'),
+    path('continue-without-replacement/<int:campaign_id>/',  campaign_continue_without_replacement,  name='campaign_continue_without_replacement'),
 ]

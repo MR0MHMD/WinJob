@@ -1,5 +1,3 @@
-from django.urls import reverse
-
 from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -104,6 +102,7 @@ class Campaign(models.Model):
         RUNNING = "running", "در حال اجرا"
         COMPLETED = "completed", "تمام شده"
         CANCELLED = "cancelled", "لغو شده"
+        REVISION_NEEDED = "revision_needed", "نیاز به اصلاح"
 
     platform = models.ForeignKey(
         'plat_form.Platform',
@@ -132,6 +131,19 @@ class Campaign(models.Model):
         related_name='campaigns',
         verbose_name=_("سرویس تولید محتوا"),
         null=True, blank=True
+    )
+
+    influencer_rejection_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="تعداد رد شده توسط اینفلوئنسرها"
+    )
+    content_team_rejected = models.BooleanField(
+        default=False,
+        verbose_name="تیم محتوا رد کرده؟"
+    )
+    replacement_mode = models.BooleanField(
+        default=False,
+        verbose_name="حالت انتخاب جایگزین فعال است؟"
     )
 
     advertiser = models.ForeignKey(
@@ -300,6 +312,7 @@ class CampaignInfluencer(models.Model):
         ACCEPTED = "accepted", "پذیرفته شد"
         REJECTED = "rejected", "رد شد"
         COMPLETED = "completed", "انجام شد"
+        REPLACED = "replaced", "جایگزین شد"
 
     campaign = models.ForeignKey(
         Campaign,
@@ -359,6 +372,17 @@ class CampaignInfluencer(models.Model):
         null=True,
         blank=True,
         verbose_name="تاریخ پرداخت"
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="دلیل رد سفارش"
+    )
+    rejected_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ رد"
     )
 
     class Meta:

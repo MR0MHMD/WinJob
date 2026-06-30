@@ -29,6 +29,7 @@ from notifications.utils import (
     notify_content_team_new_order,
     notify_content_team_revision_requested,
     notify_content_team_order_accepted,
+    notify_advertiser_influencer_rejected,
 )
 
 
@@ -242,8 +243,12 @@ def submit_influencer_report_service(order, post_link, screenshot):
                 notify_advertiser_campaign_completed(campaign)
 
 
+
+# campaigns/services/campaigns_notifications.py
+
 def respond_to_influencer_order_service(order, action):
     """مدیریت پاسخ اینفلوئنسر به سفارش (تایید: ۲۰+ امتیاز / رد: ۴۰- امتیاز برای کانال)"""
+
     with transaction.atomic():
         if action == 'accept':
             order.status = 'accepted'
@@ -267,21 +272,64 @@ def respond_to_influencer_order_service(order, action):
                 description = f'قبول سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name}'
 
             update_score(order.channel, points, action_key, description)
+
             from notifications.utils import notify_advertiser_influencer_accepted
             notify_advertiser_influencer_accepted(order)
 
         elif action == 'reject':
             order.status = 'rejected'
-            order.save(update_fields=['status'])
+            order.rejected_at = timezone.now()
+            order.save(update_fields=['status', 'rejected_at'])
 
-            # برای کمپین رایگان، امتیاز منفی نده
+            # ========== برگشت پول به کیف پول تبلیغ‌دهنده (فقط برای کمپین‌های غیر رایگان) ==========
+            if not order.campaign.is_free:
+                advertiser_user = order.campaign.advertiser.user
+                wallet = advertiser_user.wallet
+
+                # برگشت مبلغ به کیف پول
+                wallet.balance += order.price
+                wallet.save(update_fields=['balance'])
+
+                # ثبت تراکنش برگشت
+                Transaction.objects.create(
+                    user=advertiser_user,
+                    amount=order.price,
+                    type=Transaction.Type.CAMPAIGN_REFUND,
+                    status=Transaction.Status.SUCCESS,
+                    campaign=order.campaign,
+                    description=f'برگشت وجه بابت رد سفارش توسط ناشر {order.channel.channel_name} در کمپین {order.campaign.name}',
+                    reference_id=f'REFUND_INFLUENCER_REJECT_{order.id}_{timezone.now().timestamp()}'
+                )
+
+                # ========== نوتیف به تبلیغ‌دهنده ==========
+                from notifications.utils import notify_advertiser_influencer_rejected
+                notify_advertiser_influencer_rejected(order)
+
+            # ========== تغییر وضعیت کمپین به REVISION_NEEDED ==========
+            campaign = order.campaign
+            if campaign.status == Campaign.Status.APPROVED:
+                campaign.status = Campaign.Status.REVISION_NEEDED
+                campaign.replacement_mode = True
+                campaign.save(update_fields=['status', 'replacement_mode'])
+
+                # ارسال نوتیفیکیشن اضافی برای اطلاع از نیاز به اصلاح
+                from notifications.utils import notify_advertiser_campaign_needs_revision
+                notify_advertiser_campaign_needs_revision(campaign, order.channel)
+
+                # ========== اجرای تسک سلری برای بررسی ۲۴ ساعته ==========
+                if settings.CELERY_ENABLED:
+                    from campaigns.tasks import auto_approve_campaign_after_rejection
+                    auto_approve_campaign_after_rejection.apply_async(
+                        args=[campaign.id],
+                        countdown=60 * 60 * 24
+                    )
+
+            # امتیاز منفی برای کمپین غیر رایگان
             if not order.campaign.is_free:
                 update_score(order.channel, -40, 'رد کردن تبلیغ',
                              f'رد سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
-
-            # می‌توان یک نوتیفیکیشن ساده با ممنونیت فرستاد (اختیاری)
             else:
-                # اختیاری: ثبت یک لاگ یا نوتیفیکیشن بدون امتیاز
+                # برای کمپین رایگان، فقط نوتیف بدون امتیاز
                 from notifications.models import Notification
                 Notification.objects.create(
                     user=order.channel.influencer.user,

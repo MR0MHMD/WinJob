@@ -1,10 +1,19 @@
+// campaigns/static/campaigns/js/create_step_2/create_step_2.js
+
 (function () {
     'use strict';
 
     const PRICES = window.RATES_PRICES || {};
     const PREV_SELECTED = window.PREV_SELECTED_RATE_IDS || [];
     const CAMPAIGN_ID = window.CAMPAIGN_ID || null;
+    const IS_REPLACEMENT_MODE = window.IS_REPLACEMENT_MODE || false;
+    const WALLET_BALANCE = window.WALLET_BALANCE || 0;
 
+    // ========== در حالت جایگزینی، لیست انتخاب‌ها رو خالی شروع کن ==========
+    // دیگر از PREV_SELECTED برای مقداردهی اولیه استفاده نمیکنیم
+    let memorySelectedIds = [];
+
+    // ========== کلید localStorage برای حالت عادی ==========
     const STORAGE_KEY = CAMPAIGN_ID ? 'selected_rates_' + CAMPAIGN_ID : 'selected_rates_temp';
 
     const totalPriceEl = document.getElementById('total-price-display');
@@ -14,7 +23,9 @@
     const CALCULATE_URL = window.CALCULATE_URL || "/campaigns/campaign_create_step2/calculate";
 
     let debounceTimer = null;
+    let initialLoadDone = false;
 
+    // ========== توابع کمکی ==========
     function toPersianNum(num) {
         return String(num).replace(/\d/g, function (d) {
             return '۰۱۲۳۴۵۶۷۸۹'[d];
@@ -25,7 +36,14 @@
         return toPersianNum(num.toLocaleString('en-US')) + ' تومان';
     }
 
+    // ========== دریافت لیست انتخاب‌ها ==========
     function getStoredIds() {
+        if (IS_REPLACEMENT_MODE) {
+            // ========== در حالت جایگزینی، از حافظه استفاده کن ==========
+            return memorySelectedIds.slice();
+        }
+
+        // ========== حالت عادی: از localStorage ==========
         if (!CAMPAIGN_ID) return [];
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -38,11 +56,20 @@
         return [];
     }
 
+    // ========== ذخیره لیست انتخاب‌ها ==========
     function setStoredIds(ids) {
+        if (IS_REPLACEMENT_MODE) {
+            // ========== در حالت جایگزینی، فقط حافظه رو آپدیت کن ==========
+            memorySelectedIds = ids.slice();
+            return;
+        }
+
+        // ========== حالت عادی: ذخیره در localStorage ==========
         if (!CAMPAIGN_ID) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
     }
 
+    // ========== اضافه کردن ID ==========
     function addId(id) {
         const ids = getStoredIds();
         if (!ids.includes(id)) {
@@ -53,6 +80,7 @@
         updateUIFromStored();
     }
 
+    // ========== حذف ID ==========
     function removeId(id) {
         const ids = getStoredIds();
         const index = ids.indexOf(id);
@@ -64,6 +92,7 @@
         updateUIFromStored();
     }
 
+    // ========== همگام‌سازی فیلدهای مخفی ==========
     function syncHiddenFields() {
         const container = document.getElementById('hidden-selected-container');
         if (!container) return;
@@ -80,6 +109,7 @@
         });
     }
 
+    // ========== به‌روزرسانی UI ==========
     function updateUIFromStored() {
         const ids = getStoredIds();
         const count = ids.length;
@@ -91,6 +121,9 @@
         }, 0);
         totalPriceEl.textContent = formatPrice(total);
 
+        // به‌روزرسانی وضعیت کیف پول
+        updateWalletStatus(ids);
+
         if (count > 0) {
             fetchAccuratePrice(ids);
         } else {
@@ -99,6 +132,7 @@
         }
     }
 
+    // ========== دریافت قیمت دقیق از سرور ==========
     function fetchAccuratePrice(selectedIds) {
         if (!selectedIds.length) {
             totalPriceEl.classList.remove('updating');
@@ -151,6 +185,55 @@
             });
     }
 
+    // ========== محاسبه مجموع قیمت ==========
+    function calculateTotalPrice(ids) {
+        let total = 0;
+        ids.forEach(function (id) {
+            total += (PRICES[String(id)] || 0);
+        });
+        return total;
+    }
+
+    // ========== بررسی محدودیت کیف پول ==========
+    function validateWalletLimit(ids) {
+        if (!IS_REPLACEMENT_MODE) return true;
+        const total = calculateTotalPrice(ids);
+        if (total > WALLET_BALANCE) {
+            const formattedTotal = total.toLocaleString('en-US');
+            const formattedBalance = WALLET_BALANCE.toLocaleString('en-US');
+            if (typeof showNotificationModal !== 'undefined') {
+                showNotificationModal(
+                    '⚠️ محدودیت کیف پول',
+                    `مجموع قیمت کانال‌های انتخاب شده (${formattedTotal} تومان) از موجودی کیف پول شما (${formattedBalance} تومان) بیشتر است.`,
+                    'warning'
+                );
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // ========== به‌روزرسانی نمایش وضعیت کیف پول ==========
+    function updateWalletStatus(ids) {
+        if (!IS_REPLACEMENT_MODE) return;
+        const total = calculateTotalPrice(ids);
+        const remaining = WALLET_BALANCE - total;
+
+        const walletStatusEl = document.getElementById('wallet-status-display');
+        if (walletStatusEl) {
+            if (remaining >= 0) {
+                walletStatusEl.innerHTML = `
+                    <span class="text-success">✅ موجودی باقی‌مانده: ${remaining.toLocaleString('en-US')} تومان</span>
+                `;
+            } else {
+                walletStatusEl.innerHTML = `
+                    <span class="text-danger">❌ مجموع قیمت از موجودی کیف پول بیشتر است!</span>
+                `;
+            }
+        }
+    }
+
+    // ========== مدیریت کلیک روی کارت ==========
     function handleCardClick(wrapper) {
         const id = parseInt(wrapper.dataset.id);
         const checkbox = document.querySelector('#rate_' + id);
@@ -159,6 +242,21 @@
         const cardInner = wrapper.querySelector('.influencer-card-inner');
         const isCurrentlyChecked = checkbox.checked;
 
+        // شبیه‌سازی تغییر وضعیت
+        let tempIds = getStoredIds().slice();
+        if (isCurrentlyChecked) {
+            const index = tempIds.indexOf(id);
+            if (index !== -1) tempIds.splice(index, 1);
+        } else {
+            tempIds.push(id);
+        }
+
+        // ========== اعتبارسنجی محدودیت کیف پول ==========
+        if (!validateWalletLimit(tempIds)) {
+            return;
+        }
+
+        // اعمال تغییر
         if (isCurrentlyChecked) {
             checkbox.checked = false;
             cardInner.classList.remove('selected');
@@ -178,17 +276,17 @@
         }, 400);
     }
 
+    // ========== بازیابی انتخاب‌های قبلی ==========
     function restoreSelection() {
         let storedIds = getStoredIds();
-        if (storedIds.length === 0 && PREV_SELECTED.length > 0) {
-            setStoredIds(PREV_SELECTED);
-            storedIds = PREV_SELECTED;
-        }
 
         document.querySelectorAll('.influencer-card-wrapper').forEach(function (wrapper) {
             const id = parseInt(wrapper.dataset.id);
             const checkbox = document.querySelector('#rate_' + id);
             const cardInner = wrapper.querySelector('.influencer-card-inner');
+
+            // ========== در حالت جایگزینی، هیچ کانالی نباید از قبل انتخاب شده باشه ==========
+            // مگر اینکه کاربر قبلاً انتخاب کرده باشه (که توی memorySelectedIds ذخیره شده)
             if (checkbox && storedIds.includes(id)) {
                 checkbox.checked = true;
                 cardInner.classList.add('selected');
@@ -200,8 +298,10 @@
 
         updateUIFromStored();
         syncHiddenFields();
+        initialLoadDone = true;
     }
 
+    // ========== آماده‌سازی فرم برای ارسال ==========
     function prepareFormForSubmit() {
         syncHiddenFields();
 
@@ -210,6 +310,7 @@
         });
     }
 
+    // ========== رویدادها ==========
     document.querySelectorAll('.influencer-card-wrapper').forEach(function (wrapper) {
         wrapper.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -217,6 +318,7 @@
         });
     });
 
+    // ========== دریافت CSRF Token ==========
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -230,6 +332,7 @@
         return cookieValue;
     }
 
+    // ========== مدیریت پارامتر select_rate ==========
     function handleSelectRateParam() {
         const urlParams = new URLSearchParams(window.location.search);
         const selectRate = urlParams.get('select_rate');
@@ -252,12 +355,11 @@
         }
     }
 
-    // اجرا قبل از بازیابی انتخاب‌ها
+    // ========== اجرا ==========
     handleSelectRateParam();
-
     restoreSelection();
 
-    // اضافه کردن رویداد submit به فرم
+    // ========== رویداد submit فرم ==========
     const step2Form = document.getElementById('step2-form');
     if (step2Form) {
         step2Form.addEventListener('submit', function () {

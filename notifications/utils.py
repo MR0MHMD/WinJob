@@ -1,5 +1,7 @@
 import requests
 import threading
+
+from campaigns.models import CampaignInfluencer
 from .models import Notification, NotificationPreference
 from django.conf import settings
 
@@ -180,6 +182,80 @@ def notify_advertiser_influencer_accepted(campaign_influencer):
         notification_type='influencer_accepted',
         title='🤝 پیوستن یک ناشر جدید',
         message=f'ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) درخواست شما را برای کمپین «تست تکمیلی نوتیف» پذیرفت.» پذیرفت.',
+        link=f'/advertisers/campaign_detail/{campaign.id}',
+        related_object_id=campaign.id,
+        related_content_type='Campaign'
+    )
+
+
+# notifications/utils.py
+
+def notify_advertiser_influencer_rejected(campaign_influencer):
+    """
+    نوتیف به تبلیغ‌دهنده وقتی ناشر سفارش رو رد میکنه
+    """
+    campaign = campaign_influencer.campaign
+    user = campaign.advertiser.user
+    channel = campaign_influencer.channel
+    price = campaign_influencer.price
+
+    if campaign.is_free:
+        return None
+
+    return create_notification(
+        user=user,
+        notification_type='influencer_rejected',  # این تایپ رو باید به Notification.Type اضافه کنی
+        title='❌ رد سفارش توسط ناشر',
+        message=f'ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) سفارش شما برای کمپین «{campaign.name}» را رد کرد.\n'
+                f'💰 مبلغ {price:,} تومان به کیف پول شما برگشت داده شد.\n'
+                f'برای انتخاب ناشر جایگزین، روی لینک زیر کلیک کنید.',
+        link=f'/campaigns/select-replacement/{campaign.id}/',
+        related_object_id=campaign.id,
+        related_content_type='Campaign'
+    )
+
+
+# notifications/utils.py
+
+def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
+    """نوتیف به تبلیغ‌دهنده وقتی کمپین نیاز به اصلاح دارد"""
+    user = campaign.advertiser.user
+
+    channel_name = rejected_channel.channel_name if rejected_channel else "یک ناشر"
+    message = f'ناشر «{channel_name}» سفارش شما برای کمپین «{campaign.name}» را رد کرد.\n'
+    message += f'💰 مبلغ مربوطه به کیف پول شما برگشت داده شد.\n\n'
+    message += '🔄 دو گزینه پیش روی شماست:\n'
+    message += '1️⃣ انتخاب ناشر جایگزین\n'
+    message += '2️⃣ ادامه کمپین بدون جایگزینی (ناشران رد شده نادیده گرفته می‌شوند)\n\n'
+    message += '⚠️ در صورت عدم اقدام تا ۲۴ ساعت، گزینه ۲ به طور خودکار انتخاب خواهد شد.'
+
+    return create_notification(
+        user=user,
+        notification_type='campaign_needs_revision',
+        title='🔄 کمپین نیاز به اصلاح دارد',
+        message=message,
+        link=f'/advertisers/campaign_detail/{campaign.id}',
+        related_object_id=campaign.id,
+        related_content_type='Campaign'
+    )
+
+
+def notify_advertiser_campaign_auto_approved(campaign):
+    """نوتیف به تبلیغ‌دهنده وقتی کمپین به صورت خودکار تایید شد"""
+    user = campaign.advertiser.user
+
+    rejected_count = campaign.influencer_bookings.filter(
+        status=CampaignInfluencer.Status.REJECTED
+    ).count()
+
+    message = f'🔔 کمپین «{campaign.name}» به صورت خودکار و پس از گذشت ۲۴ ساعت از رد شدن {rejected_count} ناشر، ادامه یافت.\n'
+    message += 'ناشران رد شده نادیده گرفته شده‌اند و روند کمپین ادامه پیدا میکند.'
+
+    return create_notification(
+        user=user,
+        notification_type='campaign_auto_approved',
+        title='✅ ادامه خودکار کمپین',
+        message=message,
         link=f'/advertisers/campaign_detail/{campaign.id}',
         related_object_id=campaign.id,
         related_content_type='Campaign'

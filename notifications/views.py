@@ -5,6 +5,7 @@ from .models import Notification, NotificationPreference
 import json
 from django.views.decorators.http import require_POST
 
+
 @login_required
 def notification_list(request):
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
@@ -30,7 +31,6 @@ def mark_all_read(request):
     return JsonResponse({'error': 'متد نامعتبر'}, status=400)
 
 
-
 @login_required
 def update_preferences(request):
     if request.method == 'POST':
@@ -51,9 +51,6 @@ def update_preferences(request):
         prefs.save()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'متد نامعتبر'}, status=400)
-
-
-
 
 
 @login_required

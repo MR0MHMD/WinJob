@@ -1,0 +1,155 @@
+{% extends "parent/base.html" %}
+{% load static %}
+{% load jformat %}
+
+{% block title %}انتخاب کانال‌های جایگزین{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/replacement.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'advertisers:my_campaigns' %}">مدیریت کمپین‌ها</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'advertisers:campaign_detail' campaign.id %}">{{ campaign.name }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">انتخاب کانال‌های جایگزین</li>
+        </ol>
+    </nav>
+
+    <div class="card glass-box bg-dark border-light mb-4 animate-up">
+        <div class="card-body p-4">
+            <h4 class="text-light mb-3">
+                <i class="fi-refresh text-primary me-2"></i>
+                انتخاب کانال‌های جایگزین
+            </h4>
+            <p class="text-muted">
+                کانال‌های زیر سفارش شما را رد کرده‌اند. لطفاً کانال‌های جایگزین را انتخاب کنید.
+            </p>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-2 bg-faded-danger">
+                        <div class="text-muted small">کانال‌های رد شده</div>
+                        <div class="text-light fw-bold">{{ rejected_bookings|length }} کانال</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-2 bg-faded-success">
+                        <div class="text-muted small">مبلغ قابل استفاده</div>
+                        <div class="text-success fw-bold">{{ total_rejected_price|floatformat:0|default:0 }} تومان</div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    {% for rate in available_rates %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-dark border-light h-100 influencer-card" data-price="{{ rate.price }}">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="rate_ids" value="{{ rate.id }}" 
+                                               id="rate_{{ rate.id }}">
+                                        <label class="form-check-label w-100" for="rate_{{ rate.id }}">
+                                            <div class="d-flex align-items-center gap-3">
+                                                {% if rate.channel.avatar %}
+                                                    <img src="{{ rate.channel.avatar.url }}" 
+                                                         class="rounded-circle" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                                         style="width: 50px; height: 50px;">
+                                                        <i class="fi-user text-light"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <div>
+                                                    <div class="text-light fw-semibold">{{ rate.channel.channel_name }}</div>
+                                                    <div class="text-muted small">{{ rate.channel.channel_id }}</div>
+                                                    <div class="text-success small">
+                                                        {{ rate.price|floatformat:0|default:0 }} تومان
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="col-12">
+                            <div class="text-center py-5">
+                                <i class="fi-inbox fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                                <p class="text-muted">هیچ کانال جایگزینی موجود نیست.</p>
+                                <a href="{% url 'advertisers:campaign_detail' campaign.id %}" 
+                                   class="btn btn-outline-light rounded-pill px-4">
+                                    <i class="fi-arrow-right me-2"></i>
+                                    بازگشت به کمپین
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if available_rates %}
+                    <div class="mt-4 pt-3 border-top border-light d-flex flex-wrap gap-3 align-items-center">
+                        <div class="flex-grow-1">
+                            <span class="text-muted">مجموع انتخاب شده: </span>
+                            <span class="text-light fw-bold" id="selectedCount">0</span>
+                            <span class="text-muted"> کانال</span>
+                            <span class="text-muted mx-2">|</span>
+                            <span class="text-muted">قیمت کل: </span>
+                            <span class="text-success fw-bold" id="totalPrice">0 تومان</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5" id="submitBtn" disabled>
+                            <i class="fi-check me-2"></i>
+                            انتخاب کانال‌های جایگزین
+                        </button>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('input[name="rate_ids"]');
+        const submitBtn = document.getElementById('submitBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        const totalPrice = document.getElementById('totalPrice');
+
+        function updateUI() {
+            const checked = document.querySelectorAll('input[name="rate_ids"]:checked');
+            selectedCount.textContent = checked.length;
+            submitBtn.disabled = checked.length === 0;
+
+            let total = 0;
+            checked.forEach(cb => {
+                const card = cb.closest('.influencer-card');
+                const price = parseInt(card.dataset.price) || 0;
+                total += price;
+            });
+            totalPrice.textContent = total.toLocaleString() + ' تومان';
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateUI);
+        });
+
+        updateUI();
+    });
+</script>
+{% endblock %}
