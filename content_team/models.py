@@ -439,6 +439,21 @@ class ContentOrder(models.Model):
         verbose_name="وضعیت"
     )
 
+    replaced_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='replaced_orders',
+        verbose_name='جایگزین شده توسط'
+    )
+
+    replaced_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاریخ جایگزینی'
+    )
+
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name="زمان ایجاد"

@@ -9,8 +9,14 @@
     const IS_REPLACEMENT_MODE = window.IS_REPLACEMENT_MODE || false;
     const WALLET_BALANCE = window.WALLET_BALANCE || 0;
 
+    // ========== لاگ اولیه برای بررسی مقادیر ورودی ==========
+    console.log('🔍 [create_step_2.js] مقادیر اولیه:');
+    console.log('  - IS_REPLACEMENT_MODE:', IS_REPLACEMENT_MODE);
+    console.log('  - WALLET_BALANCE:', WALLET_BALANCE, '(نوع:', typeof WALLET_BALANCE, ')');
+    console.log('  - CAMPAIGN_ID:', CAMPAIGN_ID);
+    console.log('  - PRICES:', PRICES);
+
     // ========== در حالت جایگزینی، لیست انتخاب‌ها رو خالی شروع کن ==========
-    // دیگر از PREV_SELECTED برای مقداردهی اولیه استفاده نمیکنیم
     let memorySelectedIds = [];
 
     // ========== کلید localStorage برای حالت عادی ==========
@@ -36,14 +42,24 @@
         return toPersianNum(num.toLocaleString('en-US')) + ' تومان';
     }
 
+    // ========== تابع کمکی برای اطمینان از عدد بدون کاما ==========
+    function sanitizeNumber(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+            // حذف کاما و تبدیل به عدد
+            const cleaned = value.replace(/,/g, '');
+            const num = parseInt(cleaned, 10);
+            return isNaN(num) ? 0 : num;
+        }
+        return 0;
+    }
+
     // ========== دریافت لیست انتخاب‌ها ==========
     function getStoredIds() {
         if (IS_REPLACEMENT_MODE) {
-            // ========== در حالت جایگزینی، از حافظه استفاده کن ==========
             return memorySelectedIds.slice();
         }
 
-        // ========== حالت عادی: از localStorage ==========
         if (!CAMPAIGN_ID) return [];
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -59,12 +75,10 @@
     // ========== ذخیره لیست انتخاب‌ها ==========
     function setStoredIds(ids) {
         if (IS_REPLACEMENT_MODE) {
-            // ========== در حالت جایگزینی، فقط حافظه رو آپدیت کن ==========
             memorySelectedIds = ids.slice();
             return;
         }
 
-        // ========== حالت عادی: ذخیره در localStorage ==========
         if (!CAMPAIGN_ID) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
     }
@@ -117,7 +131,8 @@
         summaryBar.classList.toggle('has-selection', count > 0);
 
         const total = ids.reduce(function (sum, id) {
-            return sum + (PRICES[String(id)] || 0);
+            const price = PRICES[String(id)] || 0;
+            return sum + sanitizeNumber(price);
         }, 0);
         totalPriceEl.textContent = formatPrice(total);
 
@@ -132,64 +147,130 @@
         }
     }
 
-    // ========== دریافت قیمت دقیق از سرور ==========
+    // ========== دریافت قیمت دقیق از سرور (با کمیسیون) ==========
     function fetchAccuratePrice(selectedIds) {
         if (!selectedIds.length) {
             totalPriceEl.classList.remove('updating');
             breakdownEl.innerHTML = '';
+            hideCommissionDisplay();
             return;
         }
 
         totalPriceEl.classList.add('updating');
 
-        fetch(CALCULATE_URL, {
+        const url = IS_REPLACEMENT_MODE
+            ? '/campaigns/api/calculate-influencer-commission/'
+            : CALCULATE_URL;
+
+        const body = IS_REPLACEMENT_MODE
+            ? JSON.stringify({ rate_ids: selectedIds, campaign_id: CAMPAIGN_ID })
+            : JSON.stringify({ service_rate_ids: selectedIds });
+
+        console.log('📤 [fetchAccuratePrice] ارسال درخواست به:', url);
+        console.log('📤 [fetchAccuratePrice] body:', body);
+
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken'),
             },
-            body: JSON.stringify({service_rate_ids: selectedIds}),
+            body: body,
         })
             .then(function (res) {
                 return res.json();
             })
             .then(function (data) {
                 totalPriceEl.classList.remove('updating');
-                if (data.error) return;
-                totalPriceEl.textContent = formatPrice(data.total);
 
-                if (data.breakdown && data.breakdown.length) {
-                    const totalCount = data.breakdown.length;
-                    const displayItems = data.breakdown.slice(0, 4);
-                    const remainingCount = totalCount - 4;
+                console.log('📥 [fetchAccuratePrice] پاسخ دریافت شد:');
+                console.log('  - success:', data.success);
+                console.log('  - data:', data);
 
-                    let namesHtml = '';
-                    displayItems.forEach(function (item) {
-                        namesHtml += '<span class="d-block">' +
-                            '<span class="text-light">' + item.name + '</span>' +
-                            ' · ' +
-                            '<span style="color:#a5b4fc;">' + toPersianNum(item.formatted) + ' تومان</span>' +
-                            '</span>';
-                    });
-                    if (remainingCount > 0) {
-                        namesHtml += '<span class="d-block text-muted small mt-1" style="color:#a5b4fc;">و ' +
-                            toPersianNum(remainingCount) + ' نفر دیگر</span>';
+                if (data.error) {
+                    console.error('❌ خطا از سرور:', data.error);
+                    return;
+                }
+
+                if (IS_REPLACEMENT_MODE && data.success) {
+                    // ========== حالت جایگزینی: نمایش با کمیسیون ==========
+                    // اطمینان از عدد بودن مقادیر (حذف کاما)
+                    const totalDeduct = sanitizeNumber(data.total_deduct);
+                    const commissionDiff = sanitizeNumber(data.commission_diff);
+                    const newInfluencerCost = sanitizeNumber(data.new_influencer_cost);
+                    const selectedCount = sanitizeNumber(data.selected_count);
+
+                    console.log('💰 [fetchAccuratePrice] مقادیر کمیسیون:');
+                    console.log('  - totalDeduct:', totalDeduct);
+                    console.log('  - commissionDiff:', commissionDiff);
+                    console.log('  - newInfluencerCost:', newInfluencerCost);
+                    console.log('  - selectedCount:', selectedCount);
+
+                    totalPriceEl.textContent = formatPrice(totalDeduct);
+
+                    if (commissionDiff > 0) {
+                        breakdownEl.innerHTML = `
+                            <span class="d-block text-light">هزینه کانال‌های جدید: ${toPersianNum(newInfluencerCost.toLocaleString('en-US'))} تومان</span>
+                            <span class="d-block" style="color:#f97316;">➕ مابه‌التفاوت حق‌العمل: ${toPersianNum(commissionDiff.toLocaleString('en-US'))} تومان</span>
+                            <span class="d-block mt-1" style="color:#22c55e; font-weight:bold; font-size:1rem;">💰 مبلغ قابل پرداخت: ${toPersianNum(totalDeduct.toLocaleString('en-US'))} تومان</span>
+                            <span class="d-block text-muted small mt-1">(تعداد کانال‌های انتخاب شده: ${toPersianNum(selectedCount)})</span>
+                        `;
+                    } else {
+                        breakdownEl.innerHTML = `
+                            <span class="d-block text-light">هزینه کانال‌های جدید: ${toPersianNum(newInfluencerCost.toLocaleString('en-US'))} تومان</span>
+                            <span class="d-block text-muted small mt-1">(تعداد کانال‌های انتخاب شده: ${toPersianNum(selectedCount)})</span>
+                            <span class="d-block mt-1" style="color:#22c55e; font-weight:bold; font-size:1rem;">💰 مبلغ قابل پرداخت: ${toPersianNum(totalDeduct.toLocaleString('en-US'))} تومان</span>
+                        `;
                     }
-                    breakdownEl.innerHTML = namesHtml;
                 } else {
-                    breakdownEl.innerHTML = '';
+                    // ========== حالت عادی ==========
+                    const total = sanitizeNumber(data.total);
+                    totalPriceEl.textContent = formatPrice(total);
+
+                    if (data.breakdown && data.breakdown.length) {
+                        const totalCount = data.breakdown.length;
+                        const displayItems = data.breakdown.slice(0, 4);
+                        const remainingCount = totalCount - 4;
+
+                        let namesHtml = '';
+                        displayItems.forEach(function (item) {
+                            const price = sanitizeNumber(item.price);
+                            namesHtml += '<span class="d-block">' +
+                                '<span class="text-light">' + item.name + '</span>' +
+                                ' · ' +
+                                '<span style="color:#a5b4fc;">' + toPersianNum(price.toLocaleString('en-US')) + ' تومان</span>' +
+                                '</span>';
+                        });
+                        if (remainingCount > 0) {
+                            namesHtml += '<span class="d-block text-muted small mt-1" style="color:#a5b4fc;">و ' +
+                                toPersianNum(remainingCount) + ' نفر دیگر</span>';
+                        }
+                        breakdownEl.innerHTML = namesHtml;
+                    } else {
+                        breakdownEl.innerHTML = '';
+                    }
                 }
             })
-            .catch(function () {
+            .catch(function (error) {
+                console.error('❌ [fetchAccuratePrice] خطا در fetch:', error);
                 totalPriceEl.classList.remove('updating');
             });
+    }
+
+    // ========== مخفی کردن نمایش کمیسیون ==========
+    function hideCommissionDisplay() {
+        const commissionDisplay = document.getElementById('commission-diff-display');
+        if (commissionDisplay) {
+            commissionDisplay.style.display = 'none';
+        }
     }
 
     // ========== محاسبه مجموع قیمت ==========
     function calculateTotalPrice(ids) {
         let total = 0;
         ids.forEach(function (id) {
-            total += (PRICES[String(id)] || 0);
+            const price = PRICES[String(id)] || 0;
+            total += sanitizeNumber(price);
         });
         return total;
     }
@@ -198,9 +279,15 @@
     function validateWalletLimit(ids) {
         if (!IS_REPLACEMENT_MODE) return true;
         const total = calculateTotalPrice(ids);
-        if (total > WALLET_BALANCE) {
+        const walletBalance = sanitizeNumber(WALLET_BALANCE);
+
+        console.log('💰 [validateWalletLimit] بررسی کیف پول:');
+        console.log('  - total:', total);
+        console.log('  - walletBalance:', walletBalance);
+
+        if (total > walletBalance) {
             const formattedTotal = total.toLocaleString('en-US');
-            const formattedBalance = WALLET_BALANCE.toLocaleString('en-US');
+            const formattedBalance = walletBalance.toLocaleString('en-US');
             if (typeof showNotificationModal !== 'undefined') {
                 showNotificationModal(
                     '⚠️ محدودیت کیف پول',
@@ -217,7 +304,8 @@
     function updateWalletStatus(ids) {
         if (!IS_REPLACEMENT_MODE) return;
         const total = calculateTotalPrice(ids);
-        const remaining = WALLET_BALANCE - total;
+        const walletBalance = sanitizeNumber(WALLET_BALANCE);
+        const remaining = walletBalance - total;
 
         const walletStatusEl = document.getElementById('wallet-status-display');
         if (walletStatusEl) {
@@ -242,7 +330,6 @@
         const cardInner = wrapper.querySelector('.influencer-card-inner');
         const isCurrentlyChecked = checkbox.checked;
 
-        // شبیه‌سازی تغییر وضعیت
         let tempIds = getStoredIds().slice();
         if (isCurrentlyChecked) {
             const index = tempIds.indexOf(id);
@@ -251,12 +338,10 @@
             tempIds.push(id);
         }
 
-        // ========== اعتبارسنجی محدودیت کیف پول ==========
         if (!validateWalletLimit(tempIds)) {
             return;
         }
 
-        // اعمال تغییر
         if (isCurrentlyChecked) {
             checkbox.checked = false;
             cardInner.classList.remove('selected');
@@ -285,8 +370,6 @@
             const checkbox = document.querySelector('#rate_' + id);
             const cardInner = wrapper.querySelector('.influencer-card-inner');
 
-            // ========== در حالت جایگزینی، هیچ کانالی نباید از قبل انتخاب شده باشه ==========
-            // مگر اینکه کاربر قبلاً انتخاب کرده باشه (که توی memorySelectedIds ذخیره شده)
             if (checkbox && storedIds.includes(id)) {
                 checkbox.checked = true;
                 cardInner.classList.add('selected');
@@ -304,7 +387,6 @@
     // ========== آماده‌سازی فرم برای ارسال ==========
     function prepareFormForSubmit() {
         syncHiddenFields();
-
         document.querySelectorAll('.influencer-checkbox').forEach(function (cb) {
             cb.disabled = true;
         });

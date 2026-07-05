@@ -539,7 +539,7 @@ def influencer_dashboard(request):
 
     recent_transactions = Transaction.objects.filter(
         user=request.user
-    ).order_by('-created_at')[:3]
+    ).order_by('-created_at')[:10]
 
     recent_bookings = campaign_bookings.select_related(
         'campaign', 'channel'

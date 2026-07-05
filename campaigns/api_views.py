@@ -4,10 +4,11 @@ from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from influencers.models import InfluencerServiceRate
 from content_team.models import ContentServicePlan
-from campaigns.models import Campaign, Coupon
+from campaigns.models import Campaign, Coupon, CampaignInfluencer  # ✅ اضافه شد
 from django.http import JsonResponse
 from django.contrib import messages
 from django.urls import reverse
+from django.db.models import Sum
 import traceback
 import json
 
@@ -28,7 +29,6 @@ def campaign_step2_calculate_price(request):
                 'breakdown': [],
                 'formatted': '۰'
             })
-
 
         rates = (
             InfluencerServiceRate.objects
@@ -76,7 +76,6 @@ def campaign_create_step3_router(request):
 
     content_slug = campaign.content_type.slug.lower()
 
-    # دریافت شماره صفحه ذخیره شده در سشن (اگر وجود نداشت 1)
     step3_page = request.session.get('step3_team_page', '1')
 
     if content_slug == "ready-content":
@@ -110,7 +109,6 @@ def api_content_team_rates(request):
     data = []
 
     for rate in rates:
-
         if rate.service_type.unit == "minute":
             final_price = rate.price_per_unit * minutes
         else:
@@ -136,7 +134,7 @@ def apply_discount_code(request):
         code = body.get("code", "").strip()
         scope = body.get("scope", "")
 
-        print(f"🔍 دریافت درخواست: code={code}, scope={scope}")  # لاگ
+        print(f"🔍 دریافت درخواست: code={code}, scope={scope}")
 
         if not code:
             return JsonResponse(
@@ -175,7 +173,6 @@ def apply_discount_code(request):
             'platform': 'platform_coupon_id'
         }
 
-        # ✅ بررسی اینکه قبلاً کوپن برای این scope استفاده شده
         existing_coupon = getattr(campaign, scope_field_map[scope])
         if existing_coupon:
             return JsonResponse({
@@ -185,22 +182,19 @@ def apply_discount_code(request):
 
         try:
             coupon = Coupon.objects.get(code__iexact=code, scope=scope)
-            print(f"✅ کوپن پیدا شد: {coupon.code}, scope={coupon.scope}")  # لاگ
+            print(f"✅ کوپن پیدا شد: {coupon.code}, scope={coupon.scope}")
         except Coupon.DoesNotExist:
             return JsonResponse(
                 {"success": False, "message": "کد تخفیف معتبر نیست."},
                 status=404
             )
 
-        # ✅ اعتبارسنجی کوپن
         if not coupon.is_valid():
             return JsonResponse(
                 {"success": False, "message": "این کد تخفیف قابل استفاده نیست (منقضی شده یا استفاده شده)."},
                 status=400
             )
 
-        # ✅ بررسی استفاده قبلی در کمپین‌های پرداخت شده یا در انتظار
-        # فقط کمپین‌هایی که پرداخت شدن یا تایید شدن رو چک کن
         user_coupon_used = Campaign.objects.filter(
             advertiser=request.user.advertiser_profile,
             **{f"{scope_field_map[scope]}": coupon}
@@ -216,7 +210,6 @@ def apply_discount_code(request):
                 "message": "شما قبلاً در یک کمپین دیگر از این کد تخفیف استفاده کرده‌اید."
             }, status=400)
 
-        # اعتبارسنجی scope-specific
         influencer_bookings = campaign.influencer_bookings.select_related(
             "channel__influencer"
         )
@@ -244,7 +237,6 @@ def apply_discount_code(request):
                         "message": "این کد تخفیف مربوط به تیم محتوای دیگری است."
                     }, status=400)
 
-        # اعمال کوپن به کمپین
         if scope == 'influencer':
             campaign.influencer_coupon = coupon
         elif scope == 'content_team':
@@ -254,10 +246,8 @@ def apply_discount_code(request):
 
         campaign.save(update_fields=[scope_field_map[scope]])
 
-        # محاسبه مجدد فاکتور
         invoice = create_campaign_invoice(campaign)
 
-        # ✅ دیباگ: لاگ کردن مقادیر
         print(f"📊 فاکتور جدید: payable={invoice.payable_amount}, discount={invoice.discount_amount}")
 
         discount_breakdown = getattr(invoice, 'discount_breakdown', {
@@ -271,35 +261,26 @@ def apply_discount_code(request):
             "message": "کد تخفیف با موفقیت اعمال شد.",
             "scope": scope,
             "coupon_code": coupon.code,
-
             "discount_type": coupon.discount_type,
             "discount_value": float(coupon.value),
-
             "discount_amount": invoice.discount_amount,
             "discount_amount_formatted": f"{invoice.discount_amount:,}",
-
             "discount_breakdown": discount_breakdown,
-
             "payable_amount": invoice.payable_amount,
             "payable_amount_formatted": f"{invoice.payable_amount:,}",
-
             "final_total": invoice.total_amount,
             "final_total_formatted": f"{invoice.total_amount:,}",
-
             "commission": invoice.commission,
             "commission_formatted": f"{invoice.commission:,}",
-
             "influencer_cost": invoice.influencer_cost,
             "influencer_cost_formatted": f"{invoice.influencer_cost:,}",
-
             "content_cost": invoice.content_cost,
             "content_cost_formatted": f"{invoice.content_cost:,}",
         })
 
     except Exception as e:
         traceback.print_exc()
-        print(f"❌ خطا: {str(e)}")  # لاگ
-
+        print(f"❌ خطا: {str(e)}")
         return JsonResponse(
             {"success": False, "error": str(e)},
             status=500
@@ -318,3 +299,77 @@ def campaign_delete(request, campaign_id):
     campaign.delete()
     messages.success(request, "کمپین با موفقیت حذف شد.")
     return redirect('advertisers:my_campaigns')
+
+
+@login_required
+@require_POST
+def calculate_influencer_replacement_commission(request):
+    """
+    محاسبه مابه‌التفاوت حق العمل برای جایگزینی کانال‌های اینفلوئنسر
+    """
+    try:
+        body = json.loads(request.body)
+        selected_rate_ids = body.get('rate_ids', [])
+        campaign_id = body.get('campaign_id')
+
+        if not campaign_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'شناسه کمپین یافت نشد'
+            }, status=400)
+
+        campaign = get_object_or_404(Campaign, id=campaign_id, advertiser=request.user.advertiser_profile)
+
+        # ========== ۱. هزینه ناشران فعلی (غیر از رد شده‌ها) ==========
+        current_influencer_cost = campaign.influencer_bookings.exclude(
+            status__in=[CampaignInfluencer.Status.REJECTED, CampaignInfluencer.Status.REPLACED]
+        ).aggregate(total=Sum('price'))['total'] or 0
+
+        # ========== ۲. هزینه ناشران جدید (جایگزین‌ها) ==========
+        selected_rates = InfluencerServiceRate.objects.filter(id__in=selected_rate_ids, is_active=True)
+        new_influencer_cost = sum(rate.price for rate in selected_rates)
+
+        # ========== ۳. هزینه تولید محتوا ==========
+        content_cost = 0
+        if hasattr(campaign, 'invoice') and campaign.invoice:
+            content_cost = campaign.invoice.content_cost
+
+        # ========== ۴. کمیسیون قبلی ==========
+        old_commission = 0
+        if hasattr(campaign, 'invoice') and campaign.invoice:
+            old_commission = campaign.invoice.commission
+        else:
+            from campaigns.services.create_invoice import PLATFORM_COMMISSION
+            old_subtotal = int(current_influencer_cost) + int(content_cost)
+            old_commission = int(old_subtotal * PLATFORM_COMMISSION)
+
+        # ========== ۵. کمیسیون جدید ==========
+        from campaigns.services.create_invoice import PLATFORM_COMMISSION
+        new_total_influencer_cost = int(current_influencer_cost) + int(new_influencer_cost)
+        new_subtotal = new_total_influencer_cost + int(content_cost)
+        new_commission = int(new_subtotal * PLATFORM_COMMISSION)
+
+        # ========== ۶. مابه‌التفاوت ==========
+        commission_diff = max(new_commission - old_commission, 0)
+        total_deduct = int(new_influencer_cost) + commission_diff
+
+        return JsonResponse({
+            'success': True,
+            'current_influencer_cost': int(current_influencer_cost),
+            'new_influencer_cost': int(new_influencer_cost),
+            'old_commission': old_commission,
+            'new_commission': new_commission,
+            'commission_diff': commission_diff,
+            'total_deduct': total_deduct,
+            'total_deduct_formatted': f"{total_deduct:,}",
+            'commission_diff_formatted': f"{commission_diff:,}",
+            'new_influencer_cost_formatted': f"{int(new_influencer_cost):,}",
+            'selected_count': len(selected_rate_ids),
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

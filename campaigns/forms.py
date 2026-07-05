@@ -1,5 +1,4 @@
 from django.core.exceptions import ValidationError
-
 from content_team.models import ContentServiceType, ContentServicePlan, ContentOrderDescription
 from .utils import jalali_str_to_datetime, validate_start_date, validate_end_date
 from .models import ContentType, AdType, CampaignContent
@@ -124,7 +123,6 @@ class CampaignStep1Form(forms.Form):
                     ad_type=ad_type_id,
                     is_active=True
                 )
-
 
     def clean_start_date(self):
         """تبدیل و اعتبارسنجی تاریخ شروع"""
@@ -358,8 +356,6 @@ class CampaignStep2Form(forms.Form):
         return influencers
 
 
-from content_team.models import ContentServicePlan
-
 class CampaignStep3TeamForm(forms.Form):
     selected_plan = forms.IntegerField(
         required=True,
@@ -533,6 +529,10 @@ class CampaignStep3BriefForm(forms.ModelForm):
         return link
 
 
+# campaigns/forms.py
+
+# campaigns/forms.py
+
 class CampaignStep3ReadyForm(forms.ModelForm):
     class Meta:
         model = CampaignContent
@@ -616,13 +616,19 @@ class CampaignStep3ReadyForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # دریافت پارامتر is_switch_mode (دیگه برای required نیاز نیست، ولی برای منطق دیگه ممکنه استفاده بشه)
+        is_switch_mode = kwargs.pop('is_switch_mode', False)
         super().__init__(*args, **kwargs)
+
         # اینا رو غیر required می‌کنیم، خودمون هندلش می‌کنیم
         self.fields['utm_source'].required = False
         self.fields['utm_medium'].required = False
         self.fields['utm_campaign'].required = False
         self.fields['utm_content'].required = False
         self.fields['utm_term'].required = False
+
+        # ذخیره is_switch_mode برای استفاده در clean (اگه نیاز شد)
+        self.is_switch_mode = is_switch_mode
 
     def clean_media(self):
         media = self.cleaned_data.get("media")
@@ -672,18 +678,12 @@ class CampaignStep3ReadyForm(forms.ModelForm):
                     utm_params["utm_term"] = cleaned_data.get("utm_term")
 
                 if utm_params:
-                    # ساخت لینک جدید با UTM
                     parsed = urlparse(link)
                     existing_query = parsed.query
 
-                    # ترکیب query‌های موجود با UTM جدید (اولویت با UTM جدید)
                     from urllib.parse import parse_qs
                     existing_params = parse_qs(existing_query)
-
-                    # تبدیل به flat dict (اولین مقدار هر کلید)
                     flat_existing = {k: v[0] for k, v in existing_params.items()}
-
-                    # ادغام (UTM جدید override میکنه)
                     flat_existing.update(utm_params)
 
                     new_query = urlencode(flat_existing)

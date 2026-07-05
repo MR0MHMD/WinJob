@@ -21,8 +21,9 @@ const baleVideo = document.getElementById("baleVideo");
 const baleCaption = document.getElementById("baleCaption");
 const baleLink = document.getElementById("baleLink");
 
-// ---------- جدید: المان‌های فرم ----------
+// ---------- المان‌های فرم ----------
 const submitBtn = document.querySelector("button[type='submit']");
+const isSwitchMode = window.isSwitchMode || false;
 const captionInput = document.getElementById("id_caption");
 const linkInput = document.getElementById("id_link");
 const utmEnabledCheckbox = document.getElementById("id_utm_enabled");
@@ -32,10 +33,41 @@ const utmMedium = document.getElementById("id_utm_medium");
 const utmCampaign = document.getElementById("id_utm_campaign");
 const utmContent = document.getElementById("id_utm_content");
 
+document.addEventListener("DOMContentLoaded", function () {
+    if (isSwitchMode && submitBtn) {
+        submitBtn.innerHTML = '<i class="fi-check me-2"></i> تایید و انتشار';
+        submitBtn.className = 'btn btn-success px-5';
+    }
+});
+
+
 // ---------- تابع چک کردن اعتبار فرم ----------
 function validateForm() {
     let isValid = true;
 
+    // ===== حالت تبدیل: فقط UTM رو چک کن =====
+    if (isSwitchMode) {
+        // caption و link قبلاً مقدار دارن و disabled هستن
+        // فقط utm رو چک کن
+        if (utmEnabledCheckbox.checked) {
+            if (!utmSource.value.trim()) isValid = false;
+            if (!utmMedium.value.trim()) isValid = false;
+            if (!utmCampaign.value.trim()) isValid = false;
+            if (!utmContent.value.trim()) isValid = false;
+        }
+
+        // دکمه submit رو فعال/غیرفعال کن
+        if (isValid) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("opacity-50");
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.add("opacity-50");
+        }
+        return;
+    }
+
+    // ===== حالت عادی: همه فیلدها رو چک کن =====
     // چک کردن caption
     if (!captionInput.value.trim()) {
         isValid = false;
@@ -73,7 +105,6 @@ function validateForm() {
 function toggleUtmFields() {
     if (utmEnabledCheckbox.checked) {
         utmFields.classList.remove("d-none");
-        // فیلدها رو required کن (سمت کلاینت)
         utmSource.required = true;
         utmMedium.required = true;
         utmCampaign.required = true;
@@ -81,7 +112,6 @@ function toggleUtmFields() {
         document.getElementById("id_utm_term").required = false;
     } else {
         utmFields.classList.add("d-none");
-        // required رو بردار
         utmSource.required = false;
         utmMedium.required = false;
         utmCampaign.required = false;
@@ -92,8 +122,27 @@ function toggleUtmFields() {
 
 // ---------- Event Listeners ----------
 utmEnabledCheckbox.addEventListener("change", toggleUtmFields);
-captionInput.addEventListener("input", validateForm);
-linkInput.addEventListener("input", validateForm);
+captionInput.addEventListener("input", () => {
+    // فقط اگه غیرفعال نباشه (حالت عادی)
+    if (!captionInput.disabled) {
+        baleCaption.textContent = captionInput.value.trim();
+        validateForm();
+    }
+});
+linkInput.addEventListener("input", () => {
+    // فقط اگه غیرفعال نباشه (حالت عادی)
+    if (!linkInput.disabled) {
+        const link = linkInput.value.trim();
+        if (link) {
+            baleLink.href = link;
+            baleLink.textContent = link;
+            baleLink.classList.remove("d-none");
+        } else {
+            baleLink.classList.add("d-none");
+        }
+        validateForm();
+    }
+});
 utmSource.addEventListener("input", validateForm);
 utmMedium.addEventListener("input", validateForm);
 utmCampaign.addEventListener("input", validateForm);
@@ -173,12 +222,10 @@ input.addEventListener("change", () => {
     });
 });
 
-// Load existing media (edit mode)
+
 document.addEventListener("DOMContentLoaded", () => {
-    // تنظیم اولیه UTM fields
     toggleUtmFields();
 
-    // Caption + Link preview
     baleCaption.textContent = captionInput.value.trim();
     const link = linkInput.value.trim();
     if (link) {
@@ -187,42 +234,44 @@ document.addEventListener("DOMContentLoaded", () => {
         baleLink.classList.remove("d-none");
     }
 
-    // Existing media
     const existing = window.campaignData?.existingMedia || '';
-    if (!existing) return;
-    placeholder.classList.add("d-none");
-    previewWrapper.classList.remove("d-none");
-    const ext = existing.split('.').pop().toLowerCase();
-    const videos = ["mp4", "webm", "ogg"];
-    if (videos.includes(ext)) {
-        previewVideo.src = existing;
-        previewVideo.classList.remove("d-none");
-        baleVideo.src = existing;
-        baleVideo.classList.remove("d-none");
-    } else {
-        previewImg.src = existing;
-        previewImg.classList.remove("d-none");
-        baleImage.src = existing;
-        baleImage.classList.remove("d-none");
+    if (existing) {
+        placeholder.classList.add("d-none");
+        previewWrapper.classList.remove("d-none");
+        const ext = existing.split('.').pop().toLowerCase();
+        const videos = ["mp4", "webm", "ogg"];
+        if (videos.includes(ext)) {
+            previewVideo.src = existing;
+            previewVideo.classList.remove("d-none");
+            baleVideo.src = existing;
+            baleVideo.classList.remove("d-none");
+        } else {
+            previewImg.src = existing;
+            previewImg.classList.remove("d-none");
+            baleImage.src = existing;
+            baleImage.classList.remove("d-none");
+        }
     }
-    validateForm();
-});
 
-// Caption + Link preview update
-captionInput.addEventListener("input", () => {
-    baleCaption.textContent = captionInput.value.trim();
-    validateForm();
-});
-linkInput.addEventListener("input", () => {
-    const link = linkInput.value.trim();
-    if (link) {
-        baleLink.href = link;
-        baleLink.textContent = link;
-        baleLink.classList.remove("d-none");
+    const isSwitchMode = window.isSwitchMode || false;
+    if (isSwitchMode) {
+        const captionField = document.getElementById('id_caption');
+        const linkField = document.getElementById('id_link');
+
+        if (captionField) {
+            captionField.readOnly = true;
+            captionField.classList.add('opacity-50', 'bg-faded-dark');
+            captionField.style.cursor = 'not-allowed';
+        }
+        if (linkField) {
+            linkField.readOnly = true;
+            linkField.classList.add('opacity-50', 'bg-faded-dark');
+            linkField.style.cursor = 'not-allowed';
+        }
+        validateForm();
     } else {
-        baleLink.classList.add("d-none");
+        validateForm();
     }
-    validateForm();
 });
 
 // Disable submit button initially

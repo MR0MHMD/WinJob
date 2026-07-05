@@ -1,7 +1,13 @@
 {% extends "parent/base.html" %}
 {% load static %}
 
-{% block title %}ساخت کمپین | آپلود محتوا{% endblock %}
+{% block title %}
+    {% if is_switch_mode %}
+        آپلود محتوای آماده | تبدیل کمپین
+    {% else %}
+        ساخت کمپین | آپلود محتوا
+    {% endif %}
+{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/ready/step_3_ready.css' %}">
@@ -9,25 +15,61 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-5">
-        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+    <div class="container pt-5">
+        {% if not is_switch_mode %}
+            {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% else %}
+            <!-- در حالت تبدیل، هدر متفاوت -->
+            <div class="mb-4">
+                <div class="alert alert-warning bg-faded-warning text-warning d-flex align-items-center gap-3">
+                    <i class="fi-alert-triange fs-3"></i>
+                    <div>
+                        <strong>حالت تبدیل به محتوای آماده</strong>
+                        <p class="mb-0 small">شما در حال آپلود محتوای آماده برای کمپین
+                            <strong>{{ campaign.name }}</strong> هستید.</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
         <div class="card border-0 shadow-sm bg-dark">
             <div class="card-body p-4">
-                <h4 class="mb-4 text-light">آپلود محتوای تبلیغ</h4>
+                <h4 class="mb-4 text-light">
+                    {% if is_switch_mode %}
+                        📤 آپلود محتوای آماده
+                    {% else %}
+                        آپلود محتوای تبلیغ
+                    {% endif %}
+                </h4>
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row">
-    
+
+                        <!-- بعد از فرم، قبل از فیلدها -->
+                        {% if form.errors %}
+                            <div class="alert alert-danger bg-faded-danger text-danger">
+                                <i class="fi-alert-circle me-2"></i>
+                                <strong>لطفاً خطاهای زیر را بررسی کنید:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ field }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
                         <div class="col-lg-7">
-    
+
                             <label class="form-label text-light">
                                 {{ form.media.label }}
                             </label>
-    
+
                             <div class="d-none">
                                 {{ form.media }}
                             </div>
-    
+
                             <div id="uploadZone" class="upload-dropzone">
                                 <div id="uploadPlaceholder" class="upload-placeholder">
                                     <i class="fi-cloud-upload fs-2 d-block mb-3"></i>
@@ -35,13 +77,14 @@
                                     <p class="text-muted mb-3">یا کلیک کنید</p>
                                     <span class="badge bg-primary px-3 py-2">انتخاب فایل</span>
                                 </div>
-    
+
                                 <div id="uploadPreviewWrapper" class="upload-preview-wrapper d-none">
                                     <div class="position-relative d-inline-block">
                                         <img id="uploadPreviewImage" class="upload-preview-media d-none" alt="" src="">
-    
-                                        <video id="uploadPreviewVideo" class="upload-preview-media d-none" controls></video>
-    
+
+                                        <video id="uploadPreviewVideo" class="upload-preview-media d-none"
+                                               controls></video>
+
                                         <button type="button" id="removeUploadBtn"
                                                 class="upload-remove-btn shadow">
                                             <i class="fi-x"></i>
@@ -49,38 +92,51 @@
                                     </div>
                                 </div>
                             </div>
-    
+
                             <!-- Progress -->
                             <div id="uploadProgressBox" class="progress upload-progress mt-3 d-none">
-                                <div id="uploadProgressBar" class="progress-bar" role="progressbar" style="width:0"></div>
+                                <div id="uploadProgressBar" class="progress-bar" role="progressbar"
+                                     style="width:0"></div>
                             </div>
-    
+
                             <div class="d-flex justify-content-between small text-muted mt-2">
                                 <span id="uploadFileName"></span>
                                 <span id="uploadPercent"></span>
                             </div>
-    
+
                             <div class="mt-3 text-muted small">
                                 فرمت مجاز: عکس یا ویدیو<br>
                                 حداکثر حجم: 50MB
                             </div>
-    
+
                             <!-- Fields -->
                             <div class="mb-3">
                                 <label class="form-label text-light">{{ form.caption.label }}</label>
                                 {{ form.caption }}
+                                {% if is_switch_mode %}
+                                    <div class="text-muted small mt-1">
+                                        <i class="fi-info-circle me-1"></i>
+                                        این متن از بریف قبلی گرفته شده و قابل ویرایش نیست.
+                                    </div>
+                                {% endif %}
                             </div>
-    
+
                             <div class="mb-3">
                                 <label class="form-label text-light">{{ form.link.label }}</label>
                                 {{ form.link }}
+                                {% if is_switch_mode %}
+                                    <div class="text-muted small mt-1">
+                                        <i class="fi-info-circle me-1"></i>
+                                        این لینک از بریف قبلی گرفته شده و قابل ویرایش نیست.
+                                    </div>
+                                {% endif %}
                             </div>
-    
+
                             <div class="mb-3">
                                 <label class="form-label text-light">{{ form.notes.label }}</label>
                                 {{ form.notes }}
                             </div>
-    
+
                             <!-- UTM -->
                             <div class="form-check form-switch mt-4 mb-3">
                                 {{ form.utm_enabled }}
@@ -88,35 +144,35 @@
                                     {{ form.utm_enabled.label }}
                                 </label>
                             </div>
-    
+
                             <div id="utmFields" class="row g-3 d-none">
                                 <div class="col-md-6">
                                     <label class="form-label text-light">{{ form.utm_source.label }}</label>
                                     {{ form.utm_source }}
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <label class="form-label text-light">{{ form.utm_medium.label }}</label>
                                     {{ form.utm_medium }}
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <label class="form-label text-light">{{ form.utm_campaign.label }}</label>
                                     {{ form.utm_campaign }}
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <label class="form-label text-light">{{ form.utm_content.label }}</label>
                                     {{ form.utm_content }}
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <label class="form-label text-light">{{ form.utm_term.label }}</label>
                                     {{ form.utm_term }}
                                 </div>
                             </div>
                         </div>
-    
+
                         <!-- RIGHT: Bale Preview -->
                         <div class="col-lg-5">
                             <div class="mt-4">
@@ -126,7 +182,7 @@
                                         <img id="baleImage" class="bale-image d-none" alt="" src="">
                                         <video id="baleVideo" class="bale-image d-none" controls></video>
                                     </div>
-    
+
                                     <div class="bale-content">
                                         <p id="baleCaption" class="bale-text"></p>
                                         <a id="baleLink" href="#" class="bale-link d-none" target="_blank"></a>
@@ -139,12 +195,25 @@
                             </div>
                         </div>
                     </div>
-    
+
+                    <!-- ===== دکمه‌ها ===== -->
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-outline-light">
-                            مرحله قبل
-                        </a>
-                        <button type="submit" class="btn btn-primary px-4">ادامه</button>
+                        {% if is_switch_mode %}
+                            {# حالت تبدیل: دکمه بازگشت به جزئیات کمپین با برگشت نوع محتوا #}
+                            <a href="{% url 'campaigns:campaign_switch_to_ready_cancel' campaign.id %}"
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fi-arrow-right me-2"></i> بازگشت
+                            </a>
+                            <button type="submit" class="btn btn-success px-5">
+                                <i class="fi-check me-2"></i> تایید و انتشار
+                            </button>
+                        {% else %}
+                            {# حالت عادی: دکمه مرحله قبل و ادامه #}
+                            <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-outline-light">
+                                مرحله قبل
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">ادامه</button>
+                        {% endif %}
                     </div>
                 </form>
             </div>
@@ -155,6 +224,7 @@
 {% block script %}
     <script src="{% static 'campaigns/js/create_step_3/ready/step_3_ready.js' %}"></script>
     <script>
+        window.isSwitchMode = {{ is_switch_mode|yesno:"true,false" }};
         window.campaignData = {
             existingMedia: "{{ existing_media|default:'' }}"
         };

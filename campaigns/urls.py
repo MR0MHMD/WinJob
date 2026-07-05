@@ -21,4 +21,6 @@ urlpatterns = [
     path('replace-team/<int:campaign_id>/', campaign_replace_team, name='campaign_replace_team'),
     path('switch-to-ready/<int:campaign_id>/', campaign_switch_to_ready, name='campaign_switch_to_ready'),
     path('continue-without-replacement/<int:campaign_id>/',  campaign_continue_without_replacement,  name='campaign_continue_without_replacement'),
+    path('switch-to-ready-cancel/<int:campaign_id>/', campaign_switch_to_ready_cancel, name='campaign_switch_to_ready_cancel'),
+    path('api/calculate-influencer-commission/', calculate_influencer_replacement_commission, name='calculate_influencer_commission'),
 ]

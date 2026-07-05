@@ -1,4 +1,4 @@
-(function() {
+(function () {
     'use strict';
 
     // عناصر DOM
@@ -11,13 +11,17 @@
     const totalPriceEl = document.getElementById('total-price-display');
     const breakdownEl = document.getElementById('price-breakdown');
     const selectedCountEl = document.getElementById('selected-count');
+    const commissionDiffDisplay = document.getElementById('commission-diff-display');
+    const commissionDiffAmount = document.getElementById('commission-diff-amount');
+    const finalTotalDisplay = document.getElementById('final-total-display');
 
     let currentSelectedPlan = null;
+    const COMMISSION_RATE = 0.15;
 
-    // توابع کمکی
+    // ========== توابع کمکی ==========
     function escapeHtml(str) {
         if (!str) return '';
-        return String(str).replace(/[&<>]/g, function(m) {
+        return String(str).replace(/[&<>]/g, function (m) {
             if (m === '&') return '&amp;';
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
@@ -33,29 +37,160 @@
         return toPersianNum(Number(price).toLocaleString('en-US')) + ' تومان';
     }
 
-    // به‌روزرسانی نوار قیمت
-    function updatePriceUI(plan) {
+    function calculateCommission(subtotal) {
+        return Math.floor(subtotal * COMMISSION_RATE);
+    }
+
+    // ========== دریافت اطلاعات از DOM ==========
+    function getInfluencerCost() {
+        const el = document.getElementById('influencer-total-cost');
+        if (!el) return 0;
+        const raw = el.dataset.cost || '0';
+        // حذف کاما برای اطمینان (اگر از سمت سرور درست نیومده باشه)
+        const cleaned = raw.replace(/,/g, '');
+        const val = parseInt(cleaned, 10) || 0;
+        console.log('influencerCost:', val);
+        return val;
+    }
+
+    function getOldContentCost() {
+        const el = document.getElementById('old-content-cost');
+        if (!el) return 0;
+        const raw = el.dataset.cost || '0';
+        const cleaned = raw.replace(/,/g, '');
+        const val = parseInt(cleaned, 10) || 0;
+        console.log('oldContentCost:', val);
+        return val;
+    }
+
+    function getIsReplacementMode() {
+        return window.IS_REPLACEMENT_MODE === true;
+    }
+
+    // ========== به‌روزرسانی نوار قیمت ==========
+    // ========== به‌روزرسانی نوار قیمت ==========
+    function updatePriceUI(plan, commissionDiff = 0, totalDeduct = 0) {
+        const isReplacementMode = getIsReplacementMode();
+
         if (!plan) {
             if (summaryBar) summaryBar.classList.remove('has-selection');
             if (totalPriceEl) totalPriceEl.textContent = '۰ تومان';
             if (breakdownEl) breakdownEl.innerHTML = '';
             if (selectedCountEl) selectedCountEl.textContent = toPersianNum(0);
             if (submitBtn) submitBtn.disabled = true;
+
+            // ========== مخفی کردن نمایش مابه‌التفاوت حق العمل (در هر دو حالت) ==========
+            if (commissionDiffDisplay) {
+                commissionDiffDisplay.style.display = 'none';
+            }
+            if (finalTotalDisplay) {
+                finalTotalDisplay.textContent = '۰ تومان';
+            }
             return;
         }
+
         if (summaryBar) summaryBar.classList.add('has-selection');
         if (selectedCountEl) selectedCountEl.textContent = toPersianNum(1);
         if (totalPriceEl) totalPriceEl.textContent = formatPrice(plan.price);
+
+        // ========== نمایش عادی (هزینه تیم) ==========
         if (breakdownEl) {
             breakdownEl.innerHTML = `
-                <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
-                <span class="d-block mt-1" style="color:#a5b4fc;">${formatPrice(plan.price)}</span>
-            `;
+            <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
+            <span class="d-block mt-1" style="color:#a5b4fc;">${formatPrice(plan.price)}</span>
+        `;
         }
+
+        // ========== نمایش مابه‌التفاوت حق العمل (فقط در حالت جایگزینی و اگر مثبت باشد) ==========
+        if (isReplacementMode && commissionDiff > 0) {
+            if (commissionDiffDisplay) {
+                commissionDiffDisplay.style.display = 'block';
+                commissionDiffDisplay.style.opacity = '1';
+            }
+            if (commissionDiffAmount) {
+                commissionDiffAmount.textContent = formatPrice(commissionDiff);
+                commissionDiffAmount.style.color = '#f97316';
+            }
+            if (finalTotalDisplay) {
+                finalTotalDisplay.textContent = formatPrice(totalDeduct);
+                finalTotalDisplay.style.color = '#22c55e';
+                finalTotalDisplay.style.fontWeight = 'bold';
+            }
+            // به‌روزرسانی breakdown با مبلغ کل
+            if (breakdownEl) {
+                breakdownEl.innerHTML = `
+                <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
+                <span class="d-block mt-1" style="color:#a5b4fc;">هزینه تیم: ${formatPrice(plan.price)}</span>
+                <span class="d-block" style="color:#f97316;">مابه‌التفاوت حق العمل: +${formatPrice(commissionDiff)}</span>
+                <span class="d-block mt-1" style="color:#22c55e; font-weight:bold;">مبلغ قابل پرداخت: ${formatPrice(totalDeduct)}</span>
+            `;
+            }
+        } else {
+            // ========== در حالت عادی یا وقتی کمیسیون صفر هست، مخفی کن ==========
+            if (commissionDiffDisplay) {
+                commissionDiffDisplay.style.display = 'none';
+            }
+            // در حالت عادی، فقط هزینه تیم رو نشون بده
+            if (finalTotalDisplay && !isReplacementMode) {
+                finalTotalDisplay.textContent = '';  // یا مخفی کن
+                finalTotalDisplay.style.display = 'none';
+            } else if (finalTotalDisplay && isReplacementMode) {
+                // در حالت جایگزینی با کمیسیون صفر، مبلغ قابل پرداخت = هزینه تیم
+                finalTotalDisplay.textContent = formatPrice(plan.price);
+                finalTotalDisplay.style.color = '#22c55e';
+                finalTotalDisplay.style.fontWeight = 'bold';
+                finalTotalDisplay.style.display = 'block';
+            }
+        }
+
         if (submitBtn) submitBtn.disabled = false;
     }
 
-    // رندر کارت‌های پلن برای تیم انتخاب شده
+    // ========== انتخاب پلن ==========
+    function selectPlan(planId, planObj) {
+        if (hiddenPlanInput) hiddenPlanInput.value = planId;
+        currentSelectedPlan = planObj;
+
+        const isReplacementMode = getIsReplacementMode();
+        let commissionDiff = 0;
+        let totalDeduct = planObj.price;
+
+        // ========== محاسبه مابه‌التفاوت حق العمل (فقط در حالت جایگزینی) ==========
+        if (isReplacementMode) {
+            const influencerCost = getInfluencerCost();
+            const oldContentCost = getOldContentCost();
+            const newContentCost = planObj.price;
+
+            // محاسبه کل مبلغ قبلی و جدید
+            const oldSubtotal = influencerCost + oldContentCost;
+            const newSubtotal = influencerCost + newContentCost;
+
+            // محاسبه کمیسیون قبلی و جدید
+            const oldCommission = calculateCommission(oldSubtotal);
+            const newCommission = calculateCommission(newSubtotal);
+
+            // مابه‌التفاوت (فقط مثبت)
+            commissionDiff = Math.max(newCommission - oldCommission, 0);
+            totalDeduct = newContentCost + commissionDiff;
+        }
+
+        updatePriceUI(planObj, commissionDiff, totalDeduct);
+
+        // علامت‌گذاری کارت انتخاب شده
+        document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected-plan-card'));
+        const selectedCard = document.querySelector(`.plan-card[data-plan-id="${planId}"]`);
+        if (selectedCard) selectedCard.classList.add('selected-plan-card');
+
+        document.dispatchEvent(new CustomEvent('planSelected', {
+            detail: {
+                planId,
+                commissionDiff,
+                totalDeduct
+            }
+        }));
+    }
+
+    // ========== رندر کارت‌های پلن ==========
     function renderPlansForTeam(teamId, teamName, plans) {
         if (!plans || plans.length === 0) {
             if (plansSection) plansSection.style.display = 'none';
@@ -86,7 +221,7 @@
                         <div class="plan-price">
                             <span class="price-number">${formatPrice(plan.price)}</span>
                             ${plan.price_per_unit && window.CONTENT_MINUTES ?
-                                `<span class="price-unit">(${formatPrice(plan.price_per_unit)} هر دقیقه)</span>` : ''}
+                `<span class="price-unit">(${formatPrice(plan.price_per_unit)} هر دقیقه)</span>` : ''}
                         </div>
                     </div>
                     <div class="plan-body">
@@ -114,32 +249,22 @@
 
         if (plansSection) {
             plansSection.style.display = 'block';
-            plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            plansSection.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
 
         // افزودن رویداد کلیک به کارت‌های پلن
         document.querySelectorAll('.plan-card').forEach(card => {
             card.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-view-profile')) return;
                 if (e.target.closest('.btn-more')) return;
                 const planId = parseInt(card.dataset.planId);
                 const plan = plans.find(p => p.id === planId);
-                if (plan) selectPlan(planId, { ...plan, teamName });
+                if (plan) selectPlan(planId, {...plan, teamName});
             });
         });
     }
 
-    function selectPlan(planId, planObj) {
-        if (hiddenPlanInput) hiddenPlanInput.value = planId;
-        currentSelectedPlan = planObj;
-        updatePriceUI(planObj);
-
-        document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected-plan-card'));
-        const selectedCard = document.querySelector(`.plan-card[data-plan-id="${planId}"]`);
-        if (selectedCard) selectedCard.classList.add('selected-plan-card');
-
-        document.dispatchEvent(new CustomEvent('planSelected', { detail: { planId } }));
-    }
-
+    // ========== تابع اصلی ==========
     function initTeamSelection() {
         // کلیک روی کارت تیم
         document.querySelectorAll('.team-card-wrapper').forEach(wrapper => {
@@ -151,10 +276,13 @@
             let plans = [];
             try {
                 plans = JSON.parse(wrapper.dataset.plans || '[]');
-            } catch(e) { console.error("Invalid plans JSON", e); }
+            } catch (e) {
+                console.error("Invalid plans JSON", e);
+            }
 
             teamInner.addEventListener('click', (e) => {
                 if (e.target.closest('.btn')) return;
+                if (e.target.closest('.btn-view-profile')) return;
 
                 document.querySelectorAll('.team-card-inner').forEach(card => card.classList.remove('selected'));
                 teamInner.classList.add('selected');
@@ -168,7 +296,7 @@
             });
         });
 
-        // انتخاب خودکار از طریق پارامترهای URL (بازگشت از صفحه جزئیات)
+        // ========== انتخاب خودکار ==========
         const preselectedTeamId = window.PRESELECT_TEAM_ID;
         const preselectedPlanId = window.PRESELECT_PLAN_ID;
 
@@ -183,31 +311,37 @@
                     const teamId = targetWrapper.dataset.teamId;
                     const teamName = targetWrapper.dataset.teamName;
                     let plans = [];
-                    try { plans = JSON.parse(targetWrapper.dataset.plans || '[]'); } catch(e) {}
+                    try {
+                        plans = JSON.parse(targetWrapper.dataset.plans || '[]');
+                    } catch (e) {
+                    }
                     renderPlansForTeam(teamId, teamName, plans);
                     const planToSelect = plans.find(p => p.id === preselectedPlanId);
                     if (planToSelect) {
-                        selectPlan(preselectedPlanId, { ...planToSelect, teamName });
+                        selectPlan(preselectedPlanId, {...planToSelect, teamName});
                     }
                 }
             }
         } else if (preselectedPlanId && !preselectedTeamId) {
             for (let wrapper of document.querySelectorAll('.team-card-wrapper')) {
                 let plans = [];
-                try { plans = JSON.parse(wrapper.dataset.plans || '[]'); } catch(e) {}
+                try {
+                    plans = JSON.parse(wrapper.dataset.plans || '[]');
+                } catch (e) {
+                }
                 const found = plans.find(p => p.id === preselectedPlanId);
                 if (found) {
                     const teamInner = wrapper.querySelector('.team-card-inner');
                     if (teamInner) {
                         teamInner.classList.add('selected');
                         renderPlansForTeam(wrapper.dataset.teamId, wrapper.dataset.teamName, plans);
-                        selectPlan(preselectedPlanId, { ...found, teamName: wrapper.dataset.teamName });
+                        selectPlan(preselectedPlanId, {...found, teamName: wrapper.dataset.teamName});
                     }
                     break;
                 }
             }
         }
-        // انتخاب خودکار فقط تیم (بدون پلن)
+
         if (preselectedTeamId && !preselectedPlanId) {
             const targetWrapper = Array.from(document.querySelectorAll('.team-card-wrapper')).find(
                 wrapper => parseInt(wrapper.dataset.teamId) === preselectedTeamId
@@ -218,9 +352,11 @@
                 const teamId = targetWrapper.dataset.teamId;
                 const teamName = targetWrapper.dataset.teamName;
                 let plans = [];
-                try { plans = JSON.parse(targetWrapper.dataset.plans || '[]'); } catch(e) {}
+                try {
+                    plans = JSON.parse(targetWrapper.dataset.plans || '[]');
+                } catch (e) {
+                }
                 renderPlansForTeam(teamId, teamName, plans);
-                // هیچ پلنی انتخاب نمی‌شود، hiddenPlanInput خالی می‌ماند
                 if (hiddenPlanInput) hiddenPlanInput.value = '';
                 currentSelectedPlan = null;
                 updatePriceUI(null);
@@ -228,23 +364,31 @@
             }
         }
 
-        // انتخاب خودکار در حالت ویرایش کمپین
         const existingPlanId = hiddenPlanInput ? parseInt(hiddenPlanInput.value) : null;
         if (existingPlanId && !isNaN(existingPlanId) && !preselectedPlanId) {
             for (let wrapper of document.querySelectorAll('.team-card-wrapper')) {
                 let plans = [];
-                try { plans = JSON.parse(wrapper.dataset.plans || '[]'); } catch(e) {}
+                try {
+                    plans = JSON.parse(wrapper.dataset.plans || '[]');
+                } catch (e) {
+                }
                 const found = plans.find(p => p.id === existingPlanId);
                 if (found) {
                     const teamInner = wrapper.querySelector('.team-card-inner');
                     if (teamInner) teamInner.classList.add('selected');
                     renderPlansForTeam(wrapper.dataset.teamId, wrapper.dataset.teamName, plans);
-                    selectPlan(existingPlanId, { ...found, teamName: wrapper.dataset.teamName });
+                    selectPlan(existingPlanId, {...found, teamName: wrapper.dataset.teamName});
                     break;
                 }
             }
         }
+
+        // ========== اگه حالت جایگزینی نباشه، نمایش مابه‌التفاوت رو مخفی کن ==========
+        if (!getIsReplacementMode()) {
+            if (commissionDiffDisplay) commissionDiffDisplay.style.display = 'none';
+        }
     }
 
+    // ========== مقداردهی اولیه ==========
     window.initTeamSelection = initTeamSelection;
 })();

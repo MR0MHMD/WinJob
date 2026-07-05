@@ -276,17 +276,27 @@ def notify_advertiser_content_order_accepted(order):
     )
 
 
-def notify_advertiser_content_order_rejected(order):
-    campaign = order.campaign
+def notify_advertiser_content_order_rejected(campaign, team=None):
+    """نوتیف به تبلیغ‌دهنده وقتی تیم محتوا سفارش رو رد میکنه"""
     user = campaign.advertiser.user
+
+    team_name = team.name if team else "تیم تولید محتوا"
+    content_cost = campaign.invoice.content_cost if campaign.invoice and campaign.invoice.content_cost else 0
+
+    message = f'تیم تولید محتوا «{team_name}» سفارش شما برای کمپین «{campaign.name}» را رد کرد.\n'
+    message += f'💰 مبلغ {content_cost:,} تومان به کیف پول شما برگشت داده شد.\n\n'
+    message += '🔄 دو گزینه پیش روی شماست:\n'
+    message += '1️⃣ انتخاب تیم تولید محتوای جایگزین\n'
+    message += '2️⃣ آپلود محتوای آماده (بدون نیاز به تیم تولید محتوا)'
+
     return create_notification(
         user=user,
         notification_type='content_rejected',
-        title='❌ عدم پذیرش سفارش توسط تیم محتوا',
-        message=f'متأسفانه تیم «{order.team.name}» امکان انجام سفارش کمپین «{campaign.name}» را ندارد. می‌توانید سفارش را به تیم دیگری بسپارید.',
+        title='🔄 تیم محتوا سفارش را رد کرد - نیاز به اصلاح',
+        message=message,
         link=f'/advertisers/campaign_detail/{campaign.id}',
-        related_object_id=order.id,
-        related_content_type='ContentOrder'
+        related_object_id=campaign.id,
+        related_content_type='Campaign'
     )
 
 

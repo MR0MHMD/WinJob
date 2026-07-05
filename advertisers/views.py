@@ -115,33 +115,28 @@ def campaign_detail(request, campaign_id):
     channels = campaign.influencer_bookings.all()
     channels_count = channels.count()
 
-    # ==== وضعیت‌های جدید برای نمایش ====
+    # ========== ۱. وضعیت رد شدن توسط اینفلوئنسرها ==========
     rejected_influencers = channels.filter(status=CampaignInfluencer.Status.REJECTED)
     has_rejected = rejected_influencers.exists()
-    can_replace_influencer = (
-            campaign.status == Campaign.Status.PENDING and
-            has_rejected and
-            not campaign.replacement_mode
+
+    # ========== ۲. وضعیت رد شدن توسط تیم محتوا (با همه شرایط) ==========
+    content_orders = campaign.content_orders.all()
+    content_order = content_orders.first() if content_orders.exists() else None
+
+    all_content_orders_cancelled = content_orders.exists() and all(
+        order.status == ContentOrder.Status.CANCELLED for order in content_orders
     )
 
-    # بررسی وضعیت تیم محتوا
-    content_order = campaign.content_orders.first()
-    content_team_rejected = False
-    can_replace_team = False
-    can_switch_to_ready = False
+    has_ready_content = hasattr(campaign, 'content') and campaign.content and campaign.content.media
 
-    if content_order:
-        # اگر تیم محتوا کنسل کرده باشه
-        if content_order.status == ContentOrder.Status.CANCELLED:
-            content_team_rejected = True
-            can_replace_team = (
-                    campaign.status == Campaign.Status.PENDING and
-                    not campaign.replacement_mode
-            )
-            can_switch_to_ready = (
-                    campaign.status == Campaign.Status.PENDING and
-                    not campaign.replacement_mode
-            )
+    show_content_team_rejected = (
+            campaign.status == Campaign.Status.REVISION_NEEDED and
+            all_content_orders_cancelled and
+            not has_ready_content
+    )
+
+    # ========== ۳. کمپین رایگان ==========
+    is_free_campaign = campaign.is_free
 
     # progress based on campaign status
     progress_map = {
@@ -195,7 +190,6 @@ def campaign_detail(request, campaign_id):
         has_click_data = len(daily_data) > 0
 
     else:
-        # کمپین عادی: کلیک‌های روزانه به تفکیک کانال (مانند قبل)
         clicks_qs = CampaignClick.objects.filter(
             tracking_link__campaign_influencer__campaign=campaign,
             created_at__gte=last_30_days
@@ -257,14 +251,14 @@ def campaign_detail(request, campaign_id):
         "daily_datasets_json": json.dumps(datasets, ensure_ascii=False),
         "has_click_data": has_click_data,
         "is_free_campaign": campaign.is_free,
-        # فیلدهای جدید
+
+        # ========== فیلدهای جدید (با منطق درست) ==========
         "has_rejected": has_rejected,
         "rejected_influencers": rejected_influencers,
-        "can_replace_influencer": can_replace_influencer,
-        "content_team_rejected": content_team_rejected,
-        "can_replace_team": can_replace_team,
-        "can_switch_to_ready": can_switch_to_ready,
-        "content_order": content_order,
+
+        # ========== شرط اصلی نمایش هشدار تیم محتوا ==========
+        "show_content_team_rejected": show_content_team_rejected,
+        "content_order": content_order,  # برای نمایش نام تیم در تمپلیت
     }
     return render(request, "advertisers/pages/campaign_detail.html", context)
 

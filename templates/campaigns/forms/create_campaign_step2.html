@@ -11,6 +11,9 @@
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_2.css' %}">
+{% endblock %}
+
+{% block extra_style %}
     <style>
         .level-badge {
             transition: transform 0.2s ease;
@@ -428,18 +431,15 @@
                     <div id="price-breakdown" class="text-secondary price-breakdown"></div>
                 </div>
             </div>
-        {% if is_replacement_mode %}
-    <div class="wallet-status-bar mt-2" id="wallet-status-display">
-        <span class="text-muted small">
-            موجودی باقی‌مانده: <strong class="text-success">{{ wallet_balance|floatformat:0|default:0 }} تومان</strong>
-        </span>
-    </div>
-{% endif %}
+            {% if is_replacement_mode %}
+                <div class="wallet-status-bar mt-2" id="wallet-status-display">
+                    <span class="text-muted small">
+                        موجودی باقی‌مانده: <strong
+                            class="text-success">{{ wallet_balance|floatformat:0|default:0 }} تومان</strong>
+                    </span>
+                </div>
+            {% endif %}
         </div>
-        
-        <!-- بعد از price-summary-bar، یک بخش برای نمایش وضعیت کیف پول اضافه کن -->
-
-
     </div>
 
     <!-- ========== مودال فیلتر ========== -->
@@ -575,23 +575,13 @@
         window.CALCULATE_URL = "{% url 'campaigns:step2_calculate' %}";
         window.CAMPAIGN_ID = {{ campaign.id }};
         window.IS_REPLACEMENT_MODE = {{ is_replacement_mode|yesno:"true,false" }};
-        
-        // ========== WALLET_BALANCE برای حالت جایگزینی (بدون کاما) ==========
-        // |floatformat:"0" -> عدد رو بدون اعشار میده
-        // |cut:"," -> کاماها رو حذف میکنه
         window.WALLET_BALANCE = {{ wallet_balance|floatformat:"0"|cut:","|default:"0" }};
-        
-        console.log("PREV_SELECTED_RATE_IDS:", window.PREV_SELECTED_RATE_IDS);
-        console.log("RATES_PRICES:", window.RATES_PRICES);
-        console.log("IS_REPLACEMENT_MODE:", window.IS_REPLACEMENT_MODE);
-        console.log("WALLET_BALANCE:", window.WALLET_BALANCE);
     </script>
 
     <script src="{% static 'campaigns/js/create_step_2/create_step_2.js' %}"></script>
     <script src="{% static 'campaigns/js/create_step_2/step2_filter.js' %}"></script>
 
     <script>
-        // ===== در حالت جایگزینی، اگه تعداد انتخاب شده با تعداد رد شده برابر شد، پیام بده =====
         (function () {
             if (!window.IS_REPLACEMENT_MODE) return;
 
@@ -612,13 +602,11 @@
                 cb.addEventListener('change', checkSelection);
             });
 
-            // اجرای اولیه
             checkSelection();
         })();
     </script>
-    
+
     <script>
-        // ===== پاک کردن localStorage در حالت جایگزینی =====
         (function () {
             if (window.IS_REPLACEMENT_MODE) {
                 const keys = Object.keys(localStorage);
@@ -627,7 +615,6 @@
                         localStorage.removeItem(key);
                     }
                 });
-                console.log('🧹 localStorage در حالت جایگزینی پاک شد');
             }
         })();
     </script>

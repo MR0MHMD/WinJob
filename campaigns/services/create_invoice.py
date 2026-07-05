@@ -1,16 +1,22 @@
-from campaigns.models import CampaignInvoice
+from campaigns.models import CampaignInvoice, CampaignInfluencer
+from content_team.models import ContentOrder
 
 PLATFORM_COMMISSION = 0.15
 
 
 def create_campaign_invoice(campaign):
-    influencer_bookings = campaign.influencer_bookings.select_related(
-        "channel__influencer"
-    )
+    influencer_bookings = campaign.influencer_bookings.exclude(
+        status__in=[
+            CampaignInfluencer.Status.REJECTED,
+            CampaignInfluencer.Status.REPLACED
+        ]
+    ).select_related("channel__influencer")
 
     influencer_cost = sum(booking.price for booking in influencer_bookings)
 
-    content_orders = campaign.content_orders.select_related("team")
+    content_orders = campaign.content_orders.exclude(
+        status=ContentOrder.Status.CANCELLED
+    ).select_related("team")
     content_cost = sum(order.price for order in content_orders)
 
     subtotal = influencer_cost + content_cost
@@ -23,7 +29,6 @@ def create_campaign_invoice(campaign):
         'platform_discount': 0
     }
 
-    # Influencer Coupon
     if campaign.influencer_coupon and campaign.influencer_coupon.is_valid():
         coupon = campaign.influencer_coupon
 

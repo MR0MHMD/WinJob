@@ -64,12 +64,10 @@ def auto_approve_campaign_after_rejection(self, campaign_id):
         logger.error(f"❌ کمپین با ID {campaign_id} وجود ندارد")
         return
 
-    # فقط اگه کمپین هنوز در حالت REVISION_NEEDED باشه
     if campaign.status != Campaign.Status.REVISION_NEEDED:
         logger.info(f"⏭️ کمپین {campaign.name} در وضعیت {campaign.status} است (نه REVISION_NEEDED). تسک اجرا نشد.")
         return
 
-    # اگه کاربر قبلاً انتخاب جایگزین کرده باشه، کاری نمیکنیم
     if not campaign.replacement_mode:
         logger.info(f"⏭️ کمپین {campaign.name} replacement_mode=False است. تسک اجرا نشد.")
         return
@@ -77,17 +75,6 @@ def auto_approve_campaign_after_rejection(self, campaign_id):
     logger.info(f"✅ شرایط تسک برقرار است. در حال اجرا...")
 
     with transaction.atomic():
-        # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
-        rejected_bookings = campaign.influencer_bookings.filter(
-            status=CampaignInfluencer.Status.REJECTED
-        )
-        rejected_count = rejected_bookings.count()
-
-        logger.info(f"📊 تعداد ناشران رد شده: {rejected_count}")
-
-        rejected_bookings.update(
-            status=CampaignInfluencer.Status.REPLACED
-        )
 
         # ========== کمپین رو به APPROVED برگردون ==========
         campaign.status = Campaign.Status.APPROVED

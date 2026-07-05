@@ -431,6 +431,7 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 @admin.register(ContentOrder)
 class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
         "campaign",
         "team",
         "plan",
@@ -638,6 +639,7 @@ class ContentOrderDescriptionAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 @admin.register(ContentOrderFile)
 class ContentOrderFileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
         "original_name",
         "order",
         "file_type",

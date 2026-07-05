@@ -1020,6 +1020,9 @@ def team_order_detail(request, order_id):
         id=order_id,
         team=user_team
     )
+    show_count_down = False
+    if order.status == "in_progress" or order.status == "review_pending":
+        show_count_down = True
 
     revisions = order.revisions.all().order_by('-created_at')
 
@@ -1028,6 +1031,7 @@ def team_order_detail(request, order_id):
         'team_member': team_member,
         'revisions': revisions,
         'user_team': user_team,
+        'show_count_down': show_count_down,
         'brief': getattr(order, 'brief', None),
         'delivery': getattr(order, 'delivery', None),
         'attached_files': order.files.all(),
@@ -1077,12 +1081,14 @@ def accept_order(request, order_id):
         return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
 
 
+# content_team/views.py
+
 @login_required
 def reject_order(request, order_id):
     """
     رد سفارش توسط تیم
     وضعیت سفارش از pending به cancelled تغییر می‌کند
-    با جریمه امتیازی
+    با جریمه امتیازی و برگشت وجه
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1105,13 +1111,18 @@ def reject_order(request, order_id):
             'status': 'cancelled',
             'message': 'سفارش با موفقیت رد شد',
             'penalty': True,
-            'penalty_points': 10
+            'penalty_points': 50,  # تغییر از 10 به 50
+            'refund_amount': order.campaign.invoice.content_cost if order.campaign.invoice else 0
         })
 
     except ContentTeamMember.DoesNotExist:
         return JsonResponse({'error': 'شما عضو تیم نیستید'}, status=403)
     except ContentOrder.DoesNotExist:
         return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'خطای سرور: {str(e)}'}, status=500)
 
 
 @login_required
