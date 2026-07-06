@@ -9,13 +9,6 @@
     const IS_REPLACEMENT_MODE = window.IS_REPLACEMENT_MODE || false;
     const WALLET_BALANCE = window.WALLET_BALANCE || 0;
 
-    // ========== لاگ اولیه برای بررسی مقادیر ورودی ==========
-    console.log('🔍 [create_step_2.js] مقادیر اولیه:');
-    console.log('  - IS_REPLACEMENT_MODE:', IS_REPLACEMENT_MODE);
-    console.log('  - WALLET_BALANCE:', WALLET_BALANCE, '(نوع:', typeof WALLET_BALANCE, ')');
-    console.log('  - CAMPAIGN_ID:', CAMPAIGN_ID);
-    console.log('  - PRICES:', PRICES);
-
     // ========== در حالت جایگزینی، لیست انتخاب‌ها رو خالی شروع کن ==========
     let memorySelectedIds = [];
 
@@ -183,10 +176,6 @@
             .then(function (data) {
                 totalPriceEl.classList.remove('updating');
 
-                console.log('📥 [fetchAccuratePrice] پاسخ دریافت شد:');
-                console.log('  - success:', data.success);
-                console.log('  - data:', data);
-
                 if (data.error) {
                     console.error('❌ خطا از سرور:', data.error);
                     return;
@@ -199,12 +188,6 @@
                     const commissionDiff = sanitizeNumber(data.commission_diff);
                     const newInfluencerCost = sanitizeNumber(data.new_influencer_cost);
                     const selectedCount = sanitizeNumber(data.selected_count);
-
-                    console.log('💰 [fetchAccuratePrice] مقادیر کمیسیون:');
-                    console.log('  - totalDeduct:', totalDeduct);
-                    console.log('  - commissionDiff:', commissionDiff);
-                    console.log('  - newInfluencerCost:', newInfluencerCost);
-                    console.log('  - selectedCount:', selectedCount);
 
                     totalPriceEl.textContent = formatPrice(totalDeduct);
 
@@ -280,10 +263,6 @@
         if (!IS_REPLACEMENT_MODE) return true;
         const total = calculateTotalPrice(ids);
         const walletBalance = sanitizeNumber(WALLET_BALANCE);
-
-        console.log('💰 [validateWalletLimit] بررسی کیف پول:');
-        console.log('  - total:', total);
-        console.log('  - walletBalance:', walletBalance);
 
         if (total > walletBalance) {
             const formattedTotal = total.toLocaleString('en-US');

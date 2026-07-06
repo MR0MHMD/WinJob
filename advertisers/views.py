@@ -1,3 +1,4 @@
+import jdatetime
 from django.db import transaction
 
 from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignInfluencer, \
@@ -94,8 +95,6 @@ def campaigns_list(request):
 
     return render(request, "advertisers/pages/campaign_list.html", context)
 
-
-# advertisers/views.py
 
 @login_required
 def campaign_detail(request, campaign_id):
@@ -292,7 +291,6 @@ def advertiser_dashboard(request):
 
     wallet_balance = advertiser.user.wallet.balance
 
-    import jdatetime
     today = jdatetime.date.today()
     persian_date = today.strftime("%A %d %B %Y")
 
@@ -338,9 +336,9 @@ def advertiser_dashboard(request):
 
     recent_transactions = Transaction.objects.filter(
         user=request.user
-    ).order_by('-created_at')[:4]
+    ).order_by('-created_at')[:10]
 
-    recent_campaigns = campaigns.order_by('-created_at')[:5]
+    recent_campaigns = campaigns.order_by('-created_at')[:10]
 
     top_channels = InfluencerChannel.objects.filter(
         campaign_bookings__campaign_id__in=campaign_ids,
@@ -348,7 +346,7 @@ def advertiser_dashboard(request):
     ).annotate(
         total_bookings=Count('campaign_bookings'),
         _avg_rating=Avg('reviews__rating')
-    ).order_by('-total_bookings', '-_avg_rating')[:3]
+    ).order_by('-total_bookings', '-_avg_rating')[:10]
 
     expiring_soon = campaigns.filter(
         status='running',

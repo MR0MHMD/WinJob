@@ -7,12 +7,13 @@ from notifications.models import Notification
 from django.views.generic import ListView
 from ..mixins import SupportRequiredMixin
 from tickets.models import TicketMessage
+from accounts.models import CustomUser
 from plat_form.models import Platform
+from campaigns.models import Campaign
 from location.models import Province
 from tickets.models import Ticket
 from django.utils import timezone
 from core.models import Category
-from campaigns.models import Campaign
 from datetime import timedelta
 from content_team.models import (
     ContentOrder,
@@ -66,7 +67,6 @@ class ChannelListView(SupportRequiredMixin, ListView):
             total_revenue_=Sum('campaign_bookings__price', filter=Q(campaign_bookings__status='completed'))
         )
 
-        # ===== فیلتر جستجو =====
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -80,27 +80,22 @@ class ChannelListView(SupportRequiredMixin, ListView):
         if influencer_id and influencer_id.isdigit():
             queryset = queryset.filter(influencer_id=int(influencer_id))
 
-        # ===== فیلتر وضعیت =====
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
 
-        # ===== فیلتر پلتفرم =====
         platform = self.request.GET.get('platform')
         if platform:
             queryset = queryset.filter(platform_id=platform)
 
-        # ===== فیلتر استان =====
         province = self.request.GET.get('province')
         if province:
             queryset = queryset.filter(province_id=province)
 
-        # ===== فیلتر دسته‌بندی =====
         category = self.request.GET.get('category')
         if category:
             queryset = queryset.filter(category_id=category)
 
-        # ===== مرتب‌سازی =====
         sort_by = self.request.GET.get('sort')
         if sort_by == 'name':
             queryset = queryset.order_by('channel_name')
@@ -118,17 +113,13 @@ class ChannelListView(SupportRequiredMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
-        global InfluencerProfile
         context = super().get_context_data(**kwargs)
 
-        # آمار کلی
         context['total_count'] = InfluencerChannel.objects.count()
         context['pending_count'] = InfluencerChannel.objects.filter(status='pending').count()
         context['approved_count'] = InfluencerChannel.objects.filter(status='approved').count()
         context['rejected_count'] = InfluencerChannel.objects.filter(status='rejected').count()
         context['active_count'] = InfluencerChannel.objects.filter(is_active=True).count()
-
-        # پارامترهای فیلتر فعلی
         context['current_status'] = self.request.GET.get('status', '')
         context['current_platform'] = self.request.GET.get('platform', '')
         context['current_province'] = self.request.GET.get('province', '')
@@ -138,8 +129,6 @@ class ChannelListView(SupportRequiredMixin, ListView):
         context['platforms'] = Platform.objects.filter(is_active=True)
         context['provinces'] = Province.objects.all().order_by('name')
         context['categories'] = Category.objects.filter(is_active=True)
-
-        # وضعیت‌ها برای فیلتر
         context['status_choices'] = InfluencerChannel.STATUS_CHOICES
 
         influencer_id = self.request.GET.get('influencer')
@@ -164,12 +153,10 @@ class CampaignListView(SupportRequiredMixin, ListView):
             'advertiser', 'platform', 'content_type', 'ad_type', 'advertiser__user'
         ).prefetch_related('influencer_bookings')
 
-        # ===== فیلتر بر اساس تبلیغ‌دهنده (برای نمایش کمپین‌های یک کاربر خاص) =====
         advertiser_id = self.request.GET.get('advertiser')
         if advertiser_id and advertiser_id.isdigit():
             queryset = queryset.filter(advertiser_id=int(advertiser_id))
 
-        # ===== فیلتر جستجو =====
         search_query = self.request.GET.get('q', '').strip()
         if search_query:
             queryset = queryset.filter(
@@ -179,12 +166,10 @@ class CampaignListView(SupportRequiredMixin, ListView):
                 Q(advertiser__user__nickname__icontains=search_query)
             )
 
-        # ===== فیلتر بر اساس وضعیت =====
         status_filter = self.request.GET.get('status')
         if status_filter:
             queryset = queryset.filter(status=status_filter)
 
-        # ===== فیلتر بر اساس تاریخ =====
         date_filter = self.request.GET.get('date_filter')
         today = timezone.now().date()
 
@@ -200,7 +185,6 @@ class CampaignListView(SupportRequiredMixin, ListView):
             year_ago = today - timedelta(days=365)
             queryset = queryset.filter(created_at__date__gte=year_ago)
 
-        # ===== مرتب‌سازی سفارشی =====
         status_order = {
             'pending': 0,
             'approved': 1,
@@ -218,7 +202,6 @@ class CampaignListView(SupportRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # آمار کلی
         context['total_count'] = Campaign.objects.count()
         context['pending_count'] = Campaign.objects.filter(status='pending').count()
         context['approved_count'] = Campaign.objects.filter(status='approved').count()
@@ -227,16 +210,13 @@ class CampaignListView(SupportRequiredMixin, ListView):
         context['draft_count'] = Campaign.objects.filter(status='draft').count()
         context['cancelled_count'] = Campaign.objects.filter(status='cancelled').count()
 
-        # پارامترهای فیلتر فعلی
         context['current_status'] = self.request.GET.get('status', '')
         context['current_date_filter'] = self.request.GET.get('date_filter', '')
         context['current_search'] = self.request.GET.get('q', '')
         context['current_advertiser'] = self.request.GET.get('advertiser', '')
 
-        # وضعیت‌ها برای فیلتر
         context['status_choices'] = Campaign.Status.choices
 
-        # اگر فیلتر advertiser فعال باشه، نام تبلیغ‌دهنده رو هم بفرست
         if context['current_advertiser']:
             try:
                 advertiser = AdvertiserProfile.objects.get(id=context['current_advertiser'])
@@ -255,7 +235,6 @@ class ReportListView(SupportRequiredMixin, ListView):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        # فقط گزارش‌های در انتظار رو نشون بده (اگه بخوای همه رو ببینی، شرط رو بردار)
         return super().get_queryset().filter(
             status='pending'
         ).select_related(
@@ -284,7 +263,6 @@ class UserListView(SupportRequiredMixin, ListView):
             campaign_count=Count('advertiser_profile__campaigns', distinct=True),
         )
 
-        # فیلتر بر اساس نقش
         role = self.request.GET.get('role')
         if role == 'advertiser':
             queryset = queryset.filter(advertiser_profile__isnull=False)
@@ -299,7 +277,6 @@ class UserListView(SupportRequiredMixin, ListView):
                 team_member__isnull=True
             )
 
-        # جستجو
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -343,44 +320,36 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             Prefetch('report', queryset=CampaignReport.objects.all())
         )
 
-        # ===== فیلتر بر اساس اینفلوئنسر (برای نمایش سفارشات یک کاربر خاص) =====
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             queryset = queryset.filter(channel__influencer_id=int(influencer_id))
 
-        # ===== فیلتر بر اساس کمپین (اگه از صفحه کمپین اومده باشیم) =====
         campaign_id = self.request.GET.get('campaign')
         if campaign_id and campaign_id.isdigit():
             queryset = queryset.filter(campaign_id=int(campaign_id))
 
-        # ===== فیلتر بر اساس کانال (اگه از صفحه کانال اومده باشیم) =====
         channel_id = self.request.GET.get('channel')
         if channel_id and channel_id.isdigit():
             queryset = queryset.filter(channel_id=int(channel_id))
 
-        # ===== فیلتر وضعیت =====
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
 
-        # ===== فیلتر پرداخت =====
         payment_status = self.request.GET.get('payment_status')
         if payment_status == 'paid':
             queryset = queryset.filter(is_paid=True)
         elif payment_status == 'unpaid':
             queryset = queryset.filter(is_paid=False)
 
-        # ===== فیلتر پلتفرم =====
         platform = self.request.GET.get('platform')
         if platform:
             queryset = queryset.filter(channel__platform_id=platform)
 
-        # ===== فیلتر استان =====
         province = self.request.GET.get('province')
         if province:
             queryset = queryset.filter(channel__province_id=province)
 
-        # ===== جستجو =====
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -390,7 +359,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
                 Q(campaign__name__icontains=search)
             )
 
-        # ===== مرتب‌سازی =====
         sort_by = self.request.GET.get('sort')
         if sort_by == 'price_asc':
             queryset = queryset.order_by('price')
@@ -407,12 +375,9 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
 
         return queryset
 
-    # support/views.py
     def get_context_data(self, **kwargs):
-        global InfluencerProfile, Campaign, InfluencerChannel
         context = super().get_context_data(**kwargs)
 
-        # ===== پارامترهای فیلتر فعلی =====
         context['current_influencer'] = self.request.GET.get('influencer', '')
         context['current_campaign'] = self.request.GET.get('campaign', '')
         context['current_channel'] = self.request.GET.get('channel', '')
@@ -423,7 +388,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         context['current_search'] = self.request.GET.get('q', '')
         context['current_sort'] = self.request.GET.get('sort', '')
 
-        # ===== اگر فیلتر اینفلوئنسر فعال باشه =====
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             try:
@@ -433,7 +397,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             except InfluencerProfile.DoesNotExist:
                 pass
 
-        # ===== اگر فیلتر کمپین فعال باشه =====
         campaign_id = self.request.GET.get('campaign')
         if campaign_id and campaign_id.isdigit():
             try:
@@ -443,7 +406,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             except Campaign.DoesNotExist:
                 pass
 
-        # ===== اگر فیلتر کانال فعال باشه =====
         channel_id = self.request.GET.get('channel')
         if channel_id and channel_id.isdigit():
             try:
@@ -453,7 +415,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             except InfluencerChannel.DoesNotExist:
                 pass
 
-        # ===== آمار کلی =====
         base_qs = self.get_queryset()
         context['total_count'] = base_qs.count()
         context['pending_count'] = base_qs.filter(status='pending').count()
@@ -462,8 +423,6 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         context['completed_count'] = base_qs.filter(status='completed').count()
         context['paid_count'] = base_qs.filter(is_paid=True).count()
         context['unpaid_count'] = base_qs.filter(is_paid=False).count()
-
-        # ===== لیست‌ها برای فیلتر =====
         context['platforms'] = Platform.objects.filter(is_active=True)
         context['provinces'] = Province.objects.all().order_by('name')
         context['status_choices'] = CampaignInfluencer.Status.choices
@@ -487,7 +446,6 @@ class TeamListView(SupportRequiredMixin, ListView):
             total_revenue=Sum('orders__price', filter=Q(orders__status='completed'))
         ).select_related('score')
 
-        # ===== فیلتر جستجو =====
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -497,14 +455,12 @@ class TeamListView(SupportRequiredMixin, ListView):
                 Q(members__user__nickname__icontains=search)
             ).distinct()
 
-        # ===== فیلتر وضعیت =====
         status = self.request.GET.get('status')
         if status == 'active':
             queryset = queryset.filter(is_active=True)
         elif status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
-        # ===== مرتب‌سازی =====
         sort_by = self.request.GET.get('sort')
         if sort_by == 'name':
             queryset = queryset.order_by('name')
@@ -522,12 +478,10 @@ class TeamListView(SupportRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # آمار کلی
         context['total_count'] = ContentTeam.objects.count()
         context['active_count'] = ContentTeam.objects.filter(is_active=True).count()
         context['inactive_count'] = ContentTeam.objects.filter(is_active=False).count()
 
-        # پارامترهای فیلتر فعلی
         context['current_search'] = self.request.GET.get('q', '')
         context['current_status'] = self.request.GET.get('status', '')
         context['current_sort'] = self.request.GET.get('sort', '')
@@ -557,12 +511,10 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
             Prefetch('delivery', queryset=ContentDelivery.objects.all()),
         )
 
-        # ===== فیلتر بر اساس تیم (از URL) =====
         team_id = self.request.GET.get('team')
         if team_id and team_id.isdigit():
             queryset = queryset.filter(team_id=int(team_id))
 
-        # ===== فیلتر جستجو =====
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -573,12 +525,10 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
                 Q(plan__name__icontains=search)
             )
 
-        # ===== فیلتر وضعیت =====
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
 
-        # ===== فیلتر تاریخ =====
         date_filter = self.request.GET.get('date_filter')
         today = timezone.now().date()
 
@@ -591,7 +541,6 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
             month_ago = today - timedelta(days=30)
             queryset = queryset.filter(created_at__date__gte=month_ago)
 
-        # ===== مرتب‌سازی =====
         sort_by = self.request.GET.get('sort')
         if sort_by == 'price_asc':
             queryset = queryset.order_by('price')
@@ -609,7 +558,6 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
 
         team_id = self.request.GET.get('team')
 
-        # آمار کلی (با در نظر گرفتن فیلتر تیم)
         base_qs = ContentOrder.objects.all()
         if team_id and team_id.isdigit():
             base_qs = base_qs.filter(team_id=int(team_id))
@@ -619,21 +567,16 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
         context['in_progress_count'] = base_qs.filter(status='in_progress').count()
         context['completed_count'] = base_qs.filter(status='completed').count()
         context['cancelled_count'] = base_qs.filter(status='cancelled').count()
-
-        # پارامترهای فیلتر فعلی
         context['current_status'] = self.request.GET.get('status', '')
         context['current_team'] = self.request.GET.get('team', '')
         context['current_search'] = self.request.GET.get('q', '')
         context['current_date_filter'] = self.request.GET.get('date_filter', '')
         context['current_sort'] = self.request.GET.get('sort', '')
 
-        # لیست تیم‌ها برای فیلتر
         context['teams'] = ContentTeam.objects.filter(is_active=True)
 
-        # وضعیت‌ها برای فیلتر
         context['status_choices'] = ContentOrder.Status.choices
 
-        # اگر تیم فیلتر شده، نام تیم رو به context اضافه کن
         if team_id and team_id.isdigit():
             try:
                 team = ContentTeam.objects.get(id=int(team_id))
@@ -654,24 +597,20 @@ class NotificationListView(SupportRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Notification.objects.select_related('user').order_by('-created_at')
 
-        # ===== فیلتر بر اساس کاربر (از صفحه جزئیات کاربر) =====
         user_id = self.request.GET.get('user')
         if user_id and user_id.isdigit():
             queryset = queryset.filter(user_id=int(user_id))
 
-        # ===== فیلتر وضعیت خوانده شده =====
         is_read = self.request.GET.get('is_read')
         if is_read == 'read':
             queryset = queryset.filter(is_read=True)
         elif is_read == 'unread':
             queryset = queryset.filter(is_read=False)
 
-        # ===== فیلتر نوع =====
         notification_type = self.request.GET.get('type')
         if notification_type:
             queryset = queryset.filter(type=notification_type)
 
-        # ===== فیلتر تاریخ =====
         date_filter = self.request.GET.get('date_filter')
 
         today = timezone.now().date()
@@ -685,7 +624,6 @@ class NotificationListView(SupportRequiredMixin, ListView):
             month_ago = today - timedelta(days=30)
             queryset = queryset.filter(created_at__date__gte=month_ago)
 
-        # ===== جستجو =====
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -698,17 +636,14 @@ class NotificationListView(SupportRequiredMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
-        global CustomUser
         context = super().get_context_data(**kwargs)
 
-        # پارامترهای فیلتر فعلی
         context['current_user'] = self.request.GET.get('user', '')
         context['current_is_read'] = self.request.GET.get('is_read', '')
         context['current_type'] = self.request.GET.get('type', '')
         context['current_date_filter'] = self.request.GET.get('date_filter', '')
         context['current_search'] = self.request.GET.get('q', '')
 
-        # اگر فیلتر کاربر فعال باشه، نامش رو به context اضافه کن
         user_id = self.request.GET.get('user')
         if user_id and user_id.isdigit():
             try:
@@ -717,7 +652,6 @@ class NotificationListView(SupportRequiredMixin, ListView):
             except CustomUser.DoesNotExist:
                 pass
 
-        # آمار کلی
         base_qs = Notification.objects.all()
         if user_id and user_id.isdigit():
             base_qs = base_qs.filter(user_id=int(user_id))
@@ -726,7 +660,6 @@ class NotificationListView(SupportRequiredMixin, ListView):
         context['unread_count'] = base_qs.filter(is_read=False).count()
         context['read_count'] = base_qs.filter(is_read=True).count()
 
-        # انواع نوتیفیکیشن برای فیلتر
         context['type_choices'] = Notification.Type.choices
 
         return context

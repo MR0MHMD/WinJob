@@ -329,7 +329,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-history text-primary"></i>
                             
-                            <h5 class="text-white mb-0">آخرین کمپین‌ها</h5>
+                            <h5 class="text-white mb-0">آخرین کمپین ها</h5>
                         </div>
                         
                         <a href="{% url 'advertisers:my_campaigns' %}" class="small text-primary text-decoration-none">
@@ -338,7 +338,7 @@
                         </a>
                     </div>
                 
-                    <div class="card-body p-0">
+                    <div class="card-body p-0" style="max-height: 230px; overflow-y: auto">
                         {% if recent_campaigns %}
                             {% for campaign in recent_campaigns %}
                                 <div class="campaign-item m-3 mb-2">
@@ -387,42 +387,31 @@
                         </div>
                     </div>
                 
-                    <div class="card-body p-0">
-                    
+                    <div class="card-body p-0" style="max-height: 330px; overflow-y: auto">
                         {% if top_channels %}
-                            
                             {% for channel in top_channels %}
-                                
                                 <div class="influencer-card m-3 mb-2">
                                     <a class="text-decoration-none" href="{% url 'influencers:channel_detail' channel.id %}">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="flex-shrink-0">
-                                            
                                                 {% if channel.avatar %}
-                                                    
                                                     <img src="{{ channel.avatar.url }}" class="rounded-circle channel-avatar" alt="{{ channel.channel_name }}">
-                                                    
                                                 {% else %}
-                                                    
                                                     <div class="default-channel-avatar">
                                                         <i class="fi-user text-white fs-5"></i>
                                                     </div>
-                                                    
                                                 {% endif %}
                                             </div>
                                         
                                             <div class="flex-grow-1">
                                                 <div class="text-white fw-bold">{{ channel.channel_name|truncatechars:20 }}</div>
-                                            
                                                 <div class="small text-muted">
                                                     {{ channel.platform.name }} | {{ channel.channel_id }}
                                                 </div>
                                             
                                                 <div class="small text-muted mt-1 rating-stars">
                                                     {% with rating=channel.avg_rating|default:0 %}
-                                                        
                                                         {% for i in "12345"|make_list %}
-                                                            
                                                             {% if forloop.counter <= rating %}
                                                                 <i class="fi-star-filled rating-star"></i>
                                                             {% elif forloop.counter <= rating|add:0.5 %}
@@ -430,13 +419,11 @@
                                                             {% else %}
                                                                 <i class="fi-star rating-star"></i>
                                                             {% endif %}
-                                                            
                                                         {% endfor %}
                                                         
                                                         {% if rating == 0 %}
                                                             <span class="text-muted">بدون امتیاز</span>
                                                         {% endif %}
-                                                        
                                                     {% endwith %}
                                                 </div>
                                             </div>
@@ -447,9 +434,7 @@
                                         </div>
                                     </a>
                                 </div>
-                                
                             {% endfor %}
-                            
                         {% else %}
                             
                             <div class="text-center py-5">
@@ -461,9 +446,7 @@
                                     جستجوی کانال
                                 </a>
                             </div>
-                            
                         {% endif %}
-                    
                     </div>
                 </div>
             
@@ -545,13 +528,10 @@
                         </a>
                     </div>
                 
-                    <div class="card-body p-0">
-                    
+                    <div class="card-body p-0" style="max-height: 280px; overflow-y: auto">
                         {% if recent_transactions %}
-                            
                             {% for transaction in recent_transactions %}
-                                
-                                <div class="transaction-item p-3">
+                                <div class="transaction-item p-3 me-2">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="rounded-circle transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">

@@ -115,7 +115,7 @@ class Badge(models.Model):
         max_length=100,
         help_text=_('نام نمایشی، مثال: برنزی، نقره‌ای، طلایی')
     )
-    min_points = models.PositiveIntegerField(
+    min_points = models.IntegerField(
         _('حداقل امتیاز'),
         default=0,
         help_text=_('حداقل امتیاز مورد نیاز برای کسب این سطح')

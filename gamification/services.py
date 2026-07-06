@@ -1,23 +1,27 @@
-# gamification/services.py
-
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from .models import PointLog, TeamScore, ChannelScore, AdvertiserScore, Badge
-from accounts.models import Transaction, Wallet
+from accounts.models import Transaction
 
 
 @transaction.atomic
 def update_score(target_instance, points, action_key, description):
     """
-    ثبت امتیاز جدید (مثبت یا منفی) برای موجودیت‌های مختلف (تیم، کانال، تبلیغ‌دهنده)
+    ثبت امتیاز جدید (مثبت یا منفی) برای موجودیت‌های مختلف
+
+    Args:
+        target_instance: ContentTeam یا InfluencerChannel یا AdvertiserProfile
+        points: عدد مثبت یا منفی
+        action_key: کلید عملیات (مثلاً 'campaign_completed')
+        description: توضیح عملیات
     """
     if points == 0:
         return
 
     score_obj = _get_or_create_score_profile(target_instance)
+
     score_obj.points += points
-    if score_obj.points < 0:
-        score_obj.points = 0
+
     score_obj.save()
 
     PointLog.objects.create(
@@ -34,6 +38,7 @@ def update_score(target_instance, points, action_key, description):
 def _get_or_create_score_profile(target_instance):
     """بازگرداندن یا ایجاد شیء امتیاز مرتبط با موجودیت ورودی"""
     model_name = target_instance.__class__.__name__
+
     if model_name == 'ContentTeam':
         score, _ = TeamScore.objects.get_or_create(team=target_instance)
     elif model_name == 'InfluencerChannel':
@@ -42,22 +47,28 @@ def _get_or_create_score_profile(target_instance):
         score, _ = AdvertiserScore.objects.get_or_create(profile=target_instance)
     else:
         raise ValueError("نوع موجودیت برای سیستم امتیازدهی معتبر نیست.")
+
     return score
 
 
 def _evaluate_badge_and_reward(score_obj):
-    """بررسی سطح فعلی و ارتقا/تنزل نشان و پرداخت جایزه"""
+    """
+    بررسی سطح فعلی و ارتقا/تنزل نشان
+    🔥 این تابع هم ارتقا و هم تنزل رو پشتیبانی میکنه
+    """
     current_points = score_obj.points
 
-    badges = Badge.objects.filter(is_active=True).order_by('-min_points')
-    if not badges.exists():
+    badges = list(Badge.objects.filter(is_active=True).order_by('min_points'))
+
+    if not badges:
         return
 
-    new_badge = badges.last()
+    new_badge = badges[0]
 
     for badge in badges:
         if current_points >= badge.min_points:
             new_badge = badge
+        else:
             break
 
     if score_obj.badge and score_obj.badge.id == new_badge.id:
@@ -66,29 +77,15 @@ def _evaluate_badge_and_reward(score_obj):
     old_badge = score_obj.badge
     score_obj.badge = new_badge
 
-    if not old_badge or new_badge.order > old_badge.order:
+    if old_badge and new_badge.order > old_badge.order:
         if not score_obj.highest_badge or new_badge.order > score_obj.highest_badge.order:
             score_obj.highest_badge = new_badge
 
+
+    elif old_badge and new_badge.order < old_badge.order:
+        pass
+
     score_obj.save()
-
-
-def _deposit_reward(score_obj, amount, badge_name):
-    """واریز جایزه به کیف پول کاربر(ها)"""
-    description = f"جایزه ارتقا به نشان {badge_name}"
-
-    if isinstance(score_obj, TeamScore):
-        members = score_obj.team.members.filter(is_active=True)
-        if members.exists():
-            split_amount = amount // members.count()
-            for member in members:
-                _add_to_wallet(member.user, split_amount, description)
-    elif isinstance(score_obj, ChannelScore):
-        user = score_obj.channel.influencer.user
-        _add_to_wallet(user, amount, description)
-    elif isinstance(score_obj, AdvertiserScore):
-        user = score_obj.profile.user
-        _add_to_wallet(user, amount, description)
 
 
 def _add_to_wallet(user, amount, description):
