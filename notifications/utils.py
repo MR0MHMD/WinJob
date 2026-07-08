@@ -188,8 +188,6 @@ def notify_advertiser_influencer_accepted(campaign_influencer):
     )
 
 
-# notifications/utils.py
-
 def notify_advertiser_influencer_rejected(campaign_influencer):
     """
     نوتیف به تبلیغ‌دهنده وقتی ناشر سفارش رو رد میکنه
@@ -215,7 +213,34 @@ def notify_advertiser_influencer_rejected(campaign_influencer):
     )
 
 
-# notifications/utils.py
+
+def notify_advertiser_influencer_report_rejected(campaign_influencer, reason=''):
+    """
+    نوتیف به تبلیغ‌دهنده وقتی گزارش ناشر توسط ادمین رد میشه
+    """
+    campaign = campaign_influencer.campaign
+    user = campaign.advertiser.user
+    channel = campaign_influencer.channel
+    price = campaign_influencer.price
+
+    if campaign.is_free:
+        return None
+
+    message = f'گزارش ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) برای کمپین «{campaign.name}» توسط ادمین رد شد.\n'
+    if reason:
+        message += f'📌 دلیل رد: {reason}\n'
+    message += f'💰 مبلغ {price:,} تومان به کیف پول شما برگشت داده شد.\n\n'
+
+    return create_notification(
+        user=user,
+        notification_type='influencer_report_rejected',
+        title='❌ رد گزارش ناشر توسط ادمین',
+        message=message,
+        link=f'/advertisers/campaign_detail/{campaign.id}',
+        related_object_id=campaign.id,
+        related_content_type='Campaign'
+    )
+
 
 def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
     """نوتیف به تبلیغ‌دهنده وقتی کمپین نیاز به اصلاح دارد"""

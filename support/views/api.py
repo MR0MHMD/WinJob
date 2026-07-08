@@ -119,7 +119,7 @@ class ReportRejectView(SupportRequiredMixin, View):
 
             try:
                 reject_influencer_report_service(report, reason=reason)
-                messages.warning(request, '❌ گزارش با موفقیت رد شد.')
+                messages.success(request, '✅ گزارش با موفقیت رد شد.')
             except Exception as e:
                 messages.error(request, f'خطا در رد گزارش: {str(e)}')
         else:

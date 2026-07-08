@@ -404,7 +404,13 @@
                                                 {% endif %}
                                             </div>
                                             <div>
-                                                <div class="name">{{ booking.channel.channel_name }}</div>
+                                                {% if booking.has_report %}
+                                                    <a class="text-decoration-none" href="{% url 'support:report_detail' booking.report.id %}">
+                                                        <div class="name text-primary">{{ booking.channel.channel_name }}</div>
+                                                    </a>
+                                                {% else %}
+                                                    <div class="name">{{ booking.channel.channel_name }}</div>
+                                                {% endif %} 
                                                 <div class="platform">{{ booking.channel.platform.name }}
                                                     • {{ booking.channel.followers_formatted }} فالوور
                                                 </div>

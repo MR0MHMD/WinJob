@@ -1,8 +1,10 @@
-from django.utils import timezone
+from content_team.models import ContentOrderFile, ContentOrderDescription
 from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.utils import timezone
+from django.apps import apps
 import jdatetime
-from datetime import timedelta
-from content_team.models import ContentOrderFile
+import json
 
 
 def validate_start_date(start_date):
@@ -85,3 +87,69 @@ def _detect_file_type(file):
         return ContentOrderFile.FileType.DOCUMENT
 
     return ContentOrderFile.FileType.OTHER
+
+
+def safe_load_json(value):
+    try:
+        return json.loads(value) if value else []
+    except json.JSONDecodeError:
+        return []
+
+
+def save_brief(order, brief_form):
+    brief_data = brief_form.cleaned_data
+    brief, _ = ContentOrderDescription.objects.get_or_create(order=order)
+
+    brief_fields = ['goal', 'goal_description', 'tone', 'brand_name', 'hashtags',
+                    'reference_links', 'target_audience', 'description', 'do_not_include']
+    for field in brief_fields:
+        if field in brief_data:
+            setattr(brief, field, brief_data[field])
+    brief.save()
+
+
+def save_campaign_content(campaign, brief_form):
+    ad_caption = brief_form.cleaned_data.get('ad_caption', '')
+    ad_link = brief_form.cleaned_data.get('ad_link', '')
+
+    CampaignContent = apps.get_model('campaigns', 'CampaignContent')
+
+    campaign_content, created = CampaignContent.objects.get_or_create(
+        campaign=campaign,
+        defaults={
+            'caption': ad_caption,
+            'link': ad_link or '',
+            'notes': 'محتوای سفارش داده شده از طریق بریف تیم تولید محتوا',
+        }
+    )
+    if not created:
+        campaign_content.caption = ad_caption
+        campaign_content.link = ad_link or ''
+        campaign_content.save()
+    return campaign_content
+
+
+def handle_deleted_files(post):
+    deleted_ids = safe_load_json(post.get("deleted_attachments"))
+    if deleted_ids:
+        ContentOrderFile.objects.filter(id__in=deleted_ids).delete()
+
+
+def handle_new_files(request, order):
+    files = request.FILES.getlist("attachments")
+    descriptions = safe_load_json(request.POST.get("attachment_descriptions"))
+
+    if len(files) > 5:
+        messages.error(request, "حداکثر می‌توانید ۵ فایل پیوست اضافه کنید.")
+        return False
+
+    for i, file in enumerate(files):
+        ContentOrderFile.objects.create(
+            order=order,
+            file=file,
+            file_type=_detect_file_type(file),
+            description=descriptions[i] if i < len(descriptions) else "",
+            original_name=file.name,
+            file_size=file.size,
+        )
+    return True

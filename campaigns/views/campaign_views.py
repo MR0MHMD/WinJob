@@ -1,27 +1,30 @@
-from collections import defaultdict
-
-from django.urls import reverse
-
+from content_team.models import ContentOrder, ContentOrderFile, ContentTeam, ContentServicePlan, ContentOrderDescription
+from ..services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
+from ..utils import save_brief, save_campaign_content, handle_deleted_files, handle_new_files
+from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField
+from ..services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
+from ..models import Campaign, CampaignInfluencer, Payment, CampaignContent
 from notifications.utils import notify_influencer_new_campaign_orders
-from .models import CampaignClick, CampaignInfluencer, Campaign, Payment
+from ..services.free_campaign import create_free_campaign_bookings
 from django.shortcuts import redirect, get_object_or_404, render
-from content_team.models import ContentOrder, ContentOrderFile, ContentTeam
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
-from accounts.models import Transaction
-from .services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
-from .services.create_invoice import create_campaign_invoice
-from .services.free_campaign import create_free_campaign_bookings
-from .utils import _detect_file_type
-from django.db.models import Prefetch, Count, Sum
-from django.contrib import messages
-from django.utils import timezone
-from django.db import transaction
-from django.db.models import F, Case, When, Value, IntegerField, Q
-from django.core.paginator import Paginator
 from django.db.models.functions import Coalesce
-from .forms import *
+from django.core.paginator import Paginator
+from accounts.models import Transaction
+from collections import defaultdict
+from django.contrib import messages
+from django.db import transaction
+from django.utils import timezone
+from django.urls import reverse
 import json
+from ..forms import (
+    CampaignStep3BriefForm,
+    CampaignStep3ReadyForm,
+    CampaignStep3TeamForm,
+    InfluencerFilterForm,
+    CampaignStep1Form,
+)
 
 
 @login_required
@@ -119,20 +122,17 @@ def campaign_create_step1(request, campaign_id=None):
 
 @login_required
 def campaign_create_step2(request):
-    campaign_id = request.session.get('campaign_draft_id')
-
     # ========== بررسی حالت جایگزینی ==========
     is_replacement_mode = request.GET.get('replacement_mode') == 'true'
     replacement_campaign_id = request.GET.get('campaign_id')
 
-    # اگه حالت جایگزینی فعال باشه، کمپین رو از پارامتر میگیریم
     if is_replacement_mode and replacement_campaign_id:
         campaign = get_object_or_404(
             Campaign,
             id=replacement_campaign_id,
             advertiser=request.user.advertiser_profile,
-            status=Campaign.Status.REVISION_NEEDED,  # تغییر: بررسی وضعیت REVISION_NEEDED
-            replacement_mode=True  # تغییر: بررسی replacement_mode
+            status=Campaign.Status.REVISION_NEEDED,
+            replacement_mode=True
         )
         request.session['replacement_campaign_id'] = campaign.id
         request.session['replacement_mode'] = True
@@ -323,16 +323,13 @@ def campaign_create_step2(request):
                         content_cost = int(campaign.invoice.content_cost)  # ✅ تبدیل به int
 
                     # ========== ۲. کمیسیون قبلی ==========
-                    old_commission = 0
                     if hasattr(campaign, 'invoice') and campaign.invoice:
                         old_commission = int(campaign.invoice.commission)  # ✅ تبدیل به int
                     else:
-                        from campaigns.services.create_invoice import PLATFORM_COMMISSION
                         old_subtotal = current_influencer_cost + content_cost
                         old_commission = int(old_subtotal * PLATFORM_COMMISSION)
 
                     # ========== ۳. کمیسیون جدید ==========
-                    from campaigns.services.create_invoice import PLATFORM_COMMISSION
                     new_total_influencer_cost = current_influencer_cost + new_influencer_cost
                     new_subtotal = new_total_influencer_cost + content_cost
                     new_commission = int(new_subtotal * PLATFORM_COMMISSION)
@@ -456,135 +453,38 @@ def campaign_create_step2(request):
 
 
 @login_required
+def campaign_create_step3_router(request):
+    campaign_id = request.session.get("campaign_draft_id")
+
+    if not campaign_id:
+        return redirect("campaigns:campaign_create_step1")
+
+    campaign = get_object_or_404(
+        Campaign,
+        id=campaign_id,
+        advertiser=request.user.advertiser_profile
+    )
+
+    content_slug = campaign.content_type.slug.lower()
+
+    step3_page = request.session.get('step3_team_page', '1')
+
+    if content_slug == "ready-content":
+        return redirect("campaigns:campaign_create_step3_ready")
+    elif content_slug == "content-production-team":
+        url = reverse("campaigns:campaign_create_step3_team")
+        return redirect(f"{url}?page={step3_page}")
+    else:
+        messages.error(request, "نوع محتوای کمپین معتبر نیست.")
+        return redirect("campaigns:campaign_create_step1")
+
+
+@login_required
 def campaign_create_step3_team(request):
-    # ------------------------ Helper functions ------------------------
-    def safe_load_json(value):
-        try:
-            return json.loads(value) if value else []
-        except json.JSONDecodeError:
-            return []
-
-    def save_brief(order, brief_form):
-        brief_data = brief_form.cleaned_data
-        brief, _ = ContentOrderDescription.objects.get_or_create(order=order)
-
-        brief_fields = ['goal', 'goal_description', 'tone', 'brand_name', 'hashtags',
-                        'reference_links', 'target_audience', 'description', 'do_not_include']
-        for field in brief_fields:
-            if field in brief_data:
-                setattr(brief, field, brief_data[field])
-        brief.save()
-
-    def save_campaign_content(campaign, brief_form):
-        ad_caption = brief_form.cleaned_data.get('ad_caption', '')
-        ad_link = brief_form.cleaned_data.get('ad_link', '')
-
-        campaign_content, created = CampaignContent.objects.get_or_create(
-            campaign=campaign,
-            defaults={
-                'caption': ad_caption,
-                'link': ad_link or '',
-                'notes': 'محتوای سفارش داده شده از طریق بریف تیم تولید محتوا',
-            }
-        )
-        if not created:
-            campaign_content.caption = ad_caption
-            campaign_content.link = ad_link or ''
-            campaign_content.save()
-        return campaign_content
-
-    def handle_deleted_files(post):
-        deleted_ids = safe_load_json(post.get("deleted_attachments"))
-        if deleted_ids:
-            ContentOrderFile.objects.filter(id__in=deleted_ids).delete()
-
-    def handle_new_files(request, order):
-        files = request.FILES.getlist("attachments")
-        descriptions = safe_load_json(request.POST.get("attachment_descriptions"))
-
-        if len(files) > 5:
-            messages.error(request, "حداکثر می‌توانید ۵ فایل پیوست اضافه کنید.")
-            return False
-
-        for i, file in enumerate(files):
-            ContentOrderFile.objects.create(
-                order=order,
-                file=file,
-                file_type=_detect_file_type(file),
-                description=descriptions[i] if i < len(descriptions) else "",
-                original_name=file.name,
-                file_size=file.size,
-            )
-        return True
-
-    def copy_brief_to_new_order(old_order, new_order):
-        """
-        کپی کردن بریف از سفارش قدیمی به سفارش جدید
-        """
-        if old_order and hasattr(old_order, 'brief'):
-            old_brief = old_order.brief
-
-            # ایجاد بریف جدید با اطلاعات بریف قبلی
-            new_brief = ContentOrderDescription.objects.create(
-                order=new_order,
-                goal=old_brief.goal,
-                goal_description=old_brief.goal_description,
-                tone=old_brief.tone,
-                brand_name=old_brief.brand_name,
-                hashtags=old_brief.hashtags,
-                reference_links=old_brief.reference_links,
-                target_audience=old_brief.target_audience,
-                description=old_brief.description,
-                do_not_include=old_brief.do_not_include,
-            )
-            return new_brief
-        return None
-
-    def copy_attachments_to_new_order(old_order, new_order):
-        """
-        کپی کردن فایل‌های پیوست از سفارش قدیمی به سفارش جدید
-        (فقط ارجاع به فایل‌ها کپی میشه، خود فایل کپی نمیشه)
-        """
-        if old_order:
-            for old_file in old_order.files.all():
-                # فقط اگه فایل هنوز وجود داره
-                if old_file.file:
-                    ContentOrderFile.objects.create(
-                        order=new_order,
-                        file=old_file.file,
-                        file_type=old_file.file_type,
-                        original_name=old_file.original_name,
-                        description=old_file.description,
-                        file_size=old_file.file_size,
-                    )
-
-    def copy_campaign_content(campaign, old_order=None):
-        """
-        کپی کردن محتوای تبلیغ از سفارش قدیمی یا استفاده از موجود
-        """
-        # اگر از قبل CampaignContent وجود داره، ازش استفاده کن
-        campaign_content, created = CampaignContent.objects.get_or_create(
-            campaign=campaign
-        )
-
-        # اگر سفارش قدیمی وجود داره و بریف داره، از اون استفاده کن
-        if old_order and hasattr(old_order, 'brief'):
-            old_brief = old_order.brief
-            # فقط اگه قبلاً محتوایی تنظیم نشده باشه
-            if not campaign_content.caption and hasattr(old_brief, 'ad_caption'):
-                campaign_content.caption = old_brief.ad_caption
-                campaign_content.link = old_brief.ad_link or ''
-                campaign_content.save()
-
-        return campaign_content
-
     # ========== بررسی حالت جایگزینی ==========
     is_replacement_mode = request.GET.get('replacement_mode') == 'true'
     replacement_campaign_id = request.GET.get('campaign_id')
 
-    campaign_id = request.session.get("campaign_draft_id")
-
-    # اگه حالت جایگزینی فعال باشه، کمپین رو از پارامتر میگیریم
     if is_replacement_mode and replacement_campaign_id:
         campaign = get_object_or_404(
             Campaign,
@@ -806,21 +706,16 @@ def campaign_create_step3_team(request):
             wallet = request.user.wallet
 
             # ========== محاسبه کمیسیون قبلی و جدید ==========
-            from campaigns.services.create_invoice import PLATFORM_COMMISSION
 
             # ۱. محاسبه هزینه ناشران (ثابت میمونه)
             influencer_cost = sum(booking.price for booking in campaign.influencer_bookings.all())
 
-            # ۲. دریافت کمیسیون قبلی از فاکتور (نه محاسبه مجدد)
-            old_commission = 0
             if hasattr(campaign, 'invoice') and campaign.invoice:
                 old_commission = campaign.invoice.commission
             else:
-                # اگر فاکتور وجود نداشت، محاسبه کن
                 old_subtotal = influencer_cost + old_price
                 old_commission = int(old_subtotal * PLATFORM_COMMISSION)
 
-            # ۳. محاسبه کمیسیون جدید بر اساس کل مبلغ (هزینه ناشران + هزینه جدید)
             new_subtotal = influencer_cost + new_price
             new_commission = int(new_subtotal * PLATFORM_COMMISSION)
 
@@ -931,7 +826,6 @@ def campaign_create_step3_team(request):
 
                 # ========== ۱۰. به‌روزرسانی فاکتور با حفظ کمیسیون قدیمی ==========
                 if hasattr(campaign, 'invoice'):
-                    from campaigns.services.create_invoice import create_campaign_invoice
                     # فاکتور رو با مقادیر جدید محاسبه کن
                     invoice = create_campaign_invoice(campaign)
 
@@ -1366,241 +1260,3 @@ def campaign_create_step4(request):
     }
 
     return render(request, "campaigns/forms/create_campaign_step4.html", context)
-
-
-def track_click(request, code):
-    influencer = get_object_or_404(
-        CampaignInfluencer,
-        tracking_code=code
-    )
-
-    tracking = influencer.tracking_link
-
-    ip = request.META.get("REMOTE_ADDR")
-    user_agent = request.META.get("HTTP_USER_AGENT", "")
-
-    is_unique = not CampaignClick.objects.filter(
-        tracking_link=tracking,
-        ip_address=ip
-    ).exists()
-
-    CampaignClick.objects.create(
-        tracking_link=tracking,
-        ip_address=ip,
-        user_agent=user_agent
-    )
-
-    tracking.clicks = F("clicks") + 1
-
-    if is_unique:
-        tracking.unique_clicks = F("unique_clicks") + 1
-
-    tracking.save(update_fields=["clicks", "unique_clicks"])
-
-    campaign = influencer.campaign
-    content = campaign.content
-
-    if content.utm_enabled:
-        destination_url = content.get_utm_link(influencer)
-    else:
-        destination_url = content.link
-
-    return redirect(destination_url)
-
-
-# campaigns/views.py
-
-@login_required
-def campaign_select_replacement(request, campaign_id):
-    """صفحه انتخاب کانال جایگزین بعد از رد شدن - هدایت به استپ ۲"""
-
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile,
-        status=Campaign.Status.REVISION_NEEDED,  # تغییر: از APPROVED به REVISION_NEEDED
-        replacement_mode=True  # تغییر: چک کردن replacement_mode
-    )
-
-    rejected_bookings = campaign.influencer_bookings.filter(
-        status=CampaignInfluencer.Status.REJECTED
-    )
-
-    if not rejected_bookings.exists():
-        messages.info(request, "هیچ کانال رد شده‌ای برای جایگزینی وجود ندارد.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    return redirect(f"{reverse('campaigns:campaign_create_step2')}?replacement_mode=true&campaign_id={campaign.id}")
-
-
-@login_required
-def campaign_replace_team(request, campaign_id):
-    """انتخاب تیم تولید محتوای جایگزین - هدایت به استپ ۳"""
-
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile,
-        status=Campaign.Status.REVISION_NEEDED,
-        replacement_mode=True
-    )
-
-    # بررسی اینکه تیم محتوا واقعاً رد کرده
-    existing_order = campaign.content_orders.first()
-    if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
-        messages.error(request, "سفارش تیم محتوا قابل جایگزینی نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    # هدایت به استپ ۳ با پارامترهای جایگزینی
-    return redirect(
-        f"{reverse('campaigns:campaign_create_step3_team')}?replacement_mode=true&campaign_id={campaign.id}"
-    )
-
-
-@login_required
-def campaign_switch_to_ready(request, campaign_id):
-    if request.method != 'POST':
-        messages.warning(request, "این عملیات تنها از طریق فرم قابل انجام است.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign_id)
-
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile,
-        status=Campaign.Status.REVISION_NEEDED
-    )
-
-    existing_order = campaign.content_orders.first()
-    if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
-        messages.error(request, "امکان تبدیل به محتوای آماده وجود ندارد.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    with transaction.atomic():
-        # ========== دریافت اطلاعات بریف ==========
-        brief_data = {}
-        if hasattr(existing_order, 'brief'):
-            brief = existing_order.brief
-            caption_text = brief.description[:200] if brief.description else ''
-            link_url = ''
-            if hasattr(campaign, 'content') and campaign.content and campaign.content.link:
-                link_url = campaign.content.link
-
-            brief_data = {
-                'caption': caption_text,
-                'link': link_url,
-            }
-
-        # تغییر نوع محتوا به آماده
-        ready_content_type = ContentType.objects.filter(slug='ready-content').first()
-        if not ready_content_type:
-            messages.error(request, "نوع محتوای آماده در سیستم تعریف نشده است.")
-            return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-        campaign.content_type = ready_content_type
-        campaign.content_service_type = None
-
-        # لغو سفارش تیم محتوا (بدون حذف)
-        existing_order.status = ContentOrder.Status.CANCELLED
-        existing_order.save(update_fields=['status'])
-
-        # غیرفعال کردن حالت جایگزینی و رد تیم محتوا
-        campaign.replacement_mode = False
-        campaign.content_team_rejected = False
-        campaign.save(update_fields=[
-            'content_type',
-            'content_service_type',
-            'replacement_mode',
-            'content_team_rejected'
-        ])
-
-
-        # ذخیره اطلاعات بریف در session
-        request.session['campaign_switch_to_ready_data'] = brief_data
-        request.session['campaign_draft_id'] = campaign.id
-        request.session['is_switch_to_ready_mode'] = True
-
-    messages.info(request, "لطفاً محتوای تبلیغ را آپلود کنید.")
-    return redirect('campaigns:campaign_create_step3_ready')
-
-
-
-@login_required
-def campaign_switch_to_ready_cancel(request, campaign_id):
-    """
-    لغو تبدیل به محتوای آماده و برگشت به حالت قبلی (تیم تولید محتوا)
-    """
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile
-    )
-
-    if campaign.status != Campaign.Status.REVISION_NEEDED:
-        messages.warning(request, "این عملیات قابل انجام نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    if campaign.content_type.slug != "ready-content":
-        messages.warning(request, "نوع محتوای کمپین آماده نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    team_content_type = ContentType.objects.filter(slug='content-production-team').first()
-    if team_content_type:
-        campaign.content_type = team_content_type
-        existing_order = campaign.content_orders.first()
-        if existing_order and existing_order.plan and existing_order.plan.service_type:
-            campaign.content_service_type = existing_order.plan.service_type
-        campaign.replacement_mode = True
-        campaign.content_team_rejected = True
-        campaign.save(
-            update_fields=['content_type', 'content_service_type', 'replacement_mode', 'content_team_rejected']
-        )
-
-    # پاک کردن session های مربوط به تبدیل
-    for key in ['campaign_switch_to_ready_data', 'is_switch_to_ready_mode']:
-        if key in request.session:
-            del request.session[key]
-
-    messages.info(request, "به حالت انتخاب تیم تولید محتوا بازگشتید.")
-    return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-
-@login_required
-def campaign_continue_without_replacement(request, campaign_id):
-    """
-    ادامه کمپین بدون انتخاب ناشر جایگزین
-    ناشران رد شده نادیده گرفته می‌شوند و کمپین به APPROVED برمی‌گردد
-    """
-    campaign = get_object_or_404(
-        Campaign,
-        id=campaign_id,
-        advertiser=request.user.advertiser_profile,
-        status=Campaign.Status.REVISION_NEEDED,
-        replacement_mode=True
-    )
-
-    if request.method != 'POST':
-        messages.warning(request, "این عملیات تنها از طریق فرم قابل انجام است.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
-
-    with transaction.atomic():
-        # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
-        rejected_bookings = campaign.influencer_bookings.filter(
-            status=CampaignInfluencer.Status.REJECTED
-        )
-        rejected_count = rejected_bookings.count()
-
-        # ========== کمپین رو به APPROVED برگردون ==========
-        campaign.status = Campaign.Status.APPROVED
-        campaign.replacement_mode = False
-        campaign.save(update_fields=['status', 'replacement_mode'])
-
-        # ========== نوتیف به کاربر ==========
-        from notifications.utils import notify_advertiser_campaign_auto_approved
-        notify_advertiser_campaign_auto_approved(campaign)
-
-        messages.success(
-            request,
-            f"✅ کمپین با موفقیت ادامه یافت. {rejected_count} ناشر رد شده نادیده گرفته شدند."
-        )
-
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)

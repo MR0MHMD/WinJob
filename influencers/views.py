@@ -472,17 +472,20 @@ def influencer_dashboard(request):
     completed_bookings = campaign_bookings.filter(status='completed').count()
 
     total_earned = campaign_bookings.filter(
-        status='completed'
+        status='completed', report__status="approved", is_paid=True
     ).aggregate(total=Sum('price'))['total'] or 0
 
     pending_earnings = campaign_bookings.filter(
-        status__in=['accepted', 'pending']
+        status__in=['accepted', 'completed'], is_paid=False
+    ).exclude(
+        report__status__in=["approved", "rejected"]
     ).aggregate(total=Sum('price'))['total'] or 0
+
+    print(pending_earnings)
 
     wallet = request.user.wallet
     wallet_balance = wallet.balance
 
-    # گرفتن ۳ کد تخفیف آخر اینفلوئنسر
     latest_coupons = Coupon.objects.filter(
         channel__influencer=influencer,
         is_active=True

@@ -31,7 +31,9 @@ from notifications.utils import (
     notify_content_team_new_order,
     notify_content_team_revision_requested,
     notify_content_team_order_accepted,
-    notify_advertiser_influencer_rejected, notify_advertiser_campaign_needs_revision,
+    notify_advertiser_influencer_rejected,
+    notify_advertiser_campaign_needs_revision,
+    notify_advertiser_influencer_report_rejected,
 )
 
 
@@ -241,7 +243,7 @@ def submit_influencer_report_service(order, post_link, screenshot):
         order.save(update_fields=['status'])
 
         # --- سیستم گیمیفیکیشن ---
-        update_score(order.channel, 15, 'ارسال گزارش تبلیغ', f'ارسال گزارش عملکرد و اتمام کمپین {order.campaign.name} در کانال {order.channel.channel_name}در {order.channel.platform.name}')
+        update_score(order.channel, 15, 'ارسال گزارش تبلیغ', f' ارسال گزارش عملکرد و اتمام کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
 
         total_reports = CampaignReport.objects.filter(
             campaign_influencer__campaign=campaign
@@ -270,9 +272,6 @@ def submit_influencer_report_service(order, post_link, screenshot):
 
                 notify_advertiser_campaign_completed(campaign)
 
-
-
-# campaigns/services/campaigns_notifications.py
 
 def respond_to_influencer_order_service(order, action):
     """مدیریت پاسخ اینفلوئنسر به سفارش (تایید: ۲۰+ امتیاز / رد: ۴۰- امتیاز برای کانال)"""
@@ -402,7 +401,37 @@ def reject_influencer_report_service(report, reason=''):
             report.status = 'rejected'
             report.save(update_fields=['status'])
 
-            notify_influencer_report_rejected(report.campaign_influencer, reason)
+            # ========== دریافت اطلاعات سفارش ==========
+            campaign_influencer = report.campaign_influencer
+            campaign = campaign_influencer.campaign
+            advertiser_user = campaign.advertiser.user
+            channel = campaign_influencer.channel
+            price = campaign_influencer.price
+
+            # ========== برگشت پول به کیف پول تبلیغ‌دهنده ==========
+            if not campaign.is_free and not campaign_influencer.is_paid and price > 0:
+                # ۱. برگشت به کیف پول تبلیغ‌دهنده
+                advertiser_wallet = advertiser_user.wallet
+                advertiser_wallet.balance += price
+                advertiser_wallet.save(update_fields=['balance'])
+
+                # ۲. ثبت تراکنش برگشت برای تبلیغ‌دهنده
+                Transaction.objects.create(
+                    user=advertiser_user,
+                    amount=price,
+                    type=Transaction.Type.CAMPAIGN_REFUND,
+                    status=Transaction.Status.SUCCESS,
+                    campaign=campaign,
+                    invoice=campaign.invoice if hasattr(campaign, 'invoice') else None,
+                    description=f'برگشت وجه بابت رد گزارش ناشر {channel.channel_name} (شناسه کانال: {channel.channel_id}@) در کمپین {campaign.name}',
+                    reference_id=f'REFUND_INFLUENCER_REPORT_REJECT_{campaign_influencer.id}_{timezone.now().timestamp()}'
+                )
+
+                # ========== نوتیف به تبلیغ‌دهنده ==========
+                notify_advertiser_influencer_report_rejected(campaign_influencer, reason)
+
+            # ========== نوتیف به اینفلوئنسر ==========
+            notify_influencer_report_rejected(campaign_influencer, reason)
 
 
 def create_revision_request_service(order, requested_by, feedback, file=None):

@@ -1,8 +1,8 @@
+from balethon.objects import ReplyKeyboard, ReplyKeyboardButton
 from django.core.management.base import BaseCommand
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from balethon import Client
-from balethon.objects import ReplyKeyboard, ReplyKeyboardButton
-from asgiref.sync import sync_to_async
 
 
 class Command(BaseCommand):
@@ -29,7 +29,6 @@ class Command(BaseCommand):
             except CustomUser.DoesNotExist:
                 return None
 
-                # کلمه bot رو از پرانتز حذف کردیم
         @bot.on_message()
         async def handle_messages(message):
             chat_id = message.chat.id
