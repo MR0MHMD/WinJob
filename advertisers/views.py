@@ -1,25 +1,29 @@
-import jdatetime
-from django.db import transaction
-
-from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInvoice, CampaignInfluencer, \
-    ContentType
+from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery, ContentDeliveryFile
 from django.shortcuts import render, get_object_or_404, redirect
-from content_team.models import ContentOrder, ContentTeamMember, ContentServicePlan, ContentTeam
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
-from django.db.models.functions import TruncDate, Coalesce
-from influencers.models import InfluencerChannel, InfluencerServiceRate
-from accounts.models import Transaction
-from django.db.models import Sum, Count, Avg, Value, Q, IntegerField, Prefetch
+from django.db.models.functions import TruncDate
+from influencers.models import InfluencerChannel
+from django.db.models import Sum, Count, Avg
 from django.core.paginator import Paginator
 from core.utils import convert_to_jalali
+from accounts.models import Transaction
+from plat_form.models import Platform
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+import jdatetime
 import json
-from plat_form.models import Platform
-from campaigns.models import AdType
+from campaigns.models import (
+    Campaign,
+    CampaignClick,
+    CampaignTrackingLink,
+    CampaignInvoice,
+    CampaignInfluencer,
+    CampaignContent,
+    AdType
+)
 
 
 @login_required
@@ -114,18 +118,56 @@ def campaign_detail(request, campaign_id):
     channels = campaign.influencer_bookings.all()
     channels_count = channels.count()
 
+    # ========== MULTI_CHOICE: دریافت دلیوری‌های با گزینه ==========
+    print(campaign.content_orders.all())
+    content_order = campaign.content_orders.last() if campaign.content_orders.exists() else None
+    multi_choice_deliveries = []
+    is_multi_choice = False
+    selected_option = None
+    has_selected_file = False
+
+    if content_order and content_order.plan and content_order.plan.delivery_type == 'multi_choice':
+        is_multi_choice = True
+
+        # ========== ✅ استفاده از متد has_selected_file ==========
+        has_selected_file = content_order.has_selected_file()
+
+        # دریافت همه دلیوری‌ها با فایل‌های گزینه‌دار
+        deliveries = content_order.deliveries.prefetch_related('files').all()
+
+        for delivery in deliveries:
+            # فایل‌های گزینه‌دار این تحویل
+            option_files = delivery.files.filter(is_option=True)
+            for file_obj in option_files:
+                multi_choice_deliveries.append({
+                    'delivery': delivery,
+                    'file': file_obj,
+                    'option_number': file_obj.option_number,
+                    'file_name': file_obj.file_name,
+                    'file_size_display': file_obj.file_size_display,
+                    'file_url': file_obj.file.url if file_obj.file else None,
+                    'is_selected': file_obj.is_selected,
+                })
+
+                # پیدا کردن گزینه انتخاب شده
+                if file_obj.is_selected:
+                    selected_option = file_obj.option_number
+
+        # ========== ✅ اگر فایلی انتخاب نشده، از CampaignContent چک کن (سازگاری با نسخه‌های قدیمی) ==========
+        if not has_selected_file and campaign.content and campaign.content.media:
+            campaign_media_url = campaign.content.media.url if campaign.content.media else None
+            for item in multi_choice_deliveries:
+                if item['file'] and campaign_media_url and item['file_url'] == campaign_media_url:
+                    selected_option = item['option_number']
+                    has_selected_file = True
+                    break
+
     # ========== ۱. وضعیت رد شدن توسط اینفلوئنسرها ==========
     rejected_influencers = channels.filter(status=CampaignInfluencer.Status.REJECTED)
     has_rejected = rejected_influencers.exists()
 
-    # ========== ۲. وضعیت رد شدن توسط تیم محتوا (با همه شرایط) ==========
-    content_orders = campaign.content_orders.all()
-    content_order = content_orders.first() if content_orders.exists() else None
-
-    all_content_orders_cancelled = content_orders.exists() and all(
-        order.status == ContentOrder.Status.CANCELLED for order in content_orders
-    )
-
+    # ========== ۲. وضعیت رد شدن توسط تیم محتوا ==========
+    all_content_orders_cancelled = content_order and content_order.status == ContentOrder.Status.CANCELLED
     has_ready_content = hasattr(campaign, 'content') and campaign.content and campaign.content.media
 
     show_content_team_rejected = (
@@ -133,9 +175,6 @@ def campaign_detail(request, campaign_id):
             all_content_orders_cancelled and
             not has_ready_content
     )
-
-    # ========== ۳. کمپین رایگان ==========
-    is_free_campaign = campaign.is_free
 
     # progress based on campaign status
     progress_map = {
@@ -251,15 +290,108 @@ def campaign_detail(request, campaign_id):
         "has_click_data": has_click_data,
         "is_free_campaign": campaign.is_free,
 
-        # ========== فیلدهای جدید (با منطق درست) ==========
+        # ========== فیلدهای جدید ==========
         "has_rejected": has_rejected,
         "rejected_influencers": rejected_influencers,
-
-        # ========== شرط اصلی نمایش هشدار تیم محتوا ==========
         "show_content_team_rejected": show_content_team_rejected,
-        "content_order": content_order,  # برای نمایش نام تیم در تمپلیت
+        "content_order": content_order,
+
+        # ========== MULTI_CHOICE ==========
+        "is_multi_choice": is_multi_choice,
+        "multi_choice_deliveries": multi_choice_deliveries,
+        "selected_option": selected_option,
+        "has_selected_file": has_selected_file,
     }
     return render(request, "advertisers/pages/campaign_detail.html", context)
+
+
+@login_required
+def select_multi_choice_option(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        delivery_file_id = request.POST.get('delivery_file_id')
+        if not delivery_file_id:
+            return JsonResponse({'error': 'شناسه فایل یافت نشد'}, status=400)
+
+        delivery_file = ContentDeliveryFile.objects.get(
+            id=delivery_file_id,
+            delivery__order__campaign__advertiser=request.user.advertiser_profile,
+            is_option=True
+        )
+
+        # ✅ چک کن که فایل وجود داره
+        if not delivery_file.file:
+            return JsonResponse({'error': 'فایل مورد نظر وجود ندارد'}, status=400)
+
+        order = delivery_file.delivery.order
+        campaign = order.campaign
+
+        if order.status != 'done':
+            return JsonResponse({'error': 'این سفارش قابل انتخاب نیست'}, status=400)
+
+        # ========== ✅ ۱. ریست کردن انتخاب‌های قبلی ==========
+        all_deliveries = ContentDelivery.objects.filter(order=order)
+        for delivery in all_deliveries:
+            for file_obj in delivery.files.all():
+                if file_obj.is_selected:
+                    file_obj.is_selected = False
+                    file_obj.save(update_fields=['is_selected'])
+
+        # ========== ✅ ۲. انتخاب فایل جدید ==========
+        delivery_file.is_selected = True
+        delivery_file.save(update_fields=['is_selected'])
+
+        # ========== ۳. به‌روزرسانی محتوای کمپین ==========
+        campaign_content, created = CampaignContent.objects.get_or_create(
+            campaign=campaign,
+            defaults={
+                'media': delivery_file.file,
+                'caption': f'گزینه {delivery_file.option_number} انتخاب شده',
+                'notes': f'فایل تحویلی نسخه {delivery_file.delivery.version} - گزینه {delivery_file.option_number}'
+            }
+        )
+
+        if not created:
+            campaign_content.media = delivery_file.file
+            campaign_content.notes = f'فایل تحویلی نسخه {delivery_file.delivery.version} - گزینه {delivery_file.option_number}'
+            campaign_content.save(update_fields=['media', 'notes'])
+
+        # ========== ۴. انجام عملیات تایید نهایی ==========
+        content_cost = campaign.invoice.content_cost if hasattr(campaign, 'invoice') and campaign.invoice else 0
+
+        if content_cost > 0:
+            team_members = ContentTeamMember.objects.filter(
+                team=order.team,
+                is_active=True
+            ).select_related('user')
+
+            if team_members.exists():
+                total_percent = sum(member.revenue_share_percent for member in team_members)
+
+                if total_percent == 100:
+                    from campaigns.services.campaigns_notifications import accept_content_order_delivery
+                    accept_content_order_delivery(
+                        order=order,
+                        content_cost=content_cost,
+                        team_members=team_members,
+                        primary_delivery=delivery_file.delivery
+                    )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'گزینه {delivery_file.option_number} با موفقیت انتخاب و سفارش تأیید شد.',
+            'option_number': delivery_file.option_number,
+            'is_final_accepted': True
+        })
+
+    except ContentDeliveryFile.DoesNotExist:
+        return JsonResponse({'error': 'فایل مورد نظر یافت نشد'}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
@@ -406,9 +538,15 @@ def request_revision(request, order_id):
             campaign__advertiser=request.user.advertiser_profile
         )
 
-        # فقط سفارشات completed قابل ویرایش هستند
-        if order.status != 'completed':
+        # فقط سفارشات done قابل ویرایش هستند
+        if order.status != 'done':
             return JsonResponse({'error': 'این سفارش قابل ویرایش نیست'}, status=400)
+
+        # ✅ چک کردن اینکه آیا فایلی انتخاب شده
+        if order.has_selected_file():
+            return JsonResponse({
+                'error': 'شما قبلاً یک فایل را انتخاب کرده‌اید و سفارش نهایی شده است. امکان درخواست ویرایش وجود ندارد.'
+            }, status=400)
 
         # چک کردن اینکه قبلاً درخواست pending وجود نداشته باشه
         if order.revisions.filter(status='pending').exists():
@@ -454,13 +592,15 @@ def final_accept_order(request, order_id):
             campaign__advertiser=request.user.advertiser_profile
         )
 
-        if order.status != 'completed':
+        if order.status != 'done':
             return JsonResponse({'error': 'این سفارش قابل تأیید نیست'}, status=400)
 
-        if not hasattr(order, 'delivery') or order.delivery.status != 'delivered':
+        last_delivery = order.deliveries.first()
+        if not last_delivery or last_delivery.status != 'delivered':
             return JsonResponse({'error': 'این سفارش قبلاً تأیید شده یا در وضعیت مناسبی نیست'}, status=400)
 
-        content_cost = order.campaign.invoice.content_cost if hasattr(order.campaign, 'invoice') and order.campaign.invoice else 0
+        content_cost = order.campaign.invoice.content_cost if hasattr(order.campaign,
+                                                                      'invoice') and order.campaign.invoice else 0
 
         if content_cost <= 0:
             return JsonResponse({'error': 'مبلغ تولید محتوا معتبر نیست'}, status=400)
@@ -484,12 +624,16 @@ def final_accept_order(request, order_id):
         accept_content_order_delivery(
             order=order,
             content_cost=content_cost,
-            team_members=team_members
+            team_members=team_members,
+            primary_delivery=last_delivery  # ✅ آخرین تحویل رو به عنوان primary می‌فرستیم
         )
+
+        order.status = ContentOrder.Status.COMPLETED
+        order.save(update_fields=['status'])
 
         return JsonResponse({
             'success': True,
-            'message': f'✅ سفارش با موفقیت تأیید شد!\n💰 مبلغ {content_cost:,} تومان بین {team_members.count()} عضو تیم تقسیم شد.\n📁 فایل نهایی در کمپین ذخیره گردید.',
+            'message': f'سفارش با موفقیت تأیید شد!\n این فایل به عنوان فایل اصلی کمپین در نظر گرفته شد',
             'content_cost': content_cost,
             'members_count': team_members.count(),
             'file_saved': True

@@ -1,8 +1,8 @@
-from django.core.exceptions import ValidationError
 from content_team.models import ContentServiceType, ContentServicePlan, ContentOrderDescription
 from .utils import jalali_str_to_datetime, validate_start_date, validate_end_date
 from .models import ContentType, AdType, CampaignContent
 from urllib.parse import urlparse, urlencode, urlunparse
+from django.core.exceptions import ValidationError
 from influencers.models import InfluencerProfile
 from location.models import Province
 from plat_form.models import Platform
@@ -63,6 +63,7 @@ class CampaignStep1Form(forms.Form):
         label="تاریخ پایان",
         widget=forms.HiddenInput()
     )
+
     content_service_type = forms.ModelChoiceField(
         queryset=ContentServiceType.objects.none(),
         required=False,
@@ -70,16 +71,6 @@ class CampaignStep1Form(forms.Form):
         widget=forms.Select(attrs={
             'class': 'form-select form-select-light',
             'id': 'id_content_service_type',
-        })
-    )
-
-    minutes = forms.IntegerField(
-        required=False,
-        label='مدت (دقیقه)',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control form-control-light',
-            'id': 'id_minutes',
-            'min': 1
         })
     )
 
@@ -132,7 +123,7 @@ class CampaignStep1Form(forms.Form):
             raise forms.ValidationError('تاریخ شروع الزامی است.')
 
         try:
-            start_date = jalali_str_to_datetime(start_date_str)  # jdatetime.date
+            start_date = jalali_str_to_datetime(start_date_str)
         except (ValueError, Exception) as e:
             raise forms.ValidationError('فرمت تاریخ شروع صحیح نیست.')
 
@@ -151,7 +142,7 @@ class CampaignStep1Form(forms.Form):
             raise forms.ValidationError('تاریخ پایان الزامی است.')
 
         try:
-            end_date = jalali_str_to_datetime(end_date_str)  # jdatetime.date
+            end_date = jalali_str_to_datetime(end_date_str)
         except (ValueError, Exception):
             raise forms.ValidationError('فرمت تاریخ پایان صحیح نیست.')
 
@@ -166,14 +157,15 @@ class CampaignStep1Form(forms.Form):
         end_date = cleaned_data.get('end_date')
         is_free = cleaned_data.get('is_free')
         service_type = cleaned_data.get("content_service_type")
-        minutes = cleaned_data.get("minutes")
 
+        # ========== ۱. اعتبارسنجی تاریخ ==========
         if start_date and end_date:
             try:
                 validate_end_date(start_date, end_date)
             except forms.ValidationError as e:
                 raise forms.ValidationError(str(e))
 
+        # ========== ۲. اعتبارسنجی پلتفرم و نوع محتوا ==========
         if platform and content_type:
             if not content_type.platform.filter(id=platform.id).exists():
                 raise forms.ValidationError(
@@ -186,34 +178,23 @@ class CampaignStep1Form(forms.Form):
                     'نوع تبلیغ انتخاب شده برای این پلتفرم معتبر نیست.'
                 )
 
+        # ========== ۳. اعتبارسنجی سرویس تولید محتوا ==========
         if content_type and content_type.slug == "content-production-team":
-
             if not service_type:
-                raise forms.ValidationError("انتخاب نوع خدمت الزامی است.")
-
-            if service_type.unit == "minute" and not minutes:
-                raise forms.ValidationError("برای این خدمت وارد کردن دقیقه الزامی است.")
-
+                raise forms.ValidationError("انتخاب نوع خدمت تولید محتوا الزامی است.")
         else:
             cleaned_data["content_service_type"] = None
-            cleaned_data["minutes"] = None
 
+        # ========== ۴. کمپین رایگان ==========
         if is_free:
-            # فقط نوع محتوای آماده مجاز است
             if not content_type or content_type.slug != "ready-content":
                 raise forms.ValidationError("در کمپین رایگان، تنها نوع محتوای «محتوای آماده» قابل قبول است.")
-            # حتماً هیچ سرویس تولید محتوایی نباشد
             if service_type:
                 raise forms.ValidationError("کمپین رایگان نمی‌تواند شامل سرویس تولید محتوا باشد.")
-            # مقدار minutes را پاک می‌کنیم (در صورت وجود)
-            cleaned_data['minutes'] = None
-        else:
-            # کمپین عادی: قوانین قبلی اعمال می‌شود (مثل قبل)
-            # ... (همان کدهایی که برای content-production-team داری)
-            pass
 
         return cleaned_data
 
+    # ========== متدهای JSON (بدون تغییر) ==========
     def get_platforms_json(self):
         result = {
             str(p.id): p.slug
@@ -270,7 +251,6 @@ class CampaignStep1Form(forms.Form):
                 result[aid].append({
                     "id": service.id,
                     "name": service.name,
-                    "unit": service.unit
                 })
 
         return json.dumps(result, ensure_ascii=False)
@@ -325,8 +305,8 @@ class CampaignStep1Form(forms.Form):
             result[str(item.id)] = {
                 "description": item.description or "",
                 "icon": item.icon or "",
-                "unit": item.unit,
-                "unit_label": "قیمت این خدمت بر اساس دقیقه محاسبه می‌شود" if item.unit == "minute" else ""
+                "allowed_units": item.allowed_units,
+                "allowed_units_display": item.get_allowed_units_display(),
             }
 
         return json.dumps(result, ensure_ascii=False)
@@ -528,10 +508,6 @@ class CampaignStep3BriefForm(forms.ModelForm):
             raise forms.ValidationError("لطفاً لینک مقصد را وارد کنید.")
         return link
 
-
-# campaigns/forms.py
-
-# campaigns/forms.py
 
 class CampaignStep3ReadyForm(forms.ModelForm):
     class Meta:

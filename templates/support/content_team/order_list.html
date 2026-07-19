@@ -10,9 +10,7 @@
 {% block content %}
     <div class="container py-4">
 
-        <!-- ============================================================ -->
         <!-- HEADER -->
-        <!-- ============================================================ -->
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
                 <h2 class="text-light mb-1">
@@ -23,9 +21,7 @@
             <span class="badge bg-primary fs-6">{{ total_count }} سفارش</span>
         </div>
 
-        <!-- ============================================================ -->
         <!-- هشدار فیلتر تیم -->
-        <!-- ============================================================ -->
         {% if current_team and filtered_team_name %}
             <div class="filter-alert mb-4">
                 <div class="d-flex align-items-center gap-2">
@@ -39,51 +35,47 @@
             </div>
         {% endif %}
 
-        <!-- ============================================================ -->
         <!-- آمار -->
-        <!-- ============================================================ -->
         <div class="order-stats row g-2 mb-4">
-            <div class="col-md-2 col-6">
+            <div class="col-md-2 col-4">
                 <div class="stat-card">
                     <div class="number">{{ total_count }}</div>
                     <div class="label">کل سفارش‌ها</div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
+            <div class="col-md-2 col-4">
                 <div class="stat-card border-warning">
                     <div class="number text-warning">{{ pending_count }}</div>
                     <div class="label">در انتظار</div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
+            <div class="col-md-2 col-4">
                 <div class="stat-card border-primary">
                     <div class="number text-primary">{{ in_progress_count }}</div>
                     <div class="label">در حال انجام</div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
+            <div class="col-md-2 col-4">
+                <div class="stat-card border-info">
+                    <div class="number text-info">{{ review_pending_count }}</div>
+                    <div class="label">در انتظار ویرایش</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-4">
                 <div class="stat-card border-success">
                     <div class="number text-success">{{ completed_count }}</div>
                     <div class="label">انجام شده</div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
+            <div class="col-md-2 col-4">
                 <div class="stat-card border-danger">
                     <div class="number text-danger">{{ cancelled_count }}</div>
                     <div class="label">لغو شده</div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="stat-card border-info">
-                    <div class="number text-info">{{ completed_count|add:in_progress_count }}</div>
-                    <div class="label">در جریان</div>
-                </div>
-            </div>
         </div>
 
-        <!-- ============================================================ -->
         <!-- فیلترها -->
-        <!-- ============================================================ -->
         <div class="card bg-dark border-light mb-4">
             <div class="card-body">
                 <form method="get" class="row g-2 align-items-end">
@@ -111,17 +103,13 @@
 
                     <!-- بازه زمانی -->
                     <div class="col-md-2">
-                        <label for="date_filter" class="text-muted form-label mb-1" style="font-size:0.75rem;">بازه
-                            زمانی</label>
+                        <label for="date_filter" class="text-muted form-label mb-1" style="font-size:0.75rem;">بازه زمانی</label>
                         <select id="date_filter" name="date_filter"
                                 class="form-select form-select-sm bg-dark text-light border-light">
                             <option value="">همه</option>
-                            <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>امروز
-                            </option>
-                            <option value="week" {% if current_date_filter == 'week' %}selected{% endif %}>۷ روز
-                            </option>
-                            <option value="month" {% if current_date_filter == 'month' %}selected{% endif %}>۳۰ روز
-                            </option>
+                            <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>امروز</option>
+                            <option value="week" {% if current_date_filter == 'week' %}selected{% endif %}>۷ روز</option>
+                            <option value="month" {% if current_date_filter == 'month' %}selected{% endif %}>۳۰ روز</option>
                         </select>
                     </div>
 
@@ -131,8 +119,7 @@
                             <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100">
                                 <i class="fi-search me-1"></i> فیلتر
                             </button>
-                            <a href="
-                                    {% url 'support:content_order_list' %}{% if current_team %}?team={{ current_team }}{% endif %}"
+                            <a href="{% url 'support:content_order_list' %}{% if current_team %}?team={{ current_team }}{% endif %}"
                                class="btn btn-outline-secondary btn-sm rounded-pill w-100">
                                 <i class="fi-refresh me-1"></i>
                             </a>
@@ -142,9 +129,7 @@
             </div>
         </div>
 
-        <!-- ============================================================ -->
         <!-- لیست سفارش‌ها -->
-        <!-- ============================================================ -->
         <div class="card bg-dark border-light">
             <div class="card-body p-0">
                 <div class="table-responsive-custom">
@@ -198,6 +183,7 @@
                                     {% elif order.status == 'pending' %}bg-warning
                                     {% elif order.status == 'in_progress' %}bg-primary
                                     {% elif order.status == 'review_pending' %}bg-info
+                                    {% elif order.status == 'done' %}bg-success bg-opacity-75
                                     {% elif order.status == 'cancelled' %}bg-danger
                                     {% else %}bg-secondary{% endif %}">
                                     {{ order.get_status_display }}
@@ -225,9 +211,7 @@
             </div>
         </div>
 
-        <!-- ============================================================ -->
         <!-- Pagination -->
-        <!-- ============================================================ -->
         {% if is_paginated %}
             <div class="d-flex justify-content-center mt-4">
                 <nav aria-label="Page navigation">

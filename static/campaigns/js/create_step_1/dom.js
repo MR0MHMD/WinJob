@@ -8,10 +8,8 @@ window.CampaignDOM = {
     freeCheckbox: document.getElementById("id_is_free"),
 
     serviceSelect: document.getElementById("id_content_service_type"),
-    minutesInput: document.getElementById("id_minutes"),
 
     serviceWrapper: document.getElementById("service-type-wrapper"),
-    minutesWrapper: document.getElementById("minutes-wrapper"),
 
     contentHint: document.getElementById("content-type-hint"),
     adHint: document.getElementById("ad-type-hint"),

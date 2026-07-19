@@ -1,0 +1,267 @@
+/* ==========================================
+   FILE GALLERY
+   ========================================== */
+.file-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.file-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-card:hover {
+    transform: translateY(-5px);
+    border-color: #fd5631;
+    background: rgba(253, 86, 49, 0.05);
+}
+
+.file-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(253, 86, 49, 0.1);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.file-icon-small {
+    width: 32px;
+    height: 32px;
+    background: rgba(253, 86, 49, 0.15);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+/* ==========================================
+   REVISION TIMELINE
+   ========================================== */
+.revision-timeline {
+    position: relative;
+    padding-right: 1rem;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.revision-item {
+    position: relative;
+    padding-right: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.revision-item::before {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    border: 2px solid #1f1b2d;
+    z-index: 2;
+}
+
+.revision-item::after {
+    content: '';
+    position: absolute;
+    right: 1px;
+    top: 20px;
+    bottom: 0;
+    width: 2px;
+    z-index: 1;
+    background: linear-gradient(180deg, #fd5631 0%, #5d3cf2 70%, transparent 100%);
+}
+
+.revision-item:last-child::after {
+    background: linear-gradient(180deg, #fd5631 0%, #5d3cf2 40%, transparent 100%);
+}
+
+.revision-content {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.revision-status-badge {
+    border-radius: 50rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.revision-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.revision-attachment {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   ACTION BUTTONS
+   ========================================== */
+.action-btn {
+    position: relative;
+    padding: 0.875rem 1.5rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.031rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.action-btn:hover::before {
+    left: 100%;
+}
+
+.action-btn-primary {
+    background: var(--success-gradient);
+    border: none;
+    box-shadow: 0 5px 20px rgba(253, 86, 49, 0.3);
+}
+
+.action-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(253, 86, 49, 0.4);
+}
+
+.quick-actions-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.quick-action-message {
+    text-align: center;
+    padding: 0.75rem 0;
+}
+
+.quick-action-message .icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.quick-action-message .text-muted-sm {
+    font-size: 0.875rem;
+    color: #9691a4;
+}
+
+/* ==========================================
+   DEADLINE TIMER
+   ========================================== */
+.deadline-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 2rem;
+    padding: 0.3rem 0.8rem 0.3rem 1rem;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+}
+
+.deadline-timer.status-green {
+    background: rgba(7, 201, 139, 0.2);
+    border-color: rgba(7, 201, 139, 0.4);
+}
+
+.deadline-timer.status-yellow {
+    background: rgba(253, 188, 49, 0.2);
+    border-color: rgba(253, 188, 49, 0.4);
+}
+
+.deadline-timer.status-red {
+    background: rgba(242, 60, 73, 0.2);
+    border-color: rgba(242, 60, 73, 0.4);
+}
+
+.deadline-timer.expired {
+    background: rgba(108, 117, 125, 0.15);
+    border-color: rgba(108, 117, 125, 0.3);
+    opacity: 0.6;
+}
+
+.deadline-timer.expired::after {
+    content: "⏰ منقضی";
+    font-size: 0.7rem;
+    color: #f23c49;
+    padding: 0.2rem 0.6rem;
+    background: rgba(242, 60, 73, 0.15);
+    border-radius: 2rem;
+    white-space: nowrap;
+}
+
+.deadline-timer .counter-box {
+    text-align: center;
+    min-width: 52px;
+}
+
+.deadline-timer .counter-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+    font-family: 'vazir-bold', monospace;
+    color: #fff;
+}
+
+.deadline-timer .counter-label {
+    display: block;
+    font-size: 0.6rem;
+    color: #9691a4;
+    margin-top: 0.1rem;
+}
+
+.deadline-timer .remaining-badge {
+    background: linear-gradient(135deg, #fd5631, #fd5631);
+    padding: 0.25rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #fff;
+    margin-left: 0.25rem;
+    white-space: nowrap;
+    box-shadow: 0 0 8px rgba(253, 86, 49, 0.3);
+}
+
+.deadline-timer.status-green .remaining-badge {
+    background: linear-gradient(135deg, #07c98b, #07c98b);
+}
+
+.deadline-timer.status-yellow .remaining-badge {
+    background: linear-gradient(135deg, #fdbc31, #fdbc31);
+}
+
+.deadline-timer.status-red .remaining-badge {
+    background: linear-gradient(135deg, #f23c49, #f23c49);
+}
+
+.deadline-timer.expired .remaining-badge {
+    display: none;
+}

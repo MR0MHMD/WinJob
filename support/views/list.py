@@ -508,7 +508,7 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
         ).prefetch_related(
             Prefetch('brief', queryset=ContentOrderDescription.objects.all()),
             Prefetch('files', queryset=ContentOrderFile.objects.all()),
-            Prefetch('delivery', queryset=ContentDelivery.objects.all()),
+            Prefetch('deliveries', queryset=ContentDelivery.objects.all()),
         )
 
         team_id = self.request.GET.get('team')
@@ -521,8 +521,10 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
                 Q(campaign__name__icontains=search) |
                 Q(campaign__advertiser__business_name__icontains=search) |
                 Q(campaign__advertiser__user__phone_number__icontains=search) |
+                Q(campaign__advertiser__user__nickname__icontains=search) |
                 Q(team__name__icontains=search) |
-                Q(plan__name__icontains=search)
+                Q(plan__name__icontains=search) |
+                Q(plan__service_type__name__icontains=search)
             )
 
         status = self.request.GET.get('status')
@@ -567,6 +569,10 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
         context['in_progress_count'] = base_qs.filter(status='in_progress').count()
         context['completed_count'] = base_qs.filter(status='completed').count()
         context['cancelled_count'] = base_qs.filter(status='cancelled').count()
+
+        context['review_pending_count'] = base_qs.filter(status='review_pending').count()
+        context['done_count'] = base_qs.filter(status='done').count()
+
         context['current_status'] = self.request.GET.get('status', '')
         context['current_team'] = self.request.GET.get('team', '')
         context['current_search'] = self.request.GET.get('q', '')
@@ -585,7 +591,6 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
                 pass
 
         return context
-
 
 class NotificationListView(SupportRequiredMixin, ListView):
     """لیست نوتیفیکیشن‌ها با فیلترهای پیشرفته"""

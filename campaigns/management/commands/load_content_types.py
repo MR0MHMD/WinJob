@@ -1,7 +1,6 @@
-# commands/create_content_types.py
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from campaigns.models import ContentType  # یا هر جای دیگه که مدلت هست
+from campaigns.models import ContentType
 from plat_form.models import Platform
 
 

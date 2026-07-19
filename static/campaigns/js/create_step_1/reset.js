@@ -1,17 +1,15 @@
 "use strict";
 
 window.resetServiceType = function () {
-    var dom = CampaignDOM;
+    const dom = CampaignDOM;
     if (!dom.serviceSelect) return;
     dom.serviceSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
     if (dom.serviceCards) dom.serviceCards.innerHTML = "";
     dom.serviceWrapper.style.display = "none";
-    dom.minutesWrapper.style.display = "none";
-    if (dom.minutesInput) dom.minutesInput.value = "";
 };
 
 window.resetAdType = function () {
-    var dom = CampaignDOM;
+    const dom = CampaignDOM;
     dom.adTypeSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
     dom.adTypeSelect.disabled = true;
     if (dom.adCards) dom.adCards.innerHTML = "";
@@ -21,11 +19,10 @@ window.resetAdType = function () {
 };
 
 window.resetContentType = function () {
-    var dom = CampaignDOM;
+    const dom = CampaignDOM;
     dom.contentTypeSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
     dom.contentTypeSelect.disabled = true;
     if (dom.contentCards) dom.contentCards.innerHTML = "";
     dom.contentHint.textContent = "ابتدا نوع تبلیغ را انتخاب کنید";
     dom.contentHint.style.display = "block";
-    // ❗ دیگه resetAdType صدا زده نمی‌شه
 };

@@ -28,7 +28,7 @@
                         <h1 class="spm-title mb-1">{{ service_type.name }}</h1>
                         <p class="text-muted mb-0 small">
                             <i class="fi-clock me-1"></i>
-                            واحد: {{ service_type.get_unit_display }}
+                            واحدهای مجاز: {{ service_type.get_allowed_units_display }}
                         </p>
                     </div>
                 </div>
@@ -58,7 +58,6 @@
                          data-edit-url="{% url 'content_team:edit_plan' plan.id %}"
                          data-delete-url="{% url 'content_team:delete_plan' plan.id %}">
 
-                        <!-- وضعیت فعال / غیرفعال -->
                         <div class="spm-plan-status-badge {% if plan.is_active %}active{% else %}inactive{% endif %}">
                             {% if plan.is_active %}
                                 <i class="fi-check-circle"></i> فعال
@@ -67,22 +66,39 @@
                             {% endif %}
                         </div>
 
-                        <!-- عنوان و قیمت -->
                         <div class="spm-plan-header">
                             <h3 class="spm-plan-name">{{ plan.name }}</h3>
                             <div class="spm-plan-price">
-                                <span class="price-amount">{{ plan.price_per_unit|floatformat:0 }}</span>
+                                <span class="price-amount">{{ plan.price|floatformat:0 }}</span>
                                 <span class="price-unit">تومان</span>
-                                <small class="price-per">/ {{ service_type.get_unit_display }}</small>
                             </div>
                         </div>
 
-                        <!-- توضیحات (اختیاری) -->
+                        <div class="spm-plan-meta">
+                            <div class="meta-item">
+                                <i class="fi-hashtag"></i>
+                                <span>واحد: <strong>{{ plan.get_pricing_unit_display }}</strong></span>
+                            </div>
+                            {% if plan.base_quantity %} 
+                                <div class="meta-item">
+                                    <i class="fi-grid"></i>
+                                    <span>پایه: <strong>{{ plan.base_quantity }}</strong></span>
+                                </div>
+                            {% endif %}
+                            <div class="meta-item">
+                                <i class="fi-arrows-sort"></i>
+                                <span>محدوده: <strong>{{ plan.quantity_display }}</strong></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fi-package"></i>
+                                <span>تحویل: <strong>{{ plan.delivery_type_display }}</strong></span>
+                            </div>
+                        </div>
+
                         {% if plan.description %}
-                            <p class="spm-plan-description">{{ plan.description|truncatewords:25 }}</p>
+                            <p class="spm-plan-description mt-3">{{ plan.description|truncatewords:25 }}</p>
                         {% endif %}
 
-                        <!-- لیست ویژگی‌ها -->
                         {% if plan.features %}
                             <div class="spm-plan-features">
                                 <div class="features-title">
@@ -97,13 +113,11 @@
                             </div>
                         {% endif %}
 
-                        <!-- زمان تحویل -->
                         <div class="spm-plan-delivery">
                             <i class="fi-clock"></i>
                             <span>تحویل در <strong>{{ plan.estimated_delivery_days }}</strong> روز کاری</span>
                         </div>
 
-                        <!-- دکمه‌های عملیات -->
                         <div class="spm-plan-actions">
                             <button class="spm-action-btn edit-plan" onclick="editPlan(this)" title="ویرایش">
                                 <i class="fi-edit"></i>
@@ -116,7 +130,6 @@
                 {% endfor %}
             </div>
         {% else %}
-            <!-- حالت خالی: هیچ پلنی وجود ندارد -->
             <div class="spm-empty-state">
                 <div class="spm-empty-icon">
                     <i class="bi bi-tags"></i>
@@ -132,7 +145,6 @@
             </div>
         {% endif %}
 
-        <!-- هشدار رسیدن به حداکثر تعداد پلن فعال -->
         {% if not can_add_plan and plans %}
             <div class="spm-warning-box mt-4">
                 <i class="fi-alert-triangle"></i>
@@ -164,9 +176,10 @@
                         <div class="row g-4">
                             <!-- نام پلن -->
                             <div class="col-12">
-                                <label for="planName" class="form-label text-white">نام پلن <span class="text-danger">*</span></label>
+                                <label for="planName" class="form-label text-white">نام پلن <span
+                                        class="text-danger">*</span></label>
                                 <input type="text" class="spm-form-control" id="planName" name="name" required
-                                       placeholder="مثال: پلن اقتصادی - دو دوربین">
+                                       placeholder="مثال: موشن ساده ۲۰ ثانیه">
                             </div>
 
                             <!-- توضیحات -->
@@ -176,11 +189,75 @@
                                           placeholder="توضیح کامل این پلن..."></textarea>
                             </div>
 
-                            <!-- قیمت (با کاماگذاری خودکار) -->
+                            <!-- ========== واحد قیمت‌گذاری ========== -->
                             <div class="col-md-6">
-                                <label for="planPrice" class="form-label text-white">قیمت (تومان) <span class="text-danger">*</span></label>
+                                <label for="pricingUnit" class="form-label text-white">واحد قیمت‌گذاری <span
+                                        class="text-danger">*</span></label>
+                                <select class="spm-form-control" id="pricingUnit" name="pricing_unit" required>
+                                    <option value="">انتخاب کنید...</option>
+                                    <option value="second">ثانیه</option>
+                                    <option value="minute">دقیقه</option>
+                                    <option value="quantity">تعدادی</option>
+                                </select>
+                                <small class="text-muted d-block mt-1" id="pricingUnitHelp">
+                                    <i class="fi-info-circle me-1"></i>
+                                    واحدهای مجاز برای این سرویس: {{ service_type.get_allowed_units_display }}
+                                </small>
+                            </div>
+
+                            <!-- ========== قیمت نهایی ========== -->
+                            <div class="col-md-6">
+                                <label for="planPrice" class="form-label text-white">قیمت نهایی (تومان) <span
+                                        class="text-danger">*</span></label>
                                 <input type="text" inputmode="numeric" class="spm-form-control" id="planPrice"
-                                       name="price_per_unit" required placeholder="مثلاً ۲,۵۰۰,۰۰۰">
+                                       name="price" required placeholder="مثلاً ۲۵۰,۰۰۰">
+                            </div>
+
+                            <!-- ========== مقدار پایه ========== -->
+                            <div class="col-md-4">
+                                <label for="baseQuantity" class="form-label text-white">مقدار پایه <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="spm-form-control" id="baseQuantity"
+                                       name="base_quantity" value="1" min="1" required>
+                                <small class="text-muted">مقدار اصلی پلن (مثلاً ۲۰ ثانیه)</small>
+                            </div>
+
+                            <!-- ========== حداقل مقدار ========== -->
+                            <div class="col-md-4">
+                                <label for="minQuantity" class="form-label text-white">حداقل مقدار <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="spm-form-control" id="minQuantity"
+                                       name="min_quantity" value="1" min="1" required>
+                                <small class="text-muted">حداقل مقداری که پلن پوشش میده</small>
+                            </div>
+
+                            <!-- ========== حداکثر مقدار ========== -->
+                            <div class="col-md-4">
+                                <label for="maxQuantity" class="form-label text-white">حداکثر مقدار</label>
+                                <input type="number" class="spm-form-control" id="maxQuantity"
+                                       name="max_quantity" min="1" placeholder="اختیاری">
+                                <small class="text-muted">حداکثر مقدار (اختیاری)</small>
+                            </div>
+
+                            <!-- ========== نوع تحویل ========== -->
+                            <div class="col-md-6">
+                                <label for="deliveryType" class="form-label text-white">نوع تحویل <span
+                                        class="text-danger">*</span></label>
+                                <select class="spm-form-control" id="deliveryType" name="delivery_type" required>
+                                    <!-- گزینه‌ها توسط JS پر می‌شوند -->
+                                </select>
+                                <small class="text-muted d-block mt-1" id="deliveryTypeHelp">
+                                    ابتدا واحد قیمت‌گذاری را انتخاب کنید.
+                                </small>
+                            </div>
+
+                            <!-- ========== تعداد گزینه های تحویلی ========== -->
+                            <div class="col-md-6" id="deliveryOptionsWrapper" style="display:none;">
+                                <label for="deliveryOptionsCount" class="form-label text-white">تعداد گزینه های
+                                    تحویلی</label>
+                                <input type="number" class="spm-form-control" id="deliveryOptionsCount"
+                                       name="delivery_options_count" min="2" placeholder="مثلاً ۳">
+                                <small class="text-muted">برای نوع "چند گزینه برای انتخاب"</small>
                             </div>
 
                             <!-- مدت تحویل -->
@@ -190,12 +267,13 @@
                                        name="estimated_delivery_days" value="5" min="1">
                             </div>
 
-                            <!-- ویژگی‌های پلن (داینامیک) -->
+                            <!-- ویژگی‌های پلن -->
                             <div class="col-12">
-                                <label for="featuer_input" class="form-label text-white">ویژگی‌های پلن</label>
+                                <label class="form-label text-white">ویژگی‌های پلن</label>
                                 <div id="featuresContainer" class="spm-features-container">
                                     <div class="spm-feature-item">
-                                        <input id="featuer_input" type="text" class="spm-feature-input" placeholder="مثال: ۲ دوربین 4K">
+                                        <label for="text" class="d-none"></label>
+                                        <input type="text" id="text" class="spm-feature-input" placeholder="مثال: ۲ دوربین 4K">
                                         <button type="button" class="remove-feature" onclick="removeFeature(this)">
                                             <i class="fi-trash"></i>
                                         </button>
@@ -209,7 +287,8 @@
                             <!-- وضعیت فعال/غیرفعال -->
                             <div class="col-12">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="planActive" name="is_active" checked>
+                                    <input class="form-check-input" type="checkbox" id="planActive" name="is_active"
+                                           checked>
                                     <label class="form-check-label text-white" for="planActive">فعال بودن پلن</label>
                                 </div>
                             </div>
@@ -245,7 +324,8 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-center gap-3">
                     <button type="button" class="spm-btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                    <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn" style="border-radius: 40px;">
+                    <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn"
+                            style="border-radius: 40px;">
                         <i class="fi-trash me-1"></i>
                         حذف کن
                     </button>
@@ -256,5 +336,15 @@
 {% endblock %}
 
 {% block script %}
-    <script src="{% static 'content_team/js/pages/service_plans_management.js' %}"></script>
+    <!-- ========== فایل‌های JS ========== -->
+    <script src="{% static 'content_team/js/pages/service_plans_management/service_plans_helpers.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/service_plans_management/service_plans_init.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/service_plans_management/service_plans_modal.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/service_plans_management/service_plans_management.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/service_plans_management/service_plans_main.js' %}"></script>
+
+    <script>
+        window.ALLOWED_UNITS = {{ service_type.allowed_units|safe }};
+        window.SERVICE_TYPE_NAME = "{{ service_type.name }}";
+    </script>
 {% endblock %}

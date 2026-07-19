@@ -200,50 +200,101 @@
         if (plansContainer) plansContainer.innerHTML = '';
 
         plans.forEach((plan, idx) => {
-            const isPopular = (plans.length === 3 && idx === 1);
+            const isPopular = plan.is_most_popular || false;
+
+            // ========== تشخیص نوع واحد ==========
+            const isTimeUnit = (plan.pricing_unit === 'second' || plan.pricing_unit === 'minute');
+            const isQuantityUnit = (plan.pricing_unit === 'quantity');
+
+            // محدوده برای SECOND/MINUTE
+            const hasRange = isTimeUnit && plan.min_quantity && plan.max_quantity &&
+                plan.min_quantity !== plan.max_quantity;
+
+            // ========== ✅ نمایش تعداد برای QUANTITY (از delivery_options_count) ==========
+            let quantityDisplay = '';
+            if (isQuantityUnit && plan.delivery_options_count) {
+                quantityDisplay = `${plan.delivery_options_count} گزینه`;
+            }
+
+            // محدوده نمایشی برای SECOND/MINUTE
+            let rangeDisplay = '';
+            if (hasRange) {
+                rangeDisplay = plan.quantity_display || '';
+            } else if (isTimeUnit && plan.base_quantity) {
+                const unitLabels = {
+                    'second': 'ثانیه',
+                    'minute': 'دقیقه',
+                    'quantity': 'عدد'
+                };
+                const unit = unitLabels[plan.pricing_unit] || '';
+                rangeDisplay = `${plan.base_quantity} ${unit}`;
+            }
+
             const col = document.createElement('div');
             const currentPage = new URLSearchParams(window.location.search).get('page') || '1';
             col.className = 'col-md-6 col-lg-4 mb-4';
             col.innerHTML = `
-                <div class="plan-card ${isPopular ? 'plan-card-popular' : ''}" data-plan-id="${plan.id}">
-                    <div class="plan-selection-indicator">
-                        <i class="fi-check-circle selected-icon"></i>
-                        <i class="fi-circle unselected-icon"></i>
-                    </div>
-                    ${isPopular ? '<div class="popular-badge">⭐ پرطرفدار</div>' : ''}
-                    <div class="plan-preview">
-                        <div class="plan-preview-icon">
-                            <i class="${plan.service_type_icon || 'fi-star'}"></i>
-                        </div>
-                    </div>
-                    <div class="plan-header">
-                        <h4 class="plan-name">${escapeHtml(plan.name)}</h4>
-                        <div class="plan-price">
-                            <span class="price-number">${formatPrice(plan.price)}</span>
-                            ${plan.price_per_unit && window.CONTENT_MINUTES ?
-                `<span class="price-unit">(${formatPrice(plan.price_per_unit)} هر دقیقه)</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="plan-body">
-                        <p class="plan-description">${escapeHtml(plan.description) || 'توضیحاتی ثبت نشده است.'}</p>
-                        ${plan.features && plan.features.length ? `
-                            <div class="plan-features">
-                                <div class="fw-semibold text-light mb-1">✨ ویژگی‌ها:</div>
-                                <ul>
-                                    ${plan.features.slice(0, 3).map(f => `<li><i class="fi-check-circle text-success me-1"></i> ${escapeHtml(f)}</li>`).join('')}
-                                    ${plan.features.length > 3 ? `<li class="text-secondary">...</li>` : ''}
-                                </ul>
-                            </div>
-                        ` : ''}
-                        <div class="plan-delivery">
-                            <i class="fi-clock text-primary"></i> <span>تحویل: ${plan.delivery_days} روز کاری</span>
-                        </div>
-                    </div>
-                    <div class="plan-footer text-center">
-                        <a href="/content_team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
+            <div class="plan-card ${isPopular ? 'plan-card-popular' : ''}" data-plan-id="${plan.id}">
+                <div class="plan-selection-indicator">
+                    <i class="fi-check-circle selected-icon"></i>
+                    <i class="fi-circle unselected-icon"></i>
+                </div>
+                ${isPopular ? '<div class="popular-badge">⭐ محبوب‌ترین</div>' : ''}
+                <div class="plan-preview">
+                    <div class="plan-preview-icon">
+                        <i class="${plan.service_type_icon || 'fi-star'}"></i>
                     </div>
                 </div>
-            `;
+                <div class="plan-header">
+                    <h4 class="plan-name">${escapeHtml(plan.name)}</h4>
+                    <div class="plan-price">
+                        <span class="price-number">${formatPrice(plan.price)}</span>
+                    </div>
+                    
+                    <!-- ========== ✅ نمایش محدوده یا تعداد گزینه‌ها ========== -->
+                    ${(rangeDisplay || quantityDisplay) ? `
+                        <div class="plan-range mt-1">
+                            <span class="badge bg-faded-light">
+                                ${escapeHtml(rangeDisplay || quantityDisplay)}
+                            </span>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- ========== ✅ میانگین امتیاز ========== -->
+                    <div class="plan-rating mt-1">
+                        ${plan.avg_rating ? `
+                            <span class="badge bg-warning bg-opacity-10 text-warning">
+                                <i class="fi-star-filled me-1"></i> ${plan.avg_rating}
+                            </span>
+                        ` : `
+                            <span class="badge bg-secondary bg-opacity-10 text-muted">
+                                <i class="fi-star me-1"></i> بدون امتیاز
+                            </span>
+                        `}
+                    </div>
+                </div>
+                <div class="plan-body">
+                    <p class="plan-description">${escapeHtml(plan.description) || 'توضیحاتی ثبت نشده است.'}</p>
+                    ${plan.features && plan.features.length ? `
+                        <div class="plan-features">
+                            <div class="fw-semibold text-light mb-1">✨ ویژگی‌ها:</div>
+                            <ul>
+                                ${plan.features.slice(0, 3).map(f => `<li><i class="fi-check-circle text-success me-1"></i> ${escapeHtml(f)}</li>`).join('')}
+                                ${plan.features.length > 3 ? `<li class="text-secondary">...</li>` : ''}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    <div class="plan-delivery">
+                        <i class="fi-clock text-primary"></i> <span>تحویل: ${plan.delivery_days} روز کاری</span>
+                        <span class="mx-1 text-muted">•</span>
+                        <span class="text-muted">${escapeHtml(plan.delivery_type_display || '')}</span>
+                    </div>
+                </div>
+                <div class="plan-footer text-center">
+                    <a href="/content_team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
+                </div>
+            </div>
+        `;
             if (plansContainer) plansContainer.appendChild(col);
         });
 
@@ -252,7 +303,6 @@
             plansSection.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
 
-        // افزودن رویداد کلیک به کارت‌های پلن
         document.querySelectorAll('.plan-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.btn-view-profile')) return;

@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from plat_form.models import Platform
 
-
 PLATFORMS = [
     {
         "name": "بله",

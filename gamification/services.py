@@ -58,18 +58,21 @@ def _evaluate_badge_and_reward(score_obj):
     """
     current_points = score_obj.points
 
+    # فقط نشان‌های فعال رو بگیر و بر اساس min_points مرتب کن
     badges = list(Badge.objects.filter(is_active=True).order_by('min_points'))
 
     if not badges:
         return
 
-    new_badge = badges[0]
-
+    new_badge = None
     for badge in badges:
         if current_points >= badge.min_points:
             new_badge = badge
         else:
             break
+
+    if new_badge is None:
+        new_badge = badges[0]
 
     if score_obj.badge and score_obj.badge.id == new_badge.id:
         return

@@ -4,7 +4,7 @@ from .views import *
 app_name = 'campaigns'
 
 urlpatterns = [
-    # views
+    # view
     path('campaign_create_step1', campaign_create_step1, name='campaign_create_step1'),
     path('campaign_edit/<int:campaign_id>/step1/', campaign_create_step1, name='campaign_edit_step1'),
     path('campaign_create_step2', campaign_create_step2, name='campaign_create_step2'),

@@ -14,18 +14,25 @@ class ContentServicePlanInline(admin.TabularInline):
     fields = (
         "service_type",
         "name",
-        "price_per_unit",
+        "pricing_unit",           # ← جدید (جایگزین price_per_unit)
+        "base_quantity",          # ← جدید
+        "price",                  # ← جدید (جایگزین price_per_unit)
+        "delivery_type",          # ← جدید
         "estimated_delivery_days",
         "is_active",
         "formated_created_at",
     )
-    readonly_fields = ("service_type",
-                       "name",
-                       "price_per_unit",
-                       "estimated_delivery_days",
-                       "is_active",
-                       "formated_created_at",
-   )
+    readonly_fields = (
+        "service_type",
+        "name",
+        "pricing_unit",           # ← جدید
+        "base_quantity",          # ← جدید
+        "price",                  # ← جدید
+        "delivery_type",          # ← جدید
+        "estimated_delivery_days",
+        "is_active",
+        "formated_created_at",
+    )
     classes = ['collapse']
 
     def formated_created_at(self, obj):
@@ -148,3 +155,28 @@ class ContentPortfolioInline(admin.TabularInline):
     media_preview.short_description = _("پیش‌نمایش")
 
     classes = ['collapse']
+
+
+class ContentDeliveryFileInline(admin.TabularInline):
+    """فایل‌های یک تحویل"""
+    model = ContentDeliveryFile
+    extra = 0
+    fields = (
+        "file",
+        "file_name",
+        "file_size_display",
+        "is_option",
+        "option_number",
+        "created_at",
+    )
+    readonly_fields = (
+        "file_name",
+        "file_size_display",
+        "created_at",
+    )
+    classes = ['collapse']
+
+    def file_size_display(self, obj):
+        return obj.file_size_display
+
+    file_size_display.short_description = _("حجم فایل")

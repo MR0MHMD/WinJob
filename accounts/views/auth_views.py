@@ -1,3 +1,4 @@
+from ..utils.otp_utils import handle_password_login, handle_ajax_login
 from ..services.otp_service import OTPGhasedakService
 from ..forms import LoginForm, RegistrationForm
 from django.shortcuts import render, redirect
@@ -5,10 +6,7 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.utils import timezone
 from ..models import OTPRequest
-from ..utils.otp_utils import (
-    handle_password_login,
-    handle_ajax_login,
-)
+
 
 
 def register_view(request):

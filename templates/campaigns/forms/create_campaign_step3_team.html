@@ -12,6 +12,91 @@
     <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/forms-upload.css' %}">
 {% endblock %}
 
+{% block extra_style %}
+    <style>
+    /* ========================================
+   Plan Range & Rating (اضافه شده)
+======================================== */
+.plan-range {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.plan-range .badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: #9691a4;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.plan-rating {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.2rem;
+}
+
+.plan-rating .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.7rem;
+}
+
+.plan-rating .badge i {
+    font-size: 0.6rem;
+}
+
+/* ========================================
+   Plan Price & Header Improvements
+======================================== */
+.plan-header {
+    padding: 0 1.2rem;
+    text-align: center;
+}
+
+.plan-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.15rem;
+}
+
+.plan-price {
+    margin-top: 0.1rem;
+}
+
+.price-number {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fd5631;
+}
+
+/* ========================================
+   Plan Delivery (با اطلاعات جدید)
+======================================== */
+.plan-delivery {
+    margin-top: 0.7rem;
+    font-size: 0.7rem;
+    color: #9691a4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.plan-delivery i {
+    color: #fd5631;
+    font-size: 0.8rem;
+}
+
+.plan-delivery .text-muted {
+    color: #7a6e9e;
+}
+    </style>
+{% endblock %}
+
 {% block content %}
     <div class="container mt-4 pb-5" dir="rtl">
         {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
@@ -47,13 +132,13 @@
                         </div>
                     </div>
                 {% endif %}
+
                 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                     <div>
                         <h5 class="text-light fw-bold mb-1">انتخاب تیم تولید محتوا</h5>
                         <p class="text-secondary small mb-0">
                             تیم‌های فعال برای
                             <span class="badge ms-1 service-badge">{{ service_type.name }}</span>
-                            {% if minutes %}<span class="badge ms-1 minutes-badge">{{ minutes }} دقیقه</span>{% endif %}
                         </p>
                     </div>
                     <div class="text-secondary small text-start">
@@ -91,8 +176,7 @@
                                                         {% else %}
                                                             <div class="rounded-circle d-flex align-items-center justify-content-center"
                                                                  style="width: 34px; height: 34px; background-color: #6c757d;">
-                                                                <i class="fi-award text-white"
-                                                                   style="font-size: 1rem;"></i>
+                                                                <i class="fi-award text-white" style="font-size: 1rem;"></i>
                                                             </div>
                                                         {% endif %}
                                                     </div>
@@ -187,8 +271,7 @@
                                     <label class="form-label text-light fw-semibold required-field">متن تبلیغ</label>
                                     {{ brief_form.ad_caption }}
                                     <div class="d-flex justify-content-between align-items-center mt-1">
-                                        <small class="text-secondary">متن تبلیغی که در پست اینفلوئنسر منتشر
-                                            می‌شود.</small>
+                                        <small class="text-secondary">متن تبلیغی که در پست اینفلوئنسر منتشر می‌شود.</small>
                                         <small class="char-counter" id="ad-caption-counter">حداقل ۱۰ کاراکتر</small>
                                     </div>
                                 </div>
@@ -199,8 +282,7 @@
                                         <small class="text-secondary">
                                             <i class="bi bi-info-circle-fill"></i> لینکی که کاربران پس از کلیک روی تبلیغ
                                             به آن هدایت می‌شوند.
-                                            <strong class="text-warning">این لینک برای رهگیری کلیک‌ها الزامی
-                                                است.</strong>
+                                            <strong class="text-warning">این لینک برای رهگیری کلیک‌ها الزامی است.</strong>
                                         </small>
                                         <small class="char-counter" id="ad-link-counter"></small>
                                     </div>
@@ -222,8 +304,7 @@
                                 <span class="badge bg-secondary rounded-pill">اطلاعات داخلی</span>
                             </div>
                             <p class="text-secondary small mb-3">
-                                اطلاعات زیر فقط برای تیم تولید محتوا نمایش داده می‌شود و در محتوای نهایی کمپین استفاده
-                                نمی‌شود.
+                                اطلاعات زیر فقط برای تیم تولید محتوا نمایش داده می‌شود و در محتوای نهایی کمپین استفاده نمی‌شود.
                             </p>
                             <div class="description-body">
                                 <div class="row g-3">
@@ -276,8 +357,7 @@
                                         <span class="text-danger">*</span>
                                         {{ brief_form.description }}
                                         <div class="d-flex justify-content-between mt-2">
-                                            <small class="min-char-warning" id="min-char-warning">حداقل ۵۰ کاراکتر لازم
-                                                است</small>
+                                            <small class="min-char-warning" id="min-char-warning">حداقل ۵۰ کاراکتر لازم است</small>
                                             <small><span id="char-count">۰</span> / ۵۰</small>
                                         </div>
                                     </div>
@@ -321,10 +401,10 @@
                                                         <td class="text-secondary">{{ file.mime_type }}</td>
                                                         <td class="text-info">{{ file.file_size_display }}</td>
                                                         <td>
-                                                                <span class="text-danger fs-4 remove-existing-file"
-                                                                      data-id="{{ file.id }}">
-                                                                    &times;
-                                                                </span>
+                                                            <span class="text-danger fs-4 remove-existing-file"
+                                                                  data-id="{{ file.id }}">
+                                                                &times;
+                                                            </span>
                                                         </td>
                                                     </tr>
                                                 {% endfor %}
@@ -346,8 +426,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between mt-5">
-                        <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-accent px-4">← مرحله
-                            قبل</a>
+                        <a href="{% url 'campaigns:campaign_create_step2' %}" class="btn btn-accent px-4">← مرحله قبل</a>
                         <button type="submit" id="submit-btn" class="btn btn-primary px-5" disabled>مرحله بعد ←</button>
                     </div>
                 </form>
@@ -362,10 +441,9 @@
                         <div class="text-secondary small mb-0">هزینه تولید محتوا</div>
                         <div class="total-price-display" id="total-price-display">۰ تومان</div>
                     </div>
-                    
+
                     <!-- ========== فقط در حالت جایگزینی ========== -->
                     {% if is_replacement_mode %}
-                        <!-- نمایش مابه‌التفاوت حق العمل -->
                         <div id="commission-diff-display" style="display: none;">
                             <div class="text-secondary small mb-0">مابه‌التفاوت حق العمل</div>
                             <div class="text-warning" id="commission-diff-amount">۰ تومان</div>
@@ -382,7 +460,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- برای ذخیره هزینه ناشران و هزینه قدیم تیم محتوا -->
     <input type="hidden" id="influencer-total-cost" data-cost="{{ influencer_cost|default:0 }}">
     <input type="hidden" id="old-content-cost" data-cost="{{ old_content_cost|default:0 }}">
@@ -424,7 +502,7 @@
 {% block script %}
     {{ block.super }}
     <script>
-        window.CONTENT_MINUTES = {% if minutes %}{{ minutes }}{% else %}0{% endif %};
+        window.CONTENT_MINUTES = 0;
         window.PRESELECT_PLAN_ID = {{ preselect_plan_id|default:'null' }};
         window.PRESELECT_TEAM_ID = {{ preselect_team_id|default:'null' }};
         window.IS_REPLACEMENT_MODE = {{ is_replacement_mode|yesno:"true,false" }};

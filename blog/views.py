@@ -80,4 +80,3 @@ def person_posts(request, id):
     }
 
     return render(request, 'blog/pages/person_posts.html', context)
-

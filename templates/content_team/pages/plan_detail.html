@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-    {{ plan.name }} {{ plan.team.name }}
+    {{ plan.name }} - {{ plan.team.name }}
 {% endblock %}
 
 {% block extra_style %}
@@ -30,6 +30,9 @@
                             <span class="text-primary fs-5"><a href="{% url 'content_team:team_detail' team.slug %}" class="text-decoration-none">{{ team.name }}</a></span>
                             <span class="text-muted">•</span>
                             <span class="text-light-50">{{ plan.service_type.name }}</span>
+                            {% if is_most_popular %}
+                                <span class="badge bg-warning text-dark">⭐ محبوب‌ترین</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -42,18 +45,20 @@
                             <i class="fi-check-circle me-1 text-success"></i> {{ completed_orders_count }} سفارش موفق
                         </div>
                         <div class="stars">
-                            {% with avg=team.avg_rating|default:0 %}
+                            {% if avg_rating %}
                                 {% for i in "12345" %}
-                                    {% if forloop.counter <= avg %}
+                                    {% if forloop.counter <= avg_rating %}
                                         <i class="fi-star-filled text-warning"></i>
-                                    {% elif forloop.counter <= avg|add:0.5 %}
+                                    {% elif forloop.counter <= avg_rating|add:0.5 %}
                                         <i class="fi-star-half text-warning"></i>
                                     {% else %}
                                         <i class="fi-star text-muted"></i>
                                     {% endif %}
                                 {% endfor %}
-                            {% endwith %}
-                            <span class="text-muted ms-2">({{ reviews.count }})</span>
+                                <span class="text-muted ms-2">({{ reviews_count }})</span>
+                            {% else %}
+                                <span class="text-muted">هنوز امتیازی ثبت نشده</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -62,12 +67,23 @@
                 <div class="glass-premium p-4">
                     <div class="text-muted mb-2 small">قیمت پلن</div>
                     <div class="price-neon">
-                        {{ plan.price_per_unit|floatformat:0|default:"0" }}
+                        {{ plan.price|floatformat:0|default:"0" }}
                         <small class="fs-5 text-white-50">تومان</small>
                     </div>
-                    <div class="small text-muted mb-3">به ازای هر 
-                        {% if plan.service_type.unit == "minute" %}دقیقه{% else %}پروژه{% endif %}
+                    
+                    <!-- ========== ✅ نمایش واحد و مقدار ========== -->
+                    <div class="small text-muted mb-3">
+                        {% if plan.pricing_unit == 'second' %}
+                            به ازای هر {{ plan.base_quantity|default:1 }} ثانیه
+                        {% elif plan.pricing_unit == 'minute' %}
+                            به ازای هر {{ plan.base_quantity|default:1 }} دقیقه
+                        {% elif plan.pricing_unit == 'quantity' %}
+                            برای هر پروژه
+                        {% else %}
+                            {{ plan.get_pricing_unit_display }}
+                        {% endif %}
                     </div>
+                    
                     <div class="d-grid gap-2 mt-3">
                         {% if from_campaign %}
                             <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ plan.id }}&selected_team={{ team.id }}&page={{ page }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
@@ -86,16 +102,24 @@
                         {% endif %}
                     </div>
                     <hr class="opacity-25 my-3">
+                    
+                    <!-- ========== ✅ آمار پلن (جایگزین اعضای تیم) ========== -->
                     <div class="row text-center">
                         <div class="col-6">
                             <i class="fi-check-circle text-success fs-4"></i>
-                            <div class="stat-value">{{ team.avg_rating|default:"جدید" }}</div>
-                            <small class="text-muted">میانگین امتیاز</small>
+                            <div class="stat-value">{{ completed_orders_count|default:0 }}</div>
+                            <small class="text-muted">سفارش موفق</small>
                         </div>
                         <div class="col-6">
-                            <i class="fi-users text-primary fs-4"></i>
-                            <div class="stat-value">{{ team.members_count }}</div>
-                            <small class="text-muted">اعضای تیم</small>
+                            <i class="fi-star-filled text-warning fs-4"></i>
+                            <div class="stat-value">
+                                {% if avg_rating %}
+                                    {{ avg_rating|floatformat:1 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">میانگین امتیاز</small>
                         </div>
                     </div>
                 </div>
@@ -110,7 +134,74 @@
             <div class="glass-premium p-4 p-lg-5 mb-5 slide-left delay-2">
                 <h3 class="h3 text-white mb-3"><i class="fi-info-circle text-primary me-2"></i> توضیحات کامل پلن</h3>
                 <div class="text-light opacity-75 lh-lg" style="text-align: justify; line-height: 1.8;">
-                    {{ plan.description|linebreaksbr|safe }}
+                    {{ plan.description|linebreaksbr|safe|default:"توضیحاتی برای این پلن ثبت نشده است." }}
+                </div>
+            </div>
+
+            <!-- ========== ✅ اطلاعات تکمیلی پلن ========== -->
+            <div class="glass-premium p-4 mb-5 slide-left delay-2">
+                <h3 class="h3 text-white mb-4"><i class="fi-settings text-primary me-2"></i> مشخصات فنی پلن</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-faded-dark">
+                            <div class="text-muted small mb-1">واحد قیمت‌گذاری</div>
+                            <div class="text-light fw-semibold">{{ plan.get_pricing_unit_display }}</div>
+                        </div>
+                    </div>
+                    {% if plan.pricing_unit == 'second' or plan.pricing_unit == 'minute' %}
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 bg-faded-dark">
+                                <div class="text-muted small mb-1">مقدار پایه</div>
+                                <div class="text-light fw-semibold">{{ plan.base_quantity|default:"-" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 bg-faded-dark">
+                                <div class="text-muted small mb-1">حداقل مقدار</div>
+                                <div class="text-light fw-semibold">{{ plan.min_quantity|default:"-" }}</div>
+                            </div>
+                        </div>
+                        {% if plan.max_quantity %}
+                            <div class="col-md-6">
+                                <div class="p-3 rounded-3 bg-faded-dark">
+                                    <div class="text-muted small mb-1">حداکثر مقدار</div>
+                                    <div class="text-light fw-semibold">{{ plan.max_quantity }}</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-faded-dark">
+                            <div class="text-muted small mb-1">نوع تحویل</div>
+                            <div class="text-light fw-semibold">{{ plan.delivery_type_display|safe }}</div>
+                        </div>
+                    </div>
+                    {% if plan.delivery_options_count %}
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 bg-faded-dark">
+                                <div class="text-muted small mb-1">تعداد گزینه‌های تحویلی</div>
+                                <div class="text-light fw-semibold">{{ plan.delivery_options_count }} گزینه</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-faded-dark">
+                            <div class="text-muted small mb-1">مدت آماده‌سازی</div>
+                            <div class="text-light fw-semibold">{{ plan.estimated_delivery_days }} روز کاری</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-faded-dark">
+                            <div class="text-muted small mb-1">وضعیت</div>
+                            <div class="text-light fw-semibold">
+                                {% if plan.is_active %}
+                                    <span class="badge bg-success">فعال</span>
+                                {% else %}
+                                    <span class="badge bg-danger">غیرفعال</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -153,37 +244,73 @@
             </div>
             {% endif %}
 
-            <!-- نظرات -->
-            <div id="reviews" class="glass-premium p-4 slide-left delay-4">
-                <h3 class="h3 text-white mb-4"><i class="fi-star-filled text-warning me-2"></i> نظرات تبلیغ‌دهندگان</h3>
-                {% if reviews %}
-                    {% for review in reviews %}
-                    <div class="border-bottom border-light pb-3 mb-3">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <!-- نظرات (فقط نظرات این پلن) -->
+<div id="reviews" class="glass-premium p-4 slide-left delay-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <h3 class="h3 text-white mb-0">
+            <i class="fi-star-filled text-warning me-2"></i> نظرات کاربران درباره این پلن
+            {% if reviews_count %}
+                <span class="badge bg-faded-primary rounded-pill ms-2">{{ reviews_count }}</span>
+            {% endif %}
+        </h3>
+    </div>
+
+    {% if reviews %}
+        <div class="reviews-container-scroll">
+            {% for review in reviews %}
+                <div class="review-card-modern">
+                    <div class="review-header">
+                        <div class="reviewer-info">
+                            <div class="reviewer-avatar">
+                                {% if review.advertiser.user.avatar %}
+                                    <img src="{{ review.advertiser.user.avatar.url }}" alt="{{ review.advertiser.user.nickname }}">
+                                {% else %}
+                                    <i class="fi-user"></i>
+                                {% endif %}
+                            </div>
                             <div>
-                                <span class="fw-bold text-white">{{ review.advertiser.user.nickname }}</span>
-                                <div class="stars mt-1">
-                                    {% for i in "12345" %}
-                                        {% if forloop.counter <= review.rating %}
-                                            <i class="fi-star-filled text-warning"></i>
-                                        {% else %}
-                                            <i class="fi-star text-muted"></i>
-                                        {% endif %}
-                                    {% endfor %}
+                                <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
+                                <div class="reviewer-date">
+                                    <i class="fi-calendar"></i> {{ review.created_at|date:"H:i | Y/m/d" }}
                                 </div>
                             </div>
-                            <span class="text-muted small">{{ review.created_at|date:"Y/m/d" }}</span>
                         </div>
-                        <p class="text-light-75 mt-2 mb-0">{{ review.comment|linebreaksbr }}</p>
+                        <div class="review-rating-stars">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="fi-star-filled"></i>
+                                {% else %}
+                                    <i class="fi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fi-chat-circle fs-1 text-muted"></i>
-                        <p class="text-muted mt-2">هنوز نظری ثبت نشده است.</p>
+
+                    {% if review.comment %}
+                        <p class="review-body">{{ review.comment|linebreaksbr }}</p>
+                    {% endif %}
+
+                    <div class="review-footer">
+                        {% if review.order and review.order.status == 'completed' %}
+                            <i class="fi-check-circle"></i>
+                            <span>همکاری موفق</span>
+                        {% endif %}
                     </div>
-                {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-reviews">
+            <div class="empty-reviews-icon">
+                <i class="fi-chat-circle text-accent"></i>
             </div>
+            <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
+            <p class="text-muted small">
+                اولین نفری باشید که تجربه استفاده از این پلن را به اشتراک می‌گذارید!
+            </p>
+        </div>
+    {% endif %}
+</div>
         </div>
 
         <!-- ستون کناری: خلاصه سریع -->
@@ -191,8 +318,19 @@
             <div class="glass-premium p-4 sticky-lg-top" style="top: 120px;">
                 <div class="text-center mb-4">
                     <div class="badge bg-primary rounded-pill px-3 py-2 mb-3 animate-glow">پلن ویژه</div>
-                    <div class="price-neon fs-1">{{ plan.price_per_unit|floatformat:0 }}</div>
-                    <div class="text-muted">تومان / {% if plan.service_type.unit == "minute" %}دقیقه{% else %}پروژه{% endif %}</div>
+                    <div class="price-neon fs-1">{{ plan.price|floatformat:0 }}</div>
+                    <div class="text-muted">
+                        تومان / 
+                        {% if plan.pricing_unit == 'second' %}
+                            {{ plan.base_quantity|default:1 }} ثانیه
+                        {% elif plan.pricing_unit == 'minute' %}
+                            {{ plan.base_quantity|default:1 }} دقیقه
+                        {% elif plan.pricing_unit == 'quantity' %}
+                            پروژه
+                        {% else %}
+                            {{ plan.get_pricing_unit_display }}
+                        {% endif %}
+                    </div>
                 </div>
                 <hr class="opacity-25">
                 <ul class="list-unstyled mb-4">
@@ -236,7 +374,7 @@
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     fadeElements.forEach(el => observer.observe(el));
 
-    // اسکرول افقی با موس (اختیاری)
+    // اسکرول افقی با موس
     const scrollContainers = document.querySelectorAll('.portfolio-scroll');
     scrollContainers.forEach(container => {
         let isDown = false;

@@ -14,16 +14,28 @@ class GamificationMixin(models.Model):
         برگرداندن اطلاعات سطح با استفاده از مدل Badge (پویا)
         """
         try:
-            score_obj = self.score
-            points = score_obj.points
-            current_badge = score_obj.badge
+            score_obj = getattr(self, 'score', None)
+            if score_obj is None:
+                points = 0
+                current_badge = None
+            else:
+                points = score_obj.points
+                current_badge = score_obj.badge
         except ObjectDoesNotExist:
             points = 0
             current_badge = None
 
-        # اگر سطح فعلی معتبر نیست، از اولین سطح فعال (کمترین min_points) استفاده کن
+        # اگر سطح فعلی معتبر نیست، نشان چوبی رو پیش‌فرض بگیر (نه پلاستیکی!)
         if not current_badge or not current_badge.is_active:
-            current_badge = Badge.objects.filter(is_active=True).order_by('min_points').first()
+            # دنبال نشان چوبی بگرد، اگه نبود اولین نشان فعال رو بگیر
+            current_badge = Badge.objects.filter(
+                is_active=True,
+                slug='wood',
+                order=2
+            ).first()
+
+            if not current_badge:
+                current_badge = Badge.objects.filter(is_active=True).order_by('min_points').first()
 
         # دریافت لیست تمام سطوح فعال (برای پیدا کردن سطح بعدی)
         all_badges = list(Badge.objects.filter(is_active=True).order_by('min_points'))

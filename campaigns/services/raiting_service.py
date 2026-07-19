@@ -1,9 +1,8 @@
-from django.db import transaction
-
-from campaigns.models import CampaignInfluencer
 from content_team.models import TeamReview, ContentOrder
-from gamification.services import update_score
 from influencers.models import InfluencerReview
+from campaigns.models import CampaignInfluencer
+from gamification.services import update_score
+from django.db import transaction
 
 def submit_team_review_service(order, advertiser, rating, comment=""):
     """

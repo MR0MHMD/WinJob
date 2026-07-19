@@ -1194,39 +1194,260 @@
     letter-spacing: 0.3px;
 }
 
-/* ریسپانسیو برای تعداد ستون‌های پلن */
-@media (max-width: 768px) {
-    .pricing-grid-detailed {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* =============================================
    چیدمان هوشمند پلن‌ها
    ============================================= */
-.pricing-grid.plans-count-1 {
+
+/* ---- کارت اصلی پلن ---- */
+.pricing-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1.5rem;
+    padding: 1.75rem 1.25rem;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    min-height: 320px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.pricing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #fd5631, #5d3cf2, transparent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.pricing-card:hover::before {
+    opacity: 1;
+}
+
+.pricing-card:hover {
+    transform: translateY(-10px);
+    border-color: rgba(253,86,49,0.25);
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(253,86,49,0.05);
+}
+
+/* ---- پلن محبوب ---- */
+.pricing-card.most-popular {
+    border-color: rgba(253,86,49,0.35);
+    background: linear-gradient(145deg, rgba(253,86,49,0.08), rgba(93,60,242,0.05));
+    transform: scale(1.02);
+}
+
+.pricing-card.most-popular:hover {
+    transform: scale(1.02) translateY(-10px);
+}
+
+.most-popular-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #fd5631, #fd8a4a);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.3rem 1.2rem;
+    border-radius: 2rem;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(253,86,49,0.35);
+}
+
+/* ---- آیکون پلن ---- */
+.pricing-card-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(253,86,49,0.12);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    font-size: 1.6rem;
+    color: #fd5631;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
 }
 
-.pricing-grid.plans-count-2 {
-    justify-content: space-between;
+.pricing-card:hover .pricing-card-icon {
+    background: rgba(253,86,49,0.2);
+    transform: scale(1.05) rotate(-5deg);
 }
 
-.pricing-grid.plans-count-3 {
-    justify-content: center;
+/* ---- نام پلن ---- */
+.pricing-card-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.3px;
 }
 
-.pricing-grid .pricing-card {
-    flex: 0 1 calc(33.333% - 1rem);
-    max-width: 340px;
-    min-width: 260px;
+/* ---- قیمت ---- */
+.pricing-card-price {
+    margin-bottom: 0.75rem;
 }
 
-/* در موبایل کارت‌ها تمام عرض */
-@media (max-width: 768px) {
-    .pricing-grid .pricing-card {
-        flex: 0 1 100%;
-        max-width: 100%;
+.price-number {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 30%, #fd5631 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.5px;
+}
+
+.price-currency {
+    font-size: 0.85rem;
+    color: #9691a4;
+    margin-right: 0.2rem;
+}
+
+/* ---- محدوده (Range) ---- */
+.pricing-card-range {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover .pricing-card-range {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(253,86,49,0.15);
+}
+
+.range-value {
+    font-weight: 700;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.range-unit {
+    color: #9691a4;
+    font-size: 0.7rem;
+    margin-right: 0.15rem;
+}
+
+.range-separator {
+    color: #5d3cf2;
+    margin: 0 0.3rem;
+    font-weight: 300;
+}
+
+.range-base {
+    color: #7a6e9e;
+    font-size: 0.6rem;
+    margin-right: 0.2rem;
+    opacity: 0.7;
+}
+
+/* ---- نوع تحویل ---- */
+.pricing-card-delivery {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    color: #a89bc2;
+    padding: 0.25rem 0.8rem;
+    border-radius: 2rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover .pricing-card-delivery {
+    background: rgba(253,86,49,0.08);
+    border-color: rgba(253,86,49,0.15);
+    color: #fff;
+}
+
+/* ---- ویژگی پایین کارت ---- */
+.pricing-card-feature {
+    width: 100%;
+    font-size: 0.75rem;
+    color: #9691a4;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    margin-top: auto;
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover .pricing-card-feature {
+    border-color: rgba(253,86,49,0.1);
+}
+
+/* ---- توضیحات ---- */
+.pricing-card .small.text-muted {
+    font-size: 0.7rem !important;
+    line-height: 1.5;
+    color: #7a6e9e !important;
+    margin-top: 0.5rem !important;
+}
+
+/* ---- گرید پلن‌ها ---- */
+.pricing-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.plans-count-1 {
+    grid-template-columns: 1fr;
+    max-width: 380px;
+    margin: 0 auto;
+}
+
+.plans-count-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.plans-count-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* ---- ریسپانسیو ---- */
+@media (max-width: 992px) {
+    .plans-count-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pricing-card.most-popular {
+        transform: scale(1);
+    }
+
+    .pricing-card.most-popular:hover {
+        transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 576px) {
+    .plans-count-2,
+    .plans-count-3 {
+        grid-template-columns: 1fr;
+        max-width: 380px;
+        margin: 0 auto;
+    }
+
+    .price-number {
+        font-size: 1.6rem;
+    }
+
+    .pricing-card {
+        padding: 1.25rem 1rem;
+        min-height: auto;
     }
 }
 
@@ -1342,6 +1563,10 @@
         height: 40px;
         font-size: 1rem;
     }
+
+    .pricing-grid-detailed {
+        grid-template-columns: 1fr;
+    }
 }
 
 .star-rating-input i {
@@ -1353,4 +1578,8 @@
 
 .star-rating-input i.active {
     color: #fdbc31 !important;
+}
+
+.page-wrapper {
+    padding: 0 !important;
 }

@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils.text import slugify
-from core.utils import generate_random_slug
 
 
 class Province(models.Model):

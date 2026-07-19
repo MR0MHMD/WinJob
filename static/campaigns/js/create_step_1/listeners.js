@@ -1,44 +1,40 @@
 "use strict";
 
 window.registerListeners = function () {
-    var dom = CampaignDOM;
+    const dom = CampaignDOM;
 
-    // در registerListeners، لیسنر پلتفرم:
+    // لیسنر پلتفرم
     dom.platformSelect.addEventListener("change", function () {
-        var platformId = this.value;
+        const platformId = this.value;
 
         if (platformId) {
-            // ۱. بروزرسانی گزینه‌های نوع محتوا و نوع تبلیغ
             updateContentType(platformId);
             updateAdType(platformId);
-
-            // ۲. نمایش نوع تبلیغ و مخفی کردن مراحل بعد
             showAdType();
-            hideContentType();   // فقط مخفی می‌کنه، ریست نمی‌کنه
+            hideContentType();
             hideServiceType();
-            hideMinutes();
+            // ❌ حذف hideMinutes
+            // hideMinutes();
             hideDateAndName();
         } else {
-            // اگر پلتفرم خالی شد، همه چیز رو ریست و مخفی کن
             hideAdType();
             hideContentType();
-            // content type رو هم ریست کن چون پلتفرم نداریم
             resetContentType();
             hideServiceType();
-            hideMinutes();
+            // ❌ حذف hideMinutes
+            // hideMinutes();
             hideDateAndName();
         }
 
-        // ریست کردن آفست تاریخ پیش‌فرض
         if (window.CampaignDatepicker) {
             window.CampaignDatepicker.setStartMinDays(2);
         }
         validateForm();
     });
 
-    // ۲. انتخاب نوع تبلیغ
+    // انتخاب نوع تبلیغ
     dom.adTypeSelect.addEventListener("change", function () {
-        var adTypeId = this.value;
+        const adTypeId = this.value;
 
         if (adTypeId) {
             showContentType();
@@ -49,100 +45,113 @@ window.registerListeners = function () {
             hideContentType();
         }
 
-        // مخفی کردن مراحل بعدی
         hideServiceType();
-        hideMinutes();
+        // ❌ حذف hideMinutes
+        // hideMinutes();
         hideDateAndName();
 
         validateForm();
     });
 
-    // ۳. انتخاب نوع محتوا
+    // انتخاب نوع محتوا
     dom.contentTypeSelect.addEventListener("change", function () {
-        var selectedValue = this.value;
-        var meta = CampaignData.CONTENT_TYPE_META[selectedValue];
-        var slug = meta ? meta.slug : null;
+        const selectedValue = this.value;
+        const meta = CampaignData.CONTENT_TYPE_META[selectedValue];
+        const slug = meta ? meta.slug : null;
 
-        // تنظیم محدودیت تاریخ
         if (window.CampaignDatepicker) {
             window.CampaignDatepicker.setStartMinDays(slug === "content-production-team" ? 10 : 2);
         }
 
         if (slug === "content-production-team") {
-            // نمایش خدمات تولید محتوا
             if (dom.adTypeSelect.value) {
                 updateServiceTypes(dom.adTypeSelect.value);
                 showServiceType();
             }
-            hideMinutes();
+            // ❌ حذف hideMinutes
+            // hideMinutes();
             hideDateAndName();
         } else {
-            // محتوای آماده یا هر چیز دیگه
             hideServiceType();
-            hideMinutes();
+            // ❌ حذف hideMinutes
+            // hideMinutes();
             showDateAndName();
         }
 
         validateForm();
     });
 
-    // ۴. انتخاب خدمت تولید محتوا
+    // انتخاب خدمت تولید محتوا
     if (dom.serviceSelect) {
         dom.serviceSelect.addEventListener("change", function () {
-            var selected = this.options[this.selectedIndex];
+            const selected = this.options[this.selectedIndex];
             if (!selected) return;
-            var unit = selected.dataset.unit;
 
-            if (unit === "minute") {
-                showMinutes();
-            } else {
-                hideMinutes();
+            // ❌ حذف منطق unit
+            // var unit = selected.dataset.unit;
+            // if (unit === "minute") {
+            //     showMinutes();
+            // } else {
+            //     hideMinutes();
+            // }
+
+            // ========== نمایش واحدهای مجاز ==========
+            const serviceId = this.value;
+            const serviceInfo = document.getElementById("service-type-info");
+            const unitsDisplay = document.getElementById("service-type-units-display");
+            if (serviceInfo && unitsDisplay) {
+                if (serviceId) {
+                    const meta = CampaignData.SERVICE_TYPE_META[serviceId];
+                    if (meta && meta.allowed_units_display) {
+                        serviceInfo.style.display = "block";
+                        unitsDisplay.textContent = "واحدهای مجاز: " + meta.allowed_units_display;
+                    }
+                } else {
+                    serviceInfo.style.display = "none";
+                }
             }
 
-            // حالا تاریخ و نام رو نشون بده
             showDateAndName();
         });
     }
 
-    var nameInput = document.getElementById("id_name");
-    var minutesInput = document.getElementById("id_minutes");
+    const nameInput = document.getElementById("id_name");
+    // ❌ حذف minutesInput
+    // var minutesInput = document.getElementById("id_minutes");
     if (nameInput) nameInput.addEventListener("input", validateForm);
-    if (minutesInput) minutesInput.addEventListener("input", validateForm);
+    // if (minutesInput) minutesInput.addEventListener("input", validateForm);
 };
 
 if (CampaignDOM.freeCheckbox) {
     CampaignDOM.freeCheckbox.addEventListener('change', function () {
         window.toggleFreeCampaign();
-        // همچنین اگر نوع محتوا قبلاً انتخاب شده بود و اکنون غیرفعال شده، آن را ریست کن
         if (this.checked) {
             const selectedContent = CampaignDOM.contentTypeSelect.value;
             if (selectedContent) {
                 const meta = CampaignData.CONTENT_TYPE_META[selectedContent];
                 if (meta && meta.slug !== "ready-content") {
                     CampaignDOM.contentTypeSelect.value = "";
-                    // حذف کلاس selected از کارت‌ها
                     if (CampaignDOM.contentCards) {
                         CampaignDOM.contentCards.querySelectorAll('.option-card-inner').forEach(c => c.classList.remove('selected'));
                     }
-                    // مخفی کردن سرویس‌ها و دقیقه
                     window.hideServiceType();
-                    window.hideMinutes();
+                    // ❌ حذف hideMinutes
+                    // window.hideMinutes();
                 }
             }
         } else {
-            // وقتی تیک برداشته شد، سرویس‌ها را دوباره بر اساس نوع محتوا نمایش بده
             const selectedContent = CampaignDOM.contentTypeSelect.value;
             if (selectedContent) {
                 const meta = CampaignData.CONTENT_TYPE_META[selectedContent];
                 if (meta && meta.slug === "content-production-team") {
-                    // نمایش سرویس‌ها
-                    if (CampaignDOM.adTypeSelect.value) {
+                    if (CampaignDOM.adTypeSelect && CampaignDOM.adTypeSelect.value) {
                         window.updateServiceTypes(CampaignDOM.adTypeSelect.value);
                         window.showServiceType();
                     }
                 } else {
                     window.hideServiceType();
-                    window.hideMinutes();
+                    // ❌ حذف hideMinutes
+                    // window.hideMinutes();
                 }
             }
         }

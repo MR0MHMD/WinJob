@@ -11,4 +11,5 @@ urlpatterns = [
     path('dashboard/', advertiser_dashboard, name='dashboard'),
     path('campaign/order/<int:order_id>/request-revision/',  request_revision, name='request_revision'),
     path('campaign/order/<int:order_id>/final-accept/', final_accept_order, name='final_accept_order'),
+    path('campaign/select-option/', select_multi_choice_option, name='select_multi_choice_option'),
 ]

@@ -1,19 +1,18 @@
-import uuid
-
-from django.db import transaction
-from django.db import models
-from django.utils import timezone
-from collections import defaultdict
-from django.conf import settings
-from accounts.models import Wallet, Transaction
-from campaigns.services.create_invoice import create_campaign_invoice
-from content_team.models import ContentOrderRevision, ContentDelivery
-from accounts.services.payment_service import pay_influencer
-from influencers.models import CampaignReport
-from campaigns.models import CampaignInfluencer, CampaignContent, Campaign, CampaignTrackingLink
 from campaigns.tasks import penalize_unaccepted_content_orders, auto_approve_campaign_after_rejection
+from campaigns.models import CampaignInfluencer, CampaignContent, Campaign, CampaignTrackingLink
+from content_team.models import ContentOrderRevision, ContentDelivery, ContentOrder
+from campaigns.services.create_invoice import create_campaign_invoice
+from accounts.services.payment_service import pay_influencer
+from accounts.models import Wallet, Transaction
 from gamification.services import update_score
+from influencers.models import CampaignReport
 from notifications.models import Notification
+from collections import defaultdict
+from django.db import transaction
+from django.utils import timezone
+from django.conf import settings
+from django.db import models
+import uuid
 from notifications.utils import (
     notify_advertiser_content_order_accepted,
     notify_advertiser_content_order_rejected,
@@ -41,8 +40,6 @@ def submit_campaign_for_review(campaign):
     """انتقال کمپین از پیش‌نویس به در انتظار تایید پس از پرداخت و اعمال امتیاز های تبلیغ ‌دهنده"""
     if campaign.status == 'draft':
         with transaction.atomic():
-            campaign.status = 'pending'
-            campaign.save(update_fields=['status'])
             notify_advertiser_campaign_pending(campaign)
             advertiser = campaign.advertiser
             is_first_campaign = not advertiser.campaigns.exclude(status='draft').exists()
@@ -52,14 +49,21 @@ def submit_campaign_for_review(campaign):
             if hasattr(campaign, 'invoice') and campaign.invoice:
                 payable_amount = campaign.invoice.payable_amount
                 if payable_amount < 10_000_000:
-                    update_score(advertiser, 30, 'ثبت کمپین زیر 10 میلیون تومان', f'ثبت کمپین با بودجه زیر ۱۰ میلیون تومان (کمپین {campaign.name})')
+                    update_score(advertiser, 30, 'ثبت کمپین زیر 10 میلیون تومان',
+                                 f'ثبت کمپین با بودجه زیر ۱۰ میلیون تومان (کمپین {campaign.name})')
                 elif 10_000_000 <= payable_amount <= 30_000_000:
-                    update_score(advertiser, 50, 'ثبت کمپین زیر 30 میلیون تومان', f'ثبت کمپین با بودجه بین ۱۰ تا ۳۰ میلیون تومان (کمپین {campaign.name})')
+                    update_score(advertiser, 50, 'ثبت کمپین زیر 30 میلیون تومان',
+                                 f'ثبت کمپین با بودجه بین ۱۰ تا ۳۰ میلیون تومان (کمپین {campaign.name})')
                 elif payable_amount > 30_000_000:
-                    update_score(advertiser, 70, 'ثبت کمپین بالای 30 میلیون تومان', f'ثبت کمپین با بودجه بالای ۳۰ میلیون تومان (کمپین {campaign.name})')
+                    update_score(advertiser, 70, 'ثبت کمپین بالای 30 میلیون تومان',
+                                 f'ثبت کمپین با بودجه بالای ۳۰ میلیون تومان (کمپین {campaign.name})')
 
             if campaign.content_orders.exists():
-                update_score(advertiser, 15, 'استفاده از تیم تولید محتوا', f'استفاده از خدمات تیم تولید محتوا در کمپین {campaign.name}')
+                update_score(advertiser, 15, 'استفاده از تیم تولید محتوا',
+                             f'استفاده از خدمات تیم تولید محتوا در کمپین {campaign.name}')
+
+            campaign.status = 'pending'
+            campaign.save(update_fields=['status'])
 
     return campaign
 
@@ -120,7 +124,6 @@ def accept_content_order_service(order):
         notify_advertiser_content_order_accepted(order)
 
 
-
 def reject_content_order_service(order):
     """سرویس رد سفارش توسط تیم محتوا (۵۰- امتیاز منفی برای تیم)"""
 
@@ -158,24 +161,16 @@ def reject_content_order_service(order):
         campaign.save(update_fields=['status', 'content_team_rejected', 'replacement_mode'])
 
 
-def deliver_content_order_service(order, team_member, notes, file, new_version):
-    """سرویس تحویل فایل سفارش و بررسی تحویل قبل یا بعد از ضرب‌الاجل (Deadline)"""
+def deliver_content_order_service(order, primary_delivery):
+    """
+    سرویس تحویل فایل سفارش (فقط برای نوتیف و امتیاز)
+    دلیوری قبلاً در ویو ایجاد شده
+    """
+    if not primary_delivery:
+        return None
+
     with transaction.atomic():
-        delivery = ContentDelivery.objects.create(
-            order=order,
-            status='delivered',
-            delivered_by=team_member,
-            delivered_at=timezone.now(),
-            notes=notes,
-            version=new_version,
-            file=file,
-            file_name=file.name,
-            file_size=file.size
-        )
-
-        order.status = 'completed'
-        order.save(update_fields=['status'])
-
+        # ========== امتیازدهی بر اساس ددلاین ==========
         if order.deadline:
             if timezone.now() <= order.deadline:
                 update_score(order.team, 30, 'تحویل به موقع',
@@ -187,8 +182,10 @@ def deliver_content_order_service(order, team_member, notes, file, new_version):
             update_score(order.team, 20, 'تحویل فایل سفارش',
                          f'تحویل فایل سفارش کمپین {order.campaign.name}')
 
-        notify_advertiser_content_delivered(delivery)
-        return delivery
+        # ========== ارسال نوتیف (با دلیوری که قبلاً ساخته شده) ==========
+        notify_advertiser_content_delivered(primary_delivery)
+
+        return primary_delivery
 
 
 def accept_revision_service(order, revision):
@@ -204,27 +201,44 @@ def accept_revision_service(order, revision):
             order.delivery.status = 'revision_requested'
             order.delivery.save(update_fields=['status'])
 
-        update_score(order.team, 10, 'قبول درخواست ویرایش', f'پذیرش و انجام اصلاحیه کمپین{revision.order.campaign.name}')
+        update_score(order.team, 10, 'قبول درخواست ویرایش',
+                     f'پذیرش و انجام اصلاحیه کمپین{revision.order.campaign.name}')
 
         notify_advertiser_revision_accepted(revision)
 
 
 def reject_revision_service(order, revision):
-    """سرویس رد درخواست ویرایش توسط تیم محتوا (۳۰- امتیاز منفی برای تیم)"""
+    """
+    سرویس رد درخواست ویرایش توسط تیم محتوا
+    ۳۰- امتیاز منفی برای تیم
+    وضعیت سفارش به DONE تغییر میکند
+    وضعیت آخرین تحویل به DELIVERED برمیگردد
+    """
     with transaction.atomic():
+        # ========== ۱. آپدیت وضعیت ریویژن ==========
         revision.status = 'rejected'
         revision.save(update_fields=['status'])
 
-        order.status = 'completed'
+        # ========== ۲. تغییر وضعیت سفارش به DONE ==========
+        order.status = ContentOrder.Status.DONE
         order.save(update_fields=['status'])
 
-        if hasattr(order, 'delivery'):
-            order.delivery.status = 'delivered'
-            order.delivery.save(update_fields=['status'])
+        # ========== ۳. پیدا کردن آخرین تحویل ==========
+        last_delivery = order.deliveries.first()
 
-        update_score(order.team, -30, 'در درخواست ویرایش', f'رد درخواست اصلاحیه کمپین{revision.order.campaign.name}')
+        if last_delivery:
+            # ========== ۴. برگردوندن وضعیت تحویل به DELIVERED ==========
+            last_delivery.status = ContentDelivery.DeliveryStatus.DELIVERED
+            last_delivery.save(update_fields=['status'])
 
+        # ========== ۵. امتیاز منفی برای تیم ==========
+        update_score(order.team, -30, 'رد درخواست ویرایش',
+                     f'رد درخواست اصلاحیه کمپین {revision.order.campaign.name}')
+
+        # ========== ۶. نوتیف به تبلیغ‌دهنده ==========
         notify_advertiser_revision_rejected(revision)
+
+    return True
 
 
 def submit_influencer_report_service(order, post_link, screenshot):
@@ -243,7 +257,8 @@ def submit_influencer_report_service(order, post_link, screenshot):
         order.save(update_fields=['status'])
 
         # --- سیستم گیمیفیکیشن ---
-        update_score(order.channel, 15, 'ارسال گزارش تبلیغ', f' ارسال گزارش عملکرد و اتمام کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
+        update_score(order.channel, 15, 'ارسال گزارش تبلیغ',
+                     f' ارسال گزارش عملکرد و اتمام کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
 
         total_reports = CampaignReport.objects.filter(
             campaign_influencer__campaign=campaign
@@ -389,7 +404,8 @@ def approve_influencer_report_service(report):
             if not ci.is_paid:
                 pay_influencer(ci)
 
-            update_score(ci.channel, 5, 'تایید شدن گزارش', f'تایید نهایی گزارش عملکرد توسط ادمین برای کانال {ci.channel.channel_name} در {ci.channel.platform.name}')
+            update_score(ci.channel, 5, 'تایید شدن گزارش',
+                         f'تایید نهایی گزارش عملکرد توسط ادمین برای کانال {ci.channel.channel_name} در {ci.channel.platform.name}')
 
             notify_influencer_report_approved(ci)
 
@@ -452,6 +468,11 @@ def create_revision_request_service(order, requested_by, feedback, file=None):
         order.status = 'review_pending'
         order.save(update_fields=['status'])
 
+        last_delivery = order.deliveries.first()
+        if last_delivery:
+            last_delivery.status = 'revision_requested'
+            last_delivery.save(update_fields=['status'])
+
         if hasattr(order, 'delivery'):
             order.delivery.status = 'revision_requested'
             order.delivery.save(update_fields=['status'])
@@ -463,9 +484,26 @@ def create_revision_request_service(order, requested_by, feedback, file=None):
     return revision
 
 
-def accept_content_order_delivery(order, content_cost, team_members):
+def accept_content_order_delivery(order, content_cost, team_members, primary_delivery=None):
     """سرویس تأیید نهایی سفارش، تقسیم وجه و بررسی بونوس تایید بدون اصلاحیه (+۳۰ امتیاز برای تیم)"""
     with transaction.atomic():
+
+        if not primary_delivery:
+            primary_delivery = order.deliveries.first()
+
+        if not primary_delivery:
+            return False
+
+        # ✅ پیدا کردن فایل انتخاب شده
+        primary_file = primary_delivery.files.filter(is_selected=True).first()
+
+        # ❌ اگه فایل انتخاب شده پیدا نشد، از اولین فایل استفاده کن
+        if not primary_file:
+            primary_file = primary_delivery.files.first()
+
+        if not primary_file:
+            return False
+
         for member in team_members:
             share_amount = int((content_cost * member.revenue_share_percent) / 100)
 
@@ -491,25 +529,28 @@ def accept_content_order_delivery(order, content_cost, team_members):
 
         has_revisions = ContentOrderRevision.objects.filter(order=order).exists()
         if not has_revisions:
-            update_score(order.team, 30, 'تایید نهایی بدون درخواست ویرایش', f'تایید نهایی سفارش {order.campaign.name} بدون هیچ درخواست اصلاحیه‌ای از سمت کارفرما #{order.id}')
+            update_score(order.team, 30, 'تایید نهایی بدون درخواست ویرایش',
+                         f'تایید نهایی سفارش {order.campaign.name} بدون هیچ درخواست اصلاحیه‌ای از سمت کارفرما #{order.id}')
 
+        # ✅ استفاده از primary_file (فایل انتخاب شده)
         campaign_content, created = CampaignContent.objects.get_or_create(
             campaign=order.campaign,
             defaults={
-                'media': order.delivery.file,
+                'media': primary_file.file,
                 'notes': f'محتوای تولید شده توسط تیم {order.team.name}',
             }
         )
 
         if not created:
-            campaign_content.media = order.delivery.file
+            campaign_content.media = primary_file.file
             campaign_content.notes = f'محتوای تولید شده توسط تیم {order.team.name} در تاریخ {timezone.now()}'
             campaign_content.save(update_fields=['media', 'notes'])
 
-        order.delivery.status = 'final_accepted'
-        order.delivery.accepted_at = timezone.now()
-        order.delivery.save(update_fields=['status', 'accepted_at'])
-
+        primary_delivery.status = 'final_accepted'
+        primary_delivery.accepted_at = timezone.now()
+        primary_delivery.save(update_fields=['status', 'accepted_at'])
+        order.status = "completed"
+        order.save(update_fields=['status', ])
 
         campaign = order.campaign
         if campaign.content_type.slug == 'content-production-team':

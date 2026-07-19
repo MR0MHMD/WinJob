@@ -1,75 +1,10 @@
 {% extends 'parent/base.html' %}
 {% load static %}
 
-{% block title %}🏆 مرکز امتیازات و نشان‌ها | WinJob{% endblock %}
+{% block title %}مرکز امتیازات و نشان‌ها{% endblock %}
 
-{% block extra_style %}
-    <style>
-        /* استایل‌های قبلی保持不变 */
-        .progress-custom {
-            height: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-        }
-        .progress-custom .progress-bar {
-            background: linear-gradient(90deg, #fd5631, #ffb347);
-            border-radius: 1rem;
-        }
-        .current-badge-icon {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 8px rgba(253, 86, 49, 0.3));
-        }
-        .points-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fd5631, #ffb347);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1.2;
-        }
-        .role-badge {
-            background: rgba(253, 86, 49, 0.15);
-            color: #fd5631;
-            border-radius: 2rem;
-            padding: 0.3rem 1rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        .rule-item {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 0.75rem;
-            padding: 0.6rem 1rem;
-            margin-bottom: 0.5rem;
-            border-right: 3px solid transparent;
-        }
-        .rule-item.positive { border-right-color: #07c98b; }
-        .rule-item.negative { border-right-color: #f23c49; }
-        .table-custom-dark {
-            --bs-table-bg: transparent;
-            color: #dee2e6 !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
-        }
-        .table-custom-dark td, .table-custom-dark th {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 0.9rem;
-            vertical-align: middle;
-        }
-        .insight-card {
-            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.08));
-            border: 1px solid rgba(253, 86, 49, 0.2);
-            border-radius: 1rem;
-        }
-        @media (max-width: 768px) {
-            .points-number { font-size: 1.8rem; }
-            .current-badge-icon { width: 50px; height: 50px; }
-        }
-    </style>
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'gamification/pages/points_guide.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -179,19 +114,19 @@
                         <div class="insight-card p-4 mb-4 text-center">
                             <i class="bi bi-graph-up fs-2 text-primary mb-2 d-block"></i>
                             <h6 class="text-light">🌟 چرا امتیاز خود را افزایش دهید؟</h6>
-                            <p class="text-muted small mb-0">هرچه امتیاز شما بالاتر باشد، اعتبار کسب‌وکارتان بیشتر می‌شود... (متن قبلی)</p>
+                            <p class="text-muted small mb-0">هرچه امتیاز شما بالاتر باشد، اعتبار کسب و کارتان بیشتر می‌شود... </p>
                         </div>
                     {% elif role.role == 'team_member' %}
                         <div class="insight-card p-4 mb-4 text-center">
                             <i class="bi bi-trophy fs-2 text-warning mb-2 d-block"></i>
                             <h6 class="text-light">🏆 چرا امتیاز تیم خود را افزایش دهید؟</h6>
-                            <p class="text-muted small mb-0">تیم‌های با امتیاز بالاتر در اولویت انتخاب تبلیغ‌دهندگان قرار می‌گیرند و پروژه‌های بزرگ‌تری دریافت می‌کنند. اعتبار تیم شما نشان‌دهنده کیفیت و حرفه‌ای‌گری است.</p>
+                            <p class="text-muted small mb-0">تیم‌های با امتیاز بالاتر در اولویت انتخاب تبلیغ‌دهندگان قرار می گیرند و پروژه‌های بزرگ‌تری دریافت می‌کنند. اعتبار تیم شما نشان‌دهنده کیفیت و حرفه‌ای‌گری است.</p>
                         </div>
                     {% elif role.role == 'influencer' %}
                         <div class="insight-card p-4 mb-4 text-center">
                             <i class="bi bi-megaphone fs-2 text-warning mb-2 d-block"></i>
                             <h6 class="text-light">🚀 امتیاز بالاتر = فرصت‌های بیشتر!</h6>
-                            <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... (متن قبلی)</p>
+                            <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... </p>
                         </div>
                     {% endif %}
 
@@ -242,7 +177,7 @@
                 {% endif %}
             {% endfor %}
 
-            {# ========== حالت عادی اینفلوئنسر (چند کانال) : کارت‌های کوچک دوستونی بدون لاگ و راهنما (راهنما بعداً جدا می‌آید) ========== #}
+            {# ========== حالت عادی اینفلوئنسر (چند کانال) : کارت‌های کوچک دو ستونی بدون لاگ و راهنما (راهنما بعداً جدا می‌آید) ========== #}
             {% if influencer_exists and not single_channel_mode %}
                 <div class="row g-4 mb-4">
                     {% for role in roles_data %}
@@ -307,7 +242,7 @@
                 <div class="insight-card p-4 mb-4 text-center">
                     <i class="bi bi-megaphone fs-2 text-warning mb-2 d-block"></i>
                     <h6 class="text-light">🚀 امتیاز بالاتر = فرصت‌های بیشتر!</h6>
-                    <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... (متن قبلی)</p>
+                    <p class="text-muted small mb-0">هرچه امتیاز و نشان شما بالاتر باشد، اعتبار کانال شما در بین تبلیغ‌دهندگان بیشتر می‌شود... </p>
                 </div>
                 <div class="card bg-faded-light border-0 rounded-4 mb-5">
                     <div class="card-body p-4">
@@ -342,7 +277,7 @@
                             <tbody>
                                 {% for badge in badges %}
                                 <tr>
-                                    <td><div class="d-flex align-items-center gap-2">{% if badge.icon %}<img src="{{ badge.icon.url }}" width="36" height="36" class="rounded-circle bg-dark p-1">{% else %}<i class="bi bi-award fs-4 text-secondary"></i>{% endif %}<span class="fw-semibold">{{ badge.name }}</span></div></td>
+                                    <td><div class="d-flex align-items-center gap-2">{% if badge.icon %}<img src="{{ badge.icon.url }}" alt="{{ badge.icon.name }}" width="36" height="36" class="rounded-circle bg-dark p-1">{% else %}<i class="bi bi-award fs-4 text-secondary"></i>{% endif %}<span class="fw-semibold">{{ badge.name }}</span></div></td>
                                     <td>{{ badge.min_points }} امتیاز</td>
                                     <td class="text-muted small">{{ badge.description|truncatewords:20|default:"—" }}</td>
                                 </tr>

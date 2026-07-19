@@ -412,10 +412,10 @@ class CampaignInfluencer(models.Model):
             self.status = self.Status.COMPLETED
             self.save()
 
-    def uniq_url(self,):
+    def uniq_url(self, ):
         from django.conf import settings
         if not self.tracking_code:
-            return "#"   # یا None
+            return "#"  # یا None
         return f"{settings.SITE_URL}/campaigns/r/{self.tracking_code}"
 
 

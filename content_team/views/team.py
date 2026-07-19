@@ -1,0 +1,326 @@
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Prefetch, Avg, Count
+from django.db import models
+from content_team.models import (
+    ContentTeam,
+    TeamReview,
+    ContentTeamMember,
+    ContentServiceType,
+    ContentOrder,
+    ContentServicePlan
+)
+
+
+def team_list_view(request):
+    """
+    ویو لیست تیم‌های تولید محتوا
+    """
+    search_query = request.GET.get('search', '')
+    service_type_filter = request.GET.getlist('service_type')
+    ordering = request.GET.get('ordering', '-annotated_avg_rating')
+
+    allowed_ordering = [
+        '-annotated_avg_rating', 'annotated_avg_rating',
+        '-annotated_review_count', 'annotated_review_count',
+        '-annotated_completed_orders', 'annotated_completed_orders',
+        '-created_at', 'created_at',
+        'name', '-name'
+    ]
+    if ordering not in allowed_ordering:
+        ordering = '-annotated_avg_rating'
+
+    teams = ContentTeam.objects.filter(is_active=True)
+
+    if search_query:
+        teams = teams.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    if service_type_filter:
+        for slug in service_type_filter:
+            teams = teams.filter(
+                service_plans__service_type__slug=slug,
+                service_plans__is_active=True
+            )
+
+    # Prefetch بدون اسلایس
+    teams = teams.prefetch_related(
+        'service_plans__service_type',
+        'portfolio_items',
+        Prefetch('reviews', queryset=TeamReview.objects.order_by('-created_at')),  # اسلایس رو برداشتم
+        Prefetch('members', queryset=ContentTeamMember.objects.filter(is_active=True))
+    ).annotate(
+        annotated_avg_rating=Avg('reviews__rating'),
+        annotated_review_count=Count('reviews'),
+        annotated_completed_orders=Count('orders', filter=Q(orders__status='completed')),
+        annotated_active_members_count=Count('members', filter=Q(members__is_active=True))
+    ).order_by(ordering)
+
+    paginator = Paginator(teams, 21)
+    page = request.GET.get('page', 1)
+
+    try:
+        teams_page = paginator.page(page)
+    except PageNotAnInteger:
+        teams_page = paginator.page(1)
+    except EmptyPage:
+        teams_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'teams': teams_page,
+        'search_query': search_query,
+        'selected_service_types': service_type_filter,
+        'current_ordering': ordering,
+        'service_types': ContentServiceType.objects.filter(is_active=True),
+        'selected_service_type': service_type_filter[0] if len(service_type_filter) == 1 else '',
+        'total_teams': teams.count(),
+        'is_paginated': teams_page.has_other_pages(),
+        'page_obj': teams_page,
+        'paginator': paginator,
+    }
+
+    return render(request, 'content_team/pages/team_list.html', context)
+
+
+def team_detail_view(request, slug):
+    """
+    ویو جزئیات تیم تولید محتوا
+    """
+    team = get_object_or_404(
+        ContentTeam.objects.filter(is_active=True).prefetch_related(
+            'members',
+            'service_plans__service_type',
+            'portfolio_items',
+            Prefetch(
+                'reviews',
+                queryset=TeamReview.objects.select_related(
+                    'advertiser__user', 'order'
+                ).order_by('-created_at')
+            ),
+            Prefetch(
+                'orders',
+                queryset=ContentOrder.objects.select_related(
+                    'campaign__advertiser__user'
+                ).order_by('-created_at')
+            )
+        ).annotate(
+            annotated_avg_rating=Avg('reviews__rating'),
+            annotated_review_count=models.Count('reviews'),
+            annotated_completed_orders=models.Count('orders', filter=models.Q(orders__status='completed')),
+            annotated_active_members_count=models.Count('members', filter=models.Q(members__is_active=True))
+        ),
+        slug=slug
+    )
+
+    managers = team.members.filter(is_active=True, role='manager')
+    editors = team.members.filter(is_active=True, role='editor')
+    writers = team.members.filter(is_active=True, role='writer')
+    designers = team.members.filter(is_active=True, role='designer')
+    videographers = team.members.filter(is_active=True, role='videographer')
+    other_members = team.members.filter(is_active=True, role='other')
+
+    member_roles = [
+        {'id': 'managers', 'title': 'مدیران', 'icon': 'fi-star-filled', 'members': managers},
+        {'id': 'editors', 'title': 'ادیتورها', 'icon': 'fi-edit', 'members': editors},
+        {'id': 'writers', 'title': 'نویسندگان', 'icon': 'fi-pencil', 'members': writers},
+        {'id': 'designers', 'title': 'طراحان', 'icon': 'fi-image', 'members': designers},
+        {'id': 'videographers', 'title': 'فیلم‌برداران', 'icon': 'fi-video', 'members': videographers},
+        {'id': 'other', 'title': 'سایر اعضا', 'icon': 'fi-layers', 'members': other_members},
+    ]
+
+    from itertools import groupby
+
+    # ========== دریافت پلن‌های فعال ==========
+    active_plans = team.service_plans.filter(
+        is_active=True
+    ).select_related('service_type').order_by('service_type__name', 'price')
+
+    # ========== ✅ محاسبه محبوب‌ترین پلن برای هر سرویس با یک کوئری ==========
+    from django.db.models import Count, Q, OuterRef, Subquery, Case, When, Value, BooleanField
+
+    # ساب‌کوئری برای پیدا کردن محبوب‌ترین پلن هر سرویس
+    most_popular_subquery = ContentServicePlan.objects.filter(
+        team=team,
+        service_type=OuterRef('service_type'),
+        is_active=True
+    ).annotate(
+        completed_count=Count(
+            'orders',
+            filter=Q(orders__status__in=[ContentOrder.Status.COMPLETED, ContentOrder.Status.DONE])
+        )
+    ).filter(
+        completed_count__gt=0
+    ).order_by('-completed_count').values('id')[:1]
+
+    # ✅ یک بار annotate کردن همه پلن‌ها با is_most_popular
+    active_plans = active_plans.annotate(
+        is_most_popular=Case(
+            When(
+                id=Subquery(most_popular_subquery),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        )
+    )
+
+    # ========== ساختاردهی پلن‌ها بر اساس نوع سرویس ==========
+    service_plans_by_type = []
+    for service_type, plans in groupby(active_plans, key=lambda p: p.service_type):
+        plan_list = list(plans)
+        service_plans_by_type.append({
+            'service_type': service_type,
+            'plans': plan_list,
+        })
+
+    portfolio_items = team.portfolio_items.filter(
+        is_active=True
+    ).order_by('display_order', '-created_at')[:3]
+
+    stats = {
+        'avg_rating': team.annotated_avg_rating,
+        'review_count': team.annotated_review_count,
+        'completed_orders': team.annotated_completed_orders,
+        'active_members': team.annotated_active_members_count,
+        'revenue_share_valid': team.is_revenue_share_valid(),
+        'total_revenue_percent': team.get_total_revenue_percent(),
+    }
+
+    reviews = team.reviews.all()[:3]
+    recent_completed_orders = team.orders.filter(status='completed')[:5]
+
+    # دریافت پارامترهای انتخاب خودکار از استپ سوم
+    select_team = request.GET.get('select_team')
+    from_campaign = bool(select_team)
+    return_page = request.GET.get('page', '1')
+
+    can_submit_review = False
+    pending_orders = []
+
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        advertiser = request.user.advertiser_profile
+        pending_orders = list(ContentOrder.objects.filter(
+            campaign__advertiser=advertiser,
+            team=team,
+            status=ContentOrder.Status.COMPLETED,
+            review__isnull=True
+        ).select_related('campaign').order_by('-created_at'))
+
+        has_any_review = TeamReview.objects.filter(team=team, advertiser=advertiser).exists()
+
+        if not has_any_review:
+            can_submit_review = True
+        elif pending_orders:
+            can_submit_review = True
+
+    all_reviews = list(team.reviews.all())
+    if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
+        user_reviews = [r for r in all_reviews if r.advertiser.user == request.user]
+        other_reviews = [r for r in all_reviews if r.advertiser.user != request.user]
+        sorted_reviews = user_reviews + sorted(other_reviews, key=lambda x: x.created_at, reverse=True)
+    else:
+        sorted_reviews = sorted(all_reviews, key=lambda x: x.created_at, reverse=True)
+
+    context = {
+        'team': team,
+        'managers': managers,
+        'editors': editors,
+        'writers': writers,
+        'designers': designers,
+        'member_roles': member_roles,
+        'videographers': videographers,
+        'other_members': other_members,
+        'service_plans_by_type': service_plans_by_type,  # ✅ is_most_popular به صورت annotate شده
+        'portfolio_items': portfolio_items,
+        'stats': stats,
+        'reviews': reviews,
+        'recent_completed_orders': recent_completed_orders,
+        'from_campaign': from_campaign,
+        'team_id': select_team,
+        'return_page': return_page,
+        'gamification': team.gamification_status,
+        'can_submit_review': can_submit_review,
+        'pending_orders': pending_orders,
+        'sorted_reviews': sorted_reviews,
+    }
+
+    return render(request, 'content_team/pages/team_detail.html', context)
+
+
+def plan_detail(request, plan_id):
+    """نمایش جزئیات یک پلن"""
+    plan = get_object_or_404(
+        ContentServicePlan.objects.select_related('team', 'service_type'),
+        id=plan_id, is_active=True
+    )
+    team = plan.team
+    from_campaign = request.GET.get('from') == 'create_campaign'
+    page = request.GET.get('page', '1')
+
+    # ========== ✅ ۱. تعداد سفارش‌های موفق این پلن ==========
+    completed_orders_count = plan.orders.filter(
+        status=ContentOrder.Status.COMPLETED
+    ).count()
+
+    # ========== ✅ ۲. میانگین امتیاز فقط برای سفارش‌های این پلن ==========
+    avg_rating = TeamReview.objects.filter(
+        order__plan=plan,
+        order__status=ContentOrder.Status.COMPLETED,
+    ).aggregate(avg=Avg('rating'))['avg']
+
+    if avg_rating:
+        avg_rating = round(avg_rating, 1)
+
+    # ========== ✅ ۳. نظرات فقط برای سفارش‌های این پلن ==========
+    reviews = TeamReview.objects.filter(
+        order__plan=plan,
+        order__status=ContentOrder.Status.COMPLETED,
+    ).select_related(
+        'advertiser__user', 'order'
+    ).order_by('-created_at')[:5]
+
+    # ========== ✅ ۴. تعداد کل نظرات این پلن ==========
+    reviews_count = TeamReview.objects.filter(
+        order__plan=plan,
+        order__status=ContentOrder.Status.COMPLETED,
+    ).count()
+
+    # ========== ✅ ۵. نمونه کارها (همون) ==========
+    portfolio_items = team.portfolio_items.filter(is_active=True)[:6]
+
+    # ========== ✅ ۶. اعضای تیم (همون) ==========
+    members = team.members.filter(is_active=True)
+
+    # ========== ✅ ۷. محبوب‌ترین پلن بودن ==========
+    # (اختیاری - میتونی برای نمایش بدج محبوب استفاده کنی)
+    most_popular = ContentServicePlan.objects.filter(
+        team=team,
+        service_type=plan.service_type,
+        is_active=True
+    ).annotate(
+        completed_count=Count(
+            'orders',
+            filter=Q(orders__status=ContentOrder.Status.COMPLETED)
+        )
+    ).filter(
+        completed_count__gt=0
+    ).order_by('-completed_count').first()
+
+    is_most_popular = (most_popular and most_popular.id == plan.id)
+
+    context = {
+        'plan': plan,
+        'team': team,
+        'completed_orders_count': completed_orders_count,  # ✅ فقط این پلن
+        'avg_rating': avg_rating,  # ✅ فقط این پلن
+        'reviews': reviews,  # ✅ فقط این پلن
+        'reviews_count': reviews_count,  # ✅ فقط این پلن
+        'portfolio_items': portfolio_items,
+        'members': members,
+        'from_campaign': from_campaign,
+        'page': page,
+        'is_most_popular': is_most_popular,  # ✅ اضافه شد
+    }
+    return render(request, 'content_team/pages/plan_detail.html', context)

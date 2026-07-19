@@ -149,7 +149,7 @@ def order_list(request):
         ).filter(
             Q(campaign__content_type__slug__isnull=True) |
             ~Q(campaign__content_type__slug='content-production-team') |
-            Q(campaign__content_orders__delivery__status='final_accepted')
+            Q(campaign__content_orders__deliveries__status='final_accepted')
         ).distinct()
 
         # ========== فیلترها ==========
@@ -461,7 +461,7 @@ def influencer_dashboard(request):
     ).filter(
         Q(campaign__content_type__slug__isnull=True) |
         ~Q(campaign__content_type__slug='content-production-team') |
-        Q(campaign__content_orders__delivery__status='final_accepted')
+        Q(campaign__content_orders__deliveries__status='final_accepted')
     ).distinct()
 
     booking_ids = campaign_bookings.values_list('id', flat=True)
@@ -947,7 +947,7 @@ def channel_detail(request, channel_id):
     from_campaign = select_rate_param is not None
     selectable_rate_id = int(select_rate_param) if select_rate_param and select_rate_param.isdigit() else None
 
-    # influencers/views.py (قسمت منطق ثبت نظر)
+    # influencers/view.py (قسمت منطق ثبت نظر)
     # ========== منطق ثبت نظر ==========
     can_submit_review = False
     pending_bookings = []

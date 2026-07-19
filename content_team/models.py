@@ -8,7 +8,6 @@ from core.utils import generate_random_slug
 from .utils import content_order_file_path
 from django.db.models import Sum
 from django.db import models
-from decimal import Decimal
 import mimetypes
 
 
@@ -190,7 +189,6 @@ class ContentTeamMember(models.Model):
 class ContentServiceType(models.Model):
     """
     انواع خدمات تولید محتوا - توسط ادمین تعریف می‌شود
-    مثل: طراحی استوری، تولید ویدیو، موشن گرافیک، عکاسی و...
     """
     ad_type = models.ManyToManyField(
         "campaigns.AdType",
@@ -219,7 +217,12 @@ class ContentServiceType(models.Model):
         help_text=_('نام کلاس آیکون (مثلاً: fa-video)')
     )
 
-    unit = models.CharField(_("واحد"), max_length=20, choices=[("minute", "دقیقه"), ("project", "پروژه")])
+    allowed_units = models.JSONField(
+        _('واحدهای مجاز'),
+        default=list,
+        blank=True,
+        help_text=_('واحدهایی که این سرویس می‌تواند داشته باشد. مثال: ["second", "minute", "quantity"]')
+    )
 
     is_active = models.BooleanField(
         _('فعال'),
@@ -242,14 +245,31 @@ class ContentServiceType(models.Model):
     def __str__(self):
         return self.name
 
+    def get_allowed_units_display(self):
+        """نمایش واحدهای مجاز به صورت خوانا"""
+        unit_labels = {
+            'second': 'ثانیه',
+            'minute': 'دقیقه',
+            'quantity': 'تعدادی'
+        }
+        return ', '.join([unit_labels.get(u, u) for u in self.allowed_units])
+
 
 class ContentServicePlan(models.Model):
     """
     پلن‌های قیمت‌گذاری خدمات تیم‌های تولید محتوا
-    هر تیم برای هر خدمت می‌تونه تا ۳ پلن تعریف کنه
-    مدیر تیم می‌تونه پلن‌ها رو ایجاد و مدیریت کنه
     """
 
+    class PricingUnit(models.TextChoices):
+        SECOND = 'second', 'ثانیه'
+        MINUTE = 'minute', 'دقیقه'
+        QUANTITY = 'quantity', 'تعدادی'
+
+    class DeliveryType(models.TextChoices):
+        SINGLE = 'single', 'تحویل یک فایل'
+        MULTI_CHOICE = 'multi_choice', 'تحویل چند گزینه و انتخاب یکی'
+
+    # ========== ارتباطات ==========
     team = models.ForeignKey(
         'ContentTeam',
         on_delete=models.CASCADE,
@@ -264,14 +284,16 @@ class ContentServicePlan(models.Model):
         verbose_name=_('نوع خدمت')
     )
 
+    # ========== اطلاعات پلن ==========
     name = models.CharField(
         _('نام پلن'),
         max_length=200,
-        help_text=_('مثلاً: "پلن اقتصادی - دو دوربین" یا "پکیج حرفه‌ای - چهار دوربین"')
+        help_text=_('مثلاً: "موشن ساده" یا "پکیج ۳ پوستر"')
     )
 
     description = models.TextField(
         _('توضیحات پلن'),
+        blank=True,
         help_text=_('توضیح کامل این پلن شامل چه چیزایی میشه')
     )
 
@@ -279,17 +301,64 @@ class ContentServicePlan(models.Model):
         _('ویژگی‌ها'),
         default=list,
         blank=True,
-        help_text=_('لیست ویژگی‌های این پلن. مثال: ["۲ دوربین 4K", "تدوین حرفه‌ای", "موزیک متن", "تحویل ۳ روزه"]')
+        help_text=_('لیست ویژگی‌های این پلن. مثال: ["۲ دوربین 4K", "تدوین حرفه‌ای"]')
     )
 
-    price_per_unit = models.DecimalField(
-        _('قیمت به ازای واحد (تومان)'),
-        max_digits=12,
-        decimal_places=0,
-        validators=[MinValueValidator(Decimal('0'))],
-        help_text=_('قیمت برای هر دقیقه/پروژه')
+    # ========== واحد و مقدار ==========
+    pricing_unit = models.CharField(
+        _('واحد قیمت‌گذاری'),
+        max_length=20,
+        choices=PricingUnit.choices,
+        help_text=_('واحد اندازه‌گیری برای این پلن (ثانیه، دقیقه، یا تعدادی)')
     )
 
+    # ✅ فقط برای SECOND و MINUTE استفاده میشه
+    base_quantity = models.PositiveIntegerField(
+        _('مقدار پایه'),
+        null=True,
+        blank=True,
+        help_text=_('مقدار پایه این پلن. مثلاً ۲۰ برای ۲۰ ثانیه، یا ۳ دقیقه. (فقط برای واحدهای ثانیه و دقیقه)')
+    )
+
+    # ✅ فقط برای SECOND و MINUTE استفاده میشه
+    min_quantity = models.PositiveIntegerField(
+        _('حداقل مقدار'),
+        null=True,
+        blank=True,
+        help_text=_('حداقل مقداری که این پلن پوشش میدهد. (فقط برای واحدهای ثانیه و دقیقه)')
+    )
+
+    # ✅ فقط برای SECOND و MINUTE استفاده میشه
+    max_quantity = models.PositiveIntegerField(
+        _('حداکثر مقدار'),
+        null=True,
+        blank=True,
+        help_text=_('حداکثر مقداری که این پلن پوشش میدهد. (فقط برای واحدهای ثانیه و دقیقه)')
+    )
+
+    # ========== قیمت نهایی ==========
+    price = models.PositiveBigIntegerField(
+        _('قیمت نهایی (تومان)'),
+        help_text=_('قیمت کاملاً مشخص این پلن. مثلاً ۲۵۰,۰۰۰ تومان')
+    )
+
+    # ========== نوع تحویل ==========
+    delivery_type = models.CharField(
+        _('نوع تحویل'),
+        max_length=20,
+        choices=DeliveryType.choices,
+        default=DeliveryType.SINGLE,
+        help_text=_('نحوه تحویل فایل‌ها به کاربر')
+    )
+
+    delivery_options_count = models.PositiveIntegerField(
+        _('تعداد گزینه‌های تحویلی'),
+        null=True,
+        blank=True,
+        help_text=_('برای نوع تحویل MULTI_CHOICE: چند گزینه به کاربر داده میشه؟')
+    )
+
+    # ========== زمان تحویل ==========
     estimated_delivery_days = models.PositiveIntegerField(
         _('مدت آماده سازی'),
         default=5,
@@ -297,12 +366,14 @@ class ContentServicePlan(models.Model):
         help_text=_('حداکثر چند روز کاری طول میکشه تا تحویل داده بشه')
     )
 
+    # ========== وضعیت ==========
     is_active = models.BooleanField(
         _('فعال'),
         default=True,
         help_text=_('آیا این پلن در حال حاضر قابل سفارش هست؟')
     )
 
+    # ========== متادیتا ==========
     created_at = jmodels.jDateTimeField(
         _('تاریخ ایجاد'),
         auto_now_add=True
@@ -317,34 +388,115 @@ class ContentServicePlan(models.Model):
         verbose_name = _('پلن خدمت')
         verbose_name_plural = _('پلن‌های خدمات')
         unique_together = [
-            ['team', 'service_type', 'name']  # هر تیم برای هر خدمت نمیتونه دو پلن با نام یکسان داشته باشه
+            ['team', 'service_type', 'name']
         ]
-        ordering = ['team', 'service_type', 'price_per_unit']  # مرتب‌سازی بر اساس قیمت از کم به زیاد
+        ordering = ['team', 'service_type', 'price']
         indexes = [
             models.Index(fields=['team', 'service_type', 'is_active']),
-            models.Index(fields=['price_per_unit']),
+            models.Index(fields=['price']),
         ]
 
     def __str__(self):
-        return f"{self.team.name} - {self.service_type.name} - {self.name}"
+        unit_labels = {
+            'second': 'ثانیه',
+            'minute': 'دقیقه',
+            'quantity': 'عدد'
+        }
+        unit = unit_labels.get(self.pricing_unit, '')
+
+        # نمایش مقدار پایه فقط برای SECOND و MINUTE
+        if self.pricing_unit in [self.PricingUnit.SECOND, self.PricingUnit.MINUTE]:
+            quantity_str = f" ({self.base_quantity} {unit})"
+        else:
+            quantity_str = ""
+
+        return f"{self.team.name} - {self.service_type.name} - {self.name}{quantity_str}"
 
     def clean(self):
         """اعتبارسنجی پلن"""
         super().clean()
 
-        # بررسی تعداد پلن‌های فعال برای این تیم و خدمت
+        # ========== ۱. اعتبارسنجی واحد ==========
+        if self.service_type.allowed_units:
+            if self.pricing_unit not in self.service_type.allowed_units:
+                raise ValidationError({
+                    'pricing_unit': f'واحد "{self.get_pricing_unit_display()}" برای این سرویس مجاز نیست. '
+                                    f'واحدهای مجاز: {self.service_type.get_allowed_units_display()}'
+                })
+
+        # ========== ۲. اعتبارسنجی مقادیر (فقط برای SECOND و MINUTE) ==========
+        if self.pricing_unit in [self.PricingUnit.SECOND, self.PricingUnit.MINUTE]:
+            # فیلدها باید پر شده باشند
+            if not self.base_quantity:
+                raise ValidationError({
+                    'base_quantity': 'برای واحد ثانیه/دقیقه، مقدار پایه الزامی است.'
+                })
+            if not self.min_quantity:
+                raise ValidationError({
+                    'min_quantity': 'برای واحد ثانیه/دقیقه، حداقل مقدار الزامی است.'
+                })
+
+            # اعتبارسنجی مقادیر
+            if self.min_quantity > self.base_quantity:
+                raise ValidationError({
+                    'min_quantity': 'حداقل مقدار نمی‌تواند از مقدار پایه بیشتر باشد.'
+                })
+
+            if self.max_quantity and self.max_quantity < self.base_quantity:
+                raise ValidationError({
+                    'max_quantity': 'حداکثر مقدار نمی‌تواند از مقدار پایه کمتر باشد.'
+                })
+
+            if self.max_quantity and self.min_quantity > self.max_quantity:
+                raise ValidationError({
+                    'min_quantity': 'حداقل مقدار نمی‌تواند از حداکثر مقدار بیشتر باشد.'
+                })
+
+        # ========== ۳. اعتبارسنجی برای واحد QUANTITY ==========
+        if self.pricing_unit == self.PricingUnit.QUANTITY:
+            # فیلدهای quantity نباید پر شوند
+            if self.base_quantity:
+                raise ValidationError({
+                    'base_quantity': 'برای واحد تعدادی، نیازی به مقدار پایه نیست.'
+                })
+            if self.min_quantity:
+                raise ValidationError({
+                    'min_quantity': 'برای واحد تعدادی، نیازی به حداقل مقدار نیست.'
+                })
+            if self.max_quantity:
+                raise ValidationError({
+                    'max_quantity': 'برای واحد تعدادی، نیازی به حداکثر مقدار نیست.'
+                })
+
+            # برای QUANTITY، فقط SINGLE و MULTI_CHOICE مجاز هستن
+            if self.delivery_type not in [self.DeliveryType.SINGLE, self.DeliveryType.MULTI_CHOICE]:
+                raise ValidationError({
+                    'delivery_type': 'برای واحد تعدادی، فقط تحویل یک فایل یا چند گزینه مجاز است.'
+                })
+
+        # ========== ۴. اعتبارسنجی تعداد گزینه‌ها ==========
+        if self.delivery_type == self.DeliveryType.MULTI_CHOICE:
+            if not self.delivery_options_count or self.delivery_options_count < 2:
+                raise ValidationError({
+                    'delivery_options_count': 'برای تحویل چند گزینه‌ای، حداقل ۲ گزینه باید مشخص شود.'
+                })
+        else:
+            if self.delivery_options_count is not None:
+                self.delivery_options_count = None
+
+        # ========== ۵. بررسی تعداد پلن‌های فعال ==========
         active_plans_count = ContentServicePlan.objects.filter(
             team=self.team,
             service_type=self.service_type,
             is_active=True
         ).exclude(pk=self.pk).count()
 
-        if self.is_active and not self.pk:  # پلن جدید
+        if self.is_active and not self.pk:
             if active_plans_count >= 3:
                 raise ValidationError(
                     _('هر تیم برای هر خدمت حداکثر می‌تونه ۳ پلن فعال داشته باشه.')
                 )
-        elif self.is_active and self.pk:  # ویرایش پلن موجود
+        elif self.is_active and self.pk:
             if active_plans_count > 3:
                 raise ValidationError(
                     _('نمیشه بیشتر از ۳ پلن فعال برای یک خدمت داشت.')
@@ -356,18 +508,37 @@ class ContentServicePlan(models.Model):
 
     @property
     def price_display(self):
-        """نمایش قیمت به صورت خوانا"""
-        if self.price_per_unit is not None:
-            return f"{self.price_per_unit:,} تومان"
-        return "-"  # یا "نامشخص"
+        return f"{self.price:,} تومان"
 
     @property
-    def price_per_unit_int(self):
-        """قیمت به صورت عدد صحیح برای محاسبات"""
-        return int(self.price_per_unit)
+    def quantity_display(self):
+        """نمایش مقدار به صورت خوانا (فقط برای SECOND و MINUTE)"""
+        if self.pricing_unit not in [self.PricingUnit.SECOND, self.PricingUnit.MINUTE]:
+            return "-"
+
+        unit_labels = {
+            'second': 'ثانیه',
+            'minute': 'دقیقه',
+            'quantity': 'عدد'
+        }
+        unit = unit_labels.get(self.pricing_unit, '')
+
+        if self.min_quantity == self.base_quantity == (self.max_quantity or self.base_quantity):
+            return f"{self.base_quantity} {unit}"
+        elif self.max_quantity:
+            return f"{self.min_quantity} تا {self.max_quantity} {unit} (پایه: {self.base_quantity})"
+        else:
+            return f"از {self.min_quantity} {unit} به بالا (پایه: {self.base_quantity})"
+
+    @property
+    def delivery_type_display(self):
+        labels = {
+            'single': 'تحویل یک فایل',
+            'multi_choice': f'{self.delivery_options_count or "چند"} گزینه برای انتخاب',
+        }
+        return labels.get(self.delivery_type, self.delivery_type)
 
     def get_features_list(self):
-        """دریافت لیست ویژگی‌ها"""
         if isinstance(self.features, list):
             return self.features
         elif isinstance(self.features, str):
@@ -382,11 +553,13 @@ class ContentServicePlan(models.Model):
 class ContentOrder(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"
-        REVIEW_PENDING = "review_pending", "در انتظار ویراش"
+        REVIEW_PENDING = "review_pending", "در انتظار ویرایش"
         IN_PROGRESS = "in_progress", "در حال انجام"
-        COMPLETED = "completed", "انجام شده"
+        DONE = "done", "انجام شده"
+        COMPLETED = "completed", "تمام شده"
         CANCELLED = "cancelled", "لغو شده"
 
+    # ========== ارتباطات ==========
     campaign = models.ForeignKey(
         'campaigns.Campaign',
         on_delete=models.CASCADE,
@@ -408,15 +581,30 @@ class ContentOrder(models.Model):
         verbose_name="پلن انتخابی"
     )
 
+    # ========== قیمت ==========
     price = models.PositiveBigIntegerField(
-        verbose_name="قیمت"
+        verbose_name="قیمت",
+        help_text='قیمت نهایی از روی پلن کپی می‌شود'
     )
 
-    minutes = models.PositiveSmallIntegerField(
-        verbose_name=_('دقیقه'),
-        null=True, blank=True
+    # ========== مقدار انتخابی کاربر (فقط برای اطلاع) ==========
+    selected_quantity = models.PositiveIntegerField(
+        _('مقدار انتخابی'),
+        null=True,
+        blank=True,
+        help_text='مقداری که کاربر انتخاب کرده (در صورت قابل تنظیم بودن)'
     )
 
+    # ========== وضعیت ==========
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name="وضعیت"
+    )
+
+    # ========== ددلاین ==========
     deadline = jmodels.jDateTimeField(
         verbose_name='ددلاین تحویل',
         null=True,
@@ -428,17 +616,10 @@ class ContentOrder(models.Model):
         verbose_name='ددلاین تحویل (Unix Timestamp)',
         null=True,
         blank=True,
-        help_text='تایم‌استمپ ددلاین به میلی ‌ثانیه'
+        help_text='تایم‌استمپ ددلاین به میلی‌ثانیه'
     )
 
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PENDING,
-        db_index=True,
-        verbose_name="وضعیت"
-    )
-
+    # ========== جایگزینی ==========
     replaced_by = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -454,6 +635,7 @@ class ContentOrder(models.Model):
         verbose_name='تاریخ جایگزینی'
     )
 
+    # ========== متادیتا ==========
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name="زمان ایجاد"
@@ -464,16 +646,21 @@ class ContentOrder(models.Model):
         verbose_name_plural = "سفارش‌های تولید محتوا"
 
     def __str__(self):
-        return f' سفارش {self.campaign.name} - {self.campaign.advertiser.user.nickname}'
+        return f'سفارش {self.campaign.name} - {self.team.name}'
 
     def save(self, *args, **kwargs):
-        """محاسبه خودکار قیمت قبل از ذخیره"""
+        """قیمت رو مستقیم از پلن میگیره"""
         if self.plan and not self.price:
-            if self.minutes:
-                self.price = int(self.plan.price_per_unit) * self.minutes
-            else:
-                self.price = int(self.plan.price_per_unit)
+            self.price = self.plan.price
         super().save(*args, **kwargs)
+
+    def has_selected_file(self):
+        """آیا فایلی برای این سفارش انتخاب شده است؟"""
+        return self.deliveries.filter(files__is_selected=True).exists()
+
+    def get_selected_file(self):
+        """دریافت فایل انتخاب شده برای این سفارش"""
+        return self.deliveries.filter(files__is_selected=True).first()
 
 
 class ContentOrderDescription(models.Model):
@@ -860,21 +1047,17 @@ class ContentOrderRevision(models.Model):
 
 
 class ContentDelivery(models.Model):
-    """
-    تحویل نهایی سفارش توسط تیم تولید محتوا
-    """
-
     class DeliveryStatus(models.TextChoices):
         PENDING = 'pending', _('در انتظار تحویل')
         DELIVERED = 'delivered', _('تحویل داده شد')
-        PARTIAL = 'partial', _('تحویل بخشی')
-        REVISION_REQUESTED = 'revision_requested', _('ویرایش درخواست شده')
+        REVISION_REQUESTED = 'revision_requested', _('درخواست ویرایش')
         FINAL_ACCEPTED = 'final_accepted', _('تأیید نهایی')
 
-    order = models.OneToOneField(
+    # ========== ارتباط ==========
+    order = models.ForeignKey(
         'ContentOrder',
         on_delete=models.CASCADE,
-        related_name='delivery',
+        related_name='deliveries',
         verbose_name=_('سفارش')
     )
 
@@ -886,27 +1069,7 @@ class ContentDelivery(models.Model):
         db_index=True
     )
 
-    file = models.FileField(
-        _('فایل تحویلی'),
-        upload_to=content_order_file_path,
-        null=True,
-        blank=True,
-        help_text=_('فایل نهایی تحویل شده توسط تیم')
-    )
-
-    file_name = models.CharField(
-        _('نام فایل'),
-        max_length=255,
-        blank=True,
-        help_text=_('نام اصلی فایل آپلود شده')
-    )
-
-    file_size = models.PositiveIntegerField(
-        _('حجم فایل (بایت)'),
-        null=True,
-        blank=True
-    )
-
+    # ========== تحویل‌دهنده ==========
     delivered_by = models.ForeignKey(
         ContentTeamMember,
         on_delete=models.SET_NULL,
@@ -934,6 +1097,12 @@ class ContentDelivery(models.Model):
         blank=True
     )
 
+    version = models.PositiveSmallIntegerField(
+        _('نسخه'),
+        default=1,
+        help_text=_('نسخه تحویل سفارش (۱ برای تحویل اولیه، ۲ برای ویرایش اول، و...)')
+    )
+
     created_at = jmodels.jDateTimeField(
         _('تاریخ ایجاد'),
         auto_now_add=True
@@ -944,20 +1113,111 @@ class ContentDelivery(models.Model):
         auto_now=True
     )
 
-    version = models.PositiveSmallIntegerField(
-        _('نسخه'),
-        default=1,
-        help_text=_('نسخه تحویل سفارش (۱ برای تحویل اولیه، ۲ برای ویرایش اول، و...)')
-    )
-
     class Meta:
         verbose_name = _('تحویل سفارش')
         verbose_name_plural = _('تحویل‌های سفارش')
         ordering = ['-version', '-delivered_at']
-        unique_together = [['order', 'version']]
+        indexes = [
+            models.Index(fields=['order', 'version']),
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
-        return f"تحویل سفارش {self.order.id} - نسخه {self.version} - {self.get_status_display()}"
+        return f"تحویل سفارش {self.order.id} - نسخه {self.version}"
+
+    @property
+    def primary_file(self):
+        """فایل اصلی (اولین فایل یا گزینه انتخاب شده)"""
+        return self.files.filter(is_option=True).first() or self.files.first()
+
+    @property
+    def has_multiple_options(self):
+        """آیا این تحویل چند گزینه داره؟"""
+        return self.files.filter(is_option=True).count() > 1
+
+    @property
+    def file_count(self):
+        """تعداد فایل‌های این تحویل"""
+        return self.files.count()
+
+
+class ContentDeliveryFile(models.Model):
+    """
+    فایل‌های یک تحویل سفارش
+    هر تحویل می‌تواند چندین فایل داشته باشد
+    """
+    delivery = models.ForeignKey(
+        'ContentDelivery',
+        on_delete=models.CASCADE,
+        related_name='files',
+        verbose_name=_('تحویل')
+    )
+
+    file = models.FileField(
+        _('فایل'),
+        upload_to=content_order_file_path,
+        help_text=_('فایل تحویل داده شده توسط تیم')
+    )
+
+    file_name = models.CharField(
+        _('نام فایل'),
+        max_length=255,
+        blank=True,
+        help_text=_('نام اصلی فایل آپلود شده')
+    )
+
+    file_size = models.PositiveIntegerField(
+        _('حجم فایل (بایت)'),
+        null=True,
+        blank=True
+    )
+
+    # ===== ✅ فیلدهای جدید =====
+
+    # ۱. آیا این فایل یک گزینه است؟ (برای MULTI_CHOICE)
+    is_option = models.BooleanField(
+        _('گزینه'),
+        default=False,
+        help_text='آیا این فایل یکی از گزینه‌های تحویلی است؟ (برای MULTI_CHOICE)'
+    )
+
+    # ۲. شماره گزینه (برای MULTI_CHOICE)
+    option_number = models.PositiveSmallIntegerField(
+        _('شماره گزینه'),
+        null=True,
+        blank=True,
+        help_text='شماره گزینه (۱، ۲، ۳، ...)'
+    )
+
+    # ۳. ✅ آیا این فایل توسط تبلیغ‌دهنده انتخاب شده است؟
+    is_selected = models.BooleanField(
+        _('انتخاب شده'),
+        default=False,
+        help_text='آیا این فایل توسط تبلیغ‌دهنده به عنوان فایل نهایی انتخاب شده است؟'
+    )
+
+    created_at = jmodels.jDateTimeField(
+        _('تاریخ ایجاد'),
+        auto_now_add=True
+    )
+
+    updated_at = jmodels.jDateTimeField(
+        _('تاریخ بروزرسانی'),
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = _('فایل تحویل')
+        verbose_name_plural = _('فایل‌های تحویل')
+        ordering = ['option_number', 'created_at']
+        indexes = [
+            models.Index(fields=['delivery', 'is_option']),
+            models.Index(fields=['option_number']),
+            models.Index(fields=['is_selected']),
+        ]
+
+    def __str__(self):
+        return f"فایل {self.option_number or ''} - {self.file_name}"
 
     def save(self, *args, **kwargs):
         if self.file and not self.file_name:
@@ -971,6 +1231,7 @@ class ContentDelivery(models.Model):
 
     @property
     def file_size_display(self):
+        """نمایش حجم فایل به صورت خوانا"""
         if not self.file_size:
             return 'نامشخص'
         size = self.file_size

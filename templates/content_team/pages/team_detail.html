@@ -3,9 +3,8 @@
 
 {% block title %}پروفایل تیم {{ team.name }}{% endblock %}
 
-{% block extra_style %}
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail.css' %}">
-    <link rel="stylesheet" href="{% static 'accounts/css/forms/auth_forms.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -322,6 +321,7 @@
                     </div>
                 {% endif %}
 
+                <!-- ===== بخش پلن‌ها ===== -->
                 {% if service_plans_by_type %}
                     <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
                         <!-- هدر اصلی -->
@@ -330,9 +330,9 @@
                             <div class="section-icon">
                                 <i class="fi-cash"></i>
                             </div>
-                            <h3 class="section-title">پلن ها</h3>
+                            <h3 class="section-title">پلن‌های خدمات</h3>
                             <div class="section-line"></div>
-                            <span class="reviews-count-badge">{{ service_plans_by_type|length }} پلن</span>
+                            <span class="reviews-count-badge">{{ service_plans_by_type|length }}</span>
                             <div class="collapse-arrow">
                                 <i class="fi-chevron-down"></i>
                             </div>
@@ -366,33 +366,77 @@
                                             {% for plan in group.plans %}
                                                 <a href="{% url 'content_team:plan_detail' plan.id %}"
                                                    class="text-decoration-none">
-                                                    <div class="pricing-card h-100 d-flex flex-column position-relative {% if group.plans|length == 3 and forloop.counter0 == 1 %}most-popular{% endif %}"
-                                                         style="margin: 0 auto">
-
-                                                        {% if group.plans|length == 3 and forloop.counter0 == 1 %}
-                                                            <div class="most-popular-badge">
-                                                                <i class="fi-star-filled me-1"></i>محبوب‌ترین
-                                                            </div>
+                                                    <div class="pricing-card {% if group.plans|length >= 2 and plan.is_most_popular %}most-popular{% endif %}">
+                                                        {% if group.plans|length >= 2 %}
+                                                            {% if plan.is_most_popular %}
+                                                                <div class="most-popular-badge mt-2">
+                                                                    <i class="fi-star-filled me-1"></i>محبوب‌ترین
+                                                                </div>
+                                                            {% endif %}
                                                         {% endif %}
 
-                                                        <div class="pricing-card-icon mx-auto">
+                                                        <div class="pricing-card-icon">
                                                             {% if group.service_type.icon %}
                                                                 <i class="{{ group.service_type.icon }}"></i>
                                                             {% else %}
                                                                 <i class="fi-check-circle"></i>
                                                             {% endif %}
                                                         </div>
+
                                                         <div class="pricing-card-title">{{ plan.name }}</div>
 
-                                                        <div class="pricing-card-price mb-2">
-                                                            <span class="price-number">{{ plan.price_per_unit|floatformat:0 }}</span>
+                                                        <!-- قیمت -->
+                                                        <div class="pricing-card-price">
+                                                            <span class="price-number">{{ plan.price|floatformat:0 }}</span>
                                                             <span class="price-currency">تومان</span>
                                                         </div>
 
-                                                        <div class="pricing-card-feature mt-auto">
+                                                        <!-- محدوده -->
+                                                        <div class="pricing-card-range">
+                                                            {% if plan.pricing_unit == 'second' %}
+                                                                {% if plan.min_quantity == plan.max_quantity or not plan.max_quantity %}
+                                                                    <span class="range-value">{{ plan.base_quantity|default:1 }}</span>
+                                                                    <span class="range-unit">ثانیه</span>
+                                                                {% else %}
+                                                                    <span class="range-value">{{ plan.min_quantity }}</span>
+                                                                    <span class="range-separator">تا</span>
+                                                                    <span class="range-value">{{ plan.max_quantity }}</span>
+                                                                    <span class="range-unit">ثانیه</span>
+                                                                    <span class="range-base">(پایه: {{ plan.base_quantity }})</span>
+                                                                {% endif %}
+
+                                                            {% elif plan.pricing_unit == 'minute' %}
+                                                                {% if plan.min_quantity == plan.max_quantity or not plan.max_quantity %}
+                                                                    <span class="range-value">{{ plan.base_quantity|default:1 }}</span>
+                                                                    <span class="range-unit">دقیقه</span>
+                                                                {% else %}
+                                                                    <span class="range-value">{{ plan.min_quantity }}</span>
+                                                                    <span class="range-separator text-light">تا</span>
+                                                                    <span class="range-value">{{ plan.max_quantity }}</span>
+                                                                    <span class="range-unit text-primary">دقیقه</span>
+                                                                    <span class="range-base text-success">(پایه: {{ plan.base_quantity }})</span>
+                                                                {% endif %}
+
+                                                            {% elif plan.pricing_unit == 'quantity' %}
+                                                                <span class="range-unit text-primary">تعدادی</span>
+                                                                <span class="range-base text-success">({{ plan.delivery_type_display|safe }})</span>
+                                                            {% else %}
+                                                                <span class="range-unit">{{ plan.get_pricing_unit_display }}</span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        <!-- نوع تحویل -->
+                                                        {#                                        <div class="pricing-card-delivery">#}
+                                                        {#                                            <i class="fi-package"></i>#}
+                                                        {#                                            {{ plan.delivery_type_display|safe }}#}
+                                                        {#                                        </div>#}
+
+                                                        <!-- زمان تحویل -->
+                                                        <div class="pricing-card-feature">
                                                             <i class="fi-clock me-1"></i>
                                                             تحویل {{ plan.estimated_delivery_days }} روزه
                                                         </div>
+
                                                         {% if plan.description %}
                                                             <p class="small text-muted mt-2 mb-0">{{ plan.description|truncatewords:12 }}</p>
                                                         {% endif %}
@@ -481,6 +525,7 @@
                                                         data-rating="{{ review.rating }}"
                                                         data-comment="{{ review.comment|escapejs }}"
                                                         data-order-name="
+                                                                
                                                                 
                                                                 
                                                                 

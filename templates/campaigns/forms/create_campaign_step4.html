@@ -132,7 +132,7 @@
                                 </div>
                             </div>
 
-                            <!-- اطلاعات پلن -->
+                            <!-- ========== اطلاعات پلن (نسخه جدید) ========== -->
                             <div class="plan-detail-box bg-black-20 rounded-3 p-3 mb-3">
                                 <div class="d-flex align-items-center gap-2 mb-2">
                                     {% if content_order.plan.service_type.icon %}
@@ -143,35 +143,49 @@
                                     <span class="fw-semibold text-light">پلن انتخابی:</span>
                                     <span class="badge bg-primary-light text-white px-3 py-1 rounded-pill">{{ content_order.plan.name }}</span>
                                 </div>
+
                                 <div class="row g-2 mb-2">
                                     <div class="col-6">
                                         <div class="text-secondary small">نوع خدمت</div>
                                         <div class="text-light">{{ content_order.plan.service_type.name }}</div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-secondary small">واحد قیمت</div>
+                                        <div class="text-secondary small">واحد قیمت‌گذاری</div>
+                                        <div class="text-light">{{ content_order.plan.get_pricing_unit_display }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <div class="text-secondary small">مقدار پایه</div>
                                         <div class="text-light">
-                                            {% if content_order.plan.service_type.unit == "minute" %}
-                                                قیمت هر دقیقه
-                                            {% else %}
-                                                قیمت پروژه
+                                            {{ content_order.plan.base_quantity }}
+                                            {% if content_order.plan.pricing_unit == "second" %}
+                                                ثانیه
+                                            {% elif content_order.plan.pricing_unit == "minute" %}
+                                                دقیقه
+                                            {% elif content_order.plan.pricing_unit == "quantity" %}
+                                                عدد
                                             {% endif %}
                                         </div>
                                     </div>
+                                    <div class="col-6">
+                                        <div class="text-secondary small">محدوده مقدار</div>
+                                        <div class="text-light">{{ content_order.plan.quantity_display }}</div>
+                                    </div>
                                 </div>
+
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <div class="text-secondary small">قیمت پایه</div>
-                                        <div class="text-light">{{ content_order.plan.price_per_unit|floatformat:0 }}
-                                            تومان
+                                        <div class="text-secondary small">نوع تحویل</div>
+                                        <div class="text-light">{{ content_order.plan.delivery_type_display }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-secondary small">مدت تحویل</div>
+                                        <div class="text-light">{{ content_order.plan.estimated_delivery_days }} روز
+                                            کاری
                                         </div>
                                     </div>
-                                    {% if content_order.minutes %}
-                                        <div class="col-6">
-                                            <div class="text-secondary small">تعداد دقیقه</div>
-                                            <div class="text-light">{{ content_order.minutes }} دقیقه</div>
-                                        </div>
-                                    {% endif %}
                                 </div>
                             </div>
 
@@ -205,6 +219,7 @@
                 {% endif %}
             </div>
 
+            <!-- ========== ستون چپ (هزینه‌ها و پرداخت) ========== -->
             <div class="col-lg-6">
                 <!-- کارت تفکیک هزینه‌ها -->
                 <div class="premium-card mb-4">
@@ -372,7 +387,7 @@
             </div>
         </div>
 
-        <!-- فرم مخفی (داده‌ها با جاوااسکریپت ارسال می‌شود اما برای حفظ روش قدیمی، فرم را در پایین قرار می‌دهیم) -->
+        <!-- فرم مخفی -->
         <form method="POST" id="step4-form" action="" style="display: none;">
             {% csrf_token %}
             <input type="hidden" name="payment_method" id="payment-method-input" value="gateway">
@@ -383,220 +398,16 @@
 {% block script %}
     {{ block.super }}
     <script>
-        (function () {
-            // ---------- تنظیمات اولیه ----------
-            const uniInput = document.getElementById('uni-discount-input');
-            const uniBtn = document.getElementById('uni-discount-apply');
-            const feedbackDiv = document.getElementById('discount-feedback');
-            const appliedList = document.getElementById('applied-discounts-list');
-            const csrfToken = '{{ csrf_token }}';
-
-            let appliedScopes = {
-                influencer: {% if campaign.influencer_coupon %}true{% else %}false{% endif %},
-                content_team: {% if campaign.content_team_coupon %}true{% else %}false{% endif %},
-                platform: {% if campaign.platform_coupon %}true{% else %}false{% endif %}
-            };
-
-            const scopeMeta = {
-                influencer: {label: 'اینفلوئنسر', icon: '🌟'},
-                content_team: {label: 'تیم محتوا', icon: '🎬'},
-                platform: {label: 'پلتفرم', icon: '🏷️'}
-            };
-
-            function showMessage(text, type) {
-                feedbackDiv.textContent = text;
-                feedbackDiv.className = 'discount-message ' + (type === 'success' ? 'discount-success' : 'discount-error');
-                feedbackDiv.classList.remove('d-none');
-                setTimeout(() => feedbackDiv.classList.add('d-none'), 5000);
-            }
-
-            function addAppliedBadge(scope, code) {
-                if (appliedList.querySelector(`[data-scope="${scope}"]`)) return;
-                const badgeDiv = document.createElement('div');
-                badgeDiv.className = 'applied-discount-badge';
-                badgeDiv.setAttribute('data-scope', scope);
-                badgeDiv.innerHTML = `
-                <i>${scopeMeta[scope].icon}</i>
-                <span>${scopeMeta[scope].label}: <strong>${code}</strong></span>
-                <span class="applied-success-icon">✓</span>
-            `;
-                appliedList.appendChild(badgeDiv);
-            }
-
-            // تابع جدید برای غیرفعال کردن بخش تخفیف در صورت استفاده از هر سه نوع
-            function checkAndDisableUniDiscount() {
-                const allApplied = Object.values(appliedScopes).every(v => v === true);
-                if (allApplied) {
-                    uniInput.disabled = true;
-                    uniBtn.disabled = true;
-                    uniBtn.textContent = 'همه تخفیف‌ها اعمال شد';
-                    uniBtn.classList.add('disabled');
-                    showMessage('شما از هر سه نوع تخفیف (اینفلوئنسر، تیم محتوا، پلتفرم) استفاده کرده‌اید.', 'info');
-                } else {
-                    // اگر هنوز همه اعمال نشده، مطمئن شو که فعال هستند (در صورت لزوم)
-                    uniInput.disabled = false;
-                    uniBtn.disabled = false;
-                    uniBtn.textContent = 'اعمال تخفیف';
-                    uniBtn.classList.remove('disabled');
-                }
-            }
-
-            function updateTotals(data) {
-                const finalDisplay = document.getElementById('final-price-value');
-                if (finalDisplay) finalDisplay.innerHTML = data.payable_amount_formatted + ' <span class="final-price-unit">تومان</span>';
-                const finalTotalSpan = document.getElementById('final-total-display');
-                if (finalTotalSpan) finalTotalSpan.textContent = data.final_total_formatted + ' تومان';
-
-                const payableRow = document.getElementById('payable-row');
-                const payableSpan = document.getElementById('payable-amount-display');
-                if (data.discount_amount > 0) {
-                    if (payableRow) payableRow.classList.remove('d-none');
-                    if (payableSpan) payableSpan.textContent = data.payable_amount_formatted + ' تومان';
-                    const totalDiscountInfo = document.getElementById('total-discount-info');
-                    const totalDiscountVal = document.getElementById('total-discount-value');
-                    if (totalDiscountInfo) totalDiscountInfo.classList.remove('d-none');
-                    if (totalDiscountVal) totalDiscountVal.textContent = data.discount_amount_formatted;
-                } else {
-                    if (payableRow) payableRow.classList.add('d-none');
-                    if (totalDiscountInfo) totalDiscountInfo.classList.add('d-none');
-                }
-
-                if (data.scope === 'influencer' && data.discount_breakdown.influencer_discount > 0) {
-                    const row = document.getElementById('discount-influencer-row');
-                    const valSpan = document.getElementById('discount-influencer-value');
-                    const labelSpan = document.getElementById('influencer-discount-label');
-                    if (row) row.classList.remove('d-none');
-                    if (valSpan) valSpan.textContent = '- ' + data.discount_breakdown.influencer_discount.toLocaleString() + ' تومان';
-                    if (labelSpan) labelSpan.textContent = '(' + data.coupon_code + ')';
-                }
-                if (data.scope === 'content_team' && data.discount_breakdown.content_discount > 0) {
-                    const row = document.getElementById('discount-content-row');
-                    const valSpan = document.getElementById('discount-content-value');
-                    const labelSpan = document.getElementById('content-discount-label');
-                    if (row) row.classList.remove('d-none');
-                    if (valSpan) valSpan.textContent = '- ' + data.discount_breakdown.content_discount.toLocaleString() + ' تومان';
-                    if (labelSpan) labelSpan.textContent = '(' + data.coupon_code + ')';
-                }
-                if (data.scope === 'platform' && data.discount_breakdown.platform_discount > 0) {
-                    const row = document.getElementById('discount-platform-row');
-                    const valSpan = document.getElementById('discount-platform-value');
-                    const labelSpan = document.getElementById('platform-discount-label');
-                    if (row) row.classList.remove('d-none');
-                    if (valSpan) valSpan.textContent = '- ' + data.discount_breakdown.platform_discount.toLocaleString() + ' تومان';
-                    if (labelSpan) labelSpan.textContent = '(' + data.coupon_code + ')';
-                }
-            }
-
-            async function tryApplyCode(code) {
-                const scopes = ['influencer', 'content_team', 'platform'];
-                for (let scope of scopes) {
-                    if (appliedScopes[scope]) continue;
-                    try {
-                        console.log(`🔍 تلاش برای اعمال کد ${code} روی scope ${scope}`);
-                        const response = await fetch("{% url 'campaigns:apply_discount' %}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': csrfToken,
-                            },
-                            body: JSON.stringify({code: code, scope: scope})
-                        });
-                        const data = await response.json();
-                        console.log(`📦 پاسخ دریافتی:`, data);
-
-                        if (data.success) {
-                            appliedScopes[scope] = true;
-                            addAppliedBadge(scope, data.coupon_code);
-                            updateTotals(data);
-                            showMessage(`✅ کد تخفیف ${scopeMeta[scope].label} با موفقیت اعمال شد.`, 'success');
-                            uniInput.value = '';
-                            uniInput.focus();
-                            checkAndDisableUniDiscount();
-                            return true;
-                        } else {
-                            // ✅ نمایش پیام خطای دقیق از سرور
-                            const errorMsg = data.message || data.error || 'خطای ناشناخته';
-                            console.log(`❌ خطا از سرور: ${errorMsg}`);
-                            showMessage(`❌ ${errorMsg}`, 'error');
-                            // اگر خطا مربوط به این scope بود، scope بعدی رو امتحان نکن
-                            if (data.message && (
-                                data.message.includes('قبلاً از یک کد تخفیف') ||
-                                data.message.includes('قبلاً در یک کمپین دیگر')
-                            )) {
-                                return false;
-                            }
-                            // برای خطاهای دیگه، scope بعدی رو امتحان کن
-                            continue;
-                        }
-                    } catch (e) {
-                        console.error('❌ خطای شبکه:', e);
-                        showMessage('❌ خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
-                        return false;
-                    }
-                }
-                showMessage('❌ کد تخفیف معتبر نیست یا قبلاً استفاده شده است.', 'error');
-                return false;
-            }
-
-            uniBtn.addEventListener('click', async () => {
-                const code = uniInput.value.trim();
-                if (!code) {
-                    showMessage('لطفاً کد تخفیف را وارد کنید.', 'error');
-                    return;
-                }
-                if (Object.values(appliedScopes).every(v => v === true)) {
-                    showMessage('شما قبلاً از هر سه نوع تخفیف استفاده کرده‌اید.', 'error');
-                    return;
-                }
-                uniBtn.disabled = true;
-                uniBtn.textContent = 'در حال بررسی...';
-                await tryApplyCode(code);
-                uniBtn.disabled = false;
-                // اگر بعد از tryApplyCode هنوز هر سه نشده، متن رو به حالت اول برگردون
-                if (!Object.values(appliedScopes).every(v => v === true)) {
-                    uniBtn.textContent = 'اعمال تخفیف';
-                } else {
-                    uniBtn.textContent = 'همه تخفیف‌ها اعمال شد';
-                    uniBtn.disabled = true;
-                }
-            });
-
-            function initExistingDiscounts() {
-                {% if campaign.influencer_coupon %}
-                    addAppliedBadge('influencer', '{{ campaign.influencer_coupon.code }}');
-                {% endif %}
-                {% if campaign.content_team_coupon %}
-                    addAppliedBadge('content_team', '{{ campaign.content_team_coupon.code }}');
-                {% endif %}
-                {% if campaign.platform_coupon %}
-                    addAppliedBadge('platform', '{{ campaign.platform_coupon.code }}');
-                {% endif %}
-                // بررسی اولیه برای غیرفعال کردن در صورت وجود سه تخفیف از قبل
-                checkAndDisableUniDiscount();
-            }
-
-            initExistingDiscounts();
-
-            // ---------- روش پرداخت و ارسال فرم (بدون تغییر) ----------
-            const paymentOptions = document.querySelectorAll('.payment-option');
-            const paymentMethodInput = document.getElementById('payment-method-input');
-            paymentOptions.forEach(opt => {
-                opt.addEventListener('click', function () {
-                    if (this.classList.contains('disabled')) return;
-                    paymentOptions.forEach(o => o.classList.remove('active'));
-                    this.classList.add('active');
-                    paymentMethodInput.value = this.dataset.method;
-                });
-            });
-            const form = document.getElementById('step4-form');
-            const submitBtn = document.getElementById('pay-submit-btn');
-            if (form && submitBtn) {
-                submitBtn.addEventListener('click', function (e) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'در حال پردازش...';
-                    form.submit();
-                });
-            }
-        })();
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+        window.APPLY_DISCOUNT_URL = "{% url 'campaigns:apply_discount' %}";
+        window.EXISTING_SCOPES = {
+            influencer: {% if campaign.influencer_coupon %}true{% else %}false{% endif %},
+            content_team: {% if campaign.content_team_coupon %}true{% else %}false{% endif %},
+            platform: {% if campaign.platform_coupon %}true{% else %}false{% endif %}
+        };
     </script>
+    <script src="{% static 'campaigns/js/create_step_4/helpers.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_4/discount.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_4/payment.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_4/main.js' %}"></script>
 {% endblock %}

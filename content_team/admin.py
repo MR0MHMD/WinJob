@@ -1,9 +1,10 @@
+from django import forms
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from core.admin_utils import RegionalFilterAdminMixin
 from accounts.models import CustomUser
-from core.admin_utils import format_datetime
+from .forms import ContentServicePlanForm, TeamManageForm
 from .utils import get_team_province
 from .inline_admin import *
 
@@ -242,6 +243,7 @@ class ContentServiceTypeAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "icon",
+        "allowed_units_display",  # ← جدید
         "display_order",
         "is_active",
         "created_at",
@@ -265,6 +267,58 @@ class ContentServiceTypeAdmin(admin.ModelAdmin):
         "slug": ("name",)
     }
 
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "name",
+                "slug",
+                "description",
+                "icon",
+            )
+        }),
+        ("تنظیمات واحد", {  # ← جدید
+            "fields": (
+                "allowed_units",
+                "allowed_units_display",
+            ),
+            "classes": ("wide",),
+            "description": "واحدهایی که این سرویس می‌تواند داشته باشد. "
+                           "تیم‌های تولید محتوا فقط می‌توانند از این واحدها برای پلن‌های خود استفاده کنند."
+        }),
+        ("وضعیت", {
+            "fields": (
+                "is_active",
+                "display_order",
+            )
+        }),
+        ("تاریخ‌ها", {
+            "fields": (
+                "created_at",
+            ),
+            "classes": ("collapse",)
+        }),
+    )
+
+    readonly_fields = (
+        "created_at",
+        "allowed_units_display",
+    )
+
+    def allowed_units_display(self, obj):
+        """نمایش واحدهای مجاز به صورت خوانا"""
+        return obj.get_allowed_units_display() or "همه واحدها"
+
+    allowed_units_display.short_description = "واحدهای مجاز"
+
+    # ========== فیلتر فرم برای انتخاب واحدهای مجاز ==========
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == "allowed_units":
+            # استفاده از CheckboxSelectMultiple برای انتخاب راحت‌تر
+            kwargs['widget'] = forms.CheckboxSelectMultiple(
+                choices=ContentServicePlan.PricingUnit.choices
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
 
 @admin.register(ContentServicePlan)
 class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
@@ -272,12 +326,17 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     مدیریت پلن‌های خدمات تیم‌ها
     هر تیم برای هر نوع خدمت تا ۳ پلن می‌تونه داشته باشه
     """
+
+    form = ContentServicePlanForm
     list_display = (
         "id",
         "name",
         "team_link",
         "service_type",
+        "pricing_unit_display",  # ← جدید
+        "quantity_range_display",  # ← جدید
         "price_display",
+        "delivery_type_display",  # ← جدید
         "estimated_delivery_days",
         "orders_count_display",
         "is_active_badge",
@@ -288,6 +347,8 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "is_active",
         "team",
         "service_type",
+        "pricing_unit",  # ← جدید
+        "delivery_type",  # ← جدید
         "estimated_delivery_days",
     )
 
@@ -307,6 +368,8 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "created_at",
         "updated_at",
         "price_display",
+        "quantity_range_display",  # ← جدید
+        "delivery_type_display",  # ← جدید
         "features_display",
         "orders_count_display",
     )
@@ -320,12 +383,24 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "description",
             )
         }),
-        (_("قیمت‌گذاری و زمان"), {
+        (_("قیمت‌گذاری و واحد"), {  # ← تغییر
             "fields": (
-                "price_per_unit",
+                "pricing_unit",
+                "base_quantity",
+                "min_quantity",
+                "max_quantity",
+                "quantity_range_display",
+                "price",
                 "price_display",
-                "estimated_delivery_days",
             )
+        }),
+        (_("نوع تحویل"), {  # ← جدید
+            "fields": (
+                "delivery_type",
+                "delivery_options_count",
+                "delivery_type_display",
+            ),
+            "description": "نحوه تحویل فایل‌ها به کاربر را مشخص کنید."
         }),
         (_("ویژگی‌های پلن"), {
             "fields": (
@@ -333,6 +408,11 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "features_display",
             ),
             "classes": ("wide",),
+        }),
+        (_("زمان تحویل"), {
+            "fields": (
+                "estimated_delivery_days",
+            )
         }),
         (_("وضعیت و آمار"), {
             "fields": (
@@ -349,7 +429,27 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
     )
 
-    # ---------- متدهای نمایش ----------
+    # ========== متدهای جدید ==========
+    def pricing_unit_display(self, obj):
+        """نمایش واحد قیمت‌گذاری"""
+        return obj.get_pricing_unit_display()
+
+    pricing_unit_display.short_description = _("واحد")
+    pricing_unit_display.admin_order_field = "pricing_unit"
+
+    def quantity_range_display(self, obj):
+        """نمایش محدوده مقدار"""
+        return obj.quantity_display
+
+    quantity_range_display.short_description = _("محدوده مقدار")
+
+    def delivery_type_display(self, obj):
+        """نمایش نوع تحویل"""
+        return obj.delivery_type_display
+
+    delivery_type_display.short_description = _("نوع تحویل")
+
+    # ========== متدهای قبلی با تغییرات جزیی ==========
     def team_link(self, obj):
         url = reverse("admin:content_team_contentteam_change", args=[obj.team.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, obj.team.name)
@@ -358,14 +458,12 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     team_link.admin_order_field = "team__name"
 
     def price_display(self, obj):
-        """نمایش قیمت خوانا"""
         return obj.price_display
 
     price_display.short_description = _("قیمت")
-    price_display.admin_order_field = "price_per_unit"
+    price_display.admin_order_field = "price"
 
     def features_display(self, obj):
-        """نمایش کامل ویژگی‌ها در جزئیات"""
         features_list = obj.get_features_list()
         if not features_list:
             return mark_safe('<span style="color: #6c757d;">بدون ویژگی</span>')
@@ -382,7 +480,7 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     features_display.short_description = _("ویژگی‌های پلن")
 
     def orders_count_display(self, obj):
-        if not obj.pk:  # هنوز ذخیره نشده
+        if not obj.pk:
             return "-"
         count = obj.orders.count()
         if count:
@@ -403,11 +501,38 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     formated_created_ad.short_description = _("تاریخ ایجاد")
 
-    # ---------- محدودیت منطقه‌ای ----------
+    # ========== اعتبارسنجی در فرم ==========
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        # محدود کردن choices برای pricing_unit بر اساس service_type
+        if obj and obj.service_type:
+            allowed_units = obj.service_type.allowed_units
+            if allowed_units:
+                form.base_fields['pricing_unit'].choices = [
+                    (unit, label) for unit, label in ContentServicePlan.PricingUnit.choices
+                    if unit in allowed_units
+                ]
+
+        return form
+
+    def save_model(self, request, obj, form, change):
+        """اعتبارسنجی قبل از ذخیره"""
+        try:
+            obj.full_clean()
+            super().save_model(request, obj, form, change)
+        except ValidationError as e:
+            from django.contrib import messages
+            for field, errors in e.message_dict.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+            # فرم رو با خطا برگردون
+            raise
+
+    # ========== محدودیت منطقه‌ای ==========
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_regional_manager and request.user.province:
-            # فیلتر کردن پلن‌هایی که تیم‌شون در استان مدیر منطقست
             team_ids = []
             for plan in qs:
                 province = get_team_province(plan.team)
@@ -418,7 +543,6 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "team" and request.user.is_regional_manager:
-            # فقط تیم‌های هم‌استان مدیر منطقه‌ای
             team_ids = []
             for team in ContentTeam.objects.all():
                 province = get_team_province(team)
@@ -430,12 +554,14 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
 @admin.register(ContentOrder)
 class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    form = TeamManageForm
     list_display = (
         "id",
         "campaign",
         "team",
         "plan",
         "price",
+        "selected_quantity_display",  # ← جدید
         "status",
         "has_brief_display",
         "files_count_display",
@@ -462,6 +588,7 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "created_at",
         "has_brief_display",
         "files_count_display",
+        "plan_info_display",  # ← جدید
     )
 
     inlines = [
@@ -475,8 +602,16 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "campaign",
                 "team",
                 "plan",
+                "plan_info_display",  # ← جدید
                 "price",
             )
+        }),
+
+        ("مقدار انتخابی", {  # ← جدید
+            "fields": (
+                "selected_quantity",
+            ),
+            "description": "مقداری که کاربر انتخاب کرده (اختیاری - فقط برای اطلاع)"
         }),
 
         ("وضعیت", {
@@ -501,19 +636,53 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
     )
 
-    def has_brief_display(self, obj):
-        """آیا بریف ثبت شده؟"""
-        has_brief = hasattr(obj, 'brief') and obj.brief is not None
-        if has_brief:
-            return mark_safe(
-                '<span style="color: #28a745;">✓ بله</span>'
-            )
-        return mark_safe(
-            '<span style="color: #dc3545;">✗ خیر</span>'
+    # ========== متدهای جدید ==========
+    def selected_quantity_display(self, obj):
+        """نمایش مقدار انتخابی کاربر"""
+        if obj.selected_quantity:
+            unit_labels = {
+                'second': 'ثانیه',
+                'minute': 'دقیقه',
+                'quantity': 'عدد'
+            }
+            unit = unit_labels.get(obj.plan.pricing_unit if obj.plan else '', '')
+            return f"{obj.selected_quantity} {unit}"
+        return "-"
+
+    selected_quantity_display.short_description = _("مقدار انتخابی")
+
+    def plan_info_display(self, obj):
+        """نمایش اطلاعات کامل پلن در جزئیات"""
+        if not obj.plan:
+            return "-"
+
+        return format_html(
+            '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px; direction: rtl;">'
+            '<strong>نام پلن:</strong> {}<br>'
+            '<strong>واحد:</strong> {}<br>'
+            '<strong>مقدار پایه:</strong> {}<br>'
+            '<strong>محدوده:</strong> {}<br>'
+            '<strong>نوع تحویل:</strong> {}<br>'
+            '<strong>قیمت:</strong> {:,} تومان'
+            '</div>',
+            obj.plan.name,
+            obj.plan.get_pricing_unit_display(),
+            obj.plan.base_quantity,
+            obj.plan.quantity_display,
+            obj.plan.delivery_type_display,
+            obj.plan.price
         )
 
+    plan_info_display.short_description = _("اطلاعات پلن")
+
+    # ========== متدهای قبلی ==========
+    def has_brief_display(self, obj):
+        has_brief = hasattr(obj, 'brief') and obj.brief is not None
+        if has_brief:
+            return mark_safe('<span style="color: #28a745;">✓ بله</span>')
+        return mark_safe('<span style="color: #dc3545;">✗ خیر</span>')
+
     def files_count_display(self, obj):
-        """تعداد فایل‌های پیوست"""
         count = obj.files.count()
         if count:
             return format_html(
@@ -525,6 +694,7 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     has_brief_display.short_description = _("بریف ثبت شده؟")
     files_count_display.short_description = _("فایل‌های پیوست")
 
+    # ========== محدودیت منطقه‌ای ==========
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_regional_manager and request.user.province:
@@ -921,15 +1091,12 @@ class TeamJoinRequestAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
 @admin.register(ContentDelivery)
 class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
-    """
-    ادمین تحویل سفارشات - نسخه ساده شده با فایل مستقیم
-    """
     list_display = (
         "id",
         "order_link",
         "version",
         "status_badge",
-        "file_name_display",
+        "file_count_display",
         "delivered_by",
         "delivered_at_display",
         "is_accepted",
@@ -944,7 +1111,6 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     search_fields = (
         "order__campaign__name",
         "order__team__name",
-        "file_name",
         "delivered_by__user__nickname",
     )
 
@@ -956,11 +1122,13 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     readonly_fields = (
         "created_at",
         "updated_at",
-        "file_name",
-        "file_size_display",
         "order_info",
-        "file_preview",
+        "file_count_display",
     )
+
+    inlines = [
+        ContentDeliveryFileInline,  # ← اینلاین جدید
+    ]
 
     fieldsets = (
         ("اطلاعات سفارش", {
@@ -971,24 +1139,10 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             )
         }),
 
-        ("فایل تحویلی", {
-            "fields": (
-                "file",
-                "file_preview",
-                "file_name",
-                "file_size_display",
-            )
-        }),
-
-        ("وضعیت تحویل", {
+        ("اطلاعات تحویل", {
             "fields": (
                 "status",
                 "notes",
-            )
-        }),
-
-        ("اطلاعات تحویل‌دهنده", {
-            "fields": (
                 "delivered_by",
                 "delivered_at",
             )
@@ -997,6 +1151,13 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ("تأیید نهایی", {
             "fields": (
                 "accepted_at",
+            ),
+            "classes": ("collapse",)
+        }),
+
+        ("آمار فایل‌ها", {
+            "fields": (
+                "file_count_display",
             ),
             "classes": ("collapse",)
         }),
@@ -1010,6 +1171,7 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
     )
 
+    # ========== متدها ==========
     def order_link(self, obj):
         url = reverse('admin:content_team_contentorder_change', args=[obj.order.id])
         return format_html('<a href="{}" target="_blank">سفارش #{}</a>', url, obj.order.id)
@@ -1032,15 +1194,6 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         )
 
     status_badge.short_description = _("وضعیت")
-
-    def file_name_display(self, obj):
-        if obj.file_name:
-            if len(obj.file_name) > 30:
-                return obj.file_name[:27] + "..."
-            return obj.file_name
-        return "-"
-
-    file_name_display.short_description = _("نام فایل")
 
     def delivered_at_display(self, obj):
         return format_datetime(obj.delivered_at) if obj.delivered_at else "-"
@@ -1070,38 +1223,16 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     order_info.short_description = _("اطلاعات سفارش")
 
-    def file_preview(self, obj):
-        """پیش‌نمایش فایل در ادمین"""
-        if not obj.file:
-            return "-"
-
-        ext = obj.file.name.lower().split('.')[-1] if '.' in obj.file.name else ''
-
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+    def file_count_display(self, obj):
+        count = obj.files.count()
+        if count:
             return format_html(
-                '<img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;" />',
-                obj.file.url
+                '<span style="color: #007bff; font-weight: bold;">{} فایل</span>',
+                count
             )
-        elif ext in ['mp4', 'mov', 'avi', 'mkv']:
-            return format_html(
-                '<video controls style="max-width: 300px; max-height: 200px; border-radius: 8px;">'
-                '<source src="{}">'
-                'مرورگر شما از ویدیو پشتیبانی نمی‌کند.'
-                '</video>',
-                obj.file.url
-            )
-        else:
-            return format_html(
-                '<a href="{}" target="_blank" style="color: #007bff;">📎 دانلود فایل</a>',
-                obj.file.url
-            )
+        return mark_safe('<span style="color: #6c757d;">بدون فایل</span>')
 
-    file_preview.short_description = _("پیش‌نمایش")
-
-    def file_size_display(self, obj):
-        return obj.file_size_display
-
-    file_size_display.short_description = _("حجم فایل")
+    file_count_display.short_description = _("تعداد فایل‌ها")
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -1113,6 +1244,237 @@ class ContentDeliveryAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                     team_ids.append(rev.order.team_id)
             return qs.filter(order__team_id__in=team_ids)
         return qs
+
+
+@admin.register(ContentDeliveryFile)
+class ContentDeliveryFileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    """
+    ادمین فایل‌های تحویل سفارش
+    """
+    list_display = (
+        "id",
+        "delivery_link",
+        "file_name_display",
+        "file_size_display",
+        "is_option_display",
+        "option_number_display",
+        "created_at_display",
+    )
+
+    list_filter = (
+        "is_option",
+        "created_at",
+        "delivery__version",
+        "delivery__status",
+    )
+
+    search_fields = (
+        "file_name",
+        "delivery__order__campaign__name",
+        "delivery__order__team__name",
+    )
+
+    autocomplete_fields = (
+        "delivery",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "file_size_display",
+        "file_name",
+        "file_preview",
+        "delivery_info",
+    )
+
+    fieldsets = (
+        ("اطلاعات تحویل", {
+            "fields": (
+                "delivery_info",
+                "delivery",
+            )
+        }),
+
+        ("فایل", {
+            "fields": (
+                "file",
+                "file_preview",
+                "file_name",
+                "file_size_display",
+            )
+        }),
+
+        ("نوع فایل", {
+            "fields": (
+                "is_option",
+                "is_option_display",
+                "option_number",
+                "option_number_display",
+            ),
+            "description": "اگر این فایل یکی از گزینه‌های تحویلی است، گزینه بودن را فعال کنید."
+        }),
+
+        ("تاریخ‌ها", {
+            "fields": (
+                "created_at",
+                "updated_at",
+            ),
+            "classes": ("collapse",)
+        }),
+    )
+
+    # ========== متدهای نمایش ==========
+
+    def delivery_link(self, obj):
+        """لینک به صفحه تحویل در ادمین"""
+        url = reverse('admin:content_team_contentdelivery_change', args=[obj.delivery.id])
+        return format_html(
+            '<a href="{}" target="_blank">تحویل #{} - نسخه {}</a>',
+            url,
+            obj.delivery.id,
+            obj.delivery.version
+        )
+
+    delivery_link.short_description = _("تحویل مرتبط")
+    delivery_link.admin_order_field = "delivery__id"
+
+    def file_name_display(self, obj):
+        """نمایش نام فایل با truncate"""
+        if obj.file_name:
+            if len(obj.file_name) > 35:
+                return obj.file_name[:32] + "..."
+            return obj.file_name
+        return "-"
+
+    file_name_display.short_description = _("نام فایل")
+    file_name_display.admin_order_field = "file_name"
+
+    def file_size_display(self, obj):
+        """نمایش حجم فایل"""
+        return obj.file_size_display
+
+    file_size_display.short_description = _("حجم فایل")
+
+    def is_option_display(self, obj):
+        """نمایش وضعیت گزینه بودن"""
+        if obj.is_option:
+            return mark_safe('<span style="color: #28a745;">✓ گزینه</span>')
+        return mark_safe('<span style="color: #6c757d;">✗ فایل اصلی</span>')
+
+    is_option_display.short_description = _("گزینه بودن")
+
+    def option_number_display(self, obj):
+        """نمایش شماره گزینه"""
+        if obj.is_option and obj.option_number:
+            return f"گزینه {obj.option_number}"
+        return "-"
+
+    option_number_display.short_description = _("شماره گزینه")
+
+    def created_at_display(self, obj):
+        """نمایش تاریخ ایجاد"""
+        return format_datetime(obj.created_at)
+
+    created_at_display.short_description = _("تاریخ ایجاد")
+    created_at_display.admin_order_field = "created_at"
+
+    # ========== متدهای نمایش در جزئیات ==========
+
+    def delivery_info(self, obj):
+        """اطلاعات کامل تحویل مرتبط"""
+        return format_html(
+            '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px; direction: rtl;">'
+            '<strong>سفارش:</strong> {}<br>'
+            '<strong>کمپین:</strong> {}<br>'
+            '<strong>تیم:</strong> {}<br>'
+            '<strong>نسخه:</strong> {}<br>'
+            '<strong>وضعیت تحویل:</strong> {}<br>'
+            '<strong>تعداد کل فایل‌ها:</strong> {}'
+            '</div>',
+            obj.delivery.order.id,
+            obj.delivery.order.campaign.name,
+            obj.delivery.order.team.name,
+            obj.delivery.version,
+            obj.delivery.get_status_display(),
+            obj.delivery.files.count()
+        )
+
+    delivery_info.short_description = _("اطلاعات تحویل")
+
+    def file_preview(self, obj):
+        """پیش‌نمایش فایل در ادمین"""
+        if not obj.file:
+            return "-"
+
+        ext = obj.file.name.lower().split('.')[-1] if '.' in obj.file.name else ''
+
+        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+            return format_html(
+                '<img src="{}" style="max-width: 400px; max-height: 300px; '
+                'border-radius: 8px; border: 1px solid #ddd; object-fit: contain;" />',
+                obj.file.url
+            )
+        elif ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']:
+            return format_html(
+                '<video controls style="max-width: 400px; max-height: 300px; border-radius: 8px;">'
+                '<source src="{}">'
+                'مرورگر شما از ویدیو پشتیبانی نمی‌کند.'
+                '</video>',
+                obj.file.url
+            )
+        elif ext in ['mp3', 'wav', 'flac']:
+            return format_html(
+                '<audio controls style="width: 100%;">'
+                '<source src="{}">'
+                'مرورگر شما از صدا پشتیبانی نمی‌کند.'
+                '</audio>',
+                obj.file.url
+            )
+        elif ext in ['pdf']:
+            return format_html(
+                '<a href="{}" target="_blank" style="color: #dc3545; font-size: 1.2rem;">'
+                '<i class="bi bi-file-pdf"></i> 📄 مشاهده PDF</a>',
+                obj.file.url
+            )
+        else:
+            return format_html(
+                '<a href="{}" target="_blank" style="color: #007bff;">'
+                '<i class="bi bi-file-earmark"></i> 📎 دانلود فایل</a>',
+                obj.file.url
+            )
+
+    file_preview.short_description = _("پیش‌نمایش")
+
+    # ========== محدودیت منطقه‌ای ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_regional_manager and request.user.province:
+            team_ids = []
+            for file_obj in qs:
+                province = get_team_province(file_obj.delivery.order.team)
+                if province and province.id == request.user.province.id:
+                    team_ids.append(file_obj.delivery.order.team_id)
+            return qs.filter(delivery__order__team_id__in=team_ids)
+        return qs.select_related('delivery', 'delivery__order', 'delivery__order__campaign', 'delivery__order__team')
+
+    # ========== اکشن‌های سفارشی ==========
+
+    actions = ['make_option', 'remove_option']
+
+    def make_option(self, request, queryset):
+        """تبدیل فایل‌ها به گزینه"""
+        updated = queryset.update(is_option=True)
+        self.message_user(request, f'{updated} فایل با موفقیت به گزینه تبدیل شدند.')
+
+    make_option.short_description = _('تبدیل به گزینه')
+
+    def remove_option(self, request, queryset):
+        """حذف گزینه بودن از فایل‌ها"""
+        updated = queryset.update(is_option=False, option_number=None)
+        self.message_user(request, f'{updated} فایل از حالت گزینه خارج شدند.')
+
+    remove_option.short_description = _('خروج از حالت گزینه')
 
 
 @admin.register(ContentOrderRevision)

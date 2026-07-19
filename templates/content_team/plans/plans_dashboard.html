@@ -35,7 +35,7 @@
             <div class="info-alert mt-4">
                 <div class="d-flex align-items-start gap-3">
                     <i class="fi-lightbulb fa-lg mt-0.5"></i>
-                    <div>
+                    <div class="text-light">
                         <strong class="text-white">نکته مهم:</strong>
                         هر تیم می‌تواند برای هر خدمت حداکثر <strong class="text-primary">۳ پلن فعال</strong> داشته باشد.
                         برای ایجاد پلن جدید، ابتدا در صورت نیاز یک پلن غیرفعال کنید.
@@ -117,10 +117,14 @@
                                     </p>
                                 {% endif %}
 
+                                <!-- ========== نمایش واحدهای مجاز ========== -->
                                 <div class="mb-3">
-                                    <small class="text-muted d-block mb-2">
-                                        <i class="fi-clock ms-1"></i>
-                                        واحد: {{ service.get_unit_display }}
+                                    <small class="text-muted d-block">
+                                        <i class="fi-hashtag ms-1"></i>
+                                        واحدهای مجاز: 
+                                        <span class="text-light fw-semibold">
+                                            {{ service.get_allowed_units_display|default:"همه واحدها" }}
+                                        </span>
                                     </small>
                                 </div>
 
@@ -129,7 +133,11 @@
                                     <div class="mb-3">
                                         <div class="d-flex flex-wrap gap-2">
                                             {% for plan in service.active_plans|slice:":3" %}
-                                                <span class="plan-mini-tag">
+                                                <span class="plan-mini-tag" title="
+                                                    قیمت: {{ plan.price|floatformat:0 }} تومان
+                                                    | واحد: {{ plan.get_pricing_unit_display }}
+                                                    | پایه: {{ plan.base_quantity }}
+                                                ">
                                                     <i class="fi-star-filled ms-1" style="font-size: 0.6rem;"></i>
                                                     {{ plan.name|truncatechars:18 }}
                                                 </span>
@@ -191,6 +199,47 @@
             });
             card.addEventListener('mouseleave', function() {
                 this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // ========== اضافه کردن tooltip برای نمایش اطلاعات کامل پلن ==========
+        document.querySelectorAll('.plan-mini-tag').forEach(tag => {
+            tag.addEventListener('mouseenter', function(e) {
+                const tooltip = this.getAttribute('title');
+                if (tooltip) {
+                    // نمایش tooltip سفارشی
+                    const tooltipDiv = document.createElement('div');
+                    tooltipDiv.className = 'plan-tooltip';
+                    tooltipDiv.innerHTML = tooltip.replace(/\|/g, '<br>');
+                    tooltipDiv.style.cssText = `
+                        position: fixed;
+                        background: #1f1b2d;
+                        color: #fff;
+                        padding: 8px 12px;
+                        border-radius: 8px;
+                        border: 1px solid rgba(253, 86, 49, 0.3);
+                        font-size: 0.75rem;
+                        z-index: 9999;
+                        max-width: 200px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+                        pointer-events: none;
+                        direction: rtl;
+                    `;
+                    document.body.appendChild(tooltipDiv);
+                    
+                    const rect = this.getBoundingClientRect();
+                    tooltipDiv.style.top = (rect.top - tooltipDiv.offsetHeight - 8) + 'px';
+                    tooltipDiv.style.left = (rect.left + rect.width/2 - tooltipDiv.offsetWidth/2) + 'px';
+                    
+                    this._tooltip = tooltipDiv;
+                }
+            });
+
+            tag.addEventListener('mouseleave', function() {
+                if (this._tooltip) {
+                    this._tooltip.remove();
+                    this._tooltip = null;
+                }
             });
         });
     </script>

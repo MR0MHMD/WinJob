@@ -30,10 +30,9 @@
 
         <div class="card border-0 shadow-sm">
 
-
             <div class="card-body p-4 bg-dark">
 
-                <form method="POST" id="step1-form" novalidate action=" {% if edit_mode %}{% url 'campaigns:campaign_edit_step1' campaign.id %}{% else %}{% url 'campaigns:campaign_create_step1' %}{% endif %}">
+                <form method="POST" id="step1-form" novalidate action="{% if edit_mode %}{% url 'campaigns:campaign_edit_step1' campaign.id %}{% else %}{% url 'campaigns:campaign_create_step1' %}{% endif %}">
 
                     {% csrf_token %}
 
@@ -56,14 +55,12 @@
                         </div>
                     {% endif %}
 
-
                     <!-- پلتفرم -->
                     <div class="mb-4">
 
                         <label for="id_platform" class="form-label fw-bold text-light">
                             پلتفرم
                             <span class="text-danger">*</span>
-
                         </label>
 
                         {{ form.platform }}
@@ -119,7 +116,6 @@
 
                         <div id="content-type-hint" class="form-text mt-1" style="color:#adb5bd;">
                             ابتدا نوع تبلیغ را انتخاب کنید
-
                         </div>
 
                         {% if form.content_type.errors %}
@@ -143,27 +139,15 @@
                         <div class="row g-3 mt-2 option-cards" id="service-type-cards">
                         </div>
 
+                        <!-- ========== نمایش واحدهای مجاز سرویس ========== -->
+                        <div id="service-type-info" class="mt-2 text-muted small" style="display:none;">
+                            <i class="fi-info-circle me-1"></i>
+                            <span id="service-type-units-display"></span>
+                        </div>
+
                         {% if form.content_service_type.errors %}
                             <div class="text-danger mt-1 small">
                                 {{ form.content_service_type.errors }}
-                            </div>
-                        {% endif %}
-
-                    </div>
-
-                    <!-- مدت -->
-                    <div class="mb-4" id="minutes-wrapper" style="display:none;">
-
-                        <label class="form-label fw-bold text-light">
-                            مدت (دقیقه)
-                            <span class="text-danger">*</span>
-                        </label>
-
-                        {{ form.minutes }}
-
-                        {% if form.minutes.errors %}
-                            <div class="text-danger mt-1 small">
-                                {{ form.minutes.errors }}
                             </div>
                         {% endif %}
 
@@ -180,15 +164,13 @@
                         <div class="input-group">
 
                             <span class="input-group-text bg-dark">
-                                <i class="fi-calendar">
-                                </i>
+                                <i class="fi-calendar"></i>
                             </span>
 
                             <label for="start__date"></label>
                             <input id="start__date"
                                    class="form-control form-control-light range-from {% if form.start_date.errors %}is-invalid{% endif %}"
                                    type="text" placeholder="از تاریخ" autocomplete="off" readonly>
-
 
                             <input type="hidden" id="id_start_date" name="start_date" value="{{ form.start_date.value|default:'' }}">
 
@@ -201,19 +183,13 @@
 
                         {% if form.start_date.errors %}
                             <div class="text-danger small mt-1">
-                                <strong>
-                                    تاریخ شروع:
-                                </strong>
-                                {{ form.start_date.errors.0 }}
+                                <strong>تاریخ شروع:</strong> {{ form.start_date.errors.0 }}
                             </div>
                         {% endif %}
 
                         {% if form.end_date.errors %}
                             <div class="text-danger small mt-1">
-                                <strong>
-                                    تاریخ پایان:
-                                </strong>
-                                {{ form.end_date.errors.0 }}
+                                <strong>تاریخ پایان:</strong> {{ form.end_date.errors.0 }}
                             </div>
                         {% endif %}
 
@@ -284,8 +260,6 @@
             window.EDIT_CONTENT_TYPE_ID = "{{ edit_content_type_id|default:'' }}";
             window.EDIT_AD_TYPE_ID = "{{ edit_ad_type_id|default:'' }}";
             window.EDIT_SERVICE_TYPE_ID = "{{ edit_service_type_id|default:'' }}";
-            window.EDIT_MINUTES = "{{ edit_minutes|default:'' }}";
-            console.log("EDIT_MINUTES:", window.EDIT_MINUTES);  // برای دیباگ
         </script>
     {% else %}
         <script>

@@ -68,7 +68,7 @@
                                 {% if is_advertiser %}
                                     <li class="nav-item">
                                         <a class="nav-link d-flex align-items-center gap-2" href="{% url 'advertisers:my_campaigns' %}">
-                                            <i class="bi bi-briefcase"></i>
+                                            <i class="bi bi-megaphone"></i>
                                             <span>کمپین های من</span>
                                         </a>
                                     </li>
@@ -376,13 +376,14 @@
                                         class="bi bi-speedometer2 me-2"></i>داشبورد</a></li>
 
                                 {# اگر کاربر نقش ندارد و ادمین است، لینک‌های ادمین رو اضافه کن #}
+                                
                                 {% if not has_role and user.is_staff %}
                                     <li><a class="dropdown-item rounded-3 text-warning" href="{% url 'support:dashboard' %}"><i
                                             class="bi bi-shield-lock-fill me-2"></i>پنل مدیریت</a></li>
                                     <li><a class="dropdown-item rounded-3" href="{% url 'support:user_list' %}"><i
                                             class="bi bi-people-fill me-2"></i>مدیریت کاربران</a></li>
                                     <li><a class="dropdown-item rounded-3" href="{% url 'support:ticket_list' %}"><i
-                                            class="bi bi-ticket-perforated me-2"></i>تیکت‌ها</a></li>
+                                            class="bi bi-ticket-perforated me-2"></i>تیکت ها</a></li>
                                 {% endif %}
 
                                 <li><a class="dropdown-item rounded-3" href="{% url 'accounts:edit_profile' %}"><i
@@ -497,7 +498,7 @@
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
                                            href="{% url 'advertisers:my_campaigns' %}">
-                                            <i class="bi bi-briefcase"></i>
+                                            <i class="bi bi-megaphone"></i>
                                             <span>کمپین های من</span>
                                         </a>
                                     </li>
@@ -592,7 +593,7 @@
 
                             {% else %}
                                 {# ========== منوی موبایل ادمین (فقط is_staff) ========== #}
-                                {% if request.user.is_staff %}
+                                {% if not has_role and request.user.is_staff %}
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3 text-primary"
                                            href="{% url 'support:dashboard' %}">

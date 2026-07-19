@@ -10,7 +10,7 @@ urlpatterns = [
     path('register/', auth_views.register_view, name='register'),
     path('verify-otp/', auth_views.verify_otp_view, name='verify_otp'),
 
-    # views
+    # view
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('wallet/', views.wallet_dashboard, name='wallet_dashboard'),
     path('wallet/deposit/', views.wallet_deposit, name='wallet_deposit'),

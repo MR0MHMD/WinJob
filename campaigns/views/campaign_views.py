@@ -1,7 +1,6 @@
-from content_team.models import ContentOrder, ContentOrderFile, ContentTeam, ContentServicePlan, ContentOrderDescription
 from ..services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
 from ..utils import save_brief, save_campaign_content, handle_deleted_files, handle_new_files
-from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField
+from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField, Avg
 from ..services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from ..models import Campaign, CampaignInfluencer, Payment, CampaignContent
 from notifications.utils import notify_influencer_new_campaign_orders
@@ -18,6 +17,14 @@ from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
 import json
+from content_team.models import (
+    ContentOrder,
+    ContentOrderFile,
+    ContentTeam,
+    ContentServicePlan,
+    ContentOrderDescription,
+    TeamReview
+)
 from ..forms import (
     CampaignStep3BriefForm,
     CampaignStep3ReadyForm,
@@ -30,7 +37,6 @@ from ..forms import (
 @login_required
 def campaign_create_step1(request, campaign_id=None):
     editing_campaign = None
-    minutes_value = None  # متغیر برای ذخیره دقیقه‌ها
 
     if campaign_id:
         editing_campaign = get_object_or_404(
@@ -41,16 +47,7 @@ def campaign_create_step1(request, campaign_id=None):
         )
         request.session['campaign_draft_id'] = editing_campaign.id
 
-        # دریافت دقیقه از order در صورت وجود
-        if editing_campaign.content_service_type and editing_campaign.content_service_type.unit == 'minute':
-            order = editing_campaign.content_orders.first()
-            if order and order.minutes:
-                minutes_value = order.minutes
-                request.session['content_minutes'] = minutes_value
-            else:
-                request.session.pop('content_minutes', None)
-        else:
-            request.session.pop('content_minutes', None)
+        request.session.pop('content_minutes', None)
 
     if request.method == 'POST':
         form = CampaignStep1Form(request.POST)
@@ -80,7 +77,6 @@ def campaign_create_step1(request, campaign_id=None):
                     status=Campaign.Status.DRAFT,
                     is_free=cd["is_free"]
                 )
-            request.session['content_minutes'] = cd.get('minutes')
             request.session['campaign_draft_id'] = campaign.id
             return redirect('campaigns:campaign_create_step2')
     else:
@@ -96,8 +92,6 @@ def campaign_create_step1(request, campaign_id=None):
                 'end_date': editing_campaign.end_date,
                 'is_free': editing_campaign.is_free
             }
-            if minutes_value:
-                initial['minutes'] = minutes_value
         form = CampaignStep1Form(initial=initial)
 
     context = {
@@ -114,7 +108,6 @@ def campaign_create_step1(request, campaign_id=None):
             'edit_content_type_id': editing_campaign.content_type_id,
             'edit_ad_type_id': editing_campaign.ad_type_id,
             'edit_service_type_id': editing_campaign.content_service_type_id,
-            'edit_minutes': minutes_value,  # استفاده از متغیر قبلی
         })
 
     return render(request, 'campaigns/forms/create_campaign_step1.html', context)
@@ -481,6 +474,10 @@ def campaign_create_step3_router(request):
 
 @login_required
 def campaign_create_step3_team(request):
+    """
+    مرحله سوم ساخت کمپین - انتخاب تیم تولید محتوا و پلن
+    پشتیبانی از حالت عادی و حالت جایگزینی
+    """
     # ========== بررسی حالت جایگزینی ==========
     is_replacement_mode = request.GET.get('replacement_mode') == 'true'
     replacement_campaign_id = request.GET.get('campaign_id')
@@ -502,7 +499,6 @@ def campaign_create_step3_team(request):
             return redirect("campaigns:campaign_create_step1")
 
         existing_order = campaign.content_orders.first()
-        minutes = existing_order.minutes if existing_order else request.session.get("content_minutes")
         rejected_team_id = existing_order.team_id if existing_order else None
 
         existing_brief = existing_order.brief if existing_order and hasattr(existing_order, 'brief') else None
@@ -521,24 +517,18 @@ def campaign_create_step3_team(request):
         if not service_type:
             messages.error(request, "نوع خدمت تولید محتوا مشخص نشده است.")
             return redirect("campaigns:campaign_create_step1")
-        minutes = request.session.get("content_minutes")
-        rejected_team_id = None
 
+        rejected_team_id = None
         request.session.pop('replacement_campaign_id', None)
         request.session.pop('replacement_mode_team', None)
-
         existing_brief = None
         existing_content = None
 
-    # ========== موجودی کیف پول (فقط برای حالت جایگزینی) ==========
     wallet_balance = request.user.wallet.balance
-
-    # ========== ادامه کدهای قبلی ==========
-
     existing_order = ContentOrder.objects.filter(campaign=campaign).select_related("plan", "team", "brief").first()
     attachments = existing_order.files.all() if existing_order else []
 
-    # ------------------------ Teams with active plans ------------------------
+    # ========== دریافت تیم‌های دارای پلن فعال ==========
     teams_with_plans = (
         ContentTeam.objects.filter(
             service_plans__service_type=service_type,
@@ -551,7 +541,7 @@ def campaign_create_step3_team(request):
                 'service_plans',
                 queryset=ContentServicePlan.objects.filter(
                     service_type=service_type, is_active=True
-                ).select_related('service_type').order_by('price_per_unit'),
+                ).select_related('service_type').order_by('price'),
                 to_attr='active_plans_for_service'
             )
         )
@@ -562,62 +552,36 @@ def campaign_create_step3_team(request):
         .order_by('-total_points', '-total_completed_orders')
     )
 
-    # ========== حذف همه تیم‌های رد شده (فقط در حالت جایگزینی) ==========
+    # ========== فیلتر تیم‌های رد شده در حالت جایگزینی ==========
     if is_replacement_mode:
-        # دریافت همه تیم‌هایی که تا الان رد شده‌اند (وضعیت CANCELLED دارند)
         rejected_team_ids = list(
             campaign.content_orders.filter(
                 status=ContentOrder.Status.CANCELLED
             ).values_list('team_id', flat=True)
         )
-
-        # اضافه کردن rejected_team_id از پارامتر (اگه وجود داشته باشه)
         if rejected_team_id and rejected_team_id not in rejected_team_ids:
             rejected_team_ids.append(rejected_team_id)
-
-        # حذف تیم‌های رد شده از لیست
         if rejected_team_ids:
             teams_with_plans = teams_with_plans.exclude(id__in=rejected_team_ids)
 
-    # ========== فیلتر بر اساس موجودی کیف پول (فقط در حالت جایگزینی) ==========
-    if is_replacement_mode:
-        # لیست تیم‌های رد شده رو دوباره محاسبه می‌کنیم (برای اطمینان)
-        rejected_team_ids = list(
-            campaign.content_orders.filter(
-                status=ContentOrder.Status.CANCELLED
-            ).values_list('team_id', flat=True)
-        )
-        if rejected_team_id and rejected_team_id not in rejected_team_ids:
-            rejected_team_ids.append(rejected_team_id)
-
+        # فیلتر بر اساس موجودی کیف پول
         filtered_teams = []
         for team in teams_with_plans:
-            # رد کردن تیم‌هایی که قبلاً رد شدن
             if team.id in rejected_team_ids:
                 continue
-
             plans = getattr(team, 'active_plans_for_service', [])
-            valid_plans = []
-            for plan in plans:
-                if service_type.unit == "minute" and minutes:
-                    total_price = int(plan.price_per_unit) * int(minutes)
-                else:
-                    total_price = int(plan.price_per_unit)
-
-                if total_price <= wallet_balance:
-                    valid_plans.append(plan)
-
+            valid_plans = [p for p in plans if p.price <= wallet_balance]
             if valid_plans:
                 team.active_plans_for_service = valid_plans
                 filtered_teams.append(team)
-
         teams_with_plans = filtered_teams
 
+    # ========== صفحه‌بندی ==========
     paginator = Paginator(teams_with_plans, 21)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # ------------------------ Pre-selection logic ------------------------
+    # ========== انتخاب‌های قبلی (برای حالت ویرایش) ==========
     preselect_plan_id = request.GET.get('selected_plan')
     preselect_team_id = None
     if preselect_plan_id:
@@ -638,52 +602,81 @@ def campaign_create_step3_team(request):
         preselect_plan_id = existing_order.plan.id
         preselect_team_id = existing_order.team.id
 
-    # ------------------------ Build teams_data ------------------------
+    # ========== محاسبه محبوب‌ترین پلن‌ها ==========
+    most_popular_map = {}
+    all_plans = ContentServicePlan.objects.filter(
+        team__in=teams_with_plans,
+        service_type=service_type,
+        is_active=True
+    )
+    for plan in all_plans:
+        key = (plan.team_id, plan.service_type_id)
+        completed_count = plan.orders.filter(
+            status__in=[ContentOrder.Status.COMPLETED, ContentOrder.Status.DONE]
+        ).count()
+        if key not in most_popular_map or completed_count > most_popular_map[key]['count']:
+            most_popular_map[key] = {'plan_id': plan.id, 'count': completed_count}
+
+    most_popular_ids = [
+        data['plan_id'] for data in most_popular_map.values() if data['count'] > 0
+    ]
+
+    # ========== ساختاردهی تیم‌ها با اطلاعات کامل پلن ==========
     teams_data = []
     for team in page_obj:
         plans = getattr(team, 'active_plans_for_service', [])
-        if plans:
-            plan_prices = []
-            for plan in plans:
-                if service_type.unit == "minute" and minutes:
-                    total_price = int(plan.price_per_unit) * int(minutes)
-                else:
-                    total_price = int(plan.price_per_unit)
+        if not plans:
+            continue
 
-                features = plan.features
-                if isinstance(features, str):
-                    try:
-                        features = json.loads(features)
-                    except:
-                        features = []
-                elif not isinstance(features, list):
+        plan_list = []
+        for plan in plans:
+            # میانگین امتیاز پلن
+            avg_rating = TeamReview.objects.filter(
+                order__plan=plan,
+                order__status__in=[ContentOrder.Status.COMPLETED, ContentOrder.Status.DONE]
+            ).aggregate(avg=Avg('rating'))['avg']
+            avg_rating = round(avg_rating, 1) if avg_rating else None
+
+            features = plan.features
+            if isinstance(features, str):
+                try:
+                    features = json.loads(features)
+                except:
                     features = []
+            elif not isinstance(features, list):
+                features = []
 
-                icon = plan.service_type.icon or 'fi-star'
-
-                plan_prices.append({
-                    'id': plan.id,
-                    'name': plan.name,
-                    'price': int(total_price),
-                    'price_per_unit': int(plan.price_per_unit),
-                    'description': plan.description,
-                    'delivery_days': plan.estimated_delivery_days,
-                    'features': features,
-                    'service_type_icon': icon,
-                })
-            teams_data.append({
-                'team': team,
-                'plans': plan_prices,
-                'plans_json': json.dumps(plan_prices, ensure_ascii=False),
-                'first_plan_id': plan_prices[0]['id'] if plan_prices else None
+            plan_list.append({
+                'id': plan.id,
+                'name': plan.name,
+                'price': int(plan.price),
+                'description': plan.description,
+                'delivery_days': plan.estimated_delivery_days,
+                'features': features,
+                'service_type_icon': plan.service_type.icon or 'fi-star',
+                'pricing_unit': plan.pricing_unit,
+                'base_quantity': plan.base_quantity,
+                'min_quantity': plan.min_quantity,
+                'max_quantity': plan.max_quantity,
+                'delivery_options_count': plan.delivery_options_count,
+                'quantity_display': plan.quantity_display,
+                'delivery_type_display': plan.delivery_type_display,
+                'avg_rating': avg_rating,
+                'is_most_popular': plan.id in most_popular_ids,
             })
+
+        teams_data.append({
+            'team': team,
+            'plans': plan_list,
+            'plans_json': json.dumps(plan_list, ensure_ascii=False),
+            'first_plan_id': plan_list[0]['id'] if plan_list else None
+        })
 
     # ========== پردازش POST ==========
     if request.method == "POST":
         if is_replacement_mode:
-            # ========== دریافت اطلاعات ==========
+            # ===== حالت جایگزینی =====
             selected_plan_id = request.POST.get('selected_plan')
-
             if not selected_plan_id:
                 messages.error(request, "لطفاً یک پلن تولید محتوا انتخاب کنید.")
                 return redirect(request.path)
@@ -694,22 +687,13 @@ def campaign_create_step3_team(request):
                 messages.error(request, "پلن انتخاب شده معتبر نیست.")
                 return redirect(request.path)
 
-            # ========== محاسبه قیمت جدید ==========
-            if service_type.unit == "minute" and minutes:
-                new_price = int(selected_plan.price_per_unit) * int(minutes)
-            else:
-                new_price = int(selected_plan.price_per_unit)
-
-            # ========== دریافت اطلاعات قدیمی ==========
+            new_price = selected_plan.price
             old_order = campaign.content_orders.first()
             old_price = old_order.price if old_order else 0
             wallet = request.user.wallet
 
-            # ========== محاسبه کمیسیون قبلی و جدید ==========
-
-            # ۱. محاسبه هزینه ناشران (ثابت میمونه)
+            # محاسبه کمیسیون
             influencer_cost = sum(booking.price for booking in campaign.influencer_bookings.all())
-
             if hasattr(campaign, 'invoice') and campaign.invoice:
                 old_commission = campaign.invoice.commission
             else:
@@ -718,14 +702,9 @@ def campaign_create_step3_team(request):
 
             new_subtotal = influencer_cost + new_price
             new_commission = int(new_subtotal * PLATFORM_COMMISSION)
-
-            # ۴. محاسبه مابه‌التفاوت حق العمل (فقط اگر مثبت باشد)
             commission_to_pay = max(new_commission - old_commission, 0)
-
-            # ۵. محاسبه کل مبلغی که باید از کیف پول کم بشه
             total_deduct = new_price + commission_to_pay
 
-            # ========== بررسی موجودی کیف پول ==========
             if wallet.balance < total_deduct:
                 messages.error(
                     request,
@@ -734,13 +713,10 @@ def campaign_create_step3_team(request):
                 )
                 return redirect(request.path)
 
-            # ========== اجرای تراکنش اتمیک ==========
             with transaction.atomic():
-                # ۱. کسر مبلغ کل از کیف پول
                 wallet.balance -= total_deduct
                 wallet.save(update_fields=['balance'])
 
-                # ۲. ثبت تراکنش برای هزینه جدید تیم محتوا
                 Transaction.objects.create(
                     user=request.user,
                     amount=new_price,
@@ -751,7 +727,6 @@ def campaign_create_step3_team(request):
                     reference_id=f"TEAM_NEW_PAYMENT_{campaign.id}_{timezone.now().timestamp()}"
                 )
 
-                # ۳. اگر مابه‌التفاوت حق العمل مثبت بود، تراکنش جداگانه ثبت کن
                 if commission_to_pay > 0:
                     Transaction.objects.create(
                         user=request.user,
@@ -763,28 +738,25 @@ def campaign_create_step3_team(request):
                         reference_id=f"COMMISSION_DIFF_{campaign.id}_{timezone.now().timestamp()}"
                     )
 
-                # ۴. نگه‌داشتن سفارش قدیمی با وضعیت CANCELLED
-                if old_order:
-                    if old_order.status != ContentOrder.Status.CANCELLED:
-                        old_order.status = ContentOrder.Status.CANCELLED
-                        old_order.save(update_fields=['status'])
+                if old_order and old_order.status != ContentOrder.Status.CANCELLED:
+                    old_order.status = ContentOrder.Status.CANCELLED
+                    old_order.save(update_fields=['status'])
 
-                # ۵. ایجاد سفارش جدید
+                # ایجاد سفارش جدید
                 new_order = ContentOrder.objects.create(
                     campaign=campaign,
                     team=selected_plan.team,
                     plan=selected_plan,
                     price=new_price,
-                    minutes=int(minutes) if minutes else None,
+                    selected_quantity=selected_plan.base_quantity,
                     status=ContentOrder.Status.PENDING
                 )
 
-                # ۶. ثبت جایگزینی
                 old_order.replaced_by = new_order
                 old_order.replaced_at = timezone.now()
                 old_order.save(update_fields=['replaced_by', 'replaced_at'])
 
-                # ۷. کپی بریف از سفارش قدیمی به جدید
+                # کپی بریف
                 if old_order and hasattr(old_order, 'brief'):
                     old_brief = old_order.brief
                     ContentOrderDescription.objects.create(
@@ -800,7 +772,7 @@ def campaign_create_step3_team(request):
                         do_not_include=old_brief.do_not_include,
                     )
 
-                # ۸. کپی فایل‌های پیوست
+                # کپی فایل‌های پیوست
                 if old_order:
                     for old_file in old_order.files.all():
                         if old_file.file:
@@ -813,10 +785,8 @@ def campaign_create_step3_team(request):
                                 file_size=old_file.file_size,
                             )
 
-                # ۹. اطمینان از وجود CampaignContent
-                campaign_content, created = CampaignContent.objects.get_or_create(
-                    campaign=campaign
-                )
+                # اطمینان از وجود CampaignContent
+                campaign_content, created = CampaignContent.objects.get_or_create(campaign=campaign)
                 if old_order and hasattr(old_order, 'brief') and not campaign_content.caption:
                     old_brief = old_order.brief
                     if hasattr(old_brief, 'ad_caption'):
@@ -824,56 +794,39 @@ def campaign_create_step3_team(request):
                         campaign_content.link = old_brief.ad_link or ''
                         campaign_content.save(update_fields=['caption', 'link'])
 
-                # ========== ۱۰. به‌روزرسانی فاکتور با حفظ کمیسیون قدیمی ==========
+                # به‌روزرسانی فاکتور
                 if hasattr(campaign, 'invoice'):
-                    # فاکتور رو با مقادیر جدید محاسبه کن
                     invoice = create_campaign_invoice(campaign)
-
-                    # اگر کمیسیون جدید از کمیسیون قبلی کمتر بود، مقدار قبلی رو حفظ کن
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
-                        # محاسبه مجدد total_amount و payable_amount با کمیسیون جدید
                         invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
                         invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
                         invoice.save(update_fields=['commission', 'total_amount', 'payable_amount'])
 
-                # ۱۱. تغییر وضعیت کمپین
+                # تغییر وضعیت کمپین
                 campaign.status = Campaign.Status.APPROVED
                 campaign.replacement_mode = False
                 campaign.content_team_rejected = False
                 campaign.save(update_fields=['status', 'replacement_mode', 'content_team_rejected'])
 
-                # ۱۲. پاک کردن session
                 request.session.pop('replacement_campaign_id', None)
                 request.session.pop('replacement_mode_team', None)
 
-                # ۱۳. پیام موفقیت
-                if commission_to_pay > 0:
-                    messages.success(
-                        request,
-                        f"✅ تیم تولید محتوا با موفقیت تغییر کرد. مبلغ {total_deduct:,} تومان از کیف پول شما کسر شد. "
-                        f"(هزینه تیم جدید: {new_price:,} تومان + مابه‌التفاوت حق العمل: {commission_to_pay:,} تومان)"
-                    )
-                else:
-                    messages.success(
-                        request,
-                        f"✅ تیم تولید محتوا با موفقیت تغییر کرد. مبلغ {new_price:,} تومان از کیف پول شما کسر شد."
-                    )
+                messages.success(
+                    request,
+                    f"✅ تیم تولید محتوا با موفقیت تغییر کرد. مبلغ {total_deduct:,} تومان از کیف پول شما کسر شد."
+                )
                 return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
 
         else:
-            # ========== حالت عادی ساخت کمپین ==========
+            # ===== حالت عادی =====
             team_form = CampaignStep3TeamForm(request.POST, service_type=service_type)
             brief_form = CampaignStep3BriefForm(request.POST, request.FILES)
 
             if team_form.is_valid() and brief_form.is_valid():
                 selected_plan_id = team_form.cleaned_data['selected_plan']
                 selected_plan = ContentServicePlan.objects.get(id=selected_plan_id)
-
-                if service_type.unit == "minute" and minutes:
-                    final_price = selected_plan.price_per_unit * int(minutes)
-                else:
-                    final_price = selected_plan.price_per_unit
+                final_price = selected_plan.price
 
                 order, created = ContentOrder.objects.get_or_create(
                     campaign=campaign,
@@ -881,7 +834,7 @@ def campaign_create_step3_team(request):
                         "team": selected_plan.team,
                         "plan": selected_plan,
                         "price": final_price,
-                        "minutes": int(minutes) if minutes else None,
+                        "selected_quantity": selected_plan.base_quantity,
                         "status": ContentOrder.Status.PENDING,
                     }
                 )
@@ -889,7 +842,7 @@ def campaign_create_step3_team(request):
                     order.team = selected_plan.team
                     order.plan = selected_plan
                     order.price = final_price
-                    order.minutes = int(minutes) if minutes else None
+                    order.selected_quantity = selected_plan.base_quantity
                     order.save()
 
                 save_brief(order, brief_form)
@@ -899,9 +852,7 @@ def campaign_create_step3_team(request):
                 if not handle_new_files(request, order):
                     return redirect("campaigns:campaign_create_step3_team")
 
-                current_page = request.GET.get('page', '1')
-                request.session['step3_team_page'] = current_page
-
+                request.session['step3_team_page'] = request.GET.get('page', '1')
                 return redirect("campaigns:campaign_create_step4")
             else:
                 for form in (team_form, brief_form):
@@ -909,11 +860,10 @@ def campaign_create_step3_team(request):
                         for err in errors:
                             messages.error(request, err)
 
-    # ========== GET ==========
+    # ========== مقداردهی فرم‌ها برای GET ==========
     else:
         if is_replacement_mode:
             team_form = CampaignStep3TeamForm(service_type=service_type)
-
             brief_initial = {}
             if existing_brief:
                 brief_initial = {
@@ -927,13 +877,10 @@ def campaign_create_step3_team(request):
                     'description': existing_brief.description,
                     'do_not_include': existing_brief.do_not_include,
                 }
-
             if existing_content:
                 brief_initial['ad_caption'] = existing_content.caption
                 brief_initial['ad_link'] = existing_content.link or ''
-
             brief_form = CampaignStep3BriefForm(initial=brief_initial)
-
         else:
             initial_plan = existing_order.plan.id if existing_order else None
             team_form = CampaignStep3TeamForm(initial={'selected_plan': initial_plan}, service_type=service_type)
@@ -955,23 +902,22 @@ def campaign_create_step3_team(request):
             if hasattr(campaign, 'content') and campaign.content:
                 brief_initial['ad_caption'] = campaign.content.caption
                 brief_initial['ad_link'] = campaign.content.link or ''
-
             brief_form = CampaignStep3BriefForm(initial=brief_initial)
 
-    # ========== Context ==========
+    # ========== Context نهایی ==========
     context = {
         "campaign": campaign,
         'page_obj': page_obj,
         "service_type": service_type,
-        "teams_data": teams_data,
-        "minutes": minutes,
+        'teams_data': teams_data,
+        'most_popular_ids': most_popular_ids,
         "existing_order": existing_order,
         "team_form": team_form,
         "brief_form": brief_form,
         "attachments": attachments,
         "preselect_plan_id": preselect_plan_id,
         "preselect_team_id": preselect_team_id,
-        "influencer_cost": sum(booking.price for booking in campaign.influencer_bookings.all()),  # عدد خالص
+        "influencer_cost": sum(booking.price for booking in campaign.influencer_bookings.all()),
         "old_content_cost": existing_order.price if existing_order else 0,
         "step": 3,
         "total_steps": 4,

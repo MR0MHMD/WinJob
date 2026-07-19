@@ -1,7 +1,6 @@
-import uuid
-
 from influencers.models import InfluencerServiceRate
 from campaigns.models import CampaignInfluencer
+import uuid
 
 
 def create_free_campaign_bookings(campaign):

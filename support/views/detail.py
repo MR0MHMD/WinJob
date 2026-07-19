@@ -1,6 +1,8 @@
+from django.utils import timezone
+
 from influencers.models import InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
 from django.views.generic import DetailView
-from campaigns.models import Coupon, CampaignInfluencer, Campaign
+from campaigns.models import Coupon, CampaignInfluencer, Campaign, Payment
 from ..mixins import SupportRequiredMixin
 from django.db.models import Avg, Prefetch, Sum
 from accounts.models import Transaction
@@ -17,7 +19,7 @@ from content_team.models import (
     ContentOrderDescription,
     ContentOrderFile,
     ContentDelivery,
-    ContentOrderRevision
+    ContentOrderRevision, ContentDeliveryFile
 )
 
 User = get_user_model()
@@ -134,6 +136,7 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
             'influencer_coupon',
             'content_team_coupon',
             'platform_coupon',
+            'content',
         ).prefetch_related(
             Prefetch(
                 'influencer_bookings',
@@ -156,8 +159,24 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
                 ).prefetch_related(
                     'brief',
                     'files',
-                    'delivery'
+                    'revisions',
+                    Prefetch(
+                        'deliveries',
+                        queryset=ContentDelivery.objects.prefetch_related(
+                            Prefetch('files', queryset=ContentDeliveryFile.objects.all())
+                        )
+                    ),
                 )
+            ),
+            # ===== ✅ اضافه کردن پرداخت‌ها =====
+            Prefetch(
+                'invoice__payments',  # ← از طریق invoice به payments میرسیم
+                queryset=Payment.objects.select_related('user').all()
+            ),
+            # ===== ✅ اضافه کردن تراکنش‌ها =====
+            Prefetch(
+                'transactions',
+                queryset=Transaction.objects.select_related('user').all()
             ),
         )
 
@@ -165,14 +184,13 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         campaign = self.object
 
-        # ===== دریافت رزروهای اینفلوئنسر (با اطمینان از وجود دیتا) =====
+        # ===== دریافت رزروهای اینفلوئنسر =====
         influencer_bookings = campaign.influencer_bookings.all()
         context['influencer_bookings'] = influencer_bookings[:5]
+        context['influencer_count'] = influencer_bookings.count()
 
         # ===== محتوای کمپین =====
-        campaign_content = None
-        if hasattr(campaign, 'content') and campaign.content:
-            campaign_content = campaign.content
+        campaign_content = getattr(campaign, 'content', None)
         context['campaign_content'] = campaign_content
 
         # ===== اطلاعات مورد نیاز برای پیش‌نمایش =====
@@ -199,15 +217,19 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
             context['utm_enabled'] = False
             context['utm_params'] = {}
 
-        # ===== محتوای کمپین =====
-        if hasattr(campaign, 'content') and campaign.content:
-            context['campaign_content'] = campaign.content
-        else:
-            context['campaign_content'] = None
-
         # ===== سفارش‌های تولید محتوا =====
         content_orders = campaign.content_orders.all()
         context['content_orders'] = content_orders
+        context['orders_count'] = content_orders.count()
+
+        # ===== ✅ پیدا کردن فایل انتخاب شده برای هر سفارش =====
+        for order in content_orders:
+            selected_file = None
+            for delivery in order.deliveries.all():
+                selected_file = delivery.files.filter(is_selected=True).first()
+                if selected_file:
+                    break
+            order._selected_file = selected_file
 
         # ===== گزارشات =====
         reports = CampaignReport.objects.filter(
@@ -217,19 +239,18 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
             'campaign_influencer__channel'
         )
         context['reports'] = reports
+        context['reports_count'] = reports.count()
 
-        # ===== پرداخت‌ها =====
-        payments = campaign.payments.all() if hasattr(campaign, 'payments') else []
+        # ===== ✅ پرداخت‌ها (از طریق invoice) =====
+        if hasattr(campaign, 'invoice') and campaign.invoice:
+            payments = campaign.invoice.payments.all()
+        else:
+            payments = []
         context['payments'] = payments
 
-        # ===== تراکنش‌ها =====
-        transactions = campaign.transactions.all() if hasattr(campaign, 'transactions') else []
+        # ===== ✅ تراکنش‌ها =====
+        transactions = campaign.transactions.all()
         context['transactions'] = transactions
-
-        # ===== آمار =====
-        context['influencer_count'] = influencer_bookings.count()
-        context['orders_count'] = content_orders.count()
-        context['reports_count'] = reports.count()
 
         return context
 
@@ -445,38 +466,71 @@ class ContentOrderDetailView(SupportRequiredMixin, DetailView):
         ).prefetch_related(
             Prefetch('brief', queryset=ContentOrderDescription.objects.all()),
             Prefetch('files', queryset=ContentOrderFile.objects.all()),
-            Prefetch('delivery', queryset=ContentDelivery.objects.all()),
-            Prefetch('revisions',
-                     queryset=ContentOrderRevision.objects.select_related('requested_by').order_by('-created_at')),
+            Prefetch(
+                'deliveries',  # ✅ اصلاح: delivery → deliveries
+                queryset=ContentDelivery.objects.select_related('delivered_by__user').order_by('-version')
+            ),
+            Prefetch(
+                'revisions',
+                queryset=ContentOrderRevision.objects.select_related('requested_by').order_by('-created_at')
+            ),
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         order = self.object
 
-        # بریف
+        # ===== بریف =====
         context['brief'] = getattr(order, 'brief', None)
 
-        # فایل‌ها
+        # ===== فایل‌های پیوست =====
         context['files'] = order.files.all()
 
-        # تحویل نهایی
-        context['delivery'] = getattr(order, 'delivery', None)
+        # ===== تحویل‌ها =====
+        deliveries = order.deliveries.all().order_by('-version')
+        context['deliveries'] = deliveries
+        context['deliveries_count'] = deliveries.count()
 
-        # ویرایش‌ها
-        context['revisions'] = order.revisions.all().order_by('-created_at')[:5]
-        context['revisions_count'] = order.revisions.count()
+        # تحویل نهایی (آخرین نسخه)
+        context['latest_delivery'] = deliveries.first() if deliveries.exists() else None
 
-        # نظرات تیم
-        context['team_reviews'] = TeamReview.objects.filter(
+        # ===== فایل‌های تحویل =====
+        delivery_files = ContentDeliveryFile.objects.filter(
+            delivery__order=order
+        ).select_related('delivery')
+        context['delivery_files'] = delivery_files
+        context['delivery_files_count'] = delivery_files.count()
+
+        # ===== ویرایش‌ها =====
+        revisions = order.revisions.all().order_by('-created_at')
+        context['revisions'] = revisions[:5]
+        context['revisions_count'] = revisions.count()
+        context['pending_revisions'] = revisions.filter(status='pending').count()
+
+        # ===== نظرات تیم =====
+        team_reviews = TeamReview.objects.filter(
             order=order
-        ).select_related('advertiser__user')[:5]
-        context['reviews_count'] = TeamReview.objects.filter(order=order).count()
+        ).select_related('advertiser__user')
+        context['team_reviews'] = team_reviews[:5]
+        context['reviews_count'] = team_reviews.count()
 
-        # تراکنش‌های مرتبط
-        context['transactions'] = Transaction.objects.filter(
+        # ===== تراکنش‌های مرتبط =====
+        transactions = Transaction.objects.filter(
             campaign=order.campaign
-        ).order_by('-created_at')[:10]
-        context['transactions_count'] = Transaction.objects.filter(campaign=order.campaign).count()
+        ).select_related('user').order_by('-created_at')
+        context['transactions'] = transactions[:10]
+        context['transactions_count'] = transactions.count()
+
+        # ===== اطلاعات اضافی برای نمایش =====
+        context['now'] = timezone.now()
+
+        # ===== وضعیت ددلاین =====
+        if order.deadline:
+            deadline_dt = order.deadline.togregorian() if hasattr(order.deadline, 'togregorian') else order.deadline
+            if timezone.is_naive(deadline_dt):
+                deadline_dt = timezone.make_aware(deadline_dt)
+            context['is_deadline_passed'] = deadline_dt < timezone.now()
+        else:
+            context['is_deadline_passed'] = False
 
         return context
