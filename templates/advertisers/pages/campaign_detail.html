@@ -1,4 +1,5 @@
 {% extends "parent/base.html" %}
+{% load humanize %}
 {% load static jformat %}
 
 {% block title %}
@@ -8,6 +9,85 @@
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'advertisers/css/pages/campaign_detail.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/previews/bale_preview.css' %}">
+    <style>
+        /* ============================================
+       Cost Breakdown Card
+       ============================================ */
+        .cost-breakdown-card .cost-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .cost-breakdown-card .cost-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .cost-breakdown-card .cost-row .label {
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+
+        .cost-breakdown-card .cost-row .value {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .cost-breakdown-card .cost-row .value.total {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .cost-breakdown-card .cost-row img {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+
+        .cost-breakdown-card .cost-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            margin: 6px 0;
+        }
+
+        .cost-breakdown-card .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .cost-breakdown-card .action-bar .btn {
+            font-size: 0.85rem;
+            padding: 8px 16px;
+        }
+
+        /* Hover effect for rows */
+        .cost-breakdown-card .cost-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .cost-breakdown-card .cost-row {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .cost-breakdown-card .action-bar {
+                flex-direction: column;
+            }
+
+            .cost-breakdown-card .action-bar .btn {
+                width: 100%;
+            }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -69,7 +149,9 @@
                                 <span class="text-success">رایگان</span>
                             {% else %}
                                 {{ campaign.invoice.payable_amount|floatformat:0|default:0 }}
-                                <small class="fs-6 text-muted">تومان</small>
+                                <small class="fs-6 text-muted">
+                                    <img src="{% static 'core/svg/toman-primary.svg' %}" alt="">
+                                </small>
                             {% endif %}
                         </div>
                         <div class="small text-muted">قابل پرداخت</div>
@@ -245,7 +327,7 @@
             <div class="col-6 col-md-3">
                 <div class="card glass-box bg-dark border-light text-center p-3 stat-card-hover h-100 animate-right"
                      style="animation-delay: 0.2s;">
-                    <i class="bi bi-mouse2 text-warning mb-2 d-block" style="font-size: 1.55rem"></i>
+                    <img class="d-block mx-auto" width="40" src="{% static 'advertisers/icons/click-accent.svg' %}" alt="">
                     <div class="h3 text-light mb-0">{{ campaign.total_clicks|default:0 }}</div>
                     <div class="small text-muted">کلیک</div>
                 </div>
@@ -312,60 +394,156 @@
                 </div>
             </div>
 
-            <!-- ==================== ستون میانی: هزینه‌ها ==================== -->
+            <!-- ==================== ستون میانی: هزینه‌ها (طراحی جدید) ==================== -->
             <div class="col-lg-4">
-                <div class="card glass-box bg-dark border-light h-100 animate-up" style="animation-delay: 0.15s;">
-                    <div class="card-body">
-                        <h5 class="card-title text-light mb-3">
-                            <i class="fi-wallet text-primary me-2"></i>
-                            هزینه‌ها
-                        </h5>
+                <div class="cost-breakdown-card glass-box bg-dark border-light h-100 animate-up card "
+                     style="animation-delay: 0.15s;">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="text-light mb-3">
+                                <i class="fi-calculator text-primary me-2"></i>
+                                هزینه ها
+                            </h6>
+                            <a href="{% url 'campaigns:invoice_detail' campaign.invoice.id %}"
+                               class="small text-primary text-decoration-none">
+                                مشاهده فاکتور
+                                <i class="fi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
 
                         {% if campaign.is_free %}
+                            <!-- ====== کمپین رایگان ====== -->
                             <div class="text-center py-4">
                                 <i class="fi-heart fs-1 text-success opacity-50 mb-2 d-block"></i>
                                 <p class="text-success fw-bold">کمپین رایگان – بدون هزینه</p>
                                 <p class="text-muted small">هزینه اینفلوئنسرها و حق‌العمل صفر می‌باشد.</p>
                             </div>
+
                         {% elif campaign.invoice %}
+                            <!-- ========== ردیف اول: هزینه ناشران ========== -->
+                            <div class="cost-row">
+                                <div class="d-flex flex-column">
+                                    <span class="label text-light">
+                                        <i class="fi-star text-warning"></i> هزینه ناشران
+                                    </span>
+                                    {% if campaign.invoice.influencer_discount_amount > 0 %}
+                                        <span class="text-success ms-1 small">تخفیف: 
+                                            {{ campaign.invoice.influencer_discount_amount|floatformat:0|intcomma }}
+                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end d-flex align-items-center">
+                                    <div>
+                                        <div class="value fw-bold text-light">
+                                            {{ campaign.invoice.influencer_cost|floatformat:0|intcomma }}
+                                        </div>
+                                        {% if campaign.invoice.influencer_discount_amount > 0 %}
+                                            <div class="small text-danger text-decoration-line-through">
+                                                {{ campaign.invoice.base_influencer_cost|floatformat:0|intcomma }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt="" class="ms-1"
+                                         style="width: 16px; height: 16px;">
+                                </div>
+                            </div>
 
-                            <ul class="list-unstyled mb-0">
+                            <!-- ========== ردیف دوم: هزینه تولید محتوا ========== -->
+                            {% if campaign.invoice.content_cost > 0 %}
+                                <div class="cost-row text-light">
+                                    <div class="d-flex flex-column">
+                                    <span class="label text-light">
+                                        <i class="fi-video text-info me-2"></i>هزینه تولید محتوا
+                                    </span>
+                                        {% if campaign.invoice.content_discount_amount > 0 %}
+                                            <span class="text-success ms-1 small">
+                                            تخفیف: {{ campaign.invoice.content_discount_amount|floatformat:0|intcomma }} 
+                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end d-flex align-items-center">
+                                        <div>
+                                            <div class="fw-bold text-light">
+                                                + {{ campaign.invoice.content_cost|floatformat:0|intcomma }}
+                                            </div>
+                                            {% if campaign.invoice.content_discount_amount > 0 %}
+                                                <div class="small text-danger text-decoration-line-through">
+                                                    {{ campaign.invoice.base_content_cost|floatformat:0|intcomma }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <img src="{% static 'core/svg/toman-light.svg' %}" alt="" class="ms-1"
+                                             style="width: 16px; height: 16px;">
+                                    </div>
+                                </div>
+                            {% endif %}
 
-                                <li class="mb-3 d-flex justify-content-between">
-                                    <span class="text-muted">هزینه اینفلوئنسر</span>
-                                    <span class="text-light">{{ campaign.invoice.influencer_cost }} تومان</span>
-                                </li>
+                            <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
+                            <div class="cost-row text-warning">
+                                <div class="d-flex flex-column">
+                                    <span class="label text-warning">
+                                        <i class="fi-percent me-1"></i> کمیسیون پلتفرم (15%)
+                                    </span>
+                                    {% if campaign.invoice.platform_discount_amount > 0 %}
+                                        <span class="text-success ms-1 small">
+                                            تخفیف: {{ campaign.invoice.platform_discount_amount|floatformat:0|intcomma }} 
+                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end d-flex align-items-center">
+                                    <div>
+                                        <div class="fw-bold text-warning">
+                                            + {{ campaign.invoice.commission|floatformat:0|intcomma }}
+                                        </div>
+                                        {% if campaign.invoice.platform_discount_amount > 0 %}
+                                            <div class="small text-danger text-decoration-line-through">
+                                                {{ campaign.invoice.base_commission|floatformat:0|intcomma }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <img src="{% static 'core/svg/toman-warning.svg' %}" alt="" class="ms-1"
+                                         style="width: 16px; height: 16px;">
+                                </div>
+                            </div>
 
-                                {% if campaign.invoice.content_cost %}
-                                    <li class="mb-3 d-flex justify-content-between">
-                                        <span class="text-muted">تولید محتوا</span>
-                                        <span class="text-light">{{ campaign.invoice.content_cost }} تومان</span>
-                                    </li>
+                            {% if campaign.invoice.discount_amount > 0 %}
+                                {% if not campaign.invoice.platform_discount_amount or not campaign.invoice.content_discount_amount or not campaign.invoice.influencer_discount_amount %}
+                                    <div class="cost-row fw-bold">
+                                        <span class="label text-success">
+                                            <i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده
+                                        </span>
+                                        <span class="value text-success">
+                                            {{ campaign.invoice.discount_amount|floatformat:0|intcomma }} -
+                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt=""
+                                                 style="width: 16px; height: 16px;">
+                                        </span>
+                                    </div>
                                 {% endif %}
+                            {% endif %}
 
-                                <li class="mb-3 d-flex justify-content-between">
-                                    <span class="text-muted">حق العمل</span>
-                                    <span class="text-light">{{ campaign.invoice.commission }} تومان</span>
-                                </li>
+                            <!-- ========== ردیف‌های نهایی ========== -->
+                            <div class="cost-row">
+                                <span class="label fw-bold text-light">مبلغ کل (جمع مبالغ پایه)</span>
+                                <span class="value total text-light">
+                                    {{ campaign.invoice.total_amount|floatformat:0|intcomma }} 
+                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt=""
+                                         style="width: 16px; height: 16px;">
+                                </span>
+                            </div>
 
-                                {% if campaign.invoice.discount_amount %}
-                                    <li class="mb-3 d-flex justify-content-between">
-                                        <span class="text-muted text-success">تخفیف</span>
-                                        <span class="text-success">-{{ campaign.invoice.discount_amount }} تومان</span>
-                                    </li>
-
-                                    <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
-                                        <span class="fw-bold text-light">مبلغ کل</span>
-                                        <span class="fw-bold text-light">{{ campaign.invoice.total_amount }} تومان</span>
-                                    </li>
-                                {% endif %}
-
-                                <li class="pt-2 mt-2 border-top border-light d-flex justify-content-between">
-                                    <span class="fw-bold text-light">مبلغ قابل پرداخت</span>
-                                    <span class="fw-bold text-light">{{ campaign.invoice.payable_amount }} تومان</span>
-                                </li>
-                            </ul>
+                            <div class="cost-row">
+                                <span class="label fw-bold text-info">مبلغ قابل پرداخت (پس از تخفیف)</span>
+                                <span class="value total text-info">
+                                    {{ campaign.invoice.payable_amount|floatformat:0|intcomma }}
+                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt=""
+                                         style="width: 16px; height: 16px;">
+                                </span>
+                            </div>
                         {% else %}
+                            <!-- ====== بدون فاکتور ====== -->
                             <div class="text-center py-4">
                                 <i class="fi-inbox fs-1 text-muted opacity-50 mb-2 d-block"></i>
                                 <p class="text-muted mb-0">هنوز فاکتور ایجاد نشده</p>
@@ -436,7 +614,10 @@
 
                                     <div class="d-flex justify-content-between mb-3">
                                         <span class="text-muted small">قیمت</span>
-                                        <span class="text-success fw-bold">{{ order.price }} تومان</span>
+                                        <span class="text-success fw-bold">
+                                            {{ order.price }} 
+                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                        </span>
                                     </div>
 
                                     <!-- ====== دکمه مشاهده جزئیات کامل ====== -->
@@ -592,7 +773,10 @@
                                     </td>
                                     <td>{{ ch.channel.platform.name }}</td>
                                     <td>{{ ch.channel.followers_formatted }}</td>
-                                    <td class="text-success fw-semibold">{{ ch.price }}</td>
+                                    <td class="text-success fw-semibold">
+                                        {{ ch.price }}
+                                        <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                    </td>
                                     <td>
                                         <span class="badge
                                             {% if ch.status == 'pending' %}bg-faded-warning text-warning
@@ -755,8 +939,9 @@
                                                     <div class="col-6">
                                                         <div class="p-3 rounded-2 bg-faded-dark">
                                                             <div class="text-muted small mb-1">قیمت سفارش</div>
-                                                            <div class="text-success fw-bold fs-5">{{ order.price }}
-                                                                تومان
+                                                            <div class="text-success fw-bold fs-5">
+                                                                {{ order.price }}
+                                                                <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -909,11 +1094,11 @@
                                                                 {{ delivery.delivered_at|date:'Y/m/d H:i'|default:'-' }}
                                                             </div>
                                                         </div>
-                                
+
                                                         {% if delivery.notes %}
                                                             <div class="text-light">{{ delivery.notes|linebreaks }}</div>
                                                         {% endif %}
-                                                    
+
                                                         <!-- ===== جدول فایل‌های این تحویل ===== -->
                                                         {% if files %}
                                                             <div class="table-responsive"

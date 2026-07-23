@@ -62,7 +62,7 @@
                     </div>
                 </div>
 
-                <!-- لیست اینفلوئنسرها -->
+                <!-- لیست ناشران -->
                 {% if influencer_bookings %}
                     <div class="premium-card mb-4">
                         <div class="premium-card-header">
@@ -86,14 +86,20 @@
                                             <div class="small text-secondary">{{ booking.channel.platform.name }}</div>
                                         </div>
                                     </div>
-                                    <div class="price-tag">{{ booking.price|floatformat:0 }} تومان</div>
+                                    <div class="price-tag">
+                                        {{ booking.price|floatformat:0 }}
+                                        <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                    </div>
                                 </div>
                             {% endfor %}
 
                         </div>
                         <div class="list-item-row subtotal-row">
-                            <span class="text-secondary">جمع هزینه اینفلوئنسرها</span>
-                            <span class="fw-bold text-info">{{ influencer_cost|floatformat:0 }} تومان</span>
+                            <span class="text-secondary">جمع هزینه ناشران</span>
+                            <span class="fw-bold text-info">
+                                {{ influencer_cost|floatformat:0 }} 
+                                <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                            </span>
                         </div>
                     </div>
                 {% endif %}
@@ -212,7 +218,10 @@
                             <!-- جمع هزینه نهایی -->
                             <div class="list-item-row subtotal-row mt-2">
                                 <span class="text-secondary">جمع هزینه تیم محتوا</span>
-                                <span class="fw-bold text-info fs-5">{{ team_cost|floatformat:0 }} تومان</span>
+                                <span class="fw-bold text-info fs-5">
+                                    {{ team_cost|floatformat:0 }} 
+                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -229,66 +238,124 @@
                     </div>
                     <div class="premium-card-body">
                         <div class="cost-breakdown">
-                            {% if influencer_cost > 0 %}
+
+                            <!-- ========== ردیف اول: هزینه ناشران ========== -->
+                            {% if invoice.influencer_cost > 0 %}
                                 <div class="cost-row">
-                                    <span><i class="fi-star text-warning me-1"></i> اینفلوئنسرها</span>
-                                    <span>{{ influencer_cost|floatformat:0 }} تومان</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="text-light">ناشران</span>
+                                        {% if invoice.influencer_discount_amount > 0 %}
+                                            <span class="text-success ms-1">
+                                                تخفیف: {{invoice.influencer_discount_amount}}
+                                                <img src="{% static 'core/svg/toman-success.svg' %}" alt=""> 
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end d-flex gap-1">
+                                        <div>
+                                            <!-- مبلغ نهایی -->
+                                            <div class="fw-bold text-light" 
+                                                id="influencer-final-display">
+                                                {{ invoice.influencer_cost|floatformat:0 }}
+                                            </div>
+                                            <div class="small text-secondary" id="influencer-base-display">
+                                                {% if invoice.influencer_discount_amount > 0 %}
+                                                    <span class="text-decoration-line-through text-danger">{{ invoice.base_influencer_cost|floatformat:0 }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                                    </div>
                                 </div>
                             {% endif %}
-                            {% if team_cost > 0 %}
+
+                            <!-- ========== ردیف دوم: هزینه تولید محتوا ========== -->
+                            {% if invoice.content_cost > 0 %}
                                 <div class="cost-row">
-                                    <span><i class="fi-video text-info me-1"></i> تیم تولید محتوا</span>
-                                    <span>{{ team_cost|floatformat:0 }} تومان</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="text-light"> تیم تولید محتوا</span>
+                                        {% if invoice.content_discount_amount > 0 %}
+                                            <span class="text-success ms-1">تخفیف: 
+                                                {{invoice.content_discount_amount}} 
+                                                <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end d-flex gap-1">
+                                        <div>
+                                            <div class="fw-bold text-light"
+                                                 id="content-final-display">{{ invoice.content_cost|floatformat:0 }}
+                                            </div>
+                                            <div class="small text-secondary" id="content-base-display">
+                                                {% if invoice.content_discount_amount > 0 %}
+                                                    <span class="text-decoration-line-through text-danger">{{ invoice.base_content_cost|floatformat:0 }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                                    </div>
                                 </div>
                             {% endif %}
-                            <div class="cost-divider"></div>
-                            <div class="cost-row">
-                                <span>جمع کل (بدون حق‌العمل)</span>
-                                <span>{{ total_price|floatformat:0 }} تومان</span>
-                            </div>
+
+                            <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
                             <div class="cost-row text-warning">
-                                <span><i class="fi-alert-triangle"></i> حق‌العمل پلتفرم (15%)</span>
-                                <span>+ {{ commission|floatformat:0 }} تومان</span>
+                                <div class="d-flex flex-column">
+                                    <span><i class="fi-alert-triangle me-1"></i> حق‌العمل پلتفرم (15%)</span>
+                                    {% if invoice.platform_discount_amount > 0 %}
+                                    <span class="text-success ms-1">تخفیف: 
+                                        {{invoice.platform_discount_amount}}
+                                        <img src="{% static 'core/svg/toman-success.svg' %}" alt=""> 
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end d-flex gap-1">
+                                    <div>
+                                        <div class="fw-bold text-warning" id="commission-final-display">
+                                            + {{ invoice.commission|floatformat:0 }} 
+                                        </div>
+                                        <div class="small text-secondary" id="commission-base-display">
+                                            {% if invoice.platform_discount_amount > 0 %}
+                                                <span class="text-decoration-line-through text-danger">
+                                                    {{ invoice.base_commission|floatformat:0 }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <img src="{% static 'core/svg/toman-warning.svg' %}" alt="">
+                                </div>
                             </div>
 
-                            <!-- ردیف‌های تخفیف (داینامیک) -->
-                            <div class="discount-row {% if not discount_breakdown.influencer_discount %}d-none{% endif %}"
-                                 id="discount-influencer-row">
-                                <span><i class="fi-ticket text-success"></i> تخفیف اینفلوئنسر <span
-                                        class="discount-badge"
-                                        id="influencer-discount-label">{% if campaign.influencer_coupon %}(
-                                    {{ campaign.influencer_coupon.code }}){% endif %}</span></span>
-                                <span class="text-success"
-                                      id="discount-influencer-value">- {{ discount_breakdown.influencer_discount|floatformat:0 }} تومان</span>
-                            </div>
-                            <div class="discount-row {% if not discount_breakdown.content_discount %}d-none{% endif %}"
-                                 id="discount-content-row">
-                                <span><i class="fi-ticket text-success"></i> تخفیف تیم محتوا <span
-                                        class="discount-badge"
-                                        id="content-discount-label">{% if campaign.content_team_coupon %}(
-                                    {{ campaign.content_team_coupon.code }}){% endif %}</span></span>
-                                <span class="text-success"
-                                      id="discount-content-value">- {{ discount_breakdown.content_discount|floatformat:0 }} تومان</span>
-                            </div>
-                            <div class="discount-row {% if not discount_breakdown.platform_discount %}d-none{% endif %}"
-                                 id="discount-platform-row">
-                                <span><i class="fi-ticket text-success"></i> تخفیف پلتفرم <span class="discount-badge"
-                                                                                                id="platform-discount-label">{% if campaign.platform_coupon %}
-                                    ({{ campaign.platform_coupon.code }}){% endif %}</span></span>
-                                <span class="text-success"
-                                      id="discount-platform-value">- {{ discount_breakdown.platform_discount|floatformat:0 }} تومان</span>
-                            </div>
+                            <!-- ردیف جدید: نمایش مجموع تخفیف‌ها -->
+                            {% if invoice.discount_amount > 0 %}
+                                <div class="cost-divider"></div>
+                                
+                                <div class="cost-row text-success fw-bold"
+                                     id="total-discount-row">
+                                    <span><i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده</span>
+                                    <span id="total-discount-value">
+                                        - {{ invoice.discount_amount|floatformat:0 }} 
+                                        <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                    </span>
+                                </div>
+                            {% endif %}
 
                             <div class="cost-divider"></div>
+
+                            <!-- ========== ردیف‌های نهایی ========== -->
                             <div class="cost-row fw-bold text-light">
-                                <span>قیمت نهایی (با حق‌العمل)</span>
-                                <span id="final-total-display">{{ final_total|floatformat:0 }} تومان</span>
+                                <span>جمع کل (با حق‌العمل)</span>
+                                <span id="final-total-display">
+                                    {{ invoice.total_amount|floatformat:0 }} 
+                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                                </span>
                             </div>
-                            <div class="cost-row text-info fw-bold {% if not discount_amount %}d-none{% endif %}"
+                            <div class="cost-row text-info fw-bold {% if invoice.discount_amount == 0 %}d-none{% endif %}"
                                  id="payable-row">
                                 <span>مبلغ قابل پرداخت (پس از تخفیف)</span>
-                                <span id="payable-amount-display">{% if discount_amount %}
-                                    {{ payable_amount|floatformat:0 }} تومان{% endif %}</span>
+                                <span id="payable-amount-display">
+                                    {{ invoice.payable_amount|floatformat:0 }}
+                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -342,8 +409,11 @@
                                     </div>
                                     <div class="payment-option-title">کیف پول</div>
                                     <div class="payment-option-desc">
-                                        موجودی: <span
-                                            class="fw-bold text-info">{{ wallet.balance|floatformat:0 }} تومان</span>
+                                        موجودی: 
+                                        <span class="fw-bold text-info">
+                                            {{ wallet.balance|floatformat:0 }} 
+                                            <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                                        </span>
                                         {% if wallet.balance < invoice.payable_amount %}
                                             <div class="text-danger small mt-1">موجودی کافی نیست</div>
                                         {% endif %}
@@ -365,7 +435,9 @@
                                 {% else %}
                                     {{ final_total|floatformat:0 }}
                                 {% endif %}
-                                <span class="final-price-unit">تومان</span>
+                                <span class="final-price-unit">
+                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                                </span>
                             </div>
                             <div class="small text-warning mt-1">شامل {{ commission|floatformat:0 }} تومان حق‌العمل
                             </div>
@@ -376,7 +448,7 @@
                             </div>
                         </div>
                         <div>
-                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?page={{ step3_page }}"
+                            <a href="{% url 'campaigns:campaign_create_step3' %}?page={{ step3_page }}"
                                class="btn btn-outline-light rounded-pill px-4">← مرحله قبل</a>
                             <button type="submit" form="step4-form" class="btn btn-primary rounded-pill px-5 ms-2"
                                     id="pay-submit-btn">پرداخت نهایی

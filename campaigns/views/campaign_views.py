@@ -1191,11 +1191,19 @@ def campaign_create_step4(request):
         "final_total": invoice.total_amount,
         "discount_amount": invoice.discount_amount,
         "payable_amount": invoice.payable_amount,
-        "discount_breakdown": getattr(invoice, 'discount_breakdown', {
-            'influencer_discount': 0,
-            'content_discount': 0,
-            'platform_discount': 0
-        }),
+
+        # ============================================================
+        # پاس دادن فیلدهای تخفیف جدید به تمپلیت
+        # ============================================================
+        "discount_breakdown": {
+            'influencer_discount': invoice.influencer_discount_amount,
+            'content_discount': invoice.content_discount_amount,
+            'platform_discount': invoice.platform_discount_amount,
+            'base_influencer_cost': invoice.base_influencer_cost,
+            'base_content_cost': invoice.base_content_cost,
+            'base_commission': invoice.base_commission,
+        },
+
         "invoice": invoice,
         "wallet": wallet,
         "campaign_content": campaign_content,

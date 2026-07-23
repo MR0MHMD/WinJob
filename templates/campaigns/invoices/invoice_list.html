@@ -1,0 +1,489 @@
+{% extends 'parent/base.html' %}
+{% load humanize %}
+{% load static i18n jformat %}
+
+{% block title %}
+    لیست فاکتورها | WinJob
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* ===== استایل‌های مخصوص صفحه لیست فاکتور ===== */
+        
+        .invoice-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4);
+        }
+        
+        .stat-card .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+        }
+        
+        .stat-card .stat-label {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 1.75rem;
+            opacity: 0.3;
+        }
+        
+        .stat-card.total .stat-number { color: #a5b4fc; }
+        .stat-card.paid .stat-number { color: #34d399; }
+        .stat-card.unpaid .stat-number { color: #f87171; }
+        
+        /* ===== جدول فاکتورها ===== */
+        .invoice-table-wrap {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #e5e7eb;
+        }
+        
+        .invoice-table thead {
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        
+        .invoice-table thead th {
+            padding: 1rem 1.25rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #9ca3af;
+            font-weight: 600;
+            text-align: right;
+        }
+        
+        .invoice-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s;
+        }
+        
+        .invoice-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .invoice-table tbody td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+        
+        .invoice-table .invoice-number {
+            font-family: monospace;
+            color: #a5b4fc;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .invoice-table .campaign-name {
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .invoice-table .campaign-name a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .invoice-table .campaign-name a:hover {
+            color: #a5b4fc;
+        }
+        
+        .invoice-table .price-amount {
+            font-weight: 600;
+            direction: ltr;
+            display: inline-block;
+        }
+        
+        .invoice-table .badge-status {
+            padding: 0.3rem 0.9rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        .badge-status.paid {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        
+        .badge-status.unpaid {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        
+        .badge-status .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        
+        .badge-status.paid .dot { background: #34d399; }
+        .badge-status.unpaid .dot { background: #f87171; }
+        
+        .invoice-table .action-btns {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .invoice-table .action-btns .btn-sm {
+            padding: 0.3rem 0.9rem;
+            font-size: 0.75rem;
+            border-radius: 30px;
+        }
+        
+        /* ===== فیلترها ===== */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-bar .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            padding: 0.2rem 0.2rem 0.2rem 0.8rem;
+        }
+        
+        .filter-bar .filter-group label {
+            color: #9ca3af;
+            font-size: 0.8rem;
+            margin-bottom: 0;
+        }
+        
+        .filter-bar .filter-group select {
+            background: transparent;
+            border: none;
+            color: #e5e7eb;
+            padding: 0.4rem 1.5rem 0.4rem 0.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .filter-bar .filter-group select option {
+            background: #1f1b2d;
+            color: #e5e7eb;
+        }
+        
+        .filter-bar .filter-group .btn-clear {
+            background: rgba(255, 255, 255, 0.06);
+            border: none;
+            color: #9ca3af;
+            padding: 0.3rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-bar .filter-group .btn-clear:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+        
+        /* ===== خالی بودن لیست ===== */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        
+        .empty-state .empty-icon {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .empty-state h5 {
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-state p {
+            color: #9ca3af;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        /* ===== پاسخگویی ===== */
+        @media (max-width: 768px) {
+            .invoice-stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.75rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-card .stat-number {
+                font-size: 1.5rem;
+            }
+            
+            .invoice-table thead {
+                display: none;
+            }
+            
+            .invoice-table tbody tr {
+                display: block;
+                padding: 1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            
+            .invoice-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.4rem 0;
+                border: none;
+                font-size: 0.85rem;
+            }
+            
+            .invoice-table tbody td::before {
+                content: attr(data-label);
+                color: #9ca3af;
+                font-size: 0.75rem;
+            }
+            
+            .invoice-table tbody td:last-child {
+                border-top: 1px solid rgba(255, 255, 255, 0.06);
+                padding-top: 0.8rem;
+                margin-top: 0.5rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar .filter-group {
+                justify-content: space-between;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .invoice-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" dir="rtl">
+
+    <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+            </li>
+            <li class="breadcrumb-item text-primary active" aria-current="page">تراکنش های من</li>
+        </ol>
+    </nav>
+    
+    <!-- ===== هدر صفحه ===== -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between my-4 ">
+        <div>
+            <h4 class="text-light mb-1">
+                <i class="fi-file text-primary me-2"></i>
+                فاکتورهای من
+            </h4>
+            <p class="text-secondary small m-0">
+                لیست تمام فاکتورهای ثبت‌شده برای کمپین‌های شما
+            </p>
+        </div>
+    </div>
+    
+    <!-- ===== کارت‌های آمار ===== -->
+    <div class="invoice-stats">
+        <div class="stat-card total">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_count }}</div>
+                    <div class="stat-label">کل فاکتورها</div>
+                </div>
+                <div class="stat-icon fi-file"></div>
+            </div>
+        </div>
+        <div class="stat-card paid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ paid_count }}</div>
+                    <div class="stat-label">پرداخت شده</div>
+                </div>
+                <div class="stat-icon fi-check-circle"></div>
+            </div>
+        </div>
+        <div class="stat-card unpaid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ unpaid_count }}</div>
+                    <div class="stat-label">پرداخت نشده</div>
+                </div>
+                <div class="stat-icon fi-alert-circle"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== نوار فیلتر ===== -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label class="m-2" for="status-filter"><i class="fi-filter me-1"></i> وضعیت:</label>
+            <select id="status-filter" onchange="window.location.href=this.value">
+                <option value="{% url 'campaigns:invoice_list' %}" {% if not status_filter %}selected{% endif %}>همه</option>
+                <option value="{% url 'campaigns:invoice_list' %}?status=paid" {% if status_filter == 'paid' %}selected{% endif %}>پرداخت شده</option>
+                <option value="{% url 'campaigns:invoice_list' %}?status=unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>پرداخت نشده</option>
+            </select>
+            {% if status_filter %}
+                <a href="{% url 'campaigns:invoice_list' %}" class="btn-clear">
+                    <i class="fi-x me-1"></i> پاک کردن
+                </a>
+            {% endif %}
+        </div>
+        
+        <div class="me-auto text-secondary small">
+            <i class="fi-info-circle me-1"></i>
+            {{ invoices|length }} فاکتور نمایش داده شده
+        </div>
+    </div>
+    
+    <!-- ===== جدول فاکتورها ===== -->
+    <div class="invoice-table-wrap">
+        {% if invoices %}
+            <div class="table-responsive">
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>شماره فاکتور</th>
+                            <th>کمپین</th>
+                            <th>تاریخ</th>
+                            <th>مبلغ کل</th>
+                            <th>قابل پرداخت</th>
+                            <th>وضعیت</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                            <tr>
+                                <td data-label="شماره فاکتور">
+                                    <span class="invoice-number">{{ invoice.invoice_number }}</span>
+                                </td>
+                                <td data-label="کمپین">
+                                    <span class="campaign-name">
+                                        <a href="{% url 'advertisers:campaign_detail' campaign_id=invoice.campaign.id %}">
+                                            {{ invoice.campaign.name|truncatechars:30 }}
+                                        </a>
+                                    </span>
+                                </td>
+                                <td data-label="تاریخ">
+                                    {{ invoice.created_at|jformat:"%Y/%m/%d" }}
+                                </td>
+                                <td data-label="مبلغ کل">
+                                    <span class="price-amount">{{ invoice.total_amount|floatformat:0|intcomma }}</span>
+                                </td>
+                                <td data-label="قابل پرداخت">
+                                    <span class="price-amount text-info">{{ invoice.payable_amount|floatformat:0|intcomma }}</span>
+                                </td>
+                                <td data-label="وضعیت">
+                                    {% if invoice.is_paid %}
+                                        <span class="badge-status paid">
+                                            <span class="dot"></span>
+                                            پرداخت شده
+                                        </span>
+                                    {% else %}
+                                        <span class="badge-status unpaid">
+                                            <span class="dot"></span>
+                                            پرداخت نشده
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="عملیات">
+                                    <div class="action-btns">
+                                        <a href="{% url 'campaigns:invoice_detail' invoice_id=invoice.id %}" 
+                                           class="btn btn-primary btn-sm rounded-pill px-3">
+                                            <i class="fi-eye me-1"></i> مشاهده
+                                        </a>
+                                        {% if not invoice.is_paid %}
+                                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}" 
+                                               class="btn btn-success btn-sm rounded-pill px-3">
+                                                <i class="fi-cart me-1"></i> پرداخت
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- ===== حالت خالی ===== -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fi-file"></i>
+                </div>
+                <h5 class="text-light">هیچ فاکتوری یافت نشد</h5>
+                <p>
+                    شما هنوز هیچ فاکتوری ثبت نکرده‌اید. 
+                    برای ایجاد کمپین جدید، روی دکمه زیر کلیک کنید.
+                </p>
+                <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-primary rounded-pill px-5 mt-3">
+                    <i class="fi-plus-circle me-2"></i>
+                    ساخت کمپین جدید
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+{% endblock %}

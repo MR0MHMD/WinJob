@@ -1,0 +1,698 @@
+{% extends 'parent/base.html' %}
+{% load humanize %}
+{% load static i18n jformat %}
+
+{% block title %}
+    جزئیات فاکتور {{ invoice.invoice_number }} | WinJob
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* ===== استایل‌های اختصاصی صفحه جزئیات فاکتور ===== */
+
+        .invoice-header-card {
+            background: linear-gradient(145deg, rgba(31, 27, 45, 0.97), rgba(15, 13, 25, 0.99));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 1.75rem 2rem;
+            backdrop-filter: blur(12px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .invoice-header-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 60%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.08), transparent 70%);
+            pointer-events: none;
+        }
+
+        .invoice-header-card .invoice-number-display {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #a5b4fc;
+            font-family: monospace;
+            letter-spacing: 1.5px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.3rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .invoice-header-card .invoice-status-badge {
+            padding: 0.4rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .invoice-status-badge.paid {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .invoice-status-badge.unpaid {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .invoice-status-badge .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        .invoice-status-badge.paid .dot {
+            background: #34d399;
+            animation-delay: 0s;
+        }
+
+        .invoice-status-badge.unpaid .dot {
+            background: #f87171;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+
+        /* ===== کارت اطلاعات ===== */
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-card .info-title {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card .info-title i {
+            font-size: 1rem;
+        }
+
+        .info-card .info-value {
+            color: #e5e7eb;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .info-card .info-value a {
+            color: #a5b4fc;
+            text-decoration: none;
+            transition: color 0.2s;
+            font-weight: 600;
+        }
+
+        .info-card .info-value a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        /* ===== تفکیک هزینه‌ها ===== */
+        .cost-breakdown-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.9rem;
+        }
+
+        .cost-row:last-child {
+            border-bottom: none;
+        }
+
+        .cost-row .label {
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cost-row .value {
+            color: #e5e7eb;
+            font-weight: 500;
+            direction: ltr;
+        }
+
+        .cost-row .value.positive {
+            color: #34d399;
+        }
+
+        .cost-row .value.negative {
+            color: #f87171;
+        }
+
+        .cost-row .value.total {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .cost-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            margin: 0.5rem 0;
+        }
+
+        /* ===== دکمه‌های اکشن ===== */
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-bar .btn {
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .action-bar .btn-outline-danger:hover {
+            transform: scale(1.02);
+        }
+
+        /* ===== کارت تراکنش‌ها ===== */
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-item .tx-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .tx-icon.income {
+            background: rgba(52, 211, 153, 0.12);
+            color: #34d399;
+        }
+
+        .tx-icon.expense {
+            background: rgba(248, 113, 113, 0.12);
+            color: #f87171;
+        }
+
+        .transaction-item .tx-detail .tx-type {
+            color: #e5e7eb;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .transaction-item .tx-detail .tx-date {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+
+        .transaction-item .tx-amount {
+            font-weight: 700;
+            direction: ltr;
+        }
+
+        .tx-amount.positive {
+            color: #34d399;
+        }
+
+        .tx-amount.negative {
+            color: #f87171;
+        }
+
+        /* ===== پاسخگویی (ریسپانسیو موبایل) ===== */
+        @media (max-width: 768px) {
+            .invoice-header-card {
+                padding: 1.25rem;
+            }
+
+            .invoice-header-card .invoice-number-display {
+                font-size: 1.1rem;
+                padding: 0.2rem 0.8rem;
+            }
+
+            .info-card {
+                padding: 1rem;
+            }
+
+            .cost-breakdown-card {
+                padding: 1rem;
+            }
+
+            .action-bar {
+                flex-direction: column;
+            }
+
+            .action-bar .btn {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+        }
+
+        @media print {
+            .action-bar,
+            .btn-scroll-top,
+            .navbar,
+            .footer,
+            .btn-print {
+                display: none !important;
+            }
+
+            .invoice-header-card {
+                background: #fff !important;
+                border: 1px solid #ddd !important;
+            }
+
+            .invoice-header-card .invoice-number-display {
+                color: #333 !important;
+                background: #f9f9f9 !important;
+                border: 1px solid #eee !important;
+            }
+
+            .info-card {
+                background: #f9f9f9 !important;
+                border: 1px solid #eee !important;
+            }
+
+            .info-card .info-value {
+                color: #333 !important;
+            }
+
+            .cost-breakdown-card {
+                background: #f9f9f9 !important;
+                border: 1px solid #eee !important;
+            }
+
+            .cost-row .value {
+                color: #333 !important;
+            }
+
+            .cost-row .value.total {
+                color: #000 !important;
+            }
+
+            .invoice-status-badge.paid {
+                background: #e8f5e9 !important;
+                color: #2e7d32 !important;
+                border-color: #a5d6a7 !important;
+            }
+
+            .invoice-status-badge.unpaid {
+                background: #ffebee !important;
+                color: #c62828 !important;
+                border-color: #ef9a9a !important;
+            }
+
+            body {
+                background: #fff !important;
+            }
+
+            .page-wrapper {
+                padding: 0 !important;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4" dir="rtl">
+
+        <!-- ===== هدر فاکتور ===== -->
+        <div class="invoice-header-card mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="invoice-number-display">{{ invoice.invoice_number }}</span>
+                        {% if invoice.is_paid %}
+                            <span class="invoice-status-badge paid">
+                            <span class="dot"></span>
+                            پرداخت شده
+                        </span>
+                        {% else %}
+                            <span class="invoice-status-badge unpaid">
+                            <span class="dot"></span>
+                            پرداخت نشده
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="text-secondary small mt-2">
+                        <i class="fi-calendar me-1"></i>
+                        تاریخ ثبت: {{ invoice.created_at|jformat:"%Y/%m/%d - %H:%M" }}
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                        {% if invoice.is_paid %}
+                            <a href="{% url 'campaigns:invoice_print' invoice_id=invoice.id %}"
+                               class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="fi-download me-1"></i>
+                                دانلود PDF
+                            </a>
+                        {% else %}
+                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}"
+                               class="btn btn-success rounded-pill px-4">
+                                <i class="fi-cart me-2"></i>
+                                پرداخت فاکتور
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ===== ستون راست: اطلاعات کمپین و تراکنش‌ها ===== -->
+            <div class="col-lg-7">
+
+                <!-- اطلاعات کمپین -->
+                <div class="info-card mb-4">
+                    <div class="info-title">
+                        <i class="fi-flag text-primary"></i>
+                        اطلاعات کمپین
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">نام کمپین</div>
+                            <div class="info-value">
+                                <a href="{% url 'advertisers:campaign_detail' campaign_id=invoice.campaign.id %}">
+                                    {{ invoice.campaign.name }}
+                                    <i class="fi-external-link ms-1" style="font-size:0.7rem;"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">پلتفرم</div>
+                            <div class="info-value">
+                                {% if invoice.campaign.platform.logo %}
+                                    <img src="{{ invoice.campaign.platform.logo.url }}" width="24" class="me-2" alt="">
+                                {% endif %}
+                                {{ invoice.campaign.platform.name }}
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">تاریخ شروع</div>
+                            <div class="info-value">{{ invoice.campaign.start_date|jformat:"%Y/%m/%d" }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">تاریخ پایان</div>
+                            <div class="info-value">{{ invoice.campaign.end_date|jformat:"%Y/%m/%d" }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">نوع محتوا</div>
+                            <div class="info-value">
+                                {% if invoice.campaign.content_type.icon %}
+                                    <i class="{{ invoice.campaign.content_type.icon }} me-1"></i>
+                                {% endif %}
+                                {{ invoice.campaign.content_type.name }}
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">تعداد ناشران</div>
+                            <div class="info-value">{{ influencer_count }} نفر</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تراکنش‌ها -->
+                {% if transactions %}
+                    <div class="info-card">
+                        <div class="info-title">
+                            <i class="fi-wallet text-info"></i>
+                            تراکنش‌های مرتبط
+                        </div>
+                        {% for tx in transactions %}
+                            <div class="transaction-item">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="tx-icon {% if tx.is_income %}income{% else %}expense{% endif %}">
+                                        <i class="{% if tx.is_income %}fi-arrow-down{% else %}fi-arrow-up{% endif %}"></i>
+                                    </div>
+                                    <div class="tx-detail">
+                                        <div class="tx-type">{{ tx.get_type_display }}</div>
+                                        <div class="tx-date">{{ tx.created_at|jformat:"%Y/%m/%d - %H:%M" }}</div>
+                                        {% if tx.description %}
+                                            <div class="text-secondary small">{{ tx.description|truncatechars:40 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="tx-amount {% if tx.is_income %}positive{% else %}negative{% endif %}">
+                                    {% if tx.is_income %}+{% else %}-{% endif %}
+                                    {{ tx.amount|floatformat:0|intcomma }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+            </div>
+
+            <!-- ===== ستون چپ: جزئیات هزینه‌ها و دکمه‌های اکشن ===== -->
+            <div class="col-lg-5">
+                <div class="cost-breakdown-card">
+                    <h6 class="text-light mb-3">
+                        <i class="fi-calculator text-primary me-2"></i>
+                        جزئیات هزینه‌ها
+                    </h6>
+
+                    <!-- ========== ردیف اول: هزینه ناشران ========== -->
+                    <div class="cost-row">
+                        <div class="d-flex flex-column">
+                        <span class="label text-light">
+                            <i class="fi-star text-warning"></i> هزینه ناشران
+                        </span>
+                            {% if invoice.influencer_discount_amount > 0 %}
+                                <span class="text-success ms-1 small">تخفیف: 
+                                {{ invoice.influencer_discount_amount|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-end d-flex gap-1">
+                            <div>
+                                <div class="value fw-bold text-light">
+                                    {{ invoice.influencer_cost|floatformat:0|intcomma }}
+                                </div>
+                                {% if invoice.influencer_discount_amount > 0 %}
+                                    <div class="small text-danger text-decoration-line-through">
+                                        {{ invoice.base_influencer_cost|floatformat:0|intcomma }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                        </div>
+                    </div>
+
+                    <!-- ========== ردیف دوم: هزینه تولید محتوا ========== -->
+                    {% if invoice.content_cost > 0 %}
+                        <div class="cost-row">
+                            <div class="d-flex flex-column">
+                            <span class="label text-light">
+                                <i class="fi-video text-info"></i> هزینه تولید محتوا
+                            </span>
+                                {% if invoice.content_discount_amount > 0 %}
+                                    <span class="text-success ms-1 small">تخفیف: 
+                                    {{ invoice.content_discount_amount|floatformat:0|intcomma }} 
+                                    <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-end d-flex gap-1">
+                                <div>
+                                    <div class="value fw-bold text-light">
+                                        {{ invoice.content_cost|floatformat:0|intcomma }}
+                                    </div>
+                                    {% if invoice.content_discount_amount > 0 %}
+                                        <div class="small text-danger text-decoration-line-through">
+                                            {{ invoice.base_content_cost|floatformat:0|intcomma }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
+                    <div class="cost-row text-warning">
+                        <div class="d-flex flex-column">
+                        <span class="label text-warning">
+                            <i class="fi-percent me-1"></i> کمیسیون پلتفرم (15%)
+                        </span>
+                            {% if invoice.platform_discount_amount > 0 %}
+                                <span class="text-success ms-1 small">
+                                تخفیف: {{ invoice.platform_discount_amount|floatformat:0|intcomma }} 
+                                <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-end d-flex gap-1">
+                            <div>
+                                <div class="fw-bold ">
+                                    + {{ invoice.commission|floatformat:0|intcomma }}
+                                </div>
+                                {% if invoice.platform_discount_amount > 0 %}
+                                    <div class="small text-danger text-decoration-line-through">
+                                        {{ invoice.base_commission|floatformat:0|intcomma }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <img src="{% static 'core/svg/toman-warning.svg' %}" alt="">
+
+                        </div>
+                    </div>
+
+                    <!-- ========== ردیف تخفیف کل ========== -->
+                    {% if invoice.discount_amount > 0 %}
+                        <div class="cost-divider"></div>
+                        <div class="cost-row fw-bold">
+                        <span class="label text-success">
+                            <i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده
+                        </span>
+                            <span class="value text-success">
+                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                            {{ invoice.discount_amount|floatformat:0|intcomma }} -
+                        </span>
+                        </div>
+                    {% endif %}
+
+                    <div class="cost-divider"></div>
+
+                    <!-- ========== ردیف‌های نهایی ========== -->
+                    <div class="cost-row">
+                        <span class="label fw-bold text-light">مبلغ کل (جمع مبالغ پایه)</span>
+                        <span class="value total">
+                        <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                        {{ invoice.total_amount|floatformat:0|intcomma }} 
+                    </span>
+                    </div>
+
+                    <div class="cost-row">
+                        <span class="label fw-bold text-info">مبلغ قابل پرداخت (پس از تخفیف)</span>
+                        <span class="value total text-info">
+                        <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                        {{ invoice.payable_amount|floatformat:0|intcomma }}
+                    </span>
+                    </div>
+
+                    <div class="cost-divider"></div>
+
+                    <div class="cost-row">
+                        <span class="label">وضعیت پرداخت</span>
+                        <span class="value">
+                        {% if invoice.is_paid %}
+                            <span class="text-success fw-bold">✓ پرداخت شده</span>
+                        {% else %}
+                            <span class="text-danger fw-bold">✗ پرداخت نشده</span>
+                        {% endif %}
+                    </span>
+                    </div>
+
+                    <!-- ===== دکمه‌های اکشن ===== -->
+                    <div class="action-bar">
+                        {% if not invoice.is_paid %}
+                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}"
+                               class="btn btn-success flex-fill">
+                                <i class="fi-cart me-2"></i>
+                                پرداخت فاکتور
+                            </a>
+                            <button type="button" class="btn btn-outline-danger flex-fill"
+                                    onclick="cancelInvoice('{{ invoice.id }}', '{{ invoice.invoice_number }}')">
+                                <i class="fi-trash me-2"></i>
+                                لغو فاکتور
+                            </button>
+                        {% else %}
+                            <a href="{% url 'advertisers:campaign_detail' campaign_id=invoice.campaign.id %}"
+                               class="btn btn-outline-light flex-fill">
+                                <i class="fi-eye me-2"></i>
+                                مشاهده کمپین
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script>
+        function cancelInvoice(invoiceId, invoiceNumber) {
+            if (confirm(`آیا از لغو فاکتور ${invoiceNumber} اطمینان دارید؟\n\nبا لغو این فاکتور، کل کمپین و تمام اطلاعات مرتبط حذف خواهد شد.`)) {
+                fetch(`/campaigns/invoices/${invoiceId}/cancel/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    },
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = '{% url "campaigns:invoice_list" %}';
+                        } else {
+                            alert(data.message || 'خطا در لغو فاکتور');
+                        }
+                    })
+                    .catch(error => {
+                        alert('خطا در ارتباط با سرور');
+                    });
+            }
+        }
+    </script>
+{% endblock %}

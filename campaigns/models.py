@@ -592,21 +592,55 @@ class CampaignInvoice(models.Model):
         verbose_name="کمپین"
     )
 
+    invoice_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        verbose_name="شماره فاکتور"
+    )
+
+    # ========== هزینه‌های پایه (قبل از تخفیف) ==========
+    base_influencer_cost = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="هزینه پایه ناشران"
+    )
+    base_content_cost = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="هزینه پایه تولید محتوا"
+    )
+    base_commission = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="کمیسیون پایه پلتفرم"
+    )
+
+    # ========== مبالغ تخفیف اعمال شده (به تفکیک) ==========
+    influencer_discount_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="تخفیف ناشران"
+    )
+    content_discount_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="تخفیف تولید محتوا"
+    )
+    platform_discount_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="تخفیف پلتفرم"
+    )
+
+    # ========== هزینه‌های نهایی (بعد از تخفیف) ==========
     influencer_cost = models.PositiveBigIntegerField(
-        verbose_name="هزینه اینفلوئنسر"
+        verbose_name="هزینه نهایی اینفلوئنسر"
     )
-
     content_cost = models.PositiveBigIntegerField(
-        verbose_name="هزینه تولید محتوا"
+        verbose_name="هزینه نهایی تولید محتوا"
     )
-
     commission = models.PositiveBigIntegerField(
-        verbose_name="کمیسیون پلتفرم"
+        verbose_name="کمیسیون نهایی پلتفرم"
     )
 
     discount_amount = models.PositiveBigIntegerField(
         default=0,
-        verbose_name="تخفیف"
+        verbose_name="جمع کل تخفیف"
     )
 
     total_amount = models.PositiveBigIntegerField(
@@ -634,6 +668,13 @@ class CampaignInvoice(models.Model):
 
     def payable_amount_display(self):
         return f"{self.payable_amount:,} تومان"
+
+    @classmethod
+    def generate_invoice_number(cls, invoice_id, created_at):
+        year = created_at.year
+        month = str(created_at.month).zfill(2)
+        day = str(created_at.day).zfill(2)
+        return f"INV-{year}{month}{day}-{invoice_id}"
 
 
 class Coupon(models.Model):

@@ -16,13 +16,54 @@ function initDiscountSystem(csrfToken, applyUrl, existingScopes) {
         platform: false
     };
 
-    // مقداردهی اولیه بج‌ها
-    function initExistingBadges() {
-        // این توسط سرور انجام میشه و در HTML مقداردهی شده
-        // فقط تابع check رو صدا میزنیم
-        checkAndDisableUniDiscount(appliedScopes, uniInput, uniBtn);
+    // تابع افزودن بج تخفیف
+    function addAppliedBadge(scope, code, meta) {
+        const container = document.getElementById('applied-discounts-list');
+        if (!container) return;
+
+        const badge = document.createElement('div');
+        badge.className = 'applied-discount-badge';
+        badge.innerHTML = `
+            <span class="badge-icon">${meta[scope].icon}</span>
+            <span class="badge-text">${meta[scope].label}: <strong>${code}</strong></span>
+            <span class="badge-remove" data-scope="${scope}">✕</span>
+        `;
+        container.appendChild(badge);
+
+        badge.querySelector('.badge-remove').addEventListener('click', function() {
+            console.log('حذف تخفیف برای:', scope);
+        });
     }
 
+    // تابع نمایش پیام
+    function showDiscountMessage(msg, type) {
+        const feedback = document.getElementById('discount-feedback');
+        if (!feedback) return;
+
+        feedback.className = `discount-message mt-2 ${type}`;
+        feedback.textContent = msg;
+        feedback.classList.remove('d-none');
+
+        setTimeout(() => {
+            feedback.classList.add('d-none');
+        }, 5000);
+    }
+
+    // تابع غیرفعال کردن اینپوت
+    function checkAndDisableUniDiscount(applied, input, btn) {
+        const allApplied = Object.values(applied).every(v => v === true);
+        if (allApplied) {
+            input.disabled = true;
+            btn.disabled = true;
+            btn.textContent = 'همه تخفیف‌ها اعمال شد';
+        } else {
+            input.disabled = false;
+            btn.disabled = false;
+            btn.textContent = 'اعمال تخفیف';
+        }
+    }
+
+    // تابع اصلی اعمال کد
     async function tryApplyCode(code) {
         const scopes = ['influencer', 'content_team', 'platform'];
 
@@ -44,11 +85,20 @@ function initDiscountSystem(csrfToken, applyUrl, existingScopes) {
                 if (data.success) {
                     appliedScopes[scope] = true;
                     addAppliedBadge(scope, data.coupon_code, scopeMeta);
-                    updateTotals(data);
+
+                    // *** صدا زدن تابع آپدیت از فایل helpers.js ***
+                    if (typeof updateTotals === 'function') {
+                        updateTotals(data);
+                    }
+
                     showDiscountMessage(`✅ کد تخفیف ${scopeMeta[scope].label} با موفقیت اعمال شد.`, 'success');
                     uniInput.value = '';
                     uniInput.focus();
                     checkAndDisableUniDiscount(appliedScopes, uniInput, uniBtn);
+
+                    uniBtn.disabled = true;
+                    uniBtn.textContent = 'تخفیف اعمال شد';
+
                     return true;
                 } else {
                     const errorMsg = data.message || data.error || 'خطای ناشناخته';
@@ -73,7 +123,7 @@ function initDiscountSystem(csrfToken, applyUrl, existingScopes) {
         return false;
     }
 
-    // رویداد کلیک دکمه اعمال تخفیف
+    // رویدادها
     uniBtn.addEventListener('click', async function() {
         const code = uniInput.value.trim();
 
@@ -101,7 +151,6 @@ function initDiscountSystem(csrfToken, applyUrl, existingScopes) {
         }
     });
 
-    // Enter key
     uniInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -109,12 +158,5 @@ function initDiscountSystem(csrfToken, applyUrl, existingScopes) {
         }
     });
 
-    initExistingBadges();
-
-    // برگرداندن توابع برای استفاده در main
-    return {
-        appliedScopes: appliedScopes,
-        tryApplyCode: tryApplyCode,
-        scopeMeta: scopeMeta
-    };
+    checkAndDisableUniDiscount(appliedScopes, uniInput, uniBtn);
 }

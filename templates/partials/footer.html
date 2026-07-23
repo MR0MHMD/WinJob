@@ -2,10 +2,114 @@
 
 <link rel="stylesheet" href="{% static 'partials/css/footer.css' %}">
 
+<!-- ============================================================ -->
+<!-- ========== فوتر اصلی (مخصوص مهمان‌ها + دسکتاپ) ========== -->
+<!-- ============================================================ -->
+
+<div class="footer-main-wrapper {% if request.user.is_authenticated %}d-none d-lg-block{% else %}d-block{% endif %}">
+    <div class="footer-guest-wrapper py-5">
+        {% if not request.user.is_authenticated %}
+            <div class="container mb-5">
+                <div class="cta-gradient-card p-4 p-md-5 rounded-4 text-center text-lg-start d-lg-flex align-items-center justify-content-between position-relative overflow-hidden">
+                    <div class="position-relative z-index-2 mb-4 mb-lg-0 max-width-600">
+                        <h3 class="text-white vazir-bold mb-2 fs-4">آماده‌اید کمپین تبلیغاتی خود را منفجر کنید؟</h3>
+                        <p class="text-light opacity-75 fs-sm mb-0">به هوشمندترین پلتفرم اینفلوئنسر مارکتینگ بپیوندید. دسترسی مستقیم به صدها کانال فعال در ایتا، تلگرام، روبیکا و اینستاگرام.</p>
+                    </div>
+                    <div class="position-relative z-index-2 d-flex flex-wrap justify-content-center gap-3">
+                        <a href="{% url 'accounts:register' %}?role=advertiser" class="btn btn-gradient-primary px-4 py-2.5 rounded-3 border-0 fs-sm vazir-bold">
+                            <i class="bi bi-megaphone me-2"></i>ثبت‌نام به عنوان تبلیغ‌دهنده
+                        </a>
+                        <a href="{% url 'accounts:register' %}?role=influencer" class="btn btn-outline-light-custom px-4 py-2.5 rounded-3 fs-sm vazir-bold">
+                            <i class="bi bi-person-plus me-2"></i>عضویت ناشران و اینفلوئنسرها
+                        </a>
+                    </div>
+                    <div class="glow-sphere-1"></div>
+                    <div class="glow-sphere-2"></div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="container border-bottom border-light border-opacity-10 pb-5">
+            <div class="row g-4 justify-content-between">
+                <div class="col-lg-4 col-md-6">
+                    <div class="brand-footer-section mb-3">
+                        <h4 class="text-white vazir-bold mb-3 fs-5">وین<span class="accent-color">جاب</span></h4>
+                        <p class="text-light opacity-60 fs-sm lh-lg mb-4">
+                            اولین زیرساخت هوشمند و خودکار برای مدیریت کمپین‌های اینفلوئنسر مارکتینگ و تولید محتوا در پلتفرم‌های داخلی و بین‌المللی. ما مسیر ارتباطی شما با مخاطبان هدفتان را کوتاه‌تر می‌کنیم.
+                        </p>
+                    </div>
+                    <div class="social-links-glow d-flex gap-2">
+                        <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="تلگرام"><i class="bi bi-telegram"></i></a>
+                        <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="اینستاگرام"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="ایتا"><i class="bi bi-chat-dots"></i></a>
+                        <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="آپارات"><i class="bi bi-play-circle"></i></a>
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-6 col-sm-4">
+                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای تبلیغ‌دهندگان</h6>
+                    <ul class="list-unstyled footer-links-list">
+                        <li><a href="{% url 'influencers:channel_list' %}"><i class="bi bi-chevron-left"></i>لیست کانال‌ها و پیج‌ها</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>تعرفه‌های عادلانه پلتفرم</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>تضمین امنیت پرداخت</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>تیم‌های تخصصی محتوا</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-2 col-6 col-sm-4">
+                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای ناشران محتوا</h6>
+                    <ul class="list-unstyled footer-links-list">
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>کسب درآمد از کانال</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>سیستم گیمیفیکیشن و لول</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>قوانین تسویه حساب سریع</a></li>
+                        <li><a href="#"><i class="bi bi-chevron-left"></i>نحوه احراز هویت کانال</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-3 col-sm-4">
+                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">پلتفرم‌های تحت پوشش</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <span class="platform-badge"><i class="bi bi-instagram me-1"></i>اینستاگرام</span>
+                        <span class="platform-badge"><i class="bi bi-telegram me-1"></i>تلگرام</span>
+                        <span class="platform-badge">ایتا</span>
+                        <span class="platform-badge">روبیکا</span>
+                        <span class="platform-badge">بله</span>
+                        <span class="platform-badge">سروش پلاس</span>
+                    </div>
+                    <div class="trust-badges-wrapper d-flex gap-2">
+                        <div class="trust-badge-card" data-bs-toggle="tooltip" title="اینماد">
+                            <div class="badge-placeholder"><i class="bi bi-shield-check fs-4"></i></div>
+                        </div>
+                        <div class="trust-badge-card" data-bs-toggle="tooltip" title="ساماندهی">
+                            <div class="badge-placeholder"><i class="bi bi-patch-check fs-4"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container pt-4">
+            <div class="d-md-flex align-items-center justify-content-between fs-xs text-light opacity-50">
+                <p class="mb-3 mb-md-0 text-center text-md-start">© تمام حقوق مادی و معنوی این پلتفرم محفوظ و متعلق به سامانه وینجاب می‌باشد.</p>
+                <div class="d-flex justify-content-center gap-3 footer-legal-links">
+                    <a href="#">قوانین و مقررات</a>
+                    <a href="#">حریم خصوصی</a>
+                    <a href="#">پشتیبانی و تیکت</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- ========== ناوبری پایین مخصوص موبایل (فقط برای کاربران لاگین شده) ========== -->
+<!-- ============================================================ -->
 {% if request.user.is_authenticated %}
+
     {% if request.user.is_advertiser %}
-        <!-- ========== ناوبری پایین تبلیغ‌دهنده ========== -->
-        <div class="bottom-nav d-lg-none">
+        <!-- ناوبری پایین تبلیغ‌دهنده -->
+        <div class="bottom-nav d-lg-none" id="advertiserBottomNav">
             <div class="bottom-nav-container">
                 <a href="{% url 'accounts:dashboard_router' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="خانه">
                     <i class="bi bi-house-door"></i>
@@ -65,7 +169,7 @@
                             </div>
                             <i class="bi bi-chevron-right option-arrow"></i>
                         </a>
-                        <a href="#" class="financial-option" data-option="invoices">
+                        <a href="{% url 'campaigns:invoice_list' %}" class="financial-option" data-option="invoices">
                             <div class="option-icon"><i class="bi bi-file-text"></i></div>
                             <div class="option-info">
                                 <span class="option-title">فاکتورها</span>
@@ -79,7 +183,7 @@
         </div>
 
     {% elif request.user.is_influencer %}
-        <!-- ========== ناوبری پایین مخصوص اینفلوئنسر ========== -->
+        <!-- ناوبری پایین مخصوص اینفلوئنسر -->
         <div class="bottom-nav d-lg-none" id="influencerBottomNav">
             <div class="bottom-nav-container">
                 <a href="{% url 'influencers:dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="داشبورد">
@@ -160,7 +264,7 @@
         </div>
 
     {% elif request.user.is_team_member %}
-        <!-- ========== ناوبری پایین مخصوص تیم تولید محتوا ========== -->
+        <!-- ناوبری پایین مخصوص تیم تولید محتوا -->
         <div class="bottom-nav d-lg-none" id="teamBottomNav">
             <div class="bottom-nav-container">
                 <a href="{% url 'content_team:dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="داشبورد">
@@ -194,7 +298,7 @@
             </div>
         </div>
 
-        <!-- شیت مالی تیم محتوا (کیف پول شخصی) -->
+        <!-- شیت مالی تیم محتوا -->
         <div class="bottom-sheet" id="financialSheetTeam">
             <div class="bottom-sheet-overlay"></div>
             <div class="bottom-sheet-content">
@@ -249,11 +353,9 @@
         </div>
 
     {% else %}
-        {# ============================================================ #}
-        {# ========== اگر کاربر هیچ نقشی ندارد (فقط ادمین است) ========== #}
-        {# ============================================================ #}
+        {# اگر کاربر هیچ نقشی ندارد (فقط ادمین است) #}
         {% if request.user.is_staff %}
-            <!-- ========== ناوبری پایین مخصوص ادمین ========== -->
+            <!-- ناوبری پایین مخصوص ادمین -->
             <div class="bottom-nav d-lg-none" id="adminBottomNav">
                 <div class="bottom-nav-container">
                     <a href="{% url 'support:dashboard' %}" class="bottom-nav-item" data-bs-toggle="tooltip" data-bs-placement="top" title="داشبورد">
@@ -324,109 +426,9 @@
                     </div>
                 </div>
             </div>
-
-        {% else %}
-            <!-- ========== Fallback (نباید اتفاق بیفته) ========== -->
-            <div class="bottom-nav d-lg-none">
-                <div class="bottom-nav-container">
-                    <a href="{% url 'core:home' %}" class="bottom-nav-item"><i class="bi bi-house-door"></i><span class="bottom-nav-label">خانه</span></a>
-                    <a href="#" class="bottom-nav-item"><i class="bi bi-headset"></i><span class="bottom-nav-label">پشتیبانی</span></a>
-                    <a href="#" class="bottom-nav-item"><i class="bi bi-wallet2"></i><span class="bottom-nav-label">مالی</span></a>
-                </div>
-            </div>
         {% endif %}
     {% endif %}
-{% else %}
-<div class="footer-guest-wrapper py-5">
-    <div class="container mb-5">
-        <div class="cta-gradient-card p-4 p-md-5 rounded-4 text-center text-lg-start d-lg-flex align-items-center justify-content-between position-relative overflow-hidden">
-            <div class="position-relative z-index-2 mb-4 mb-lg-0 max-width-600">
-                <h3 class="text-white vazir-bold mb-2 fs-4">آماده‌اید کمپین تبلیغاتی خود را منفجر کنید؟</h3>
-                <p class="text-light opacity-75 fs-sm mb-0">به هوشمندترین پلتفرم اینفلوئنسر مارکتینگ بپیوندید. دسترسی مستقیم به صدها کانال فعال در ایتا، تلگرام، روبیکا و اینستاگرام.</p>
-            </div>
-            <div class="position-relative z-index-2 d-flex flex-wrap justify-content-center gap-3">
-                <a href="{% url 'accounts:register' %}?role=advertiser" class="btn btn-gradient-primary px-4 py-2.5 rounded-3 border-0 fs-sm vazir-bold">
-                    <i class="bi bi-megaphone me-2"></i>ثبت‌نام به عنوان تبلیغ‌دهنده
-                </a>
-                <a href="{% url 'accounts:register' %}?role=influencer" class="btn btn-outline-light-custom px-4 py-2.5 rounded-3 fs-sm vazir-bold">
-                    <i class="bi bi-person-plus me-2"></i>عضویت ناشران و اینفلوئنسرها
-                </a>
-            </div>
-            <div class="glow-sphere-1"></div>
-            <div class="glow-sphere-2"></div>
-        </div>
-    </div>
-
-    <div class="container border-bottom border-light border-opacity-10 pb-5">
-        <div class="row g-4 justify-content-between">
-            <div class="col-lg-4 col-md-6">
-                <div class="brand-footer-section mb-3">
-                    <h4 class="text-white vazir-bold mb-3 fs-5">وین<span class="accent-color">جاب</span></h4>
-                    <p class="text-light opacity-60 fs-sm lh-lg mb-4">
-                        اولین زیرساخت هوشمند و خودکار برای مدیریت کمپین‌های اینفلوئنسر مارکتینگ و تولید محتوا در پلتفرم‌های داخلی و بین‌المللی. ما مسیر ارتباطی شما با مخاطبان هدفتان را کوتاه‌تر می‌کنیم.
-                    </p>
-                </div>
-                <div class="social-links-glow d-flex gap-2">
-                    <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="تلگرام"><i class="bi bi-telegram"></i></a>
-                    <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="اینستاگرام"><i class="bi bi-instagram"></i></a>
-                    <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="ایتا"><i class="bi bi-chat-dots"></i></a>
-                    <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="آپارات"><i class="bi bi-play-circle"></i></a>
-                </div>
-            </div>
-
-            <div class="col-lg-2 col-6 col-sm-4">
-                <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای تبلیغ‌دهندگان</h6>
-                <ul class="list-unstyled footer-links-list">
-                    <li><a href="{% url 'influencers:channel_list' %}"><i class="bi bi-chevron-left"></i>لیست کانال‌ها و پیج‌ها</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>تعرفه‌های عادلانه پلتفرم</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>تضمین امنیت پرداخت</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>تیم‌های تخصصی محتوا</a></li>
-                </ul>
-            </div>
-
-            <div class="col-lg-2 col-6 col-sm-4">
-                <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای ناشران محتوا</h6>
-                <ul class="list-unstyled footer-links-list">
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>کسب درآمد از کانال</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>سیستم گیمیفیکیشن و لول</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>قوانین تسویه حساب سریع</a></li>
-                    <li><a href="#"><i class="bi bi-chevron-left"></i>نحوه احراز هویت کانال</a></li>
-                </ul>
-            </div>
-
-            <div class="col-lg-3 col-sm-4">
-                <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">پلتفرم‌های تحت پوشش</h6>
-                <div class="d-flex flex-wrap gap-2 mb-4">
-                    <span class="platform-badge"><i class="bi bi-instagram me-1"></i>اینستاگرام</span>
-                    <span class="platform-badge"><i class="bi bi-telegram me-1"></i>تلگرام</span>
-                    <span class="platform-badge">ایتا</span>
-                    <span class="platform-badge">روبیکا</span>
-                    <span class="platform-badge">بله</span>
-                    <span class="platform-badge">سروش پلاس</span>
-                </div>
-                <div class="trust-badges-wrapper d-flex gap-2">
-                    <div class="trust-badge-card" data-bs-toggle="tooltip" title="اینماد">
-                        <div class="badge-placeholder"><i class="bi bi-shield-check fs-4"></i></div>
-                    </div>
-                    <div class="trust-badge-card" data-bs-toggle="tooltip" title="ساماندهی">
-                        <div class="badge-placeholder"><i class="bi bi-patch-check fs-4"></i></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="container pt-4">
-        <div class="d-md-flex align-items-center justify-content-between fs-xs text-light opacity-50">
-            <p class="mb-3 mb-md-0 text-center text-md-start">© تمام حقوق مادی و معنوی این پلتفرم محفوظ و متعلق به سامانه وینجاب می‌باشد.</p>
-            <div class="d-flex justify-content-center gap-3 footer-legal-links">
-                <a href="#">قوانین و مقررات</a>
-                <a href="#">حریم خصوصی</a>
-                <a href="#">پشتیبانی و تیکت</a>
-            </div>
-        </div>
-    </div>
-</div>
 {% endif %}
+
 
 <script src="{% static 'partials/js/footer.js' %}"></script>

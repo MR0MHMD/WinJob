@@ -29,4 +29,12 @@ urlpatterns = [
     path('delete/<int:campaign_id>/', campaign_delete, name='campaign_delete'),
     path('campaign_create_step2/calculate', campaign_step2_calculate_price, name='step2_calculate'),
     path('campaign_create_step4/apply_discount', apply_discount_code, name='apply_discount'),
+
+
+# اضافه کردن به urlpatterns
+    path('invoices/', invoice_list, name='invoice_list'),
+    path('invoices/<int:invoice_id>/', invoice_detail, name='invoice_detail'),
+    path('invoices/<int:invoice_id>/print/', invoice_print, name='invoice_print'),
+    path('invoices/<int:invoice_id>/cancel/', cancel_invoice, name='cancel_invoice'),
+    path('invoices/<int:invoice_id>/pay/', redirect_to_payment, name='redirect_to_payment'),
 ]

@@ -113,17 +113,32 @@ def apply_discount_code(request):
             'platform': 'platform_coupon_id'
         }
 
-        existing_coupon = getattr(campaign, scope_field_map[scope])
-        if existing_coupon:
+        # ==== چک کردن کوپن‌های موجود در کل کمپین ====
+        existing_coupon_in_scope = getattr(campaign, scope_field_map[scope])
+        if existing_coupon_in_scope:
             return JsonResponse({
                 "success": False,
-                "message": f"شما قبلاً از یک کد تخفیف استفاده کرده‌اید."
+                "message": f"شما قبلاً از یک کد تخفیف برای این بخش استفاده کرده‌اید."
             }, status=400)
+
+        # چک کردن اینکه این کوپن در هیچ اسکوپی قبلاً استفاده نشده باشد
+        all_existing_coupons = [
+            campaign.influencer_coupon_id,
+            campaign.content_team_coupon_id,
+            campaign.platform_coupon_id
+        ]
 
         try:
             coupon = Coupon.objects.get(code__iexact=code, scope=scope)
         except Coupon.DoesNotExist:
             return JsonResponse({"success": False, "message": "کد تخفیف معتبر نیست."}, status=404)
+
+        # اگر کوپن قبلاً در یکی از سه فیلد دیگر استفاده شده، خطا بده
+        if coupon.id in all_existing_coupons:
+            return JsonResponse({
+                "success": False,
+                "message": "این کد تخفیف قبلاً در یکی از بخش‌های دیگر کمپین استفاده شده است."
+            }, status=400)
 
         if not coupon.is_valid():
             return JsonResponse({
@@ -161,6 +176,15 @@ def apply_discount_code(request):
             "coupon_code": coupon.code,
             "discount_type": coupon.discount_type,
             "discount_value": float(coupon.value),
+
+            # ==== اطلاعات جدید ====
+            "base_influencer_cost": invoice.base_influencer_cost,
+            "base_content_cost": invoice.base_content_cost,
+            "base_commission": invoice.base_commission,
+            "influencer_discount_amount": invoice.influencer_discount_amount,
+            "content_discount_amount": invoice.content_discount_amount,
+            "platform_discount_amount": invoice.platform_discount_amount,
+
             "discount_amount": invoice.discount_amount,
             "discount_amount_formatted": f"{invoice.discount_amount:,}",
             "payable_amount": invoice.payable_amount,
