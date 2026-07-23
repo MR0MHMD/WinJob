@@ -1,14 +1,13 @@
-from django.utils import timezone
-
 from influencers.models import InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
-from django.views.generic import DetailView
-from campaigns.models import Coupon, CampaignInfluencer, Campaign, Payment
-from ..mixins import SupportRequiredMixin
+from campaigns.models import CampaignInfluencer, Campaign
+from payment.models import Transaction, Coupon, Payment
 from django.db.models import Avg, Prefetch, Sum
-from accounts.models import Transaction
 from django.contrib.auth import get_user_model
+from django.views.generic import DetailView
+from ..mixins import SupportRequiredMixin
 from ..forms import TicketReplyForm
 from tickets.models import Ticket
+from django.utils import timezone
 import json
 from content_team.models import (
     ContentOrder,

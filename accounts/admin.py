@@ -1,13 +1,16 @@
+# accounts/admin
 from .forms import CustomUserChangeForm, CustomUserCreationForm
 from django_jalali.admin.filters import JDateFieldListFilter
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.admin import UserAdmin
 from django.utils.safestring import mark_safe
+from payment.admin import TransactionInline
 from django.utils.html import format_html
-from .models import CustomUser, Wallet
+from payment.models import Transaction
 from django.contrib import messages
 from django.db.models import Sum
 from django.urls import reverse
+from .models import CustomUser
 from .models import OTPRequest
 from .inline_admin import *
 
@@ -309,167 +312,3 @@ class OTPRequestAdmin(admin.ModelAdmin):
                            json.dumps(obj.api_response, indent=2, ensure_ascii=False))
 
     api_response_pretty.short_description = 'پاسخ API'
-
-
-@admin.register(Wallet)
-class WalletAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'balance_display', 'formatted_created_at', 'formatted_updated_at')
-    search_fields = ('user__phone_number', 'user__nickname')
-    list_select_related = ('user',)
-    readonly_fields = ('formatted_created_at', 'formatted_updated_at', 'balance_display')
-
-    def balance_display(self, obj):
-        color = '#4CAF50' if obj.balance > 0 else '#f44336'
-        return format_html('<span style="color: {}; font-weight: bold;">{} تومان</span>', color, f"{obj.balance:,}")
-
-    balance_display.short_description = 'موجودی'
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    formatted_created_at.short_description = 'تاریخ ایجاد'
-
-    def formatted_updated_at(self, obj):
-        return format_datetime(obj.updated_at)
-
-    formatted_updated_at.short_description = 'آخرین بروزرسانی'
-
-
-@admin.register(Transaction)
-class TransactionAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'user_display',
-        'amount_display',
-        'type_badge',
-        'status_badge',
-        'campaign_link',
-        'formatted_created_at',
-    )
-
-    list_filter = (
-        'type',
-        'status',
-        ('created_at', JDateFieldListFilter),
-    )
-
-    search_fields = (
-        'user__phone_number',
-        'user__nickname',
-        'campaign__name',
-        'invoice__id',
-        'reference_id',
-        'description',
-    )
-
-    autocomplete_fields = ('user', 'campaign', 'invoice', 'payment')
-
-    readonly_fields = (
-        'formatted_created_at',
-        'amount_display',
-        'sign_display',
-    )
-
-    fieldsets = (
-        ('اطلاعات اصلی', {
-            'fields': ('user', 'amount_display', 'type', 'status')
-        }),
-        ('ارتباط با سایر مدل‌ها', {
-            'fields': ('campaign', 'invoice', 'payment', 'reference_id'),
-            'classes': ('collapse',)
-        }),
-        ('توضیحات', {
-            'fields': ('description',),
-            'classes': ('collapse',)
-        }),
-        ('تاریخ', {
-            'fields': ('formatted_created_at',),
-            'classes': ('collapse',)
-        }),
-    )
-
-    def user_display(self, obj):
-        return format_html(
-            '<a href="{}">{}</a>',
-            reverse('admin:accounts_customuser_change', args=[obj.user.id]),
-            obj.user.phone_number
-        )
-
-    user_display.short_description = 'کاربر'
-
-    def amount_display(self, obj):
-        color = '#4CAF50' if obj.is_income else '#f44336'
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} تومان</span>',
-            color,
-            f"{obj.amount:,}"
-        )
-
-    amount_display.short_description = 'مبلغ'
-
-    def sign_display(self, obj):
-        return obj.sign_display
-
-    sign_display.short_description = 'علامت'
-
-    def type_badge(self, obj):
-        colors = {
-            Transaction.Type.DEPOSIT: '#4CAF50',
-            Transaction.Type.WITHDRAW: '#f44336',
-            Transaction.Type.CAMPAIGN_PAYMENT: '#ff9800',
-            Transaction.Type.CAMPAIGN_REFUND: '#2196F3',
-            Transaction.Type.GATEWAY_PAYMENT: '#9c27b0',
-            Transaction.Type.GATEWAY_REFUND: '#00bcd4',
-        }
-        color = colors.get(obj.type, '#757575')
-        return format_html('<span style="color: {};">{}</span>', color, obj.get_type_display())
-
-    type_badge.short_description = 'نوع تراکنش'
-
-    def status_badge(self, obj):
-        colors = {
-            Transaction.Status.PENDING: '#ff9800',
-            Transaction.Status.SUCCESS: '#4CAF50',
-            Transaction.Status.FAILED: '#f44336',
-            Transaction.Status.CANCELLED: '#757575',
-        }
-        color = colors.get(obj.status, '#757575')
-        return format_html('<span style="color: {};">{}</span>', color, obj.get_status_display())
-
-    status_badge.short_description = 'وضعیت'
-
-    def campaign_link(self, obj):
-        if obj.campaign:
-            return format_html(
-                '<a href="{}">{}</a>',
-                reverse('admin:campaigns_campaign_change', args=[obj.campaign.id]),
-                obj.campaign.name[:30]
-            )
-        return '-'
-
-    campaign_link.short_description = 'کمپین'
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    formatted_created_at.short_description = 'تاریخ ایجاد'
-
-    actions = ['mark_as_success', 'mark_as_failed', 'mark_as_pending']
-
-    def mark_as_success(self, request, queryset):
-        updated = queryset.update(status=Transaction.Status.SUCCESS)
-        self.message_user(request, f'✅ {updated} تراکنش با موفقیت تأیید شد.', messages.SUCCESS)
-
-    mark_as_success.short_description = 'تغییر وضعیت به موفق'
-
-    def mark_as_failed(self, request, queryset):
-        updated = queryset.update(status=Transaction.Status.FAILED)
-        self.message_user(request, f'❌ {updated} تراکنش ناموفق علامت‌گذاری شد.', messages.SUCCESS)
-
-    mark_as_failed.short_description = 'تغییر وضعیت به ناموفق'
-
-    def mark_as_pending(self, request, queryset):
-        updated = queryset.update(status=Transaction.Status.PENDING)
-        self.message_user(request, f'⏳ {updated} تراکنش به حالت در انتظار برگشت.', messages.SUCCESS)
-
-    mark_as_pending.short_description = 'برگشت به حالت در انتظار'

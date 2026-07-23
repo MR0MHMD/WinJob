@@ -1,13 +1,13 @@
 from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery, ContentDeliveryFile
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from payment.models import Transaction, CampaignInvoice
 from django.template.loader import render_to_string
 from django.db.models.functions import TruncDate
 from influencers.models import InfluencerChannel
 from django.db.models import Sum, Count, Avg
 from django.core.paginator import Paginator
 from core.utils import convert_to_jalali
-from accounts.models import Transaction
 from plat_form.models import Platform
 from django.http import JsonResponse
 from django.contrib import messages
@@ -19,7 +19,6 @@ from campaigns.models import (
     Campaign,
     CampaignClick,
     CampaignTrackingLink,
-    CampaignInvoice,
     CampaignInfluencer,
     CampaignContent,
     AdType

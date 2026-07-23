@@ -16,6 +16,7 @@ urlpatterns = [
     path('blog/', include("blog.urls", namespace="blog")),
     path('gamification/', include("gamification.urls", namespace="gamification")),
     path('support/', include("support.urls", namespace="support")),
+    path('payment/', include("payment.urls", namespace="payment")),
     path('', include("core.urls", namespace="core")),
 ]
 

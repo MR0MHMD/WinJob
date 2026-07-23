@@ -63,7 +63,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     province = models.ForeignKey('location.Province', on_delete=models.CASCADE,
                                  related_name='accounts', verbose_name=_('استان'), null=True, blank=True)
 
-
     is_regional_manager = models.BooleanField(
         'مدیر استانی',
         default=False,
@@ -153,6 +152,8 @@ class OTPRequest(models.Model):
     api_status_code = models.IntegerField(null=True, blank=True)
 
     class Meta:
+        verbose_name = _('رمز یکبار مصرف')
+        verbose_name_plural = _('رمز های یکبار مصرف')
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['phone_number', 'status']),
@@ -195,171 +196,3 @@ class OTPRequest(models.Model):
 
     def __str__(self):
         return f"{self.phone_number} - {self.code} - {self.get_type_display()}"
-
-
-class Wallet(models.Model):
-
-    user = models.OneToOneField(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name="wallet",
-        verbose_name="کاربر"
-    )
-
-    balance = models.PositiveBigIntegerField(
-        default=0,
-        verbose_name="موجودی"
-    )
-
-    created_at = jmodels.jDateTimeField(
-        auto_now_add=True,
-        verbose_name="تاریخ ایجاد"
-    )
-
-    updated_at = jmodels.jDateTimeField(
-        auto_now=True,
-        verbose_name="آخرین بروزرسانی"
-    )
-
-    class Meta:
-        verbose_name = "کیف پول"
-        verbose_name_plural = "کیف پول‌ها"
-
-
-class Transaction(models.Model):
-    class Type(models.TextChoices):
-        # کیف پول
-        DEPOSIT = "deposit", "شارژ کیف پول"
-        WITHDRAW = "withdraw", "برداشت از کیف پول"
-
-        # کمپین
-        CAMPAIGN_PAYMENT = "campaign_payment", "پرداخت کمپین"
-        CAMPAIGN_REFUND = "campaign_refund", "بازگشت وجه کمپین"
-
-        GATEWAY_PAYMENT = "gateway_payment", "پرداخت مستقیم از درگاه"
-        GATEWAY_REFUND = "gateway_refund", "بازگشت وجه از درگاه"
-
-        INFLUENCER_PAYMENT = "influencer_payment", "پرداخت به ناشر"
-
-        TEAM_PAYMENT = "team_payment", "پرداخت به تیم تولید محتوا"
-
-
-    class Status(models.TextChoices):
-        PENDING = "pending", "در انتظار"
-        SUCCESS = "success", "موفق"
-        FAILED = "failed", "ناموفق"
-        CANCELLED = "cancelled", "لغو شده"
-
-    user = models.ForeignKey(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name="transactions",
-        verbose_name="کاربر"
-    )
-
-    amount = models.PositiveBigIntegerField(
-        verbose_name="مبلغ"
-    )
-
-    type = models.CharField(
-        max_length=30,
-        choices=Type.choices,
-        verbose_name="نوع تراکنش"
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.SUCCESS,
-        verbose_name="وضعیت"
-    )
-
-    # ارتباط با مدل‌های مختلف
-    campaign = models.ForeignKey(
-        'campaigns.Campaign',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-        verbose_name="کمپین مرتبط"
-    )
-
-    invoice = models.ForeignKey(
-        'campaigns.CampaignInvoice',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-        verbose_name="فاکتور مرتبط"
-    )
-
-    payment = models.ForeignKey(
-        'campaigns.Payment',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-        verbose_name="پرداخت مرتبط"
-    )
-
-    team_member = models.ForeignKey(
-        'content_team.ContentTeamMember',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-        verbose_name="عضو تیم محتوا"
-    )
-
-    reference_id = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name="شماره مرجع"
-    )
-
-    description = models.TextField(
-        blank=True,
-        verbose_name="توضیحات"
-    )
-
-    created_at = jmodels.jDateTimeField(
-        auto_now_add=True,
-        verbose_name="زمان ایجاد"
-    )
-
-    class Meta:
-        verbose_name = "تراکنش"
-        verbose_name_plural = "تراکنش‌ها"
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['type', 'status']),
-        ]
-
-    def __str__(self):
-        return f"{self.user} - {self.get_type_display()} - {self.amount:,} تومان"
-
-    @property
-    def is_income(self):
-        """آیا این تراکنش ورودی است؟"""
-        if not self.type:
-            return False
-        return self.type in [self.Type.DEPOSIT, self.Type.GATEWAY_PAYMENT, self.Type.CAMPAIGN_REFUND, self.Type.INFLUENCER_PAYMENT, self.Type.TEAM_PAYMENT]
-
-    @property
-    def is_expense(self):
-        """آیا این تراکنش خروجی است؟"""
-        if not self.type:
-            return True
-        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT]
-
-    @property
-    def sign_display(self):
-        """نمایش علامت (+/-) برای تراکنش"""
-        if self.amount is None:
-            return "- تومان"
-
-        if self.is_income:
-            return f"+ {self.amount:,} تومان"
-        else:
-            return f"- {self.amount:,} تومان"

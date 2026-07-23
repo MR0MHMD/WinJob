@@ -185,7 +185,7 @@
                 activeNav = 'خانه';
             } else if (currentPath.startsWith('/advertisers/my_campaigns') || currentPath.includes('/advertisers/campaign_detail')) {
                 activeNav = 'تبلیغات';
-            } else if (currentPath.startsWith('/accounts/wallet')) {
+            } else if (currentPath.startsWith('/payment/wallet') || currentPath.startsWith('/payment/wallet/deposit/') || currentPath.startsWith('/payment/invoices/') || currentPath.startsWith('/payment/invoices/detail/')) {
                 activeNav = 'مالی';
             } else if (currentPath.startsWith('/campaigns/campaign_create_step')) {
                 activeNav = 'ساخت تبلیغ';
@@ -243,7 +243,7 @@
                 activeNav = 'پلن‌ها';
             } else if (currentPath.startsWith('/content_team/team/manage') || currentPath.includes('/members/manage/')) {
                 activeNav = 'مدیریت تیم';
-            } else if (currentPath.startsWith('/accounts/wallet') || currentPath.startsWith('/content_team/team/coupons') || currentPath.startsWith('/accounts/wallet/deposit')) {
+            } else if (currentPath.startsWith('/payment/wallet') || currentPath.startsWith('/content_team/team/coupons') || currentPath.startsWith('/payment/wallet/deposit')) {
                 activeNav = 'مالی';
             } else if (currentPath.startsWith('/tickets')) {
                 activeNav = 'پشتیبانی';
@@ -331,7 +331,7 @@
     }
 
     function init() {
-        console.log('User role detected:', getUserRole()); // برای دیباگ - در تولید حذف شود
+        console.log('User role detected:', getUserRole());
         setupBottomSheets();
         setActiveNavItem();
         handleFooterVisibility();

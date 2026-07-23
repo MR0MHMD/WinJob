@@ -376,12 +376,12 @@
         <div class="filter-group">
             <label class="m-2" for="status-filter"><i class="fi-filter me-1"></i> وضعیت:</label>
             <select id="status-filter" onchange="window.location.href=this.value">
-                <option value="{% url 'campaigns:invoice_list' %}" {% if not status_filter %}selected{% endif %}>همه</option>
-                <option value="{% url 'campaigns:invoice_list' %}?status=paid" {% if status_filter == 'paid' %}selected{% endif %}>پرداخت شده</option>
-                <option value="{% url 'campaigns:invoice_list' %}?status=unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>پرداخت نشده</option>
+                <option value="{% url 'payment:invoice_list' %}" {% if not status_filter %}selected{% endif %}>همه</option>
+                <option value="{% url 'payment:invoice_list' %}?status=paid" {% if status_filter == 'paid' %}selected{% endif %}>پرداخت شده</option>
+                <option value="{% url 'payment:invoice_list' %}?status=unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>پرداخت نشده</option>
             </select>
             {% if status_filter %}
-                <a href="{% url 'campaigns:invoice_list' %}" class="btn-clear">
+                <a href="{% url 'payment:invoice_list' %}" class="btn-clear">
                     <i class="fi-x me-1"></i> پاک کردن
                 </a>
             {% endif %}
@@ -446,12 +446,12 @@
                                 </td>
                                 <td data-label="عملیات">
                                     <div class="action-btns">
-                                        <a href="{% url 'campaigns:invoice_detail' invoice_id=invoice.id %}" 
+                                        <a href="{% url 'payment:invoice_detail' invoice_id=invoice.id %}"
                                            class="btn btn-primary btn-sm rounded-pill px-3">
                                             <i class="fi-eye me-1"></i> مشاهده
                                         </a>
                                         {% if not invoice.is_paid %}
-                                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}" 
+                                            <a href="{% url 'payment:redirect_to_payment' invoice_id=invoice.id %}"
                                                class="btn btn-success btn-sm rounded-pill px-3">
                                                 <i class="fi-cart me-1"></i> پرداخت
                                             </a>

@@ -1,16 +1,16 @@
 from ..services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
 from ..utils import save_brief, save_campaign_content, handle_deleted_files, handle_new_files
 from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField, Avg
-from ..services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
-from ..models import Campaign, CampaignInfluencer, Payment, CampaignContent
+from payment.services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from notifications.utils import notify_influencer_new_campaign_orders
 from ..services.free_campaign import create_free_campaign_bookings
+from ..models import Campaign, CampaignInfluencer, CampaignContent
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
 from django.db.models.functions import Coalesce
+from payment.models import Transaction, Payment
 from django.core.paginator import Paginator
-from accounts.models import Transaction
 from collections import defaultdict
 from django.contrib import messages
 from django.db import transaction

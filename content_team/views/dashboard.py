@@ -2,10 +2,10 @@ from content_team.utils import get_last_n_months, get_jalali_month_name
 from django.db.models.functions import TruncMonth, TruncDay
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg, Count, Q
-from campaigns.models import Campaign, Coupon
+from payment.models import Transaction, Coupon
 from django.shortcuts import redirect, render
 from datetime import timedelta, datetime
-from accounts.models import Transaction
+from campaigns.models import Campaign
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings

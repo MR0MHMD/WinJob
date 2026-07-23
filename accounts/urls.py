@@ -12,9 +12,6 @@ urlpatterns = [
 
     # view
     path('profile/edit/', views.edit_profile, name='edit_profile'),
-    path('wallet/', views.wallet_dashboard, name='wallet_dashboard'),
-    path('wallet/deposit/', views.wallet_deposit, name='wallet_deposit'),
-    path('wallet/transactions/load-more/', views.load_more_transactions, name='load_more_transactions'),
 
     # api_views
     path('delete_account/', api_views.delete_account, name='delete_account'),

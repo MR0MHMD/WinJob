@@ -1,13 +1,11 @@
-from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from payment.models import Transaction, CampaignInvoice
+from payment.utils import number_to_words
+from campaigns.models import Campaign
+from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
-from django.template.loader import get_template
-from django.utils import timezone
-from campaigns.models import CampaignInvoice, Campaign
-from accounts.models import Transaction
-from django.db.models import Q
 
 
 @login_required
@@ -39,7 +37,7 @@ def invoice_list(request):
         'unpaid_count': invoices.filter(is_paid=False).count(),
     }
 
-    return render(request, 'campaigns/invoices/invoice_list.html', context)
+    return render(request, 'payment/invoices/invoice_list.html', context)
 
 
 @login_required
@@ -77,84 +75,9 @@ def invoice_detail(request, invoice_id):
         'can_pay': not invoice.is_paid,
     }
 
-    return render(request, 'campaigns/invoices/invoice_detail.html', context)
+    return render(request, 'payment/invoices/invoice_detail.html', context)
 
 
-# ============================================================
-# تابع پیشرفته تبدیل عدد به حروف فارسی (پشتیبانی از ریال و تومان)
-# ============================================================
-def number_to_words(amount, currency='ریال'):
-    """
-    تبدیل عدد به حروف فارسی به صورت کامل
-    """
-    if amount == 0:
-        return "صفر"
-
-    # تبدیل عدد به لیست ارقام
-    num_str = str(amount)
-    length = len(num_str)
-
-    # جدا کردن بخش‌های ۳ رقمی از سمت راست
-    chunks = []
-    while length > 0:
-        if length >= 3:
-            chunks.append(int(num_str[length - 3:length]))
-        else:
-            chunks.append(int(num_str[0:length]))
-        length -= 3
-
-    # برعکس کردن لیست برای پردازش از بزرگترین بخش
-    chunks = chunks[::-1]
-
-    # کلمات پایه
-    ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"]
-    teens = ["ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده"]
-    tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"]
-    hundreds = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"]
-
-    # نام بخش‌ها
-    section_names = ["", "هزار", "میلیون", "میلیارد", "تریلیون"]
-
-    def convert_chunk(num):
-        """تبدیل یک بخش ۳ رقمی به حروف"""
-        result = []
-
-        h = num // 100
-        t = (num % 100) // 10
-        o = num % 10
-
-        if h > 0:
-            result.append(hundreds[h])
-
-        if t == 1:
-            result.append(teens[o])
-        else:
-            if t > 1:
-                result.append(tens[t])
-            if o > 0:
-                result.append(ones[o])
-
-        return " و ".join(result)
-
-    # ترکیب بخش‌ها
-    result_parts = []
-    for i, chunk in enumerate(chunks):
-        if chunk > 0:
-            part_text = convert_chunk(chunk)
-            if section_names[len(chunks) - 1 - i]:
-                part_text += " " + section_names[len(chunks) - 1 - i]
-            result_parts.append(part_text)
-
-    # اتصال نهایی با "و"
-    words = " و ".join(result_parts)
-
-    # اضافه کردن واحد پول
-    return f"{words} {currency}"
-
-
-# ============================================================
-# ویو پرینت فاکتور (با ضرب ۱۰ برای تبدیل به ریال)
-# ============================================================
 @login_required
 def invoice_print(request, invoice_id):
     """
@@ -231,7 +154,8 @@ def invoice_print(request, invoice_id):
         'payable_amount_words': payable_amount_words,
     }
 
-    return render(request, 'campaigns/invoices/invoice_print.html', context)
+    return render(request, 'payment/invoices/invoice_print.html', context)
+
 
 @login_required
 @transaction.atomic
@@ -255,7 +179,7 @@ def cancel_invoice(request, invoice_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'فاکتور یافت نشد یا قبلاً پرداخت شده است.'}, status=404)
         messages.error(request, "فاکتور یافت نشد یا قبلاً پرداخت شده است.")
-        return redirect('campaigns:invoice_list')
+        return redirect('payment:invoice_list')
 
     campaign = invoice.campaign
 
@@ -263,7 +187,7 @@ def cancel_invoice(request, invoice_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'این کمپین قابل لغو نیست.'}, status=400)
         messages.error(request, "این کمپین قابل لغو نیست.")
-        return redirect('campaigns:invoice_detail', invoice_id=invoice.id)
+        return redirect('payment:invoice_detail', invoice_id=invoice.id)
 
     campaign_name = campaign.name
     campaign.delete()
@@ -272,7 +196,7 @@ def cancel_invoice(request, invoice_id):
         return JsonResponse({'success': True, 'message': f'فاکتور و کمپین {campaign_name} با موفقیت لغو شدند.'})
 
     messages.success(request, f"فاکتور و کمپین {campaign_name} با موفقیت لغو شدند.")
-    return redirect('campaigns:invoice_list')
+    return redirect('payment:invoice_list')
 
 
 @login_required

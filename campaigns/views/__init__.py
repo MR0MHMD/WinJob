@@ -1,5 +1,4 @@
 from .campaign_views import campaign_create_step1, campaign_create_step2, campaign_create_step3_ready, campaign_create_step3_team, campaign_create_step3_router, campaign_create_step4
 from .replacement_views import campaign_select_replacement, campaign_replace_team, campaign_switch_to_ready, campaign_switch_to_ready_cancel, campaign_continue_without_replacement
 from .api_views import campaign_step2_calculate_price, api_content_team_rates, apply_discount_code, campaign_delete, calculate_influencer_replacement_commission
-from .invoice_views import invoice_list, invoice_detail, cancel_invoice, redirect_to_payment, invoice_print
 from .tracking_views import track_click

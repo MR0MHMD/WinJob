@@ -22,7 +22,7 @@
         }
 
         try {
-            const response = await fetch(`/accounts/wallet/transactions/load-more/?page=${currentPage}`, {
+            const response = await fetch(`/payment/wallet/transactions/load-more/?page=${currentPage}`, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',

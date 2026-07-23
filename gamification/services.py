@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from .models import PointLog, TeamScore, ChannelScore, AdvertiserScore, Badge
-from accounts.models import Transaction
+from payment.models import Transaction
 
 
 @transaction.atomic

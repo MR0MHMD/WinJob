@@ -3,7 +3,6 @@ from advertisers.models import AdvertiserProfile
 from influencers.models import InfluencerProfile
 from core.admin_utils import format_datetime
 from django.contrib import admin
-from .models import Transaction
 
 
 class AdvertiserProfileInline(admin.StackedInline):
@@ -66,23 +65,3 @@ class InfluencerProfileInline(admin.StackedInline):
 
     formatted_created_at.short_description = "تاریخ ایجاد"
     formatted_updated_at.short_description = "تاریخ ویرایش"
-
-
-class TransactionInline(admin.TabularInline):
-    """نمایش تراکنش‌های کاربر در صفحه ادمین"""
-    model = Transaction
-    extra = 0
-    can_delete = False
-    max_num = 5
-    fields = ('amount', 'type', 'status', 'sign_display', 'formatted_created_at')
-    readonly_fields = ('amount', 'type', 'status', 'sign_display', 'formatted_created_at')
-    classes = ['collapse']
-
-    def sign_display(self, obj):
-        return obj.sign_display
-
-    def formatted_created_at(self, obj):
-        return format_datetime(obj.created_at)
-
-    sign_display.short_description = "مبلغ"
-    formatted_created_at.short_description = "تاریخ"

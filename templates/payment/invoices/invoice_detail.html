@@ -398,13 +398,13 @@
                 <div class="col-md-6 text-md-end">
                     <div class="d-flex flex-wrap justify-content-md-end gap-2">
                         {% if invoice.is_paid %}
-                            <a href="{% url 'campaigns:invoice_print' invoice_id=invoice.id %}"
+                            <a href="{% url 'payment:invoice_print' invoice_id=invoice.id %}"
                                class="btn btn-primary btn-sm rounded-pill px-4">
                                 <i class="fi-download me-1"></i>
                                 دانلود PDF
                             </a>
                         {% else %}
-                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}"
+                            <a href="{% url 'payment:redirect_to_payment' invoice_id=invoice.id %}"
                                class="btn btn-success rounded-pill px-4">
                                 <i class="fi-cart me-2"></i>
                                 پرداخت فاکتور
@@ -645,7 +645,7 @@
                     <!-- ===== دکمه‌های اکشن ===== -->
                     <div class="action-bar">
                         {% if not invoice.is_paid %}
-                            <a href="{% url 'campaigns:redirect_to_payment' invoice_id=invoice.id %}"
+                            <a href="{% url 'payment:redirect_to_payment' invoice_id=invoice.id %}"
                                class="btn btn-success flex-fill">
                                 <i class="fi-cart me-2"></i>
                                 پرداخت فاکتور
@@ -674,7 +674,7 @@
     <script>
         function cancelInvoice(invoiceId, invoiceNumber) {
             if (confirm(`آیا از لغو فاکتور ${invoiceNumber} اطمینان دارید؟\n\nبا لغو این فاکتور، کل کمپین و تمام اطلاعات مرتبط حذف خواهد شد.`)) {
-                fetch(`/campaigns/invoices/${invoiceId}/cancel/`, {
+                fetch(`/payment/invoices/${invoiceId}/cancel/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}',
@@ -684,7 +684,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            window.location.href = '{% url "campaigns:invoice_list" %}';
+                            window.location.href = '{% url "payment:invoice_list" %}';
                         } else {
                             alert(data.message || 'خطا در لغو فاکتور');
                         }

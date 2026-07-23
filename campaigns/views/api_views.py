@@ -1,12 +1,13 @@
-from ..services.create_invoice import create_campaign_invoice
+from payment.services.create_invoice import create_campaign_invoice
 from django.contrib.auth.decorators import login_required
-from ..models import Campaign, Coupon, CampaignInfluencer
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 from influencers.models import InfluencerServiceRate
 from content_team.models import ContentServicePlan
+from ..models import Campaign, CampaignInfluencer
 from django.http import JsonResponse
 from django.contrib import messages
+from payment.models import Coupon
 from django.db.models import Sum
 import traceback
 import json
@@ -242,7 +243,7 @@ def calculate_influencer_replacement_commission(request):
 
         content_cost = campaign.invoice.content_cost if hasattr(campaign, 'invoice') and campaign.invoice else 0
 
-        from campaigns.services.create_invoice import PLATFORM_COMMISSION
+        from payment.services.create_invoice import PLATFORM_COMMISSION
 
         old_commission = campaign.invoice.commission if hasattr(campaign, 'invoice') and campaign.invoice else 0
         if old_commission == 0:

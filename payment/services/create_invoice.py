@@ -1,4 +1,5 @@
-from campaigns.models import CampaignInvoice, CampaignInfluencer
+from campaigns.models import CampaignInfluencer
+from payment.models import CampaignInvoice
 from content_team.models import ContentOrder
 
 PLATFORM_COMMISSION = 0.15
