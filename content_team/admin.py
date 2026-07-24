@@ -18,6 +18,7 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "members_count_display",
         "completed_orders_display",
         "created_at",
+        "qr_code_preview"
     )
 
     list_filter = (
@@ -40,12 +41,15 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ContentPortfolioInline
     ]
 
+    actions = ['regenerate_qr']  # اکشن جدید
+
     readonly_fields = (
         "created_at",
         "updated_at",
         "avg_rating_display",
         "completed_orders_display",
         'members_count_display',
+        "qr_code_preview_large",
     )
 
     fieldsets = (
@@ -55,7 +59,12 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "slug",
                 "description",
                 "logo",
+                "qr_code",
             )
+        }),
+        ("پیش‌نمایش QR Code", {
+            "fields": ("qr_code_preview_large",),
+            "classes": ("collapse",)
         }),
         ("وضعیت", {
             "fields": ("is_active",),
@@ -75,9 +84,65 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
     )
 
+    # ========== متدهای نمایش QR Code ==========
+
+    def qr_code_preview(self, obj):
+        """نمایش QR Code در لیست"""
+        if obj.qr_code:
+            return format_html(
+                '<img src="{}" width="40" height="40" style="border-radius: 8px; object-fit: cover;" />',
+                obj.qr_code.url
+            )
+        return mark_safe(
+            '<span style="color: #999; font-size: 12px;">بدون QR</span>'
+        )
+
+    qr_code_preview.short_description = "QR Code"
+
+    def qr_code_preview_large(self, obj):
+        """نمایش QR Code بزرگ در صفحه جزئیات"""
+        if obj.qr_code:
+            return format_html(
+                '''
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
+                    <img src="{}" width="200" height="200" style="border-radius: 16px; object-fit: cover; border: 2px solid #e0e0e0;" />
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{}" download class="button" style="padding: 6px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 6px;">
+                            ⬇️ دانلود QR Code
+                        </a>
+                    </div>
+                </div>
+                ''',
+                obj.qr_code.url,
+                obj.qr_code.url,
+            )
+        return format_html(
+            '<span style="color: #999;">QR Code تولید نشده است. از اکشن "بازتولید QR Code" استفاده کنید.</span>'
+        )
+
+    qr_code_preview_large.short_description = "پیش‌نمایش QR Code"
+
+    # ========== اکشن بازتولید QR Code ==========
+
+    def regenerate_qr(self, request, queryset):
+        """بازتولید QR Code برای تیم‌های انتخاب شده"""
+        count = 0
+        for team in queryset:
+            try:
+                team.generate_qr(force=True)
+                count += 1
+            except Exception as e:
+                self.message_user(request, f"خطا در تولید QR برای {team.name}: {e}", level='ERROR')
+
+        if count > 0:
+            self.message_user(request, f"✅ QR Code برای {count} تیم بازتولید شد.")
+
+    regenerate_qr.short_description = "♻️ بازتولید QR Code برای تیم‌های انتخاب شده"
+
+    # ========== متدهای قبلی ==========
+
     @staticmethod
     def get_team_manager_province(obj):
-        """دریافت استان مدیر تیم"""
         try:
             manager = obj.members.filter(role='manager', is_active=True).first()
             if manager and manager.user and manager.user.province:
@@ -103,7 +168,6 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-
         if request.user.is_regional_manager and request.user.province:
             team_ids = []
             for team in qs:
@@ -111,7 +175,6 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 if province and province.id == request.user.province.id:
                     team_ids.append(team.id)
             return qs.filter(id__in=team_ids)
-
         return qs
 
     def has_change_permission(self, request, obj=None):

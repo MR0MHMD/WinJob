@@ -1,3 +1,4 @@
+from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -7,8 +8,11 @@ from django_resized import ResizedImageField
 from core.utils import generate_random_slug
 from .utils import content_order_file_path
 from django.db.models import Sum
+from django.conf import settings
+from django.urls import reverse
 from django.db import models
 import mimetypes
+import json
 
 
 class ContentTeam(GamificationMixin, models.Model):
@@ -25,6 +29,14 @@ class ContentTeam(GamificationMixin, models.Model):
         allow_unicode=True,
         blank=True,
         default=generate_random_slug
+    )
+
+    qr_code = models.ImageField(
+        _('QR Code'),
+        upload_to='teams/qr_codes/',
+        blank=True,
+        null=True,
+        help_text=_('QR Code برای اشتراک گذاری پروفایل تیم')
     )
 
     description = models.TextField(
@@ -67,6 +79,35 @@ class ContentTeam(GamificationMixin, models.Model):
     def is_revenue_share_valid(self):
         """آیا مجموع درصدها دقیقاً ۱۰۰ هست؟"""
         return self.get_total_revenue_percent() == 100
+
+    def generate_qr(self, force=False):
+        """
+        تولید و ذخیره QR Code برای تیم
+        """
+        from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
+        from django.urls import reverse
+
+        if self.qr_code and not force:
+            return
+
+        url = f"{settings.SITE_URL}{reverse('content_team:team_detail', kwargs={'slug': self.slug})}"
+
+        logo_path = get_site_logo_path()
+        color1, color2, gradient_direction = get_default_qr_colors()
+
+        filename = f'team_{self.slug}_{self.id}.png'
+        qr_file = generate_and_save_qr(
+            data=url,
+            filename=filename,
+            logo_path=logo_path,
+            color1=color1,
+            color2=color2,
+            gradient_direction=gradient_direction,
+            use_gradient=True  # فعال کردن گرادیانت
+        )
+
+        self.qr_code.save(filename, qr_file, save=False)
+        self.save(update_fields=['qr_code'])
 
     def clean(self):
         """اعتبارسنجی در سطح تیم"""
@@ -543,7 +584,6 @@ class ContentServicePlan(models.Model):
             return self.features
         elif isinstance(self.features, str):
             try:
-                import json
                 return json.loads(self.features)
             except:
                 return [self.features]

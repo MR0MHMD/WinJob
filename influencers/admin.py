@@ -130,21 +130,28 @@ class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 @admin.register(InfluencerChannel)
 class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
         "channel_display",
         "influencer",
         "platform",
         "is_active",
         "status",
         "formatted_created_at",
+        "qr_code_preview",  # اضافه شد
     )
     list_filter = ('platform', 'province', "is_active", 'created_at',)
     search_fields = ("channel_id", "channel_name", "influencer__full_name", "influencer__user__phone_number",)
     autocomplete_fields = ("influencer", "platform", "category", "province",)
     ordering = ("created_at", 'followers_count')
     inlines = [InfluencerServiceRateInline, InfluencerReviewInline]
-    actions = ['mark_as_approved', 'mark_as_rejected']
+    actions = ['mark_as_approved', 'mark_as_rejected', 'regenerate_qr']  # اکشن جدید
     readonly_fields = (
-        "followers_formatted_display", "formatted_created_at", "formatted_updated_at", "rates_count_display",)
+        "followers_formatted_display",
+        "formatted_created_at",
+        "formatted_updated_at",
+        "rates_count_display",
+        "qr_code_preview_large",  # اضافه شد
+    )
 
     fieldsets = (
         ("اطلاعات اصلی", {
@@ -165,7 +172,11 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             "classes": ("collapse",)
         }),
         ("آمار و تصویر", {
-            "fields": ("followers_count", "avatar"),
+            "fields": ("followers_count", "avatar", "qr_code"),  # QR Code اضافه شد
+            "classes": ("collapse",)
+        }),
+        ("پیش‌نمایش QR Code", {
+            "fields": ("qr_code_preview_large",),
             "classes": ("collapse",)
         }),
         ("وضعیت", {
@@ -178,13 +189,69 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
     )
 
+    # ========== متدهای نمایش QR Code ==========
+
+    def qr_code_preview(self, obj):
+        """نمایش QR Code در لیست"""
+        if obj.qr_code:
+            return format_html(
+                '<img src="{}" width="40" height="40" style="border-radius: 8px; object-fit: cover;" />',
+                obj.qr_code.url
+            )
+        return mark_safe(
+            '<span style="color: #999; font-size: 12px;">بدون QR</span>'
+        )
+
+    qr_code_preview.short_description = "QR Code"
+
+    def qr_code_preview_large(self, obj):
+        """نمایش QR Code بزرگ در صفحه جزئیات"""
+        if obj.qr_code:
+            return format_html(
+                '''
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
+                    <img src="{}" width="200" height="200" style="border-radius: 16px; object-fit: cover; border: 2px solid #e0e0e0;" />
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{}" download class="button" style="padding: 6px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 6px;">
+                            ⬇️ دانلود QR Code
+                        </a>
+                    </div>
+                </div>
+                ''',
+                obj.qr_code.url,
+                obj.qr_code.url,
+            )
+        return format_html(
+            '<span style="color: #999;">QR Code تولید نشده است. از اکشن "بازتولید QR Code" استفاده کنید.</span>'
+        )
+
+    qr_code_preview_large.short_description = "پیش‌نمایش QR Code"
+
+    # ========== اکشن بازتولید QR Code ==========
+
+    def regenerate_qr(self, request, queryset):
+        """بازتولید QR Code برای کانال‌های انتخاب شده"""
+        count = 0
+        for channel in queryset:
+            try:
+                channel.generate_qr(force=True)
+                count += 1
+            except Exception as e:
+                self.message_user(request, f"خطا در تولید QR برای {channel.channel_name}: {e}", level='ERROR')
+
+        if count > 0:
+            self.message_user(request, f"✅ QR Code برای {count} کانال بازتولید شد.")
+
+    regenerate_qr.short_description = "♻️ بازتولید QR Code برای کانال‌های انتخاب شده"
+
+    # ========== متدهای قبلی ==========
+
     def channel_display(self, obj):
         return obj.channel_id
 
     channel_display.short_description = "آیدی کانال"
 
     def channel_province(self, obj):
-        """استان کانال (از فیلد province خود مدل)"""
         return obj.province.name if obj.province else "-"
 
     channel_province.short_description = "استان کانال"
@@ -218,37 +285,29 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     formatted_updated_at.short_description = "آخرین ویرایش"
 
     def get_queryset(self, request):
-        """فقط کانال‌هایی که استانشون با استان مدیر یکی هست"""
         qs = super().get_queryset(request)
-
         if request.user.is_regional_manager and request.user.province:
             return qs.filter(province=request.user.province)
-
         return qs
 
     def has_change_permission(self, request, obj=None):
-        """بررسی دسترسی ویرایش بر اساس استان کانال"""
         if obj and request.user.is_regional_manager and request.user.province:
             if obj.province != request.user.province:
                 return False
         return super().has_change_permission(request, obj)
 
     def has_delete_permission(self, request, obj=None):
-        """بررسی دسترسی حذف بر اساس استان کانال"""
         if obj and request.user.is_regional_manager and request.user.province:
             if obj.province != request.user.province:
                 return False
         return super().has_delete_permission(request, obj)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """محدود کردن انتخاب‌ها در فرم"""
         if db_field.name == 'province' and request.user.is_regional_manager:
             kwargs['queryset'] = Province.objects.filter(id=request.user.province.id)
-
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
-        """موقع ذخیره، استان کانال رو خودکار ست کن برای مدیر استانی"""
         if request.user.is_regional_manager and request.user.province:
             obj.province = request.user.province
         super().save_model(request, obj, form, change)
@@ -256,12 +315,12 @@ class InfluencerChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     def mark_as_approved(modeladmin, request, queryset):
         queryset.update(status='approved')
 
-    mark_as_approved.short_description = "تایید کانال‌های انتخاب شده"
+    mark_as_approved.short_description = "✅ تایید کانال‌های انتخاب شده"
 
     def mark_as_rejected(modeladmin, request, queryset):
         queryset.update(status='rejected')
 
-    mark_as_rejected.short_description = "رد کانال‌های انتخاب شده"
+    mark_as_rejected.short_description = "❌ رد کانال‌های انتخاب شده"
 
 
 @admin.register(InfluencerServiceRate)

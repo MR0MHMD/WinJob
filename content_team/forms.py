@@ -1,9 +1,6 @@
-# content_team/forms.py
-
-from django import forms
-from django.utils.text import slugify
-
 from .models import ContentServicePlan, ContentServiceType, ContentTeam
+from django.utils.text import slugify
+from django import forms
 
 
 class ContentServicePlanForm(forms.ModelForm):

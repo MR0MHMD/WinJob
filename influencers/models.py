@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.db.models import Avg
 from django.utils.translation import gettext_lazy as _
@@ -62,6 +63,15 @@ class InfluencerChannel(GamificationMixin, models.Model):
         null=True,
         blank=True
     )
+
+    qr_code = models.ImageField(
+        _('QR Code'),
+        upload_to='influencers/qr_codes/',
+        blank=True,
+        null=True,
+        help_text=_('QR Code برای اشتراک‌گذاری پروفایل کانال')
+    )
+
     url = models.URLField(_('آدرس کانال'), blank=True, null=True)
     followers_count = models.PositiveIntegerField(_('تعداد فالوور/مشترک'), default=0)
     status = models.CharField(_('وضعیت'), max_length=20, choices=STATUS_CHOICES, default='pending', )
@@ -88,6 +98,35 @@ class InfluencerChannel(GamificationMixin, models.Model):
 
     def __str__(self):
         return f"{self.influencer.full_name} - {self.platform.name} ({self.channel_id})"
+
+    def generate_qr(self, force=False):
+        """
+        تولید و ذخیره QR Code برای کانال
+        """
+        from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
+        from django.urls import reverse
+
+        if self.qr_code and not force:
+            return
+
+        url = f"{settings.SITE_URL}{reverse('influencers:channel_detail', kwargs={'channel_id': self.id})}"
+
+        logo_path = get_site_logo_path()
+        color1, color2, gradient_direction = get_default_qr_colors()
+
+        filename = f'channel_{self.id}_{self.platform.slug}.png'
+        qr_file = generate_and_save_qr(
+            data=url,
+            filename=filename,
+            logo_path=logo_path,
+            color1=color1,
+            color2=color2,
+            gradient_direction=gradient_direction,
+            use_gradient=True
+        )
+
+        self.qr_code.save(filename, qr_file, save=False)
+        self.save(update_fields=['qr_code'])
 
     def followers_formatted(self):
         if self.followers_count >= 1000000:

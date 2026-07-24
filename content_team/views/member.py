@@ -1,6 +1,7 @@
 from content_team.models import TeamJoinRequest, ContentTeam, ContentTeamMember
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
 from content_team.forms import TeamManageForm
 from accounts.models import CustomUser
 from django.contrib import messages
@@ -328,12 +329,12 @@ def team_join_request_handle(request, team_slug, request_id):
 
 @login_required
 def team_manage_view(request):
-    # پیدا کردن عضو تیم برای کاربر جاری (به دلیل OneToOneField حداکثر یک رکورد)
+    # پیدا کردن عضو تیم برای کاربر جاری
     try:
         team_member = ContentTeamMember.objects.select_related('team').get(user=request.user, is_active=True)
     except ContentTeamMember.DoesNotExist:
         messages.error(request, "شما عضو هیچ تیم فعالی نیستید.")
-        return redirect('home')  # یا صفحه مناسب دیگر
+        return redirect('home')
 
     # بررسی نقش مدیر بودن
     if team_member.role != ContentTeamMember.Role.MANAGER:
@@ -342,13 +343,44 @@ def team_manage_view(request):
 
     team = team_member.team
 
+    # ذخیره اسلاگ قبلی برای بررسی تغییر
+    old_slug = team.slug
+
     # پردازش فرم
     if request.method == 'POST':
         form = TeamManageForm(request.POST, request.FILES, instance=team)
         if form.is_valid():
-            form.save()
+            team = form.save(commit=False)
+
+            # ========== چک کردن تغییر اسلاگ ==========
+            if team.slug != old_slug:
+                # ۱. حذف QR Code قدیمی از استوریج
+                if team.qr_code:
+                    try:
+                        if default_storage.exists(team.qr_code.name):
+                            default_storage.delete(team.qr_code.name)
+                    except Exception as e:
+                        print(f"⚠️ خطا در حذف QR Code قدیمی: {e}")
+
+                # ۲. پاک کردن فیلد QR Code از دیتابیس
+                team.qr_code = None
+
+            # ذخیره تیم
+            team.save()
+
+            # ========== تولید QR Code جدید (اگه پاک شده بود) ==========
+            if not team.qr_code:
+                try:
+                    team.generate_qr(force=True)
+                    # رفرش از دیتابیس برای آدرس جدید
+                    team.refresh_from_db()
+                except Exception as e:
+                    print(f"⚠️ خطا در تولید QR Code جدید: {e}")
+
             messages.success(request, "اطلاعات تیم با موفقیت به‌روزرسانی شد.")
             return redirect('content_team:team_manage')
+        else:
+            messages.error(request, "لطفاً خطاهای فرم را برطرف کنید.")
     else:
         form = TeamManageForm(instance=team)
 

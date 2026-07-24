@@ -1,9 +1,8 @@
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
-from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink
+from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, CampaignClick
 from campaigns.services.campaigns_notifications import submit_influencer_report_service
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.shortcuts import render, get_object_or_404, redirect
-from .services.verification_service import VerificationService
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -21,7 +20,10 @@ from core.models import Category
 from django.conf import settings
 from threading import Thread
 import jdatetime
+import logging
 import json
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -340,7 +342,6 @@ def influencer_respond(request, order_id):
         return redirect('influencers:order_detail', order_id=order.id)
 
     return redirect('influencers:order_detail', order_id=order.id)
-
 
 
 @login_required
@@ -923,6 +924,14 @@ def channel_detail(request, channel_id):
                 queryset=InfluencerReview.objects.select_related(
                     'advertiser__user'
                 ).order_by('-created_at')
+            ),
+            Prefetch(
+                'campaign_bookings',
+                queryset=CampaignInfluencer.objects.select_related(
+                    'campaign', 'service_rate'
+                ).prefetch_related(
+                    'tracking_link__click_logs'
+                )
             )
         ).annotate(
             _avg_rating=Avg('reviews__rating'),
@@ -930,24 +939,45 @@ def channel_detail(request, channel_id):
             _completed_campaigns=Count(
                 'campaign_bookings',
                 filter=Q(campaign_bookings__status='completed')
-            )
+            ),
+            _total_campaigns=Count('campaign_bookings'),
         ),
         id=channel_id,
         is_active=True,
         influencer__is_active=True
     )
 
-    cooldown_active = False
-    cooldown_hours = 0
-    if channel.status == 'rejected' and channel.rejected_at:
-        cooldown_active = VerificationService.is_cooldown_active(channel)
-        cooldown_hours = VerificationService.get_cooldown_remaining(channel)
+    # ========== تولید QR Code ==========
+    if not channel.qr_code:
+        try:
+            channel.generate_qr(force=False)
+            channel.refresh_from_db()
+        except Exception as e:
+            logger.error(f"QR Code generation failed for channel {channel.id}: {e}")
 
+    # ========== محاسبات کارت حرفه‌ای‌گری ==========
+
+    now = timezone.now()
+    channel_age_days = (now - channel.created_at).days
+
+    total_campaigns = channel._total_campaigns or 0
+    completed_campaigns = channel._completed_campaigns or 0
+    success_rate = int((completed_campaigns / total_campaigns * 100)) if total_campaigns > 0 else 0
+
+    total_clicks = CampaignClick.objects.filter(
+        tracking_link__campaign_influencer__channel=channel
+    ).count()
+
+    avg_service_price = channel.service_rates.filter(
+        is_active=True
+    ).aggregate(avg=Avg('price'))['avg'] or 0
+    avg_service_price = int(avg_service_price)
+
+    # ========== پارامترهای کمپین ==========
     select_rate_param = request.GET.get('select_rate')
     from_campaign = select_rate_param is not None
     selectable_rate_id = int(select_rate_param) if select_rate_param and select_rate_param.isdigit() else None
 
-    # influencers/view.py (قسمت منطق ثبت نظر)
     # ========== منطق ثبت نظر ==========
     can_submit_review = False
     pending_bookings = []
@@ -955,7 +985,6 @@ def channel_detail(request, channel_id):
     if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
         advertiser = request.user.advertiser_profile
 
-        # ۱. کمپین‌های تکمیل شده بدون نظر
         pending_bookings = list(CampaignInfluencer.objects.filter(
             campaign__advertiser=advertiser,
             channel=channel,
@@ -963,49 +992,45 @@ def channel_detail(request, channel_id):
             review__isnull=True
         ).select_related('campaign').order_by('-created_at'))
 
-        # ۲. بررسی آیا کاربر قبلاً نظری (حتی عمومی) ثبت کرده؟
         has_any_review = InfluencerReview.objects.filter(
             channel=channel,
             advertiser=advertiser
         ).exists()
 
-        if not has_any_review:
-            # کاربر هیچ نظری ندارد → می‌تواند یک نظر عمومی ثبت کند
-            can_submit_review = True
-        elif pending_bookings:
-            # کاربر نظر دارد ولی کمپین بدون نظر وجود دارد
+        if not has_any_review or pending_bookings:
             can_submit_review = True
 
-    # مرتب‌سازی نظرات: نظر کاربر فعلی اول، سپس بقیه بر اساس تاریخ نزولی
+    # ========== مرتب‌سازی نظرات ==========
     all_reviews = list(channel.reviews.all())
     if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
         user_reviews = [r for r in all_reviews if r.advertiser.user == request.user]
         other_reviews = [r for r in all_reviews if r.advertiser.user != request.user]
-        # مرتب کردن سایر نظرات بر اساس تاریخ (جدیدترین اول)
         other_reviews_sorted = sorted(other_reviews, key=lambda x: x.created_at, reverse=True)
         sorted_reviews = user_reviews + other_reviews_sorted
     else:
         sorted_reviews = sorted(all_reviews, key=lambda x: x.created_at, reverse=True)
 
+    # ========== کانتکست ==========
     context = {
         'channel': channel,
-        'avg_rating': channel.avg_rating,
+        'avg_rating': channel._avg_rating,
         'total_reviews': channel._total_reviews,
         'completed_campaigns': channel._completed_campaigns,
         'service_rates': channel.service_rates.filter(is_active=True),
-        'reviews': sorted_reviews,  # نظرات مرتب شده
+        'reviews': sorted_reviews,
         'gamification': channel.gamification_status,
         'from_campaign': from_campaign,
         'selectable_rate_id': selectable_rate_id,
         'can_submit_review': can_submit_review,
         'pending_bookings': pending_bookings,
         'use_n8n': settings.USE_N8N_VERIFICATION,
-        'cooldown_active': cooldown_active,
-        'cooldown_hours': cooldown_hours,
+        'channel_age_days': channel_age_days,
+        'success_rate': success_rate,
+        'total_clicks': total_clicks,
+        'avg_service_price': avg_service_price,
     }
 
     return render(request, 'influencers/pages/channel_detail.html', context)
-
 
 @login_required
 def influencer_coupons(request):

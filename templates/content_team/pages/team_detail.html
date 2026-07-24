@@ -4,7 +4,11 @@
 {% block title %}پروفایل تیم {{ team.name }}{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail/profile-cover.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail/utilities.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail/components.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail/collapse.css' %}">
+    <link rel="stylesheet" href="{% static 'content_team/css/pages/team_detail/modules.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -136,9 +140,9 @@
                             </div>
                         </div>
 
-                        <div class="collapse show" id="aboutCollapse">
+                        <div class="collapse show " id="aboutCollapse">
                             <div class="about-text">
-                                <p>{{ team.description|linebreaks }}</p>
+                                <p>{{ team.description }}</p>
                             </div>
                         </div>
                     </div>
@@ -525,10 +529,11 @@
                                                         data-rating="{{ review.rating }}"
                                                         data-comment="{{ review.comment|escapejs }}"
                                                         data-order-name="
-                                                                
-                                                                
-                                                                
-                                                                
+
+
+
+
+
                                                                 
                                                                 {% if review.order %}{{ review.order.campaign.name }}{% else %}نظر عمومی{% endif %}">
                                                     <i class="fi-edit"></i> ویرایش نظر
@@ -553,6 +558,105 @@
                         {% endif %}
                     </div>
                 </div>
+            
+                <!-- ========== کارت‌های حرفه‌ای‌گری + QR Code - کنار هم ========== -->
+                <div class="row g-4 mt-1" data-aos="fade-up" data-aos-delay="275">
+                    <!-- کارت حرفه‌ای‌گری تیم (جمع‌وجور) -->
+                    <div class="col-md-6">
+                        <div class="glass-card p-3 h-100">
+                            <div class="section-header small">
+                                <div class="section-icon small">
+                                    <i class="fi-award"></i>
+                                </div>
+                                <h3 class="section-title small">حرفه‌ای‌گری</h3>
+                            </div>
+                    
+                            <div class="excellence-grid-compact">
+                                <!-- ۱. قدمت تیم -->                             
+                                <div class="excellence-item-compact">
+                                    <div class="excellence-icon-compact">
+                                        <i class="bi bi-calendar"></i>
+                                    </div>
+                                    <div class="excellence-value-compact">
+                                        {% if stats.team_age_days|default:0 > 0 %}
+                                            {{ stats.team_age_days|default:0 }}<span class="value-unit">روز</span>
+                                        {% else %}
+                                            <span class="value-unit">تازه</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="excellence-label-compact">قدمت تیم</div>
+                                </div>
+                    
+                                <!-- ۲. درصد موفقیت سفارشات -->
+                                <div class="excellence-item-compact">
+                                    <div class="excellence-icon-compact">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                    </div>
+                                    <div class="excellence-value-compact">
+                                        {{ stats.success_rate|default:0 }}<span class="fs-sm text-light">٪</span>
+                                    </div>
+                                    <div class="excellence-label-compact">موفقیت سفارشات</div>
+                                </div>
+                    
+                                <!-- ۳. میانگین تعداد ویرایش -->
+                                <div class="excellence-item-compact">
+                                    <div class="excellence-icon-compact">
+                                        <i class="fi-edit text-warning"></i>
+                                    </div>
+                                    <div class="excellence-value-compact">
+                                        {{ stats.avg_revisions|default:0|floatformat:1 }}<span class="value-unit">مرتبه</span>
+                                    </div>
+                                    <div class="excellence-label-compact">میانگین ویرایش</div>
+                                </div>
+                    
+                                <!-- ۴. میانگین روزهای تحویل -->
+                                <div class="excellence-item-compact">
+                                    <div class="excellence-icon-compact">
+                                        <i class="fi-clock"></i>
+                                    </div>
+                                    <div class="excellence-value-compact">
+                                        {{ stats.avg_delivery_days|default:0 }}<span class="value-unit">روز</span>
+                                    </div>
+                                    <div class="excellence-label-compact">میانگین تحویل</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- کارت QR Code -->
+                    {% if team.qr_code %}
+                        <div class="col-md-6">
+                            <div class="glass-card p-3 h-100">
+                                <div class="section-header small">
+                                    <div class="section-icon small">
+                                        <i class="bi-qr-code"></i>
+                                    </div>
+                                    <h3 class="section-title small">QR Code تیم</h3>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <img src="{{ team.qr_code.url }}" 
+                                         alt="QR Code {{ team.name }}" 
+                                         class="qr-code-image"
+                                         style="max-width: 160px; width: 100%; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"
+                                         id="teamQrCode">
+                                    
+                                    <div class="mt-2 d-flex gap-2 justify-content-center flex-wrap">
+                                        <a href="{{ team.qr_code.url }}" download 
+                                           class="btn btn-accent btn-sm rounded-pill px-3">
+                                            <i class="fi-download me-1"></i> دانلود
+                                        </a>
+                                        <button class="btn btn-outline-light btn-sm rounded-pill px-3" 
+                                                onclick="shareQrCode('{{ team.qr_code.url }}', '{{ team.name|escapejs }}')">
+                                            <i class="fi-share me-1"></i> اشتراک
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
             </div>
 
             <div class="col-lg-4">
@@ -683,22 +787,6 @@
                 </div>
 
                 {% if not from_campaign %}
-                    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
-                        <div class="section-header small">
-                            <div class="section-icon small">
-                                <i class="fi-link"></i>
-                            </div>
-                            <h3 class="section-title small">ارتباط و پشتیبانی</h3>
-                        </div>
-
-                        <div class="social-links">
-                            <button class="social-link-item" onclick="shareProfile()">
-                                <i class="fi-share"></i>
-                                <span>اشتراک‌گذاری پروفایل</span>
-                            </button>
-                        </div>
-                    </div>
-
                     <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="200">
                         <div class="report-section">
                             <i class="fi-flag"></i>
@@ -874,8 +962,13 @@
 {% endblock %}
 
 {% block script %}
-    <script src="{% static 'content_team/js/pages/team_detail.js' %}"></script>
+    <!-- فایل‌های JS جداگانه با ترتیب صحیح -->
+    <script src="{% static 'content_team/js/pages/team_detail/main.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/team_detail/typing.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/team_detail/reviews.js' %}"></script>
+    <script src="{% static 'content_team/js/pages/team_detail/init.js' %}"></script>
 
+    <!-- داده‌های مورد نیاز برای سیستم نظرات -->
     <script>
         window.teamReviewData = {
             canSubmitReview: {{ can_submit_review|yesno:"true,false" }},
@@ -886,6 +979,4 @@
             editUrl: "{% url 'content_team:edit_review' %}"
         };
     </script>
-
-    <script src="{% static 'content_team/js/pages/team_detail_reviews.js' %}"></script>
 {% endblock %}
