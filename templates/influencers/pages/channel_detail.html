@@ -1,15 +1,24 @@
 {% extends 'parent/base.html' %}
-{% load static blog_tags%}
+{% load static blog_tags %}
 
-{% block title %}{{ channel.channel_name }} | پروفایل اینفلوئنسر | WinJob{% endblock %}
+{% block title %}پروفایل {{ channel.channel_name }}{% endblock %}
 
 {% block extra_style %}
-    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/header.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/main.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/sidebar.css' %}">
+    <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/modals.css' %}">
 {% endblock %}
+
 
 {% block content %}
 
-    <!-- ========== هدر پروفایل با پوشش کاور و افکت پارالاکس ========== -->
+
+    <!--
+    ======================================================
+    هدر پروفایل – کاور، آواتار، اطلاعات اصلی، دکمه اقدام
+    ======================================================
+    -->
     <div class="profile-cover">
         <div class="profile-cover-bg">
             <div class="profile-cover-overlay"></div>
@@ -23,23 +32,29 @@
                     <div class="avatar-hologram">
                         <div class="avatar-hologram-glow"></div>
                         <div class="avatar-hologram-ring"></div>
+
                         {% if channel.avatar %}
-                            <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}"
+                            <img src="{{ channel.avatar.url }}"
+                                 alt="{{ channel.channel_name }}"
                                  class="profile-avatar">
                         {% else %}
                             <div class="profile-avatar avatar-placeholder">
                                 <i class="fi-user fs-1"></i>
                             </div>
                         {% endif %}
+
                         <div class="avatar-status online"></div>
                     </div>
                 </div>
 
-                <!-- اطلاعات اصلی -->
+                <!-- اطلاعات اصلی (نام، وضعیت، آیدی، پلتفرم، امتیاز) -->
                 <div class="col-md">
                     <div class="text-center text-md-start">
+
+                        <!-- نام کانال + نشان وضعیت -->
                         <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center justify-content-md-start mb-2">
                             <h1 class="profile-name mb-0">{{ channel.channel_name }}</h1>
+
                             {% if channel.status == "pending" %}
                                 <div class="pending-badge-channel">
                                     <i class="fi-alert-circle"></i>
@@ -58,59 +73,48 @@
                             {% endif %}
                         </div>
 
-                        <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-3">
-                        <span class="info-pill">
-                            <i class="fi-at-sign"></i>{{ channel.channel_id }}@
-                        </span>
-                            <span class="info-pill platform-pill">
-                            {% if channel.platform.logo %}
-                                <img src="{{ channel.platform.logo.url }}" width="18" height="18"
-                                     alt="{{ channel.platform.name }}">
-                            {% else %}
-                                <i class="fi-device-mobile"></i>
-                            {% endif %}
-                                {{ channel.platform.name }}
-                        </span>
-                            {% if channel.category %}
-                                <span class="info-pill category-pill">
-                                <i class="fi-grid"></i>
-                                {{ channel.category.name }}
+                        <!-- آیدی و پلتفرم -->
+                        <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-2">
+                            <span class="info-pill">
+                                <i class="fi-at-sign"></i>{{ channel.channel_id }}@
                             </span>
-                            {% endif %}
+
+                            <span class="info-pill platform-pill">
+                                {% if channel.platform.logo %}
+                                    <img src="{{ channel.platform.logo.url }}"
+                                         width="18" height="18"
+                                         alt="{{ channel.platform.name }}">
+                                {% else %}
+                                    <i class="fi-device-mobile"></i>
+                                {% endif %}
+                                {{ channel.platform.name }}
+                            </span>
                         </div>
 
-                        <!-- امتیاز پیشرفته با نوار پیشرفت -->
-                        <div class="rating-advanced">
-                            <div class="rating-stars-large">
-                                {% with avg=avg_rating|default:0 %}
-                                    {% for i in "12345"|make_list %}
-                                        {% if forloop.counter <= avg %}
-                                            <i class="fi-star-filled"></i>
-                                        {% elif forloop.counter <= avg|add:0.5 %}
-                                            <i class="fi-star-half"></i>
-                                        {% else %}
-                                            <i class="fi-star"></i>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endwith %}
-                                <span class="rating-value">{{ avg_rating|default:"0" }}</span>
-                            </div>
-                            <div class="rating-progress">
-                                {% with avg=avg_rating|default:0 %}
-                                    <div class="rating-progress-bar" style="width: {% widthratio avg 5 100 %}%"></div>
-                                {% endwith %}
-                            </div>
-                            <div class="rating-count-large">
-                                <i class="fi-chat-circle"></i> {{ total_reviews }} نظر ثبت شده
-                            </div>
+                        <!-- میانگین امتیاز (ستاره‌ها) -->
+                        <div class="rating-stars-simple">
+                            {% with avg=avg_rating|default:0 %}
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= avg %}
+                                        <i class="fi-star-filled text-warning"></i>
+                                    {% elif forloop.counter <= avg|add:0.5 %}
+                                        <i class="fi-star-half text-warning"></i>
+                                    {% else %}
+                                        <i class="fi-star text-muted"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="rating-value-simple">{{ avg_rating|default:"0" }}</span>
+                                <span class="rating-count-simple">({{ total_reviews }} نظر)</span>
+                            {% endwith %}
                         </div>
+
                     </div>
                 </div>
 
-                <!-- دکمه اقدام با انیمیشن -->
+                <!-- دکمه اقدام (بسته به حالت: انتخاب ناشر، تأیید کانال، شروع همکاری) -->
                 <div class="col-md-auto">
                     {% if from_campaign and selectable_rate_id %}
-                        {# حالت انتخاب ناشر از کمپین (بدون تغییر) #}
+                        {# حالت انتخاب ناشر از کمپین #}
                         <div class="d-flex flex-column gap-2">
                             <a href="{% url 'campaigns:campaign_create_step2' %}?select_rate={{ selectable_rate_id }}"
                                class="cta-button pulse-animation text-center"
@@ -124,11 +128,13 @@
                                 <i class="fi-arrow-right me-2"></i> بازگشت به صفحه قبل
                             </a>
                         </div>
+
                     {% else %}
                         {# حالت عادی #}
                         {% if request.user == channel.influencer.user %}
                             {# کاربر صاحب کانال است #}
                             {% if use_n8n %}
+                                {# سیستم تأیید خودکار فعال است #}
                                 {% if channel.status == 'approved' %}
                                     <div class="text-center text-md-start">
                                         <span class="badge bg-success rounded-pill px-3 py-2">
@@ -138,18 +144,22 @@
                                 {% elif channel.status == 'rejected' and VerificationService.is_cooldown_active %}
                                     <div class="text-center text-md-start">
                                         <span class="badge bg-danger rounded-pill px-3 py-2">
-                                            <i class="fi-alert-circle me-1"></i> کانال رد شده - 
+                                            <i class="fi-alert-circle me-1"></i> کانال رد شده -
                                             {{ VerificationService.get_cooldown_remaining }} ساعت تا تلاش مجدد
                                         </span>
                                     </div>
                                 {% else %}
                                     <button class="cta-button pulse-animation" id="verifyChannelBtn">
-                                        <span class="cta-button-text"><i class="fi-check-circle me-2"></i> تأیید کانال</span>
-                                        <span class="cta-button-icon"><i class="fi-arrow-left"></i></span>
+                                        <span class="cta-button-text">
+                                            <i class="fi-check-circle me-2"></i> تأیید کانال
+                                        </span>
+                                        <span class="cta-button-icon">
+                                            <i class="fi-arrow-left"></i>
+                                        </span>
                                     </button>
                                 {% endif %}
                             {% else %}
-                                {# سیستم خودکار غیرفعال است – پیام دستی #}
+                                {# سیستم خودکار غیرفعال است #}
                                 <div class="text-center text-md-start">
                                     <span class="badge bg-info rounded-pill px-3 py-2">
                                         <i class="fi-info-circle me-1"></i> کانال شما ثبت شد، به زودی تأیید خواهد شد
@@ -159,19 +169,32 @@
                         {% else %}
                             {# کاربر معمولی – دکمه شروع همکاری #}
                             <button class="cta-button pulse-animation" id="orderBtn">
-                                <span class="cta-button-text"><i class="fi-send me-2"></i> شروع همکاری</span>
-                                <span class="cta-button-icon"><i class="fi-arrow-left"></i></span>
+                                <span class="cta-button-text">
+                                    <i class="fi-send me-2"></i> شروع همکاری
+                                </span>
+                                <span class="cta-button-icon">
+                                    <i class="fi-arrow-left text-light"></i>
+                                </span>
                             </button>
                         {% endif %}
                     {% endif %}
                 </div>
+
             </div>
         </div>
     </div>
 
 
-
+    <!--
+    ============================================================
+    محتوای اصلی صفحه – کارت‌های اطلاعاتی، نظرات، آمار و ...
+    ============================================================
+    -->
     <div class="container py-5">
+
+        <!--
+        ---------------- داشبورد کاربر (فقط برای صاحب کانال) ----------------
+        -->
         {% if request.user == channel.influencer.user %}
             <div class="row g-4 mb-5">
                 <div class="col-12">
@@ -189,7 +212,9 @@
                                 </a>
                             </div>
                         </div>
+
                         <div class="card-body p-4">
+                            <!-- اطلاعات سطح و امتیاز -->
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10"
@@ -200,34 +225,41 @@
                                                  width="48" height="48"
                                                  style="border-radius: 50%; object-fit: cover;">
                                         {% else %}
-                                            {# Fallback: آیکون پیش‌فرض با رنگ مناسب #}
+                                            {# Fallback: آیکون پیش‌فرض با رنگ بر اساس سطح #}
                                             <i class="fi-award" style="font-size: 30px; color:
-                                                    {% if gamification.current_badge_code == 'bronze' %}#cd7f32
-                                                    {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
-                                                    {% elif gamification.current_badge_code == 'gold' %}#ffd700
-                                                    {% elif gamification.current_badge_code == 'emerald' %}#50c878
-                                                    {% else %}#ffffff
-                                                    {% endif %}"></i>
+                                                {% if gamification.current_badge_code == 'bronze' %}#cd7f32
+                                                {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
+                                                {% elif gamification.current_badge_code == 'gold' %}#ffd700
+                                                {% elif gamification.current_badge_code == 'emerald' %}#50c878
+                                                {% else %}#ffffff
+                                                {% endif %}"></i>
                                         {% endif %}
                                     </div>
                                     <div>
                                         <h5 class="text-white mb-1">{{ gamification.current_badge_name }}</h5>
-                                        <p class="text-muted small mb-0">امتیاز فعلی: <strong
-                                                class="text-white">{{ gamification.current_points }}</strong></p>
+                                        <p class="text-muted small mb-0">
+                                            امتیاز فعلی:
+                                            <strong class="text-white">{{ gamification.current_points }}</strong>
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div class="text-md-end text-start">
                                     {% if not gamification.is_max_level %}
-                                        <span class="text-muted small d-block">نشان بعدی: <strong
-                                                class="text-warning">{{ gamification.next_badge_name }}</strong></span>
-                                        <span class="text-white fw-bold">{{ gamification.points_needed_for_next }} امتیاز تا ارتقاء</span>
+                                        <span class="text-muted small d-block">
+                                            نشان بعدی:
+                                            <strong class="text-warning">{{ gamification.next_badge_name }}</strong>
+                                        </span>
+                                        <span class="text-white fw-bold">
+                                            {{ gamification.points_needed_for_next }} امتیاز تا ارتقاء
+                                        </span>
                                     {% else %}
                                         <span class="text-warning fw-bold">🌟 بالاترین سطح کاربری 🌟</span>
                                     {% endif %}
                                 </div>
                             </div>
 
+                            <!-- نوار پیشرفت -->
                             <div class="progress mt-4"
                                  style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
@@ -243,12 +275,21 @@
                 </div>
             </div>
         {% endif %}
+
+
+        <!--
+        ---------- ردیف اصلی: ستون راست (محتوای اصلی) + ستون چپ (سایدبار) ----------
+        -->
         <div class="row g-4">
 
-            <!-- ========== ستون اصلی (راست) ========== -->
+            <!--
+            ============================================================
+            ستون اصلی (راست) – درباره، نرخ‌ها، نظرات، حرفه‌ای‌گری، QR
+            ============================================================
+            -->
             <div class="col-lg-8">
 
-                <!-- بخش درباره با افکت تایپ‌رایتر -->
+                <!-- ۱. بخش درباره با افکت تایپ‌رایتر -->
                 {% if channel.influencer.description %}
                     <div class="glass-card p-4 mb-4" data-aos="fade-up">
                         <div class="section-header">
@@ -259,14 +300,14 @@
                             <div class="section-line"></div>
                         </div>
                         <div class="about-text">
-                            <p class="typewriter-text" id="aboutText">
+                            <p class="typewriter-text text-light" id="aboutText">
                                 {{ channel.influencer.description }}
                             </p>
                         </div>
                     </div>
                 {% endif %}
 
-                <!-- نرخ خدمات با کارت‌های قیمت -->
+                <!-- ۲. نرخ‌های تبلیغات -->
                 {% if service_rates %}
                     <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                         <div class="section-header">
@@ -298,14 +339,15 @@
                     </div>
                 {% endif %}
 
-                <!-- نظرات کاربران با کاروسل -->
-                <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="200">
+                <!-- ۳. نظرات تبلیغ‌دهندگان -->
+                <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="section-header">
                         <div class="section-icon">
                             <i class="fi-chat-circle"></i>
                         </div>
                         <h3 class="section-title">نظرات تبلیغ‌دهندگان</h3>
                         <div class="section-line"></div>
+
                         {% if can_submit_review %}
                             <button class="btn btn-sm btn-outline-primary ms-auto" id="manualReviewBtn">
                                 <i class="fi-star-filled ms-1"></i> ثبت نظر
@@ -321,16 +363,20 @@
                                         <div class="reviewer-info">
                                             <div class="reviewer-avatar">
                                                 {% if review.advertiser.user.avatar %}
-                                                    <img src="{{ review.advertiser.user.avatar.url }}" alt="{{ reviews.advertiser.user.nickname }}">
+                                                    <img src="{{ review.advertiser.user.avatar.url }}"
+                                                         alt="{{ review.advertiser.user.nickname }}">
                                                 {% else %}
                                                     <i class="fi-user"></i>
                                                 {% endif %}
                                             </div>
 
                                             <div>
-                                                <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
+                                                <div class="reviewer-name">
+                                                    {{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}
+                                                </div>
                                                 <div class="reviewer-date">
-                                                    <i class="fi-calendar"></i> {{ review.created_at|date:"H:i | Y/m/d" }}
+                                                    <i class="fi-calendar"></i>
+                                                    {{ review.created_at|date:"H:i | Y/m/d" }}
                                                 </div>
                                             </div>
                                         </div>
@@ -347,7 +393,7 @@
                                     </div>
 
                                     {% if review.comment %}
-                                        <p class="review-body">{{ review.comment|markdown }}</p>
+                                        <div class="review-body">{{ review.comment|markdown }}</div>
                                     {% endif %}
 
                                     <div class="review-footer">
@@ -362,10 +408,12 @@
                                                     data-rating="{{ review.rating }}"
                                                     data-comment="{{ review.comment|escapejs }}"
                                                     data-campaign-name="
-                                                            
-                                                            
-                                                            
-                                                            {% if review.campaign_booking %}{{ review.campaign_booking.campaign.name }}{% else %}نظر عمومی{% endif %}">
+                                                        {% if review.campaign_booking %}
+                                                            {{ review.campaign_booking.campaign.name }}
+                                                        {% else %}
+                                                            نظر عمومی
+                                                        {% endif %}
+                                                    ">
                                                 <i class="fi-edit"></i> ویرایش نظر
                                             </button>
                                         {% endif %}
@@ -378,9 +426,7 @@
                             <div class="empty-reviews-icon">
                                 <i class="fi-chat-circle text-accent"></i>
                             </div>
-
                             <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
-
                             <p class="text-muted small">
                                 اولین نفری باشید که تجربه همکاری با این تیم را به اشتراک می‌گذارید!
                             </p>
@@ -388,23 +434,130 @@
                     {% endif %}
                 </div>
 
+                <!-- ۴. کارت حرفه‌ای‌گری کانال + QR Code (کنار هم) -->
+                <div class="row g-4" data-aos="fade-up" data-aos-delay="250">
+
+                    <!-- کارت حرفه‌ای‌گری -->
+                    <div class="col-md-6">
+                        <div class="glass-card p-3 h-100">
+                            <div class="section-header small">
+                                <div class="section-icon small">
+                                    <i class="fi-award"></i>
+                                </div>
+                                <h3 class="section-title small">حرفه‌ای‌گری</h3>
+                            </div>
+
+                            <div class="channel-excellence-grid">
+                                <!-- ۱. قدمت کانال -->
+                                <div class="channel-excellence-item">
+                                    <div class="channel-excellence-icon">
+                                        <i class="bi-rocket"></i>
+                                    </div>
+                                    <div class="channel-excellence-value">
+                                        {{ channel_age_days|default:0 }}<span class="value-unit">روز</span>
+                                    </div>
+                                    <div class="channel-excellence-label">در وینجاب</div>
+                                </div>
+
+                                <!-- ۲. نرخ موفقیت کمپین‌ها -->
+                                <div class="channel-excellence-item">
+                                    <div class="channel-excellence-icon">
+                                        <i class="fi-check-circle text-success"></i>
+                                    </div>
+                                    <div class="channel-excellence-value">
+                                        {{ success_rate|default:0 }}<span class="value-unit text-light fs-sm">٪</span>
+                                    </div>
+                                    <div class="channel-excellence-label">موفقیت کمپین‌ها</div>
+                                </div>
+
+                                <!-- ۳. تعداد کلیک‌ها -->
+                                <div class="channel-excellence-item">
+                                    <div class="channel-excellence-icon">
+                                        <i class="bi-hand-index text-warning"></i>
+                                    </div>
+                                    <div class="channel-excellence-value">
+                                        {{ total_clicks|default:0|floatformat:0 }}<span class="value-unit">کلیک</span>
+                                    </div>
+                                    <div class="channel-excellence-label">کل کلیک‌ها</div>
+                                </div>
+
+                                <!-- ۴. میانگین هزینه سرویس -->
+                                <div class="channel-excellence-item">
+                                    <div class="channel-excellence-icon">
+                                        <i class="fi-cash"></i>
+                                    </div>
+                                    <div class="channel-excellence-value">
+                                        {{ avg_service_price|default:0|floatformat:0 }}<span class="value-unit">تومان</span>
+                                    </div>
+                                    <div class="channel-excellence-label">میانگین هزینه</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- کارت QR Code -->
+                    {% if channel.qr_code %}
+                        <div class="col-md-6">
+                            <div class="glass-card p-3 h-100">
+                                <div class="section-header small">
+                                    <div class="section-icon small">
+                                        <i class="bi-qr-code"></i>
+                                    </div>
+                                    <h3 class="section-title small">QR Code کانال</h3>
+                                </div>
+
+                                <div class="text-center">
+                                    <img src="{{ channel.qr_code.url }}"
+                                         alt="QR Code {{ channel.channel_name }}"
+                                         class="qr-code-image"
+                                         style="max-width: 160px; width: 100%; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"
+                                         id="channelQrCode">
+
+                                    <div class="mt-2 d-flex gap-2 justify-content-center flex-wrap">
+                                        <a href="{{ channel.qr_code.url }}" download
+                                           class="btn btn-primary btn-sm rounded-pill px-3">
+                                            <i class="fi-download me-1"></i> دانلود
+                                        </a>
+                                        <button class="btn btn-outline-light btn-sm rounded-pill px-3"
+                                                onclick="shareQrCode('{{ channel.qr_code.url }}', '{{ channel.channel_name|escapejs }}')">
+                                            <i class="fi-share me-1"></i> اشتراک
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
             </div>
 
-            <!-- ========== ستون کناری (چپ) ========== -->
+
+            <!--
+            ============================================================
+            ستون کناری (چپ) – سطح کاربری، آمار، لینک‌ها، گزارش تخلف
+            ============================================================
+            -->
             <div class="col-lg-4">
+
+                <!-- ۱. کارت سطح و امتیاز (فقط برای بازدیدکنندگان) -->
                 {% if request.user != channel.influencer.user %}
-                    <!-- ========== کارت سطح و امتیاز اینفلوئنسر (برای همه بازدیدکنندگان) ========== -->
                     <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="75">
                         <div class="section-header small">
                             <div class="section-icon small">
                                 <i class="fi-award"></i>
                             </div>
-                            <h3 class="section-title small">سطح و امتیاز {% if channel.platform.slug == "instagram" %}
-                                پیج{% else %}کانال{% endif %}</h3>
+                            <h3 class="section-title small">
+                                سطح و امتیاز
+                                {% if channel.platform.slug == "instagram" %}
+                                    پیج
+                                {% else %}
+                                    کانال
+                                {% endif %}
+                            </h3>
                         </div>
 
                         <div class="d-flex align-items-center gap-3">
-                            <!-- آیکون / نشان -->
+                            <!-- نشان سطح -->
                             <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10"
                                  style="width: 60px; height: 60px; flex-shrink: 0;">
                                 {% if gamification.current_badge_icon %}
@@ -415,12 +568,12 @@
                                 {% else %}
                                     {# Fallback آیکون با رنگ بر اساس سطح #}
                                     <i class="fi-award" style="font-size: 30px; color:
-                                            {% if gamification.current_badge_slug == 'bronze' %}#cd7f32
-                                            {% elif gamification.current_badge_slug == 'silver' %}#c0c0c0
-                                            {% elif gamification.current_badge_slug == 'gold' %}#ffd700
-                                            {% elif gamification.current_badge_slug == 'emerald' %}#50c878
-                                            {% else %}#ffffff
-                                            {% endif %}"></i>
+                                        {% if gamification.current_badge_slug == 'bronze' %}#cd7f32
+                                        {% elif gamification.current_badge_slug == 'silver' %}#c0c0c0
+                                        {% elif gamification.current_badge_slug == 'gold' %}#ffd700
+                                        {% elif gamification.current_badge_slug == 'emerald' %}#50c878
+                                        {% else %}#ffffff
+                                        {% endif %}"></i>
                                 {% endif %}
                             </div>
 
@@ -442,7 +595,7 @@
                             </div>
                         </div>
 
-                        <!-- نوار پیشرفت ساده (اختیاری - برای همه قابل مشاهده است) -->
+                        <!-- نوار پیشرفت -->
                         <div class="mt-3">
                             <div class="progress"
                                  style="height: 6px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
@@ -457,18 +610,18 @@
                             <div class="d-flex justify-content-between mt-1">
                                 <span class="small text-muted">{{ gamification.current_badge_name }}</span>
                                 <span class="small text-muted">
-                                {% if not gamification.is_max_level %}
-                                    {{ gamification.next_badge_name }}
-                                {% else %}
-                                    نهایت
-                                {% endif %}
-                            </span>
+                                    {% if not gamification.is_max_level %}
+                                        {{ gamification.next_badge_name }}
+                                    {% else %}
+                                        نهایت
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                     </div>
                 {% endif %}
 
-                <!-- کارت آمار با انیمیشن شمارش -->
+                <!-- ۲. کارت آمار کلیدی -->
                 <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="50">
                     <div class="section-header small">
                         <div class="section-icon small">
@@ -478,6 +631,7 @@
                     </div>
 
                     <div class="stats-grid">
+                        <!-- تعداد فالوور -->
                         <div class="stat-card">
                             <div class="stat-card-icon">
                                 <i class="fi-users"></i>
@@ -491,6 +645,7 @@
                             </div>
                         </div>
 
+                        <!-- تعداد کمپین‌های موفق -->
                         <div class="stat-card">
                             <div class="stat-card-icon">
                                 <i class="fi-check-circle"></i>
@@ -504,6 +659,7 @@
                             </div>
                         </div>
 
+                        <!-- موقعیت جغرافیایی -->
                         {% if channel.province %}
                             <div class="stat-card">
                                 <div class="stat-card-icon">
@@ -512,14 +668,17 @@
                                 <div class="stat-card-content">
                                     <div class="stat-card-value location-value">
                                         {{ channel.province.name }}
-                                        {% if channel.city %}<span class="location-sep">•</span>
-                                            {{ channel.city.name }}{% endif %}
+                                        {% if channel.city %}
+                                            <span class="location-sep">•</span>
+                                            {{ channel.city.name }}
+                                        {% endif %}
                                     </div>
                                     <div class="stat-card-label">موقعیت جغرافیایی</div>
                                 </div>
                             </div>
                         {% endif %}
 
+                        <!-- تاریخ عضویت -->
                         <div class="stat-card">
                             <div class="stat-card-icon">
                                 <i class="fi-calendar"></i>
@@ -532,8 +691,8 @@
                     </div>
                 </div>
 
+                <!-- ۳. کارت ارتباط و لینک‌ها (فقط در حالت عادی، نه انتخاب ناشر) -->
                 {% if not from_campaign %}
-                    <!-- کارت لینک‌ها و ارتباط -->
                     <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                         <div class="section-header small">
                             <div class="section-icon small">
@@ -561,14 +720,17 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- ۴. کارت گزارش تخلف (فقط برای بازدیدکنندگان) -->
                     {% if request.user != channel.influencer.user %}
-                        <!-- کارت گزارش تخلف -->
                         <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="150">
                             <div class="report-section">
                                 <i class="fi-flag"></i>
                                 <div>
                                     <h6 class="text-light mb-1">مشاهده تخلف؟</h6>
-                                    <p class="text-muted small mb-2">در صورت مشاهده هرگونه تخلف، به ما گزارش دهید.</p>
+                                    <p class="text-muted small mb-2">
+                                        در صورت مشاهده هرگونه تخلف، به ما گزارش دهید.
+                                    </p>
                                     <button class="btn-report" onclick="reportUser()">
                                         گزارش تخلف
                                     </button>
@@ -577,14 +739,24 @@
                         </div>
                     {% endif %}
                 {% endif %}
-            </div>
-        </div>
-    </div>
 
-    <!-- ========== مودال درخواست همکاری پیشرفته ========== -->
+            </div> <!-- پایان ستون کناری -->
+
+        </div> <!-- پایان ردیف اصلی -->
+    </div> <!-- پایان container -->
+
+
+    <!--
+    ============================================================
+    مودال‌های صفحه
+    ============================================================
+    -->
+
+    <!-- ۱. مودال درخواست همکاری -->
     <div class="modal fade modal-glass" id="orderModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
+
                 <div class="modal-header border-0">
                     <div class="modal-icon">
                         <i class="fi-send"></i>
@@ -594,6 +766,7 @@
                         <i class="fi-x"></i>
                     </button>
                 </div>
+
                 <div class="modal-body text-center">
                     <p class="modal-text">
                         برای شروع همکاری با <strong class="text-primary">{{ channel.channel_name }}</strong>،
@@ -601,13 +774,14 @@
                     </p>
 
                     <div class="modal-options">
-                        <a href="#"
-                           class="modal-option-card">
+                        <a href="#" class="modal-option-card">
                             <div class="modal-option-icon">
                                 <i class="fi-plus-circle"></i>
                             </div>
                             <div class="modal-option-title">ایجاد کمپین جدید</div>
-                            <div class="modal-option-desc">یک کمپین تبلیغاتی جدید طراحی کنید</div>
+                            <div class="modal-option-desc">
+                                یک کمپین تبلیغاتی جدید طراحی کنید
+                            </div>
                             <div class="modal-option-arrow">
                                 <i class="fi-arrow-left"></i>
                             </div>
@@ -618,21 +792,25 @@
                                 <i class="bi bi-headset text-primary"></i>
                             </div>
                             <div class="modal-option-title">مشاوره با پشتیبانی</div>
-                            <div class="modal-option-desc">برای دریافت مشاوره رایگان با ما تماس بگیرید</div>
+                            <div class="modal-option-desc">
+                                برای دریافت مشاوره رایگان با ما تماس بگیرید
+                            </div>
                             <div class="modal-option-arrow">
                                 <i class="fi-arrow-left"></i>
                             </div>
                         </a>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- ========== مودال اشتراک‌گذاری ========== -->
+    <!-- ۲. مودال اشتراک‌گذاری -->
     <div class="modal fade modal-glass" id="shareModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
+
                 <div class="modal-header border-0">
                     <div class="modal-icon">
                         <i class="fi-share"></i>
@@ -642,9 +820,9 @@
                         <i class="fi-x"></i>
                     </button>
                 </div>
+
                 <div class="modal-body text-center">
                     <div class="share-url-container">
-
                         <label class="d-none" for="shareUrl"></label>
                         <input type="text" class="share-url-input" id="shareUrl" readonly
                                value="{{ request.build_absolute_uri }}">
@@ -652,29 +830,33 @@
                             <i class="fi-copy"></i>
                         </button>
                     </div>
-                    <p class="text-muted small mt-3">لینک پروفایل کپی شد! می‌توانید آن را برای دیگران ارسال کنید.</p>
+                    <p class="text-muted small mt-3">
+                        لینک پروفایل کپی شد! می‌توانید آن را برای دیگران ارسال کنید.
+                    </p>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- مودال ثبت نظر -->
-    <!-- مودال ثبت نظر -->
+    <!-- ۳. مودال ثبت نظر -->
     <div class="modal fade modal-glass" id="reviewModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <!-- هدر و ... -->
+
                 <div class="modal-body">
+                    <!-- اطلاعات کمپین در حال ویرایش -->
                     <div id="reviewCampaignInfo" style="display: none;" class="alert alert-info mb-3">
                         <i class="fi-info-circle"></i> در حال ویرایش نظر برای کمپین:
                         <strong id="campaignNameDisplay"></strong>
                     </div>
 
-                    <!-- بخش انتخاب کمپین (با id مشخص) -->
+                    <!-- انتخاب کمپین برای نظر جدید -->
                     <div id="campaignSelectionSection">
                         {% if pending_bookings %}
-                            <p class="text-muted small mb-3">لطفاً کمپینی که می‌خواهید برای آن نظر دهید را انتخاب
-                                کنید:</p>
+                            <p class="text-muted small mb-3">
+                                لطفاً کمپینی که می‌خواهید برای آن نظر دهید را انتخاب کنید:
+                            </p>
                             <div class="mb-3" id="campaignList">
                                 {% for booking in pending_bookings %}
                                     <div class="form-check mb-2">
@@ -682,22 +864,27 @@
                                                id="booking_{{ booking.id }}" value="{{ booking.id }}"
                                                {% if review_booking_id == booking.id|stringformat:"s" %}checked{% endif %}>
                                         <label class="form-check-label text-light" for="booking_{{ booking.id }}">
-                                            {{ booking.campaign.name }} (اتمام: {{ booking.created_at|date:"Y/m/d" }})
+                                            {{ booking.campaign.name }}
+                                            (اتمام: {{ booking.created_at|date:"Y/m/d" }})
                                         </label>
                                     </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <p class="text-muted small mb-3">شما هیچ کمپین تکمیل شده‌ای با این کانال ندارید، اما
-                                می‌توانید یک نظر عمومی ثبت کنید.</p>
+                            <p class="text-muted small mb-3">
+                                شما هیچ کمپین تکمیل شده‌ای با این کانال ندارید، اما
+                                می‌توانید یک نظر عمومی ثبت کنید.
+                            </p>
                         {% endif %}
                     </div>
 
+                    <!-- فرم ثبت/ویرایش نظر -->
                     <form id="reviewForm">
                         {% csrf_token %}
                         <input type="hidden" name="booking_id" id="reviewBookingId" value="">
                         <input type="hidden" name="channel_id" value="{{ channel.id }}">
 
+                        <!-- انتخاب امتیاز -->
                         <div class="mb-4 text-center">
                             <label class="form-label text-light mb-2">امتیاز شما</label>
                             <div class="star-rating-input" id="starRatingInput">
@@ -708,51 +895,64 @@
                                 <i class="fi-star-filled" data-value="5"></i>
                             </div>
                             <input type="hidden" name="rating" id="ratingValue" required>
-                            <div class="invalid-feedback" id="ratingError">لطفاً امتیاز خود را انتخاب کنید</div>
+                            <div class="invalid-feedback" id="ratingError">
+                                لطفاً امتیاز خود را انتخاب کنید
+                            </div>
                         </div>
 
+                        <!-- متن نظر -->
                         <div class="mb-3">
                             <label for="reviewComment" class="form-label text-light">نظر شما</label>
                             <textarea class="form-control form-control-light" name="comment" id="reviewComment" rows="4"
                                       placeholder="تجربه خود را از همکاری با این کانال بنویسید..."></textarea>
                         </div>
 
+                        <!-- دکمه‌های اقدام -->
                         <div class="d-flex gap-2 justify-content-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                انصراف
+                            </button>
                             <button type="submit" class="btn btn-primary" id="submitReviewBtn">
-                                <i class="fi-send ms-1"></i>
-                                ثبت نظر
+                                <i class="fi-send ms-1"></i> ثبت نظر
                             </button>
                         </div>
                     </form>
+
                     <div id="reviewMessage" class="mt-3"></div>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- مودال تأیید کانال پیشرفته -->
-<div class="modal fade" id="verifyChannelModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-light fs-4">
-                    <i class="fi-check-circle text-primary me-2"></i> تأیید کانال
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center p-4" id="verifyModalBody">
-                <div class="py-5">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">در حال بارگیری...</span>
-                    </div>
-                    <p class="text-muted mt-3">در حال آماده‌سازی...</p>
+    <!-- ۴. مودال تأیید کانال -->
+    <div class="modal fade" id="verifyChannelModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border-0 shadow-lg rounded-4">
+
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title text-light fs-4">
+                        <i class="fi-check-circle text-primary me-2"></i> تأیید کانال
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+
+                <div class="modal-body text-center p-4" id="verifyModalBody">
+                    <div class="py-5">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">در حال بارگیری...</span>
+                        </div>
+                        <p class="text-muted mt-3">در حال آماده‌سازی...</p>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
-</div>
+
+
 {% endblock %}
+
 
 {% block script %}
     <script>
@@ -768,170 +968,8 @@
             channelName: '{{ channel.channel_name|escapejs }}'
         };
     </script>
-    <script src="{% static 'influencers/js/pages/channel_detail/channel_detail.js' %}"></script>
-    <script src="{% static 'influencers/js/pages/channel_detail/channel_detail_reviews.js' %}"></script>
-    <script>
-        // توابع کمکی
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    
-        let verificationInterval = null;
-    
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).innerText;
-            navigator.clipboard.writeText(text);
-            const btn = document.getElementById('copyCodeBtn');
-            if (btn) {
-                const original = btn.innerHTML;
-                btn.innerHTML = '<i class="fi-check"></i> کپی شد!';
-                setTimeout(() => btn.innerHTML = original, 1500);
-            }
-        }
-    
-        function openVerificationModal(channelId, channelName) {
-            const modalEl = document.getElementById('verifyChannelModal');
-            const modalBody = document.getElementById('verifyModalBody');
-            const modal = new bootstrap.Modal(modalEl);
-            
-            // نمایش لودینگ
-            modalBody.innerHTML = `
-                <div class="py-5">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">در حال بارگیری...</span>
-                    </div>
-                    <p class="text-muted mt-3">در حال آماده‌سازی...</p>
-                </div>`;
-            modal.show();
-    
-            fetch(`/influencers/channel/${channelId}/verify-modal/`, {
-                headers: { 'X-CSRFToken': getCookie('csrftoken') }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'already_verified') {
-                    modalBody.innerHTML = `
-                        <div class="text-center py-4">
-                            <i class="fi-check-circle text-success fs-1 mb-3 d-block"></i>
-                            <div class="alert alert-success">${data.message}</div>
-                            <button class="btn btn-outline-light rounded-pill" data-bs-dismiss="modal">بستن</button>
-                        </div>`;
-                    return;
-                }
-                if (data.status === 'error') {
-                    modalBody.innerHTML = `
-                        <div class="alert alert-danger">${data.message || 'خطا در دریافت اطلاعات'}</div>
-                        <button class="btn btn-secondary rounded-pill mt-3" data-bs-dismiss="modal">بستن</button>`;
-                    return;
-                }
-                if (data.status !== 'ok') {
-                    modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'خطا در دریافت اطلاعات'}</div>`;
-                    return;
-                }
-    
-                // نمایش کد + دکمه کپی
-                modalBody.innerHTML = `
-                    <p class="text-muted mb-3">لطفاً کد زیر را در بیوگرافی کانال <strong class="text-primary">${escapeHtml(channelName)}</strong> قرار دهید.</p>
-                    <div class="bg-dark-2 p-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" style="background: rgba(255,255,255,0.05);">
-                        <code class="fs-1 text-primary fw-bold" style="letter-spacing: 5px;" id="verificationCode">${data.code}</code>
-                        <button class="btn btn-outline-light rounded-pill" id="copyCodeBtn" onclick="copyToClipboard('verificationCode')">
-                            <i class="fi-copy"></i> کپی
-                        </button>
-                    </div>
-                    <p class="text-muted small">سپس روی دکمه «بررسی کانال» کلیک کنید.</p>
-                    <button id="startVerifyBtn" class="btn btn-primary rounded-pill px-5 py-2 mt-2">بررسی کانال</button>
-                    <div id="verifyResult" class="mt-3"></div>
-                `;
-    
-                // رویداد کلیک دکمه شروع
-                document.getElementById('startVerifyBtn').onclick = () => {
-                    const btn = document.getElementById('startVerifyBtn');
-                    const resultDiv = document.getElementById('verifyResult');
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> در حال بررسی...';
-                    resultDiv.innerHTML = '<div class="alert alert-info">درخواست ارسال شد، منتظر پاسخ...</div>';
-    
-                    fetch(`/influencers/channel/${channelId}/start-verify/`, {
-                        method: 'POST',
-                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                    })
-                    .then(res => res.json())
-                    .then(resData => {
-                        if (resData.status === 'pending') {
-                            resultDiv.innerHTML = `<div class="alert alert-info">${resData.message}</div>`;
-                            // شروع پولینگ وضعیت
-                            if (verificationInterval) clearInterval(verificationInterval);
-                            verificationInterval = setInterval(() => {
-                                fetch(`/influencers/channel/${channelId}/verification-status/`)
-                                .then(r => r.json())
-                                .then(statusData => {
-                                    if (statusData.status === 'approved') {
-                                        clearInterval(verificationInterval);
-                                        resultDiv.innerHTML = `<div class="alert alert-success">✅ کانال شما با موفقیت تأیید شد! صفحه در حال بازآوری...</div>`;
-                                        setTimeout(() => location.reload(), 2000);
-                                    } else if (statusData.status === 'rejected') {
-                                        clearInterval(verificationInterval);
-                                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${statusData.message}</div>`;
-                                        btn.disabled = false;
-                                        btn.innerHTML = 'بررسی کانال';
-                                        setTimeout(() => location.reload(), 4000);
-                                    } else if (statusData.status === 'failed') {
-                                        clearInterval(verificationInterval);
-                                        resultDiv.innerHTML = `<div class="alert alert-warning">⚠️ ${statusData.message}</div>`;
-                                        btn.disabled = false;
-                                        btn.innerHTML = 'بررسی کانال';
-                                    }
-                                }).catch(() => {});
-                            }, 2500);
-                        } else if (resData.status === 'error') {
-                            resultDiv.innerHTML = `<div class="alert alert-danger">${resData.message}</div>`;
-                            btn.disabled = false;
-                            btn.innerHTML = 'بررسی کانال';
-                        }
-                    })
-                    .catch(err => {
-                        resultDiv.innerHTML = '<div class="alert alert-danger">خطا در ارتباط با سرور</div>';
-                        btn.disabled = false;
-                        btn.innerHTML = 'بررسی کانال';
-                    });
-                };
-            })
-            .catch(err => {
-                modalBody.innerHTML = '<div class="alert alert-danger">خطا در ارتباط با سرور</div>';
-            });
-        }
-    
-        // تابع کمکی برای جلوگیری از XSS
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-                return c;
-            });
-        }
-    
-        // اتصال دکمه تأیید کانال
-        const verifyBtn = document.getElementById('verifyChannelBtn');
-        if (verifyBtn) {
-            verifyBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                openVerificationModal({{ channel.id }}, '{{ channel.channel_name|escapejs }}');
-            });
-        }
-    </script>
+    <script src="{% static 'influencers/js/pages/channel_detail/main.js' %}"></script>
+    <script src="{% static 'influencers/js/pages/channel_detail/ui.js' %}"></script>
+    <script src="{% static 'influencers/js/pages/channel_detail/reviews.js' %}"></script>
+    <script src="{% static 'influencers/js/pages/channel_detail/verification.js' %}"></script>
 {% endblock %}

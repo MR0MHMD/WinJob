@@ -1,0 +1,313 @@
+/* ============================================
+   هدر پروفایل – کاور، آواتار، نام، دکمه‌ها
+   ============================================ */
+
+/* ---- پوشش کاور ---- */
+.page-wrapper {
+    padding: 0 !important;
+}
+
+.profile-cover {
+    position: relative;
+    padding: 5rem 0 4rem;
+    overflow: hidden;
+}
+
+.profile-cover-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #0f0c1f, #1a1528, #2a1e3a, #0d0a18);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    transition: transform 0.3s ease-out;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.profile-cover-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 30%, rgba(253, 86, 49, 0.15), transparent 70%);
+}
+
+.profile-cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+/* ---- آواتار هولوگرام ---- */
+.avatar-hologram {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar-hologram-glow {
+    position: absolute;
+    inset: -10px;
+    background: radial-gradient(circle, rgba(253, 86, 49, 0.4), transparent 70%);
+    border-radius: 2rem;
+    filter: blur(15px);
+    animation: pulseGlow 3s ease infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+.avatar-hologram-ring {
+    position: absolute;
+    inset: -5px;
+    border-radius: 2rem;
+    background: linear-gradient(135deg, #fd5631, #5d3cf2, #fd5631);
+    background-size: 200% 200%;
+    animation: rotateRing 4s linear infinite;
+    z-index: -1;
+}
+
+@keyframes rotateRing {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 1.75rem;
+    object-fit: cover;
+    border: 3px solid rgba(253, 86, 49, 0.4);
+    transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+    background: linear-gradient(135deg, #2a2438, #1a1528);
+}
+
+.profile-avatar:hover {
+    border-color: #fd5631;
+    transform: scale(1.02) rotate(2deg);
+    box-shadow: 0 1rem 2rem rgba(253, 86, 49, 0.25);
+}
+
+.avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-status {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 20px;
+    height: 20px;
+    background: #07c98b;
+    border-radius: 50%;
+    border: 2px solid #1a1528;
+    z-index: 10;
+}
+
+.avatar-status.online {
+    animation: statusPulse 2s ease infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(7, 201, 139, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(7, 201, 139, 0);
+    }
+}
+
+/* ---- نام کانال ---- */
+.profile-name {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff3b00, #fd5631);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 2px 10px rgba(253, 86, 49, 0.2);
+}
+
+/* ---- نشان‌های وضعیت ---- */
+.approved-badge-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(7, 201, 139, 0.15);
+    backdrop-filter: blur(4px);
+    padding: 0.3rem 0.9rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #07c98b;
+    border: 1px solid rgba(7, 201, 139, 0.5);
+}
+
+.pending-badge-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(201, 156, 7, 0.15);
+    backdrop-filter: blur(4px);
+    padding: 0.3rem 0.9rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #c9b907;
+    border: 1px solid rgba(201, 191, 7, 0.5);
+}
+
+.rejected-badge-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(201, 7, 7, 0.15);
+    backdrop-filter: blur(4px);
+    padding: 0.3rem 0.9rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #c90707;
+    border: 1px solid rgba(201, 7, 7, 0.5);
+}
+
+/* ---- پیل‌های اطلاعات ---- */
+.info-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+    padding: 0.35rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.2s ease;
+}
+
+.info-pill:hover {
+    background: rgba(253, 86, 49, 0.2);
+    border-color: rgba(253, 86, 49, 0.4);
+}
+
+/* ---- ستاره‌های ساده هدر ---- */
+.rating-stars-simple {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.rating-value-simple {
+    font-weight: 700;
+    color: #fff;
+    margin-right: 0.3rem;
+}
+
+.rating-count-simple {
+    font-size: 0.8rem;
+    color: #bbb7c5;
+}
+
+/* ---- دکمه CTA ---- */
+.cta-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(95deg, #fd5631, #fd3a0e);
+    border: none;
+    border-radius: 3rem;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+    box-shadow: 0 8px 20px rgba(253, 86, 49, 0.3);
+}
+
+.cta-button-text {
+    padding: 0.9rem 1.8rem;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+}
+
+.cta-button-icon {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.9rem 1.2rem;
+    border-radius: 0 3rem 3rem 0;
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(253, 86, 49, 0.5);
+}
+
+.cta-button:hover .cta-button-icon {
+    padding-right: 1.8rem;
+    padding-left: 0.6rem;
+}
+
+.pulse-animation {
+    animation: ctaPulse 2s ease infinite;
+}
+
+@keyframes ctaPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(253, 86, 49, 0);
+    }
+}
+
+/* ---- ریسپانسیو هدر ---- */
+@media (max-width: 768px) {
+    .profile-cover {
+        padding: 6rem 0 2.5rem;
+    }
+
+    .profile-name {
+        font-size: 1.6rem;
+    }
+
+    .profile-avatar {
+        width: 90px;
+        height: 90px;
+    }
+
+    .cta-button-text {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.85rem;
+    }
+
+    .info-pill {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.7rem;
+    }
+}
