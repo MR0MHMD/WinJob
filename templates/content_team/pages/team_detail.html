@@ -56,9 +56,9 @@
                             </span>
                             {% if team.is_revenue_share_valid %}
                                 <span class="info-pill info-pill-success">
-                                <i class="fi-check-circle"></i>
-                                اشتراک درآمد فعال
-                            </span>
+                                    <i class="fi-check-circle"></i>
+                                    اشتراک درآمد فعال
+                                </span>
                             {% endif %}
                         </div>
 
@@ -94,15 +94,12 @@
                 <div class="col-md-auto">
                     {% if from_campaign %}
                         <div class="d-flex flex-column gap-2 w-100">
-                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_team={{ team.id }}&page={{ return_page }}"
-                               class="cta-button pulse-animation w-100 w-md-auto text-center"
-                               style="text-decoration: none;">
+                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_team={{ team.id }}&page={{ return_page }}" class="cta-button pulse-animation w-100 w-md-auto text-center" style="text-decoration: none;">
                                 <span class="cta-button-text mx-auto">
                                     <i class="fi-plus-circle me-2"></i> انتخاب این تیم
                                 </span>
                             </a>
-                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ select_plan_id }}&page={{ return_page }}"
-                               class="btn btn-primary rounded-pill w-100 w-md-auto text-center">
+                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ select_plan_id }}&page={{ return_page }}" class="btn btn-primary rounded-pill w-100 w-md-auto text-center">
                                 بازگشت به صفحه قبل<i class="fi-arrow-left ms-2"></i>
                             </a>
                         </div>
@@ -429,12 +426,6 @@
                                                             {% endif %}
                                                         </div>
 
-                                                        <!-- نوع تحویل -->
-                                                        {#                                        <div class="pricing-card-delivery">#}
-                                                        {#                                            <i class="fi-package"></i>#}
-                                                        {#                                            {{ plan.delivery_type_display|safe }}#}
-                                                        {#                                        </div>#}
-
                                                         <!-- زمان تحویل -->
                                                         <div class="pricing-card-feature">
                                                             <i class="fi-clock me-1"></i>
@@ -529,13 +520,7 @@
                                                         data-rating="{{ review.rating }}"
                                                         data-comment="{{ review.comment|escapejs }}"
                                                         data-order-name="
-
-
-
-
-
-                                                                
-                                                                {% if review.order %}{{ review.order.campaign.name }}{% else %}نظر عمومی{% endif %}">
+                                                        {% if review.order %}{{ review.order.campaign.name }}{% else %}نظر عمومی{% endif %}">
                                                     <i class="fi-edit"></i> ویرایش نظر
                                                 </button>
                                             {% endif %}
@@ -558,7 +543,7 @@
                         {% endif %}
                     </div>
                 </div>
-            
+
                 <!-- ========== کارت‌های حرفه‌ای‌گری + QR Code - کنار هم ========== -->
                 <div class="row g-4 mt-1" data-aos="fade-up" data-aos-delay="275">
                     <!-- کارت حرفه‌ای‌گری تیم (جمع‌وجور) -->
@@ -570,9 +555,9 @@
                                 </div>
                                 <h3 class="section-title small">حرفه‌ای‌گری</h3>
                             </div>
-                    
+
                             <div class="excellence-grid-compact">
-                                <!-- ۱. قدمت تیم -->                             
+                                <!-- ۱. قدمت تیم -->
                                 <div class="excellence-item-compact">
                                     <div class="excellence-icon-compact">
                                         <i class="bi bi-calendar"></i>
@@ -586,7 +571,7 @@
                                     </div>
                                     <div class="excellence-label-compact">قدمت تیم</div>
                                 </div>
-                    
+
                                 <!-- ۲. درصد موفقیت سفارشات -->
                                 <div class="excellence-item-compact">
                                     <div class="excellence-icon-compact">
@@ -597,18 +582,19 @@
                                     </div>
                                     <div class="excellence-label-compact">موفقیت سفارشات</div>
                                 </div>
-                    
+
                                 <!-- ۳. میانگین تعداد ویرایش -->
                                 <div class="excellence-item-compact">
                                     <div class="excellence-icon-compact">
                                         <i class="fi-edit text-warning"></i>
                                     </div>
                                     <div class="excellence-value-compact">
-                                        {{ stats.avg_revisions|default:0|floatformat:1 }}<span class="value-unit">مرتبه</span>
+                                        {{ stats.avg_revisions|default:0|floatformat:1 }}<span
+                                            class="value-unit">مرتبه</span>
                                     </div>
                                     <div class="excellence-label-compact">میانگین ویرایش</div>
                                 </div>
-                    
+
                                 <!-- ۴. میانگین روزهای تحویل -->
                                 <div class="excellence-item-compact">
                                     <div class="excellence-icon-compact">
@@ -622,7 +608,7 @@
                             </div>
                         </div>
                     </div>
-                
+
                     <!-- کارت QR Code -->
                     {% if team.qr_code %}
                         <div class="col-md-6">
@@ -633,20 +619,20 @@
                                     </div>
                                     <h3 class="section-title small">QR Code تیم</h3>
                                 </div>
-                                
+
                                 <div class="text-center">
-                                    <img src="{{ team.qr_code.url }}" 
-                                         alt="QR Code {{ team.name }}" 
+                                    <img src="{{ team.qr_code.url }}"
+                                         alt="QR Code {{ team.name }}"
                                          class="qr-code-image"
                                          style="max-width: 160px; width: 100%; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"
                                          id="teamQrCode">
-                                    
+
                                     <div class="mt-2 d-flex gap-2 justify-content-center flex-wrap">
-                                        <a href="{{ team.qr_code.url }}" download 
+                                        <a href="{{ team.qr_code.url }}" download
                                            class="btn btn-accent btn-sm rounded-pill px-3">
                                             <i class="fi-download me-1"></i> دانلود
                                         </a>
-                                        <button class="btn btn-outline-light btn-sm rounded-pill px-3" 
+                                        <button class="btn btn-outline-light btn-sm rounded-pill px-3"
                                                 onclick="shareQrCode('{{ team.qr_code.url }}', '{{ team.name|escapejs }}')">
                                             <i class="fi-share me-1"></i> اشتراک
                                         </button>
@@ -680,7 +666,6 @@
                                      width="48" height="48"
                                      style="border-radius: 50%; object-fit: cover;">
                             {% else %}
-                                {# Fallback آیکون با رنگ بر اساس سطح #}
                                 <i class="fi-award" style="font-size: 30px; color:
                                         {% if gamification.current_badge_slug == 'bronze' %}#cd7f32
                                         {% elif gamification.current_badge_slug == 'silver' %}#c0c0c0
