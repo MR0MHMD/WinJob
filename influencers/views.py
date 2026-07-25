@@ -317,11 +317,11 @@ def influencer_respond(request, order_id):
 
     if request.user != order.channel.influencer.user:
         messages.error(request, "شما دسترسی به این عملیات ندارید.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     if order.status != 'pending':
         messages.error(request, "این سفارش قبلاً پاسخ داده شده است و قابل تغییر نیست.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     action = request.POST.get('action')
 
@@ -339,9 +339,9 @@ def influencer_respond(request, order_id):
                 messages.success(request, "❌ سفارش رد شد. مبلغ مربوطه به کیف پول تبلیغ‌دهنده برگشت داده شد.")
     else:
         messages.error(request, "عملیات نامعتبر است.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
-    return redirect('influencers:order_detail', order_id=order.id)
+    return redirect(order)
 
 
 @login_required
@@ -360,18 +360,18 @@ def submit_report(request, order_id):
 
     if order.status != CampaignInfluencer.Status.ACCEPTED:
         messages.error(request, "فقط سفارش‌های پذیرفته شده قابلیت گزارش دارند.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     if hasattr(order, 'report'):
         messages.error(request, "شما قبلاً گزارش خود را ثبت کرده‌اید.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     campaign = order.campaign
     now = timezone.now()
 
     if campaign.status == Campaign.Status.COMPLETED:
         messages.error(request, "این کمپین به پایان رسیده و دیگر قابلیت ثبت گزارش ندارد.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     # بررسی زمان شروع
     gregorian_date = campaign.start_date.togregorian()
@@ -381,7 +381,7 @@ def submit_report(request, order_id):
     if now < start_datetime:
         messages.error(request,
                        f"امکان ثبت گزارش از ساعت ۰۰:۰۰ روز {campaign.start_date.strftime('%Y/%m/%d')} فراهم می‌شود.")
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     if request.method == 'POST':
         post_link = request.POST.get('post_link')
@@ -430,7 +430,7 @@ def submit_report(request, order_id):
             # ۳. فلو قدیمی: بررسی دستی توسط ادمین
             messages.success(request, "گزارش شما با موفقیت ثبت شد و در انتظار بررسی توسط مدیریت است.")
 
-        return redirect('influencers:order_detail', order_id=order.id)
+        return redirect(order)
 
     else:
         context = {

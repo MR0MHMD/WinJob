@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
 from .validators import validate_ticket_attachment_size
@@ -293,6 +294,9 @@ class Ticket(models.Model):
             models.Index(fields=['status', '-created_at']),
             models.Index(fields=['category', 'status']),
         ]
+
+    def get_absolute_url(self):
+        return reverse('tickets:ticket_detail', kwargs={'pk': self.pk})
 
     def __str__(self):
         title = self.title.name if self.title else self.custom_title or '-'

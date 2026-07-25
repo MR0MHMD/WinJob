@@ -99,7 +99,7 @@
             </li>
 
             <li class="breadcrumb-item">
-                <a href="{% url 'advertisers:my_campaigns' %}">مدیریت کمپین ها</a>
+                <a href="{% url 'advertisers:campaigns_list' %}">مدیریت کمپین ها</a>
             </li>
 
             <li class="breadcrumb-item active" aria-current="page">{{ campaign.name }}</li>
@@ -404,11 +404,13 @@
                                 <i class="fi-calculator text-primary me-2"></i>
                                 هزینه ها
                             </h6>
-                            <a href="{% url 'payment:invoice_detail' campaign.invoice.id %}"
-                               class="small text-primary text-decoration-none">
-                                مشاهده فاکتور
-                                <i class="fi-arrow-left ms-1"></i>
-                            </a>
+                            {% if campaign.invoice %}
+                            	<a href="{{ campaign.invoice.get_absolute_url }}"
+                                   class="small text-primary text-decoration-none">
+                                    مشاهده فاکتور
+                                    <i class="fi-arrow-left ms-1"></i>
+                                </a>
+                            {% endif %}
                         </div>
 
                         {% if campaign.is_free %}
@@ -522,20 +524,19 @@
                                         </span>
                                     </div>
                                 {% endif %}
+                                <!-- ========== ردیف‌های نهایی ========== -->
+                                <div class="cost-row">
+                                    <span class="label fw-bold text-light">مبلغ کل (جمع مبالغ پایه)</span>
+                                    <span class="value total text-light">
+                                        {{ campaign.invoice.total_amount|floatformat:0|intcomma }} 
+                                        <img src="{% static 'core/svg/toman-light.svg' %}" alt=""
+                                             style="width: 16px; height: 16px;">
+                                    </span>
+                                </div>
                             {% endif %}
 
-                            <!-- ========== ردیف‌های نهایی ========== -->
                             <div class="cost-row">
-                                <span class="label fw-bold text-light">مبلغ کل (جمع مبالغ پایه)</span>
-                                <span class="value total text-light">
-                                    {{ campaign.invoice.total_amount|floatformat:0|intcomma }} 
-                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt=""
-                                         style="width: 16px; height: 16px;">
-                                </span>
-                            </div>
-
-                            <div class="cost-row">
-                                <span class="label fw-bold text-info">مبلغ قابل پرداخت (پس از تخفیف)</span>
+                                <span class="label fw-bold text-info">مبلغ قابل پرداخت {% if campaign.invoice.discount_amount > 0 %}(پس از تخفیف){% endif %}</span>
                                 <span class="value total text-info">
                                     {{ campaign.invoice.payable_amount|floatformat:0|intcomma }}
                                     <img src="{% static 'core/svg/toman-info.svg' %}" alt=""

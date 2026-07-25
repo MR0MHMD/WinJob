@@ -415,7 +415,7 @@ def campaign_create_step2(request):
                             f"✅ کانال‌های جایگزین با موفقیت انتخاب شدند. مبلغ {total_selected_price:,} تومان از کیف پول شما کسر شد."
                         )
 
-                    return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+                    return redirect(campaign)
                 else:
                     # ========== حالت عادی ==========
                     CampaignInfluencer.objects.filter(campaign=campaign).delete()
@@ -816,7 +816,7 @@ def campaign_create_step3_team(request):
                     request,
                     f"✅ تیم تولید محتوا با موفقیت تغییر کرد. مبلغ {total_deduct:,} تومان از کیف پول شما کسر شد."
                 )
-                return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+                return redirect(campaign)
 
         else:
             # ===== حالت عادی =====
@@ -1009,7 +1009,7 @@ def campaign_create_step3_ready(request):
                         del request.session[key]
 
                 messages.success(request, "✅ محتوای شما با موفقیت آپلود شد و کمپین به حالت تایید شده بازگشت.")
-                return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+                return redirect(campaign)
             else:
                 # ===== حالت عادی ساخت کمپین =====
                 form.save()
@@ -1018,7 +1018,7 @@ def campaign_create_step3_ready(request):
                     if "campaign_draft_id" in request.session:
                         del request.session["campaign_draft_id"]
                     messages.success(request, "کمپین رایگان شما با موفقیت ثبت و تأیید شد.")
-                    return redirect("advertisers:my_campaigns")
+                    return redirect("advertisers:campaigns_list")
                 else:
                     return redirect("campaigns:campaign_create_step4")
         else:
@@ -1140,7 +1140,7 @@ def campaign_create_step4(request):
 
             del request.session["campaign_draft_id"]
             messages.success(request, "کمپین با موفقیت ثبت شد.")
-            return redirect("advertisers:my_campaigns")
+            return redirect("advertisers:campaigns_list")
 
         else:
             with transaction.atomic():
@@ -1177,7 +1177,7 @@ def campaign_create_step4(request):
 
             del request.session["campaign_draft_id"]
             messages.success(request, "پرداخت با موفقیت انجام شد. کمپین ثبت گردید.")
-            return redirect("advertisers:my_campaigns")
+            return redirect("advertisers:campaigns_list")
 
     context = {
         "campaign": campaign,

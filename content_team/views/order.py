@@ -235,6 +235,7 @@ def team_order_detail(request, order_id):
 
 @login_required
 def accept_order(request, order_id):
+    order = None
     if request.method != 'POST':
         messages.error(request, "روش ارسال نامعتبر است.")
         return redirect('content_team:team_order_detail', order_id=order_id)
@@ -248,7 +249,7 @@ def accept_order(request, order_id):
 
         if order.status != 'pending':
             messages.error(request, 'این سفارش قابل قبول نیست')
-            return redirect('content_team:team_order_detail', order_id=order_id)
+            return redirect(order)
 
         estimated_days = order.plan.estimated_delivery_days
         deadline = timezone.now() + timedelta(days=estimated_days)
@@ -268,12 +269,12 @@ def accept_order(request, order_id):
         messages.error(request, 'سفارش یافت نشد')
     except Exception as e:
         messages.error(request, f'خطا: {str(e)}')
-
-    return redirect('content_team:team_order_detail', order_id=order_id)
+    return redirect(order)
 
 
 @login_required
 def reject_order(request, order_id):
+    order = None
     if request.method != 'POST':
         messages.error(request, "روش ارسال نامعتبر است.")
         return redirect('content_team:team_order_detail', order_id=order_id)
@@ -287,7 +288,7 @@ def reject_order(request, order_id):
 
         if order.status != 'pending':
             messages.error(request, 'این سفارش قابل رد نیست')
-            return redirect('content_team:team_order_detail', order_id=order_id)
+            return redirect(order)
 
         reject_content_order_service(order)
 
@@ -300,7 +301,7 @@ def reject_order(request, order_id):
     except Exception as e:
         messages.error(request, f'خطا: {str(e)}')
 
-    return redirect('content_team:team_order_detail', order_id=order_id)
+    return redirect(order)
 
 
 @login_required
@@ -430,6 +431,8 @@ def deliver_order(request, order_id):
 
 @login_required
 def accept_revision(request, order_id, revision_id):
+    order = None
+
     if request.method != 'POST':
         messages.error(request, "روش ارسال نامعتبر است.")
         return redirect('content_team:team_order_detail', order_id=order_id)
@@ -443,7 +446,7 @@ def accept_revision(request, order_id, revision_id):
 
         if revision.status != 'pending':
             messages.error(request, 'این درخواست قبلاً بررسی شده')
-            return redirect('content_team:team_order_detail', order_id=order_id)
+            return redirect(order)
 
         accept_revision_service(order, revision)
 
@@ -459,11 +462,13 @@ def accept_revision(request, order_id, revision_id):
     except Exception as e:
         messages.error(request, f'خطا: {str(e)}')
 
-    return redirect('content_team:team_order_detail', order_id=order_id)
+    return redirect(order)
 
 
 @login_required
 def reject_revision(request, order_id, revision_id):
+    order = None
+
     if request.method != 'POST':
         messages.error(request, "روش ارسال نامعتبر است.")
         return redirect('content_team:team_order_detail', order_id=order_id)
@@ -477,7 +482,7 @@ def reject_revision(request, order_id, revision_id):
 
         if revision.status != 'pending':
             messages.error(request, 'این درخواست قبلاً بررسی شده')
-            return redirect('content_team:team_order_detail', order_id=order_id)
+            return redirect(order)
 
         reject_revision_service(order, revision)
 
@@ -490,4 +495,4 @@ def reject_revision(request, order_id, revision_id):
     except Exception as e:
         messages.error(request, f'خطا: {str(e)}')
 
-    return redirect('content_team:team_order_detail', order_id=order_id)
+    return redirect(order)

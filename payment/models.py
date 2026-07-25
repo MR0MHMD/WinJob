@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django_jalali.db import models as jmodels
 from accounts.models import CustomUser
@@ -254,6 +255,9 @@ class CampaignInvoice(models.Model):
     class Meta:
         verbose_name = "فاکتور کمپین"
         verbose_name_plural = "فاکتورهای کمپین"
+
+    def get_absolute_url(self):
+        return reverse('payment:invoice_detail', kwargs={'invoice_id': self.id})
 
     def payable_amount_display(self):
         return f"{self.payable_amount:,} تومان"

@@ -1,3 +1,5 @@
+from django.urls import reverse
+
 from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -241,6 +243,10 @@ class Campaign(models.Model):
     def duration_days(self):
         return (self.end_date - self.start_date).days
 
+    def get_absolute_url(self):
+        return reverse('advertisers:campaign_detail', kwargs={'campaign_id': self.id})
+
+
     def clean(self):
         """
         اعتبارسنجی منطق تاریخ‌های کمپین
@@ -391,6 +397,9 @@ class CampaignInfluencer(models.Model):
 
     def __str__(self):
         return f"{self.campaign} - {self.channel.channel_name} - {self.channel.platform}"
+
+    def get_absolute_url(self):
+        return reverse('influencers:order_detail', kwargs={'order_id': self.id})
 
     def save(self, *args, **kwargs):
 

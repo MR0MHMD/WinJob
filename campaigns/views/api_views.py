@@ -217,7 +217,7 @@ def campaign_delete(request, campaign_id):
     )
     campaign.delete()
     messages.success(request, "کمپین با موفقیت حذف شد.")
-    return redirect('advertisers:my_campaigns')
+    return redirect('advertisers:campaigns_list')
 
 
 @login_required

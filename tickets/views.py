@@ -312,7 +312,7 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
                     'errors': ['این تیکت بسته شده است و امکان ارسال پیام وجود ندارد.']
                 }, status=400)
             messages.error(request, 'این تیکت بسته شده است.')
-            return redirect('tickets:ticket_detail', pk=ticket.pk)
+            return redirect(ticket)
 
         message_text = request.POST.get('message', '').strip()
         files = request.FILES.getlist('attachments')
@@ -388,7 +388,7 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
                 })
 
             messages.success(request, '✅ پیام با موفقیت ارسال شد.')
-            return redirect('tickets:ticket_detail', pk=ticket.pk)
+            return redirect(ticket)
 
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

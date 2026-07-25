@@ -248,7 +248,7 @@
                             </div>
                             
                             <div class="col-md-3 col-6">
-                                <a href="{% url 'advertisers:my_campaigns' %}" class="quick-action-btn d-block text-decoration-none">
+                                <a href="{% url 'advertisers:campaigns_list' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-list"></i>
                                     
                                     <span class="small text-white">مدیریت کمپین‌ها</span>
@@ -312,7 +312,7 @@
                                         </div>
                                         
                                         <div>
-                                            <a href="{% url 'advertisers:campaign_detail' campaign.id %}" class="btn btn-sm btn-outline-primary">
+                                            <a href="{{ campaign.get_absolute_url }}" class="btn btn-sm btn-outline-primary">
                                                 مشاهده
                                                 <i class="fi-arrow-left ms-1"></i>
                                             </a>
@@ -332,7 +332,7 @@
                             <h5 class="text-white mb-0">آخرین کمپین ها</h5>
                         </div>
                         
-                        <a href="{% url 'advertisers:my_campaigns' %}" class="small text-primary text-decoration-none">
+                        <a href="{% url 'advertisers:campaigns_list' %}" class="small text-primary text-decoration-none">
                             مشاهده همه
                             <i class="fi-arrow-left ms-1"></i>
                         </a>
@@ -342,7 +342,7 @@
                         {% if recent_campaigns %}
                             {% for campaign in recent_campaigns %}
                                 <div class="campaign-item m-3 mb-2">
-                                    <a class="text-decoration-none" href="{% url 'advertisers:campaign_detail' campaign.id %}">
+                                    <a class="text-decoration-none" href="{{ campaign.get_absolute_url }}">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="text-white fw-bold">{{ campaign.name }}</div>
@@ -391,7 +391,7 @@
                         {% if top_channels %}
                             {% for channel in top_channels %}
                                 <div class="influencer-card m-3 mb-2">
-                                    <a class="text-decoration-none" href="{% url 'influencers:channel_detail' channel.id %}">
+                                    <a class="text-decoration-none" href="{{ channel.get_absolute_url }}">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="flex-shrink-0">
                                                 {% if channel.avatar %}
@@ -476,7 +476,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <a href="{% url 'content_team:team_detail' booking.team.slug %}?review_order_id={{ booking.id }}" 
+                                    <a href="{{ booking.team.get_absolute_url }}?review_order_id={{ booking.id }}" 
                                        class="btn btn-sm btn-outline-accent">
                                         <i class="fi-star-filled ms-1"></i>
                                         ثبت نظر
@@ -501,7 +501,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <a href="{% url 'influencers:channel_detail' booking.channel.id %}?review_booking_id={{ booking.id }}" 
+                                    <a href="{{ booking.channel.get_absolute_url }}?review_booking_id={{ booking.id }}"
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="fi-star-filled ms-1"></i>
                                         ثبت نظر

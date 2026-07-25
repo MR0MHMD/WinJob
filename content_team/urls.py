@@ -6,7 +6,7 @@ app_name = 'content_team'
 urlpatterns = [
     # ==================== Team ====================
     path('team/', team_list_view, name='team_list'),
-    path('team/team/<slug:slug>/', team_detail_view, name='team_detail'),
+    path('team/team/<slug:slug>/<int:id>/', team_detail_view, name='team_detail'),
     path('team/plan/<int:plan_id>/', plan_detail, name='plan_detail'),
 
     # ==================== Dashboard ====================

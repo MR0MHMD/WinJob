@@ -187,7 +187,7 @@ def cancel_invoice(request, invoice_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'این کمپین قابل لغو نیست.'}, status=400)
         messages.error(request, "این کمپین قابل لغو نیست.")
-        return redirect('payment:invoice_detail', invoice_id=invoice.id)
+        return redirect(invoice)
 
     campaign_name = campaign.name
     campaign.delete()

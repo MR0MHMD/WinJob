@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Avg
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django_resized import ResizedImageField
 import django_jalali.db.models as jmodels
@@ -99,6 +100,9 @@ class InfluencerChannel(GamificationMixin, models.Model):
     def __str__(self):
         return f"{self.influencer.full_name} - {self.platform.name} ({self.channel_id})"
 
+    def get_absolute_url(self):
+        return reverse('influencers:channel_detail', kwargs={'channel_id': self.id})
+
     def generate_qr(self, force=False):
         """
         تولید و ذخیره QR Code برای کانال
@@ -109,7 +113,7 @@ class InfluencerChannel(GamificationMixin, models.Model):
         if self.qr_code and not force:
             return
 
-        url = f"{settings.SITE_URL}{reverse('influencers:channel_detail', kwargs={'channel_id': self.id})}"
+        url = f"{settings.SITE_URL}{self.get_absolute_url()}"
 
         logo_path = get_site_logo_path()
         color1, color2, gradient_direction = get_default_qr_colors()

@@ -116,7 +116,7 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 obj.qr_code.url,
                 obj.qr_code.url,
             )
-        return format_html(
+        return mark_safe(
             '<span style="color: #999;">QR Code تولید نشده است. از اکشن "بازتولید QR Code" استفاده کنید.</span>'
         )
 

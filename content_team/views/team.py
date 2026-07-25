@@ -93,7 +93,7 @@ def team_list_view(request):
     return render(request, 'content_team/pages/team_list.html', context)
 
 
-def team_detail_view(request, slug):
+def team_detail_view(request, slug, id):
     """
     ویو جزئیات تیم تولید محتوا
     """
@@ -123,7 +123,7 @@ def team_detail_view(request, slug):
             annotated_completed_orders=Count('orders', filter=Q(orders__status='completed')),
             annotated_active_members_count=Count('members', filter=Q(members__is_active=True))
         ),
-        slug=slug
+        slug=slug, id=id
     )
 
     # ========== تولید QR Code در صورت عدم وجود ==========

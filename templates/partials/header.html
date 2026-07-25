@@ -28,7 +28,7 @@
                         <ul class="dropdown-menu dropdown-menu-dark mt-0" aria-labelledby="servicesDropdown">
                             {% for platform in platforms %}
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'core:landing_page' platform.slug %}">
+                                    <a class="dropdown-item" href="{{ platform.get_absolute_url }}">
                                         <img width="25" src="{{ platform.logo.url }}" alt="" class="me-2">
                                         <span>تبلیغات در {{ platform.name }}</span>
                                     </a>
@@ -67,7 +67,7 @@
                                 {# -------- منوی تبلیغ‌دهنده -------- #}
                                 {% if is_advertiser %}
                                     <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2" href="{% url 'advertisers:my_campaigns' %}">
+                                        <a class="nav-link d-flex align-items-center gap-2" href="{% url 'advertisers:campaigns_list' %}">
                                             <i class="bi bi-megaphone"></i>
                                             <span>کمپین های من</span>
                                         </a>
@@ -461,7 +461,7 @@
                         <div class="collapse" id="mobileInfluencers">
                             <div class="ps-4 py-2">
                                 {% for platform in platforms %}
-                                    <a href="{% url 'core:landing_page' platform.slug %}" class="mobile-sub-link">
+                                    <a href="{{ platform.get_absolute_url }}" class="mobile-sub-link">
                                         <img width="25" src="{{ platform.logo.url }}" alt="">
                                         <span class="px-2">تبلیغات در {{ platform.name }}</span>
                                     </a>
@@ -497,7 +497,7 @@
                                     <!-- ========== منوی موبایل تبلیغ‌دهنده ========== -->
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
-                                           href="{% url 'advertisers:my_campaigns' %}">
+                                           href="{% url 'advertisers:campaigns_list' %}">
                                             <i class="bi bi-megaphone"></i>
                                             <span>کمپین های من</span>
                                         </a>

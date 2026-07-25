@@ -158,7 +158,7 @@
                         <div class="label">مبلغ قابل استفاده</div>
                         <div class="amount">{{ total_rejected_price|floatformat:0|default:0 }} تومان</div>
                     </div>
-                    <a href="{% url 'advertisers:campaign_detail' campaign.id %}" class="btn-back-to-campaign">
+                    <a href="{{ campaign.get_absolute_url }}" class="btn-back-to-campaign">
                         <i class="fi-arrow-right"></i>
                         بازگشت به کمپین
                     </a>
@@ -337,7 +337,7 @@
                                                     {{ rate.price|default:0|floatformat:0 }} تومان
                                                 </span>
                                                 <div class="mt-2">
-                                                    <a href="{% url 'influencers:channel_detail' rate.channel.id %}?select_rate={{ rate.id }}"
+                                                    <a href="{{ rate.channel.get_absolute_url }}?select_rate={{ rate.id }}"
                                                        class="btn-view-profile"
                                                        onclick="event.stopPropagation();">
                                                         <i class="fi-arrow-left ms-1"></i>
@@ -365,7 +365,7 @@
                                         {% endif %}
                                     </p>
                                     {% if is_replacement_mode %}
-                                        <a href="{% url 'advertisers:campaign_detail' campaign.id %}"
+                                        <a href="{{ campaign.get_absolute_url }}"
                                            class="btn btn-outline-light rounded-pill px-4 mt-2">
                                             <i class="fi-arrow-right me-2"></i>
                                             بازگشت به کمپین
@@ -384,7 +384,7 @@
 
                     <div class="d-flex justify-content-between mt-5 column">
                         {% if is_replacement_mode %}
-                            <a href="{% url 'advertisers:campaign_detail' campaign.id %}"
+                            <a href="{{ campaign.get_absolute_url }}"
                                class="btn btn-outline-secondary px-4">
                                 <i class="fi-arrow-right me-2"></i>
                                 انصراف و بازگشت

@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 
@@ -13,6 +14,9 @@ class Platform(models.Model):
         verbose_name = _('پلتفرم')
         verbose_name_plural = _('پلتفرم ها')
         ordering = ['-is_active', 'name']
+
+    def get_absolute_url(self):
+        return reverse('core:landing_page', kwargs={'slug': self.slug})
 
     def __str__(self):
         return self.name

@@ -5,7 +5,7 @@ from .views import *
 app_name = 'advertisers'
 
 urlpatterns = [
-    path('my_campaigns', campaigns_list, name='my_campaigns'),
+    path('campaign_list', campaigns_list, name='campaigns_list'),
     path('campaign_detail/<int:campaign_id>', campaign_detail, name='campaign_detail'),
     path('update/', profile_update, name='update'),
     path('dashboard/', advertiser_dashboard, name='dashboard'),

@@ -61,6 +61,9 @@ class ContentTeam(GamificationMixin, models.Model):
         auto_now=True
     )
 
+    def get_absolute_url(self):
+        return reverse('content_team:team_detail', kwargs={'slug': self.slug, 'id': self.id})
+
     class Meta:
         verbose_name = _('تیم تولید محتوا')
         verbose_name_plural = _('تیم‌های تولید محتوا')
@@ -90,7 +93,7 @@ class ContentTeam(GamificationMixin, models.Model):
         if self.qr_code and not force:
             return
 
-        url = f"{settings.SITE_URL}{reverse('content_team:team_detail', kwargs={'slug': self.slug})}"
+        url = f"{settings.SITE_URL}{self.get_absolute_url()}"
 
         logo_path = get_site_logo_path()
         color1, color2, gradient_direction = get_default_qr_colors()
@@ -437,6 +440,9 @@ class ContentServicePlan(models.Model):
             models.Index(fields=['price']),
         ]
 
+    def get_absolute_url(self):
+        return reverse('content_team:plan_detail', kwargs={'plan_id': self.id})
+
     def __str__(self):
         unit_labels = {
             'second': 'ثانیه',
@@ -684,6 +690,9 @@ class ContentOrder(models.Model):
     class Meta:
         verbose_name = "سفارش تولید محتوا"
         verbose_name_plural = "سفارش‌های تولید محتوا"
+
+    def get_absolute_url(self):
+        return reverse('content_team:team_order_detail', kwargs={'order_id': self.id})
 
     def __str__(self):
         return f'سفارش {self.campaign.name} - {self.team.name}'

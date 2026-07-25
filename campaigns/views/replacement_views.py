@@ -26,7 +26,7 @@ def campaign_select_replacement(request, campaign_id):
 
     if not rejected_bookings.exists():
         messages.info(request, "هیچ کانال رد شده‌ای برای جایگزینی وجود ندارد.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     return redirect(f"{reverse('campaigns:campaign_create_step2')}?replacement_mode=true&campaign_id={campaign.id}")
 
@@ -47,7 +47,7 @@ def campaign_replace_team(request, campaign_id):
     existing_order = campaign.content_orders.first()
     if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
         messages.error(request, "سفارش تیم محتوا قابل جایگزینی نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     # هدایت به استپ ۳ با پارامترهای جایگزینی
     return redirect(
@@ -71,7 +71,7 @@ def campaign_switch_to_ready(request, campaign_id):
     existing_order = campaign.content_orders.first()
     if not existing_order or existing_order.status != ContentOrder.Status.CANCELLED:
         messages.error(request, "امکان تبدیل به محتوای آماده وجود ندارد.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     with transaction.atomic():
         # ========== دریافت اطلاعات بریف ==========
@@ -92,7 +92,7 @@ def campaign_switch_to_ready(request, campaign_id):
         ready_content_type = ContentType.objects.filter(slug='ready-content').first()
         if not ready_content_type:
             messages.error(request, "نوع محتوای آماده در سیستم تعریف نشده است.")
-            return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+            return redirect(campaign)
 
         campaign.content_type = ready_content_type
         campaign.content_service_type = None
@@ -133,11 +133,11 @@ def campaign_switch_to_ready_cancel(request, campaign_id):
 
     if campaign.status != Campaign.Status.REVISION_NEEDED:
         messages.warning(request, "این عملیات قابل انجام نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     if campaign.content_type.slug != "ready-content":
         messages.warning(request, "نوع محتوای کمپین آماده نیست.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     team_content_type = ContentType.objects.filter(slug='content-production-team').first()
     if team_content_type:
@@ -157,7 +157,7 @@ def campaign_switch_to_ready_cancel(request, campaign_id):
             del request.session[key]
 
     messages.info(request, "به حالت انتخاب تیم تولید محتوا بازگشتید.")
-    return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+    return redirect(campaign)
 
 
 @login_required
@@ -176,7 +176,7 @@ def campaign_continue_without_replacement(request, campaign_id):
 
     if request.method != 'POST':
         messages.warning(request, "این عملیات تنها از طریق فرم قابل انجام است.")
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)
 
     with transaction.atomic():
         # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
@@ -195,4 +195,4 @@ def campaign_continue_without_replacement(request, campaign_id):
             f"✅ کمپین با موفقیت ادامه یافت. {rejected_count} ناشر رد شده نادیده گرفته شدند."
         )
 
-        return redirect('advertisers:campaign_detail', campaign_id=campaign.id)
+        return redirect(campaign)

@@ -71,7 +71,7 @@
                             <div class="influencer-stack">
                                 {% for channel in top_channels|slice:":3" %}
                                     <div class="influencer-stack-avatar">
-                                        <a href="{% url 'influencers:channel_detail' channel.id %}">
+                                        <a href="{{ channel.get_absolute_url }}">
                                             <img class="rounded-circle" src="{{ channel.avatar.url }}" alt="">
                                         </a>
                                     </div>
@@ -506,7 +506,7 @@
                                             class="channels-count">{{ platform.channels_count|default:"۰" }} کانال فعال</span>
                                     </div>
                                     <p class="platform-desc">{{ platform.description|default:"ارائه خدمات تبلیغاتی هوشمند و هدفمند"|truncatechars:100 }}</p>
-                                    <a href="{% url 'core:landing_page' platform.slug %}" class="btn-platform">مشاهده
+                                    <a href="{{ platform.get_absolute_url }}" class="btn-platform">مشاهده
                                         بیشتر</a>
                                 </div>
                             </div>
@@ -607,7 +607,7 @@
             <div class="channels-grid">
                 {% for channel in top_channels %}
                     <div class="influencer-card-circle scroll-reveal">
-                        <a class="text-decoration-none" href="{% url 'influencers:channel_detail' channel.id %}">
+                        <a class="text-decoration-none" href="{{ channel.get_absolute_url }}">
                             <div class="influencer-avatar-wrapper" data-id="{{ channel.id }}">
                                 {% if channel.avatar %}
                                     <img src="{{ channel.avatar.url }}" alt="{{ channel.channel_name }}"
@@ -655,7 +655,7 @@
             <div class="channels-grid">
                 {% for team in content_teams %}
                     <div class="influencer-card-circle scroll-reveal">
-                        <a class="text-decoration-none" href="{% url 'content_team:team_detail' team.slug %}">
+                        <a class="text-decoration-none" href="{{ team.get_absolute_url }}">
                             <div class="influencer-avatar-wrapper" data-id="{{ team.id }}">
                                 {% if team.logo %}
                                     <img src="{{ team.logo.url }}" alt="{{ team.name }}" class="influencer-avatar">
