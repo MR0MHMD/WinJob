@@ -25,8 +25,8 @@ class InfluencerProfile(models.Model):
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
 
     class Meta:
-        verbose_name = _('اینفلوئنسر')
-        verbose_name_plural = _('اینفلوئنسرها')
+        verbose_name = _('پروفایل ناشر')
+        verbose_name_plural = _('پروفایل ناشران')
         ordering = ['-created_at']
 
     @property
@@ -92,8 +92,8 @@ class Channel(GamificationMixin, models.Model):
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
 
     class Meta:
-        verbose_name = _('کانال اینفلوئنسر')
-        verbose_name_plural = _('کانال‌های اینفلوئنسر')
+        verbose_name = _('کانال')
+        verbose_name_plural = _('کانال ها')
         unique_together = [('influencer', 'platform', 'channel_id')]
         ordering = ['-created_at']
         indexes = [
@@ -172,8 +172,8 @@ class ChannelServiceRate(models.Model):
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
 
     class Meta:
-        verbose_name = _('نرخ خدمت اینفلوئنسر')
-        verbose_name_plural = _('نرخ‌های خدمات اینفلوئنسر')
+        verbose_name = _('نرخ خدمت')
+        verbose_name_plural = _('نرخ خدمات')
         unique_together = [('channel', 'ad_type')]
         ordering = ['ad_type']
 
@@ -233,8 +233,8 @@ class ChannelReview(models.Model):
     )
 
     class Meta:
-        verbose_name = _('نظر درباره اینفلوئنسر')
-        verbose_name_plural = _('نظرات درباره اینفلوئنسرها')
+        verbose_name = _('بازخورد کانال')
+        verbose_name_plural = _('بازخورد کانال ها')
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['rating']),
@@ -326,8 +326,8 @@ class ChannelBooking(models.Model):
     )
 
     class Meta:
-        verbose_name = "رزرو اینفلوئنسر"
-        verbose_name_plural = "رزروهای اینفلوئنسر"
+        verbose_name = "رزرو کانال"
+        verbose_name_plural = "رزرو کانال ها"
 
     def __str__(self):
         return f"{self.campaign} - {self.channel.channel_name} - {self.channel.platform}"

@@ -1,3 +1,84 @@
+// ========== تایپ‌نویسی پلتفرم‌ها با رنگ و کرسر ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const textElement = document.getElementById('changing-text');
+    if (!textElement) return;
+
+    // لیست پلتفرم‌ها با کلاس رنگ مخصوص
+    const platforms = [
+        { name: "بله", class: "platform-bale" },
+        { name: "ایتا", class: "platform-eitaa" },
+        { name: "روبیکا", class: "platform-rubika" },
+        { name: "سروش پلاس", class: "platform-soroush" },
+        { name: "تلگرام", class: "platform-telegram" },
+        { name: "اینستاگرام", class: "platform-instagram" }
+    ];
+
+    let currentIndex = 0;
+    let currentCharIndex = 0;
+    let isDeleting = false;
+    let typingSpeed = 180;
+    let deletingSpeed = 150;
+    let pauseBetweenWords = 3500;
+    let timeoutId = null;
+
+    // تابع برای به‌روزرسانی کلاس رنگ
+    function updateColorClass() {
+        const currentPlatform = platforms[currentIndex];
+        textElement.className = currentPlatform.class;
+    }
+
+    // تابع اصلی تایپ‌نویسی
+    function typeEffect() {
+        const currentPlatform = platforms[currentIndex];
+        const fullText = currentPlatform.name;
+        const currentText = textElement.textContent || '';
+
+        // اطمینان از اینکه کلاس رنگ درست باشه
+        updateColorClass();
+
+        if (isDeleting) {
+            // حالت پاک کردن: کاراکتر آخر رو حذف کن
+            textElement.textContent = fullText.substring(0, currentCharIndex - 1);
+            currentCharIndex--;
+
+            // وقتی کاملاً پاک شد، برو به کلمه بعدی
+            if (currentCharIndex === 0) {
+                isDeleting = false;
+                currentIndex = (currentIndex + 1) % platforms.length;
+                clearTimeout(timeoutId);
+                // قبل از تایپ کلمه جدید، کمی مکث کن
+                setTimeout(typeEffect, 300);
+                return;
+            }
+
+            // ادامه پاک کردن با سرعت کندتر
+            timeoutId = setTimeout(typeEffect, deletingSpeed);
+            return;
+        }
+
+        // حالت تایپ: کاراکتر جدید اضافه کن
+        if (currentCharIndex < fullText.length) {
+            textElement.textContent = fullText.substring(0, currentCharIndex + 1);
+            currentCharIndex++;
+            timeoutId = setTimeout(typeEffect, typingSpeed);
+        } else {
+            // کلمه کامل تایپ شد، مکث کن و بعد شروع به پاک کردن کن
+            isDeleting = true;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(typeEffect, pauseBetweenWords);
+        }
+    }
+
+    // مقداردهی اولیه
+    textElement.textContent = '';
+    textElement.className = platforms[0].class;
+
+    // شروع تایپ بعد از یک مکث کوتاه
+    setTimeout(() => {
+        typeEffect();
+    }, 500);
+});
+
 // اسکرول انیمیشن
 const revealElements = document.querySelectorAll('.scroll-reveal');
 const revealOnScroll = () => revealElements.forEach(el => {
@@ -43,29 +124,4 @@ if (particlesContainer) for (let i = 0; i < 50; i++) {
     p.style.animationDelay = Math.random() * 15 + 's';
     p.style.animationDuration = Math.random() * 10 + 10 + 's';
     particlesContainer.appendChild(p);
-}
-
-// تغییر متن پلتفرم‌ها
-const platforms = [{name: "تلگرام", class: "platform-telegram"}, {name: "بله", class: "platform-bale"}, {
-    name: "ایتا",
-    class: "platform-eitaa"
-}, {name: "روبیکا", class: "platform-rubika"}, {name: "اینستاگرام", class: "platform-instagram"}, {
-    name: "سروش پلاس",
-    class: "platform-soroush"
-}];
-let index = 0;
-const textElement = document.getElementById("changing-text");
-if (textElement) {
-    textElement.classList.add(platforms[0].class);
-    textElement.textContent = platforms[0].name;
-    setInterval(() => {
-        index = (index + 1) % platforms.length;
-        textElement.style.opacity = "0";
-        setTimeout(() => {
-            textElement.className = "";
-            textElement.classList.add(platforms[index].class);
-            textElement.textContent = platforms[index].name;
-            textElement.style.opacity = "1";
-        }, 200);
-    }, 4000);
 }

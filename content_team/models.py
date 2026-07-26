@@ -65,7 +65,7 @@ class ContentTeam(GamificationMixin, models.Model):
 
     class Meta:
         verbose_name = _('تیم تولید محتوا')
-        verbose_name_plural = _('تیم‌های تولید محتوا')
+        verbose_name_plural = _('تیم های تولید محتوا')
         ordering = ['name']
 
     def __str__(self):
@@ -196,8 +196,8 @@ class ContentTeamMember(models.Model):
     )
 
     class Meta:
-        verbose_name = _('عضو تیم تولید محتوا')
-        verbose_name_plural = _('اعضای تیم تولید محتوا')
+        verbose_name = _('عضو تیم')
+        verbose_name_plural = _('اعضای تیم')
         ordering = ['team', 'created_at']
 
     def __str__(self):
@@ -361,8 +361,8 @@ class ContentServicePlan(models.Model):
     )
 
     class Meta:
-        verbose_name = _('پلن خدمت')
-        verbose_name_plural = _('پلن‌های خدمات')
+        verbose_name = _('پلن')
+        verbose_name_plural = _('پلن ها')
         unique_together = [
             ['team', 'service_type', 'name']
         ]
@@ -620,8 +620,8 @@ class ContentOrder(models.Model):
     )
 
     class Meta:
-        verbose_name = "سفارش تولید محتوا"
-        verbose_name_plural = "سفارش‌های تولید محتوا"
+        verbose_name = "سفارش"
+        verbose_name_plural = "سفارشات"
 
     def get_absolute_url(self):
         return reverse('content_team:team_order_detail', kwargs={'order_id': self.id})
@@ -801,7 +801,7 @@ class ContentOrderFile(models.Model):
 
     class Meta:
         verbose_name = _('فایل سفارش')
-        verbose_name_plural = _('فایل‌های سفارش')
+        verbose_name_plural = _('فایل های سفارش')
         ordering = ['uploaded_at']
 
     def __str__(self):
@@ -872,8 +872,8 @@ class TeamReview(models.Model):
     )
 
     class Meta:
-        verbose_name = _('نظر درباره تیم')
-        verbose_name_plural = _('نظرات درباره تیم‌ها')
+        verbose_name = _('بازخورد تیم')
+        verbose_name_plural = _('بازخورد های تیم')
         ordering = ['-created_at']
 
     def __str__(self):
@@ -918,8 +918,8 @@ class TeamJoinRequest(models.Model):
     )
 
     class Meta:
-        verbose_name = _('درخواست عضویت در تیم')
-        verbose_name_plural = _('درخواست‌های عضویت در تیم')
+        verbose_name = _('درخواست عضویت')
+        verbose_name_plural = _('درخواست های عضویت')
         ordering = ['-created_at']
         unique_together = ['team', 'user']
 
@@ -999,7 +999,7 @@ class ContentOrderRevision(models.Model):
 
     class Meta:
         verbose_name = _('درخواست ویرایش')
-        verbose_name_plural = _('درخواست‌های ویرایش')
+        verbose_name_plural = _('درخواست های ویرایش')
         ordering = ['-created_at']
 
     def __str__(self):
@@ -1096,7 +1096,7 @@ class ContentDelivery(models.Model):
 
     class Meta:
         verbose_name = _('تحویل سفارش')
-        verbose_name_plural = _('تحویل‌های سفارش')
+        verbose_name_plural = _('تحویل های سفارش')
         ordering = ['-version', '-delivered_at']
         indexes = [
             models.Index(fields=['order', 'version']),
@@ -1189,7 +1189,7 @@ class ContentDeliveryFile(models.Model):
 
     class Meta:
         verbose_name = _('فایل تحویل')
-        verbose_name_plural = _('فایل‌های تحویل')
+        verbose_name_plural = _('فایل های تحویل')
         ordering = ['option_number', 'created_at']
         indexes = [
             models.Index(fields=['delivery', 'is_option']),

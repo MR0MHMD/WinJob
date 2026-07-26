@@ -226,3 +226,45 @@
     animation-delay: 2s;
     background: radial-gradient(circle, rgba(93, 60, 242, 0.3), transparent);
 }
+
+/* ========== تایپ‌نویسی پلتفرم‌ها با کرسر ========== */
+#changing-text {
+    display: inline-block;
+    min-width: 130px;
+    text-align: center;
+    transition: none;
+    font-weight: inherit;
+    direction: ltr;
+    position: relative;
+}
+
+/* برای پشتیبانی از RTL در متن فارسی */
+#changing-text:not(:empty) {
+    direction: rtl;
+}
+
+/* وقتی متن خالی‌ست، راست‌چین بمونه */
+#changing-text:empty {
+    direction: rtl;
+}
+
+/* ========== کرسر با رنگ گرادیان ========== */
+#changing-text::after {
+    content: '|';
+    display: inline-block;
+    animation: cursor-blink 0.8s step-end infinite;
+    font-weight: 300;
+    margin-right: 2px;
+    /* رنگ رو از المان اصلی می‌گیره */
+    color: inherit;
+    background: inherit;
+    -webkit-background-clip: text;
+    background-clip: text;
+    /* ولی یه سایه روشن برای دیده شدن */
+    position: relative;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}

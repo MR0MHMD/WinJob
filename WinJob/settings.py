@@ -60,13 +60,13 @@ DAISY_SETTINGS = {
     'APPS_REORDER': {
         'auth': {
             'icon': 'fa-solid fa-person-military-pointing',
-            'name': 'Authentication',
+            'name': 'احراز هویت',
             'hide': None,
             'divider_title': "Auth",
         },
         'core': {
             'icon': 'bi bi-cpu',
-            'name': 'هسته',
+            'name': 'مرکز',
             'hide': None,
         },
         'advertisers': {
@@ -97,6 +97,26 @@ DAISY_SETTINGS = {
         'content_team': {
             'icon': 'bi bi-file-earmark-post-fill',
             'name': 'تولید محتوا',
+            'hide': None,
+        },
+        'payment': {
+            'icon': 'bi bi-cash',
+            'name': 'مدیریت مالی',
+            'hide': None,
+        },
+        'notifications': {
+            'icon': 'bi bi-bell',
+            'name': 'اعلان ها',
+            'hide': None,
+        }
+        ,'tickets': {
+            'icon': 'bi bi-ticket',
+            'name': 'تیکت ها',
+            'hide': None,
+        }
+        ,'gamification': {
+            'icon': 'bi bi-star',
+            'name': 'امتیاز ها',
             'hide': None,
         },
     },

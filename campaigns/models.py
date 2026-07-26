@@ -149,7 +149,7 @@ class Campaign(models.Model):
 
     class Meta:
         verbose_name = "کمپین"
-        verbose_name_plural = "کمپین‌ها"
+        verbose_name_plural = "کمپین ها"
         ordering = ["-created_at"]
 
     def duration_days(self):
@@ -301,7 +301,7 @@ class CampaignContent(models.Model):
 
     class Meta:
         verbose_name = _("محتوای کمپین")
-        verbose_name_plural = _("محتواهای کمپین")
+        verbose_name_plural = _("محتوا های کمپین")
 
     def __str__(self):
         return f"محتوای کمپین #{self.campaign_id}"
@@ -378,8 +378,8 @@ class CampaignClick(models.Model):
     )
 
     class Meta:
-        verbose_name = "کلیک کمپین"
-        verbose_name_plural = "کلیک های کمپین"
+        verbose_name = "کلیک"
+        verbose_name_plural = "کلیک ها"
         indexes = [
             models.Index(fields=["tracking_link", "ip_address"]),
             models.Index(fields=["created_at"]),
