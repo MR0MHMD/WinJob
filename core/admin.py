@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 
 from content_team.models import ContentServicePlan
-from .models import Category, Platform, Province, ContentServiceType
+from .models import Category, Platform, Province, ContentServiceType, FAQ
 
 
 @admin.register(Category)
@@ -164,3 +164,18 @@ class ContentServiceTypeAdmin(admin.ModelAdmin):
                 choices=ContentServicePlan.PricingUnit.choices
             )
         return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+
+@admin.register(FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ['short_question', 'title', 'order', 'is_active']
+    list_display_links = ['short_question']
+    list_filter = ['title__category', 'title', 'is_active']
+    list_editable = ['order', 'is_active']
+    search_fields = ['question', 'answer']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def short_question(self, obj):
+        return obj.question[:80] + '...' if len(obj.question) > 80 else obj.question
+
+    short_question.short_description = _('سوال')

@@ -1,7 +1,8 @@
 # tickets/management/commands/load_tickets.py
 
 from django.core.management.base import BaseCommand
-from tickets.models import TicketCategory, TicketTitle, TicketFAQ
+from tickets.models import TicketCategory, TicketTitle
+from core.models import FAQ
 
 
 class Command(BaseCommand):
@@ -299,7 +300,7 @@ class Command(BaseCommand):
                 continue
 
             for faq in faqs:
-                obj, created = TicketFAQ.objects.get_or_create(
+                obj, created = FAQ.objects.get_or_create(
                     title=title_obj,
                     question=faq["question"],
                     defaults={

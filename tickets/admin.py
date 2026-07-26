@@ -1,15 +1,12 @@
-# admin.py
 from django.contrib import admin
-from django.urls import reverse
-from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Count, Q
 from django.contrib.admin import SimpleListFilter
 from .models import (
-    TicketCategory, TicketTitle, TicketFAQ,
+    TicketCategory, TicketTitle,
     Ticket, TicketMessage, TicketAttachment
 )
+from core.models import FAQ
 
 
 # ==================== فیلترهای سفارشی ====================
@@ -61,8 +58,8 @@ class AssignedFilter(SimpleListFilter):
 
 # ==================== اینلاین‌ها ====================
 
-class TicketFAQInline(admin.TabularInline):
-    model = TicketFAQ
+class FAQInline(admin.TabularInline):
+    model = FAQ
     extra = 1
     fields = ['question', 'answer', 'order', 'is_active']
     ordering = ['order']
@@ -138,7 +135,7 @@ class TicketTitleAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ['name']}
     readonly_fields = ['created_at', 'updated_at']
-    inlines = [TicketFAQInline]
+    inlines = [FAQInline]
     actions = ['make_active', 'make_inactive']
 
     def make_active(self, request, queryset):
@@ -152,21 +149,6 @@ class TicketTitleAdmin(admin.ModelAdmin):
         self.message_user(request, _('{} عنوان غیرفعال شدند.').format(updated))
 
     make_inactive.short_description = _('غیرفعال کردن عناوین انتخاب شده')
-
-
-@admin.register(TicketFAQ)
-class TicketFAQAdmin(admin.ModelAdmin):
-    list_display = ['short_question', 'title', 'order', 'is_active']
-    list_display_links = ['short_question']
-    list_filter = ['title__category', 'title', 'is_active']
-    list_editable = ['order', 'is_active']
-    search_fields = ['question', 'answer']
-    readonly_fields = ['created_at', 'updated_at']
-
-    def short_question(self, obj):
-        return obj.question[:80] + '...' if len(obj.question) > 80 else obj.question
-
-    short_question.short_description = _('سوال')
 
 
 @admin.register(Ticket)

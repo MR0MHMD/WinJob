@@ -130,53 +130,6 @@ class TicketTitle(models.Model):
         return self.faqs.count()
 
 
-class TicketFAQ(models.Model):
-    """پرسش‌های متداول برای هر عنوان تیکت"""
-
-    title = models.ForeignKey(
-        'TicketTitle',
-        on_delete=models.CASCADE,
-        related_name='faqs',
-        verbose_name=_('عنوان تیکت')
-    )
-
-    question = models.TextField(
-        verbose_name=_('سوال')
-    )
-
-    answer = models.TextField(
-        verbose_name=_('پاسخ')
-    )
-
-    order = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_('ترتیب نمایش')
-    )
-
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_('فعال')
-    )
-
-    created_at = jmodels.jDateTimeField(
-        auto_now_add=True,
-        verbose_name=_('تاریخ ایجاد')
-    )
-
-    updated_at = jmodels.jDateTimeField(
-        auto_now=True,
-        verbose_name=_('آخرین بروزرسانی')
-    )
-
-    class Meta:
-        verbose_name = _('سوال متداول')
-        verbose_name_plural = _('سوالات متداول')
-        ordering = ['order', 'created_at']
-
-    def __str__(self):
-        return self.question[:80]
-
-
 # ==================== مدل‌های اصلی تیکت ====================
 
 class Ticket(models.Model):
