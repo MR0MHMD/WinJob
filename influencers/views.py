@@ -13,7 +13,7 @@ from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
 from core.models import Platform
-from location.models import Province
+from core.models import Province
 from django.contrib import messages
 from django.utils import timezone
 from core.models import Category

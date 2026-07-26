@@ -4,7 +4,7 @@ from .models import ContentType, AdType, CampaignContent
 from urllib.parse import urlparse, urlencode, urlunparse
 from django.core.exceptions import ValidationError
 from influencers.models import InfluencerProfile
-from location.models import Province
+from core.models import Province
 from core.models import Platform
 from core.models import Category
 from django import forms

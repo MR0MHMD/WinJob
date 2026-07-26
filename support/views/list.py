@@ -10,7 +10,7 @@ from tickets.models import TicketMessage
 from accounts.models import CustomUser
 from core.models import Platform
 from campaigns.models import Campaign
-from location.models import Province
+from core.models import Province
 from tickets.models import Ticket
 from django.utils import timezone
 from core.models import Category

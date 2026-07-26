@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Category, Platform
+from .models import Category, Platform, Province
 
 
 @admin.register(Category)
@@ -72,3 +72,10 @@ class PlatformAdmin(admin.ModelAdmin):
         "name",
         "slug",
     )
+
+
+@admin.register(Province)
+class ProvinceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {"slug": ("name",)}
+    search_fields = ["name", "slug"]
