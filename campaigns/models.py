@@ -47,48 +47,6 @@ class ContentType(models.Model):
         return f'{self.name}'
 
 
-class AdType(models.Model):
-    platform = models.ForeignKey(
-        "core.Platform",
-        on_delete=models.CASCADE,
-        related_name='ad_types',
-        verbose_name=_('پلتفرم')
-    )
-    name = models.CharField(
-        max_length=100,
-        verbose_name=_('نام نوع تبلیغ')
-    )
-    slug = models.SlugField(
-        verbose_name=_('شناسه')
-    )
-
-    description = models.TextField(
-        _('توضیحات'),
-        blank=True
-    )
-
-    icon = models.CharField(
-        _('آیکون'),
-        max_length=50,
-        blank=True,
-        help_text=_('نام کلاس آیکون (مثلاً: fa-video)')
-    )
-
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_('فعال')
-    )
-
-    class Meta:
-        verbose_name = _('نوع تبلیغ')
-        verbose_name_plural = _('انواع تبلیغ')
-        unique_together = ('platform', 'slug')
-        ordering = ['platform', 'name']
-
-    def __str__(self):
-        return self.name
-
-
 class Campaign(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "پیش نویس"
@@ -114,7 +72,7 @@ class Campaign(models.Model):
     )
 
     ad_type = models.ForeignKey(
-        'AdType',
+        'core.AdType',
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='نوع تبلیغ'

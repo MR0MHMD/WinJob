@@ -1,3 +1,4 @@
+from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignInfluencer, CampaignContent
 from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery, ContentDeliveryFile
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -8,21 +9,15 @@ from influencers.models import InfluencerChannel
 from core.utils.utils import convert_to_jalali
 from django.db.models import Sum, Count, Avg
 from django.core.paginator import Paginator
-from core.models import Platform
+from core.models import Platform, AdType
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
 import jdatetime
 import json
-from campaigns.models import (
-    Campaign,
-    CampaignClick,
-    CampaignTrackingLink,
-    CampaignInfluencer,
-    CampaignContent,
-    AdType
-)
+
+
 
 
 @login_required

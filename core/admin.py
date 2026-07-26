@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 
 from content_team.models import ContentServicePlan
-from .models import Category, Platform, Province, ContentServiceType, FAQ
+from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType
 
 
 @admin.register(Category)
@@ -179,3 +179,11 @@ class FAQAdmin(admin.ModelAdmin):
         return obj.question[:80] + '...' if len(obj.question) > 80 else obj.question
 
     short_question.short_description = _('سوال')
+
+
+@admin.register(AdType)
+class AdTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "platform", "slug", "is_active")
+    list_filter = ("platform", "is_active")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}

@@ -161,7 +161,7 @@ class InfluencerChannel(GamificationMixin, models.Model):
 class InfluencerServiceRate(models.Model):
     channel = models.ForeignKey('InfluencerChannel', on_delete=models.CASCADE,
                                 related_name='service_rates', verbose_name=_('کانال'))
-    ad_type = models.ForeignKey('campaigns.AdType', on_delete=models.CASCADE,
+    ad_type = models.ForeignKey('core.AdType', on_delete=models.CASCADE,
                                 related_name='influencer_rates', verbose_name=_('نوع تبلیغ'))
     price = models.DecimalField(_('قیمت'), max_digits=12, decimal_places=0,
                                 help_text=_('قیمت به تومان'))

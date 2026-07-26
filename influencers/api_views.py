@@ -11,10 +11,10 @@ from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from .forms import InfluencerProfileForm
 from django.http import JsonResponse
-from campaigns.models import AdType
 from .models import CampaignReport
 from django.conf import settings
 from django.urls import reverse
+from core.models import AdType
 import requests
 import json
 

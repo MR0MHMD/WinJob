@@ -1,6 +1,6 @@
 # campaigns/admin
 from campaigns.services.campaigns_notifications import approve_campaign_by_admin, reject_campaign_by_admin
-from .models import ContentType, AdType, Campaign, CampaignContent, CampaignTrackingLink
+from .models import ContentType, Campaign, CampaignContent, CampaignTrackingLink
 from django_jalali.admin.filters import JDateFieldListFilter
 from influencers.inline_admin import CampaignReportInline
 from core.utils.admin_utils import RegionalFilterAdminMixin
@@ -43,7 +43,7 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     ordering = ("-created_at",)
 
-    autocomplete_fields = ("advertiser", "platform", "content_type", "ad_type")
+    autocomplete_fields = ("advertiser", "platform", "content_type")
 
     readonly_fields = (
         "created_at",
@@ -496,14 +496,6 @@ class CampaignInfluencerAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 class ContentTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "is_active")
     list_filter = ("is_active",)
-    search_fields = ("name", "slug")
-    prepopulated_fields = {"slug": ("name",)}
-
-
-@admin.register(AdType)
-class AdTypeAdmin(admin.ModelAdmin):
-    list_display = ("name", "platform", "slug", "is_active")
-    list_filter = ("platform", "is_active")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
 

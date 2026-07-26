@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.models import Platform
-from campaigns.models import AdType
+from core.models import Platform, AdType
 
 
 class Command(BaseCommand):

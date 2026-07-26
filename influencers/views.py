@@ -1,8 +1,9 @@
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
-from campaigns.models import Campaign, AdType, CampaignInfluencer, CampaignTrackingLink, CampaignClick
+from campaigns.models import Campaign, CampaignInfluencer, CampaignTrackingLink, CampaignClick
 from campaigns.services.campaigns_notifications import submit_influencer_report_service
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.shortcuts import render, get_object_or_404, redirect
+from core.models import Platform, Province, Category, AdType
 from django.db.models.functions import TruncDate, Coalesce
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -12,11 +13,8 @@ from datetime import timedelta, datetime, time
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
-from core.models import Platform
-from core.models import Province
 from django.contrib import messages
 from django.utils import timezone
-from core.models import Category
 from django.conf import settings
 from threading import Thread
 import jdatetime
