@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     "influencers.apps.InfluencersConfig",
     "campaigns.apps.CampaignsConfig",
     "blog.apps.BlogConfig",
-    "location.apps.LocationConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
     "tickets.apps.TicketsConfig",
@@ -93,11 +92,6 @@ DAISY_SETTINGS = {
         'accounts': {
             'icon': 'bi bi-people-fill',
             'name': 'کاربران',
-            'hide': None,
-        },
-        'location': {
-            'icon': 'bi bi-geo-alt-fill',
-            'name': 'موقعیت',
             'hide': None,
         },
         'content_team': {

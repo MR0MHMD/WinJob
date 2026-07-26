@@ -3,7 +3,7 @@ from django_jalali.admin.filters import JDateFieldListFilter
 from django.utils.safestring import mark_safe
 from accounts.models import CustomUser
 from .models import InfluencerProfile
-from location.models import Province
+from core.models import Province
 from django.urls import reverse
 from .inline_admin import *
 from campaigns.services.campaigns_notifications import (

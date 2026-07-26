@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from location.models import Province
+from core.models import Province
 
 
 class Command(BaseCommand):
