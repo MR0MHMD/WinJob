@@ -10,7 +10,7 @@ def update_score(target_instance, points, action_key, description):
     ثبت امتیاز جدید (مثبت یا منفی) برای موجودیت‌های مختلف
 
     Args:
-        target_instance: ContentTeam یا InfluencerChannel یا AdvertiserProfile
+        target_instance: ContentTeam یا Channel یا AdvertiserProfile
         points: عدد مثبت یا منفی
         action_key: کلید عملیات (مثلاً 'campaign_completed')
         description: توضیح عملیات
@@ -41,7 +41,7 @@ def _get_or_create_score_profile(target_instance):
 
     if model_name == 'ContentTeam':
         score, _ = TeamScore.objects.get_or_create(team=target_instance)
-    elif model_name == 'InfluencerChannel':
+    elif model_name == 'Channel':
         score, _ = ChannelScore.objects.get_or_create(channel=target_instance)
     elif model_name == 'AdvertiserProfile':
         score, _ = AdvertiserScore.objects.get_or_create(profile=target_instance)

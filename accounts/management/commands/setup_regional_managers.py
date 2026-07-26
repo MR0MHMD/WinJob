@@ -17,13 +17,13 @@ class Command(BaseCommand):
 
         models_list = [
             ('advertisers', 'AdvertiserProfile'),
-            ('influencers', 'InfluencerChannel'),
+            ('influencers', 'Channel'),
             ('influencers', 'InfluencerProfile'),
-            ('influencers', 'InfluencerServiceRate'),
+            ('influencers', 'ChannelServiceRate'),
             ('influencers', 'CampaignReport'),
-            ('influencers', 'InfluencerReview'),
+            ('influencers', 'ChannelReview'),
             ('campaigns', 'Campaign'),
-            ('campaigns', 'CampaignChannel'),
+            ('campaigns', 'ChannelBooking'),
             ('campaigns', 'CampaignContent'),
             ('campaigns', 'CampaignTrackingLink'),
             ('campaigns', 'CampaignClick'),

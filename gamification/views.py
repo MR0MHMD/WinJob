@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import render, get_object_or_404
 from gamification.models import Badge, AdvertiserScore, ChannelScore, TeamScore, PointLog
-from influencers.models import InfluencerChannel
+from influencers.models import Channel
 
 
 # تابع کمکی برای گرفتن لاگ‌ها
@@ -81,7 +81,7 @@ def points_guide(request, channel_id=None):
     }
 
     if channel_id:
-        channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=user, is_active=True)
+        channel = get_object_or_404(Channel, id=channel_id, influencer__user=user, is_active=True)
         roles_data = [get_channel_data(channel)]
         badges = Badge.objects.filter(is_active=True).order_by('min_points')
         context = {
@@ -112,7 +112,7 @@ def points_guide(request, channel_id=None):
 
     # اینفلوئنسر (همه کانال‌ها)
     if hasattr(user, 'influencer_profile'):
-        channels = InfluencerChannel.objects.filter(influencer=user.influencer_profile, is_active=True)
+        channels = Channel.objects.filter(influencer=user.influencer_profile, is_active=True)
         for channel in channels:
             roles_data.append(get_channel_data(channel))
 

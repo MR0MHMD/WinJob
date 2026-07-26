@@ -1,11 +1,11 @@
 from campaigns.tasks import penalize_unaccepted_content_orders, auto_approve_campaign_after_rejection
+from campaigns.models import CampaignReport, CampaignContent, Campaign, CampaignTrackingLink
 from content_team.models import ContentOrderRevision, ContentDelivery, ContentOrder
-from campaigns.models import CampaignContent, Campaign, CampaignTrackingLink
 from payment.services.create_invoice import create_campaign_invoice
-from influencers.models import CampaignReport, CampaignChannel
 from payment.services.payment_service import pay_influencer
 from payment.models import Wallet, Transaction
 from gamification.services import update_score
+from influencers.models import ChannelBooking
 from notifications.models import Notification
 from collections import defaultdict
 from django.db import transaction
@@ -253,7 +253,7 @@ def submit_influencer_report_service(order, post_link, screenshot):
             status='pending'
         )
 
-        order.status = CampaignChannel.Status.COMPLETED
+        order.status = ChannelBooking.Status.COMPLETED
         order.save(update_fields=['status'])
 
         # --- سیستم گیمیفیکیشن ---
@@ -273,11 +273,11 @@ def submit_influencer_report_service(order, post_link, screenshot):
             except ImportError:
                 pass
 
-        pending_or_accepted_without_report = CampaignChannel.objects.filter(
+        pending_or_accepted_without_report = ChannelBooking.objects.filter(
             campaign=campaign
         ).filter(
-            models.Q(status=CampaignChannel.Status.PENDING) |
-            models.Q(status=CampaignChannel.Status.ACCEPTED, report__isnull=True)
+            models.Q(status=ChannelBooking.Status.PENDING) |
+            models.Q(status=ChannelBooking.Status.ACCEPTED, report__isnull=True)
         ).count()
 
         if pending_or_accepted_without_report == 0:

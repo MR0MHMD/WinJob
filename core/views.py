@@ -1,4 +1,4 @@
-from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile, CampaignChannel
+from influencers.models import Channel, ChannelReview, InfluencerProfile, ChannelBooking
 from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
 from campaigns.models import CampaignClick, Campaign
 from django.views.generic import TemplateView
@@ -13,7 +13,7 @@ from blog.models import Post
 def home(request):
     total_influencers = InfluencerProfile.objects.filter(is_active=True).count()
     total_campaigns = Campaign.objects.filter(status=Campaign.Status.COMPLETED).count()
-    total_channels = InfluencerChannel.objects.filter(is_active=True, status="approved").count()
+    total_channels = Channel.objects.filter(is_active=True, status="approved").count()
     total_teams = ContentTeam.objects.filter(is_active=True).count()
     total_clicks = CampaignClick.objects.count()
 
@@ -21,7 +21,7 @@ def home(request):
         channels_count=Count('influencer_channels', filter=Q(influencer_channels__is_active=True))
     ).order_by('-channels_count')
 
-    top_channels = InfluencerChannel.objects.filter(
+    top_channels = Channel.objects.filter(
         is_active=True,
         influencer__is_active=True
     ).annotate(
@@ -38,7 +38,7 @@ def home(request):
     content_teams_raw = ContentTeam.objects.filter(is_active=True)
     content_teams = sorted(content_teams_raw, key=lambda x: x.avg_rating or 0, reverse=True)[:5]
 
-    recent_reviews = InfluencerReview.objects.select_related(
+    recent_reviews = ChannelReview.objects.select_related(
         'channel', 'advertiser__user'
     ).order_by('-created_at')[:10]
 
@@ -88,7 +88,7 @@ class AboutView(TemplateView):
             status=Campaign.Status.COMPLETED
         ).count()
 
-        context['active_approved_channels'] = InfluencerChannel.objects.filter(
+        context['active_approved_channels'] = Channel.objects.filter(
             status='approved',
             is_active=True
         ).count()
@@ -99,8 +99,8 @@ class AboutView(TemplateView):
 
         context['total_clicks'] = CampaignClick.objects.count()
 
-        context["completed_bookings"] = CampaignChannel.objects.filter(
-            status=CampaignChannel.Status.COMPLETED
+        context["completed_bookings"] = ChannelBooking.objects.filter(
+            status=ChannelBooking.Status.COMPLETED
         ).count()
 
         context["portfolio_count"] = ContentPortfolio.objects.filter(
@@ -125,7 +125,7 @@ def platform_landing_page(request, slug):
         status=Campaign.Status.COMPLETED
     ).count()
 
-    total_channels = InfluencerChannel.objects.filter(
+    total_channels = Channel.objects.filter(
         platform=platform,
         is_active=True
     ).count()
@@ -139,7 +139,7 @@ def platform_landing_page(request, slug):
         tracking_link__campaign_influencer__campaign__platform=platform
     ).count()
 
-    top_channels = InfluencerChannel.objects.filter(
+    top_channels = Channel.objects.filter(
         platform=platform,
         is_active=True,
         influencer__is_active=True

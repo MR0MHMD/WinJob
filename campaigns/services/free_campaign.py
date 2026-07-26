@@ -1,17 +1,17 @@
-from influencers.models import InfluencerServiceRate
-from influencers.models import CampaignChannel
+from influencers.models import ChannelServiceRate
+from influencers.models import ChannelBooking
 import uuid
 
 
 def create_free_campaign_bookings(campaign):
     """
     برای کمپین رایگان، تمام کانال‌های فعال و تایید شده‌ای که برای پلتفرم و نوع تبلیغ
-    کمپین نرخ فعال دارند را پیدا کرده و به عنوان CampaignChannel با قیمت ۰ ثبت می‌کند.
+    کمپین نرخ فعال دارند را پیدا کرده و به عنوان ChannelBooking با قیمت ۰ ثبت می‌کند.
     """
 
     campaign.influencer_bookings.all().delete()
 
-    rates = InfluencerServiceRate.objects.filter(
+    rates = ChannelServiceRate.objects.filter(
         channel__platform=campaign.platform,
         ad_type=campaign.ad_type,
         is_active=True,
@@ -22,17 +22,17 @@ def create_free_campaign_bookings(campaign):
     bookings = []
     for rate in rates:
         bookings.append(
-            CampaignChannel(
+            ChannelBooking(
                 campaign=campaign,
                 channel=rate.channel,
                 service_rate=rate,
                 price=0,
-                status=CampaignChannel.Status.PENDING,
+                status=ChannelBooking.Status.PENDING,
                 tracking_code=uuid.uuid4().hex[:8]  # ← اضافه کن
             )
         )
 
     if bookings:
-        CampaignChannel.objects.bulk_create(bookings)
+        ChannelBooking.objects.bulk_create(bookings)
 
     return len(bookings)

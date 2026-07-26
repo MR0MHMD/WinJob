@@ -2,10 +2,9 @@ from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django_jalali.db import models as jmodels
-from django.db import models, IntegrityError
 from urllib.parse import urlencode
 from django.urls import reverse
-import uuid
+from django.db import models
 import os
 
 
@@ -335,7 +334,7 @@ class CampaignContent(models.Model):
 
 class CampaignTrackingLink(models.Model):
     campaign_influencer = models.OneToOneField(
-        "influencers.CampaignChannel",
+        "influencers.ChannelBooking",
         on_delete=models.CASCADE,
         related_name="tracking_link"
     )
@@ -388,3 +387,44 @@ class CampaignClick(models.Model):
 
     def __str__(self):
         return f"{self.ip_address} - {self.tracking_link}"
+
+
+class CampaignReport(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'در انتظار بررسی'
+        APPROVED = 'approved', 'تأیید شد'
+        REJECTED = 'rejected', 'رد شد'
+
+    campaign_influencer = models.OneToOneField(
+        "influencers.ChannelBooking",
+        on_delete=models.CASCADE,
+        related_name='report',
+        verbose_name='سفارش'
+    )
+
+    post_link = models.URLField(verbose_name='لینک پست')
+    screenshot = models.ImageField(upload_to='campaign_reports/screenshots/')
+
+    # وضعیت نهایی گزارش (بعد از بررسی خودکار یا دستی)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name='وضعیت بررسی'
+    )
+
+    # نتایج بررسی خودکار (توسط n8n پر می‌شه)
+    auto_check_details = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='جزئیات بررسی خودکار'
+    )
+
+    admin_notes = models.TextField(blank=True, verbose_name='یادداشت ادمین')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'گزارش کمپین'
+        verbose_name_plural = 'گزارش‌های کمپین'

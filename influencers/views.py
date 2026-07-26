@@ -1,7 +1,7 @@
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
 from campaigns.models import Campaign, CampaignTrackingLink, CampaignClick
 from campaigns.services.campaigns_notifications import submit_influencer_report_service
-from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
+from .models import ChannelServiceRate, Channel, ChannelReview
 from django.shortcuts import render, get_object_or_404, redirect
 from core.models import Platform, Province, Category, AdType
 from django.db.models.functions import TruncDate, Coalesce
@@ -9,11 +9,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from .api_views import trigger_n8n_verification
 from payment.models import Transaction, Coupon
-from influencers.models import CampaignChannel
+from influencers.models import ChannelBooking
 from datetime import timedelta, datetime, time
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
-from .forms import InfluencerChannelForm
+from .forms import ChannelForm
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
@@ -38,10 +38,10 @@ def influencer_channels_view(request, pk=None):
     instance = None
 
     if pk:
-        instance = get_object_or_404(InfluencerChannel, pk=pk, influencer=influencer)
+        instance = get_object_or_404(Channel, pk=pk, influencer=influencer)
 
     if request.method == "POST":
-        form = InfluencerChannelForm(request.POST, request.FILES, instance=instance)
+        form = ChannelForm(request.POST, request.FILES, instance=instance)
         if form.is_valid():
             try:
                 channel = form.save(commit=False)
@@ -60,7 +60,7 @@ def influencer_channels_view(request, pk=None):
         else:
             messages.error(request, "لطفاً خطاهای فرم را برطرف کنید.")
     else:
-        form = InfluencerChannelForm(instance=instance)
+        form = ChannelForm(instance=instance)
 
     channels = influencer.channels.select_related("platform").all()
 
@@ -76,7 +76,7 @@ def influencer_channels_view(request, pk=None):
 def delete_channel_view(request, pk):
     """حذف کانال و ریدایرکت به لیست"""
     if request.method == "POST":
-        channel = get_object_or_404(InfluencerChannel, pk=pk, influencer__user=request.user)
+        channel = get_object_or_404(Channel, pk=pk, influencer__user=request.user)
         name = channel.channel_name
         channel.delete()
         messages.success(request, f"کانال {name} با موفقیت حذف شد.")
@@ -93,7 +93,7 @@ def service_rates_view(request):
         messages.error(request, 'پروفایل اینفلوئنسر یافت نشد')
         return redirect('influencers:dashboard')
 
-    existing_rates = InfluencerServiceRate.objects.filter(
+    existing_rates = ChannelServiceRate.objects.filter(
         channel__influencer=influencer
     ).select_related('channel', 'ad_type')
 
@@ -136,10 +136,10 @@ def service_rates_view(request):
 def order_list(request):
     user = request.user
     if not hasattr(user, "influencer_profile"):
-        orders = CampaignChannel.objects.none()
+        orders = ChannelBooking.objects.none()
     else:
         influencer = user.influencer_profile
-        orders = CampaignChannel.objects.select_related(
+        orders = ChannelBooking.objects.select_related(
             "campaign",
             "channel",
             "campaign__content",
@@ -203,7 +203,7 @@ def order_list(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        CampaignChannel.objects
+        ChannelBooking.objects
         .select_related(
             "campaign",
             "campaign__platform",
@@ -256,7 +256,7 @@ def order_detail(request, order_id):
     if content and content.utm_enabled and content.link:
         utm_link = content.get_utm_link(order)
 
-    other_orders = CampaignChannel.objects.filter(
+    other_orders = ChannelBooking.objects.filter(
         channel=channel
     ).exclude(
         id=order.id
@@ -307,7 +307,7 @@ def influencer_respond(request, order_id):
     ویو برای قبول یا رد سفارش توسط اینفلوئنسر
     """
     order = get_object_or_404(
-        CampaignChannel.objects.select_related(
+        ChannelBooking.objects.select_related(
             'channel__influencer__user',
             'campaign'
         ),
@@ -346,7 +346,7 @@ def influencer_respond(request, order_id):
 @login_required
 def submit_report(request, order_id):
     order = get_object_or_404(
-        CampaignChannel.objects.select_related(
+        ChannelBooking.objects.select_related(
             'campaign',
             'channel__influencer__user',
             'campaign__advertiser'
@@ -357,7 +357,7 @@ def submit_report(request, order_id):
     if request.user != order.channel.influencer.user:
         raise PermissionDenied("شما دسترسی به این صفحه ندارید.")
 
-    if order.status != CampaignChannel.Status.ACCEPTED:
+    if order.status != ChannelBooking.Status.ACCEPTED:
         messages.error(request, "فقط سفارش‌های پذیرفته شده قابلیت گزارش دارند.")
         return redirect(order)
 
@@ -450,11 +450,11 @@ def influencer_dashboard(request):
 
     influencer = request.user.influencer_profile
 
-    channels = InfluencerChannel.objects.filter(influencer=influencer, is_active=True)
+    channels = Channel.objects.filter(influencer=influencer, is_active=True)
     channel_ids = channels.values_list('id', flat=True)
     channels_count = channels.count()
 
-    campaign_bookings = CampaignChannel.objects.filter(
+    campaign_bookings = ChannelBooking.objects.filter(
         channel_id__in=channel_ids
     ).exclude(
         campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
@@ -566,7 +566,7 @@ def influencer_dashboard(request):
         )
         total_ad_types_count = ad_types_for_channel.count()
 
-        existing_rates = InfluencerServiceRate.objects.filter(
+        existing_rates = ChannelServiceRate.objects.filter(
             channel=channel,
             ad_type__is_active=True,
             ad_type__platform=channel.platform
@@ -758,7 +758,7 @@ def channel_list(request):
     """
 
     # کوئری اصلی - اصلاح شده با output_field
-    channels = InfluencerChannel.objects.filter(
+    channels = Channel.objects.filter(
         is_active=True,
         status="approved",
         influencer__is_active=True
@@ -875,7 +875,7 @@ def channel_list(request):
 
     # محدوده فالوور برای اسلایدر
     from django.db.models import Max, Min
-    followers_range = InfluencerChannel.objects.filter(
+    followers_range = Channel.objects.filter(
         is_active=True
     ).aggregate(
         min_followers=Min('followers_count'),
@@ -914,19 +914,19 @@ def channel_list(request):
 
 def channel_detail(request, channel_id):
     channel = get_object_or_404(
-        InfluencerChannel.objects.select_related(
+        Channel.objects.select_related(
             'platform', 'province', 'category', 'influencer'
         ).prefetch_related(
             'service_rates__ad_type',
             Prefetch(
                 'reviews',
-                queryset=InfluencerReview.objects.select_related(
+                queryset=ChannelReview.objects.select_related(
                     'advertiser__user'
                 ).order_by('-created_at')
             ),
             Prefetch(
                 'campaign_bookings',
-                queryset=CampaignChannel.objects.select_related(
+                queryset=ChannelBooking.objects.select_related(
                     'campaign', 'service_rate'
                 ).prefetch_related(
                     'tracking_link__click_logs'
@@ -984,14 +984,14 @@ def channel_detail(request, channel_id):
     if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
         advertiser = request.user.advertiser_profile
 
-        pending_bookings = list(CampaignChannel.objects.filter(
+        pending_bookings = list(ChannelBooking.objects.filter(
             campaign__advertiser=advertiser,
             channel=channel,
-            status=CampaignChannel.Status.COMPLETED,
+            status=ChannelBooking.Status.COMPLETED,
             review__isnull=True
         ).select_related('campaign').order_by('-created_at'))
 
-        has_any_review = InfluencerReview.objects.filter(
+        has_any_review = ChannelReview.objects.filter(
             channel=channel,
             advertiser=advertiser
         ).exists()
@@ -1041,7 +1041,7 @@ def influencer_coupons(request):
     influencer = request.user.influencer_profile
 
     # گرفتن کانال‌های فعال ناشر
-    channels = InfluencerChannel.objects.filter(
+    channels = Channel.objects.filter(
         influencer=influencer,
         is_active=True
     )
@@ -1139,12 +1139,12 @@ def coupon_create(request):
 
     # چک کردن مالکیت کانال
     try:
-        channel = InfluencerChannel.objects.get(
+        channel = Channel.objects.get(
             id=channel_id,
             influencer=request.user.influencer_profile,
             is_active=True
         )
-    except InfluencerChannel.DoesNotExist:
+    except Channel.DoesNotExist:
         messages.error(request, "کانال انتخاب شده معتبر نیست.")
         return redirect('influencers:coupon_list')
 
@@ -1236,12 +1236,12 @@ def coupon_edit(request, coupon_id):
 
     # چک کردن مالکیت کانال
     try:
-        channel = InfluencerChannel.objects.get(
+        channel = Channel.objects.get(
             id=channel_id,
             influencer=influencer,
             is_active=True
         )
-    except InfluencerChannel.DoesNotExist:
+    except Channel.DoesNotExist:
         messages.error(request, "کانال انتخاب شده معتبر نیست.")
         return redirect('influencers:coupon_list')
 

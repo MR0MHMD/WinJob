@@ -1,6 +1,6 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from influencers.models import CampaignChannel
+from influencers.models import ChannelBooking
 from content_team.models import ContentOrder
 from core.models import ContentType
 from django.contrib import messages
@@ -22,7 +22,7 @@ def campaign_select_replacement(request, campaign_id):
     )
 
     rejected_bookings = campaign.influencer_bookings.filter(
-        status=CampaignChannel.Status.REJECTED
+        status=ChannelBooking.Status.REJECTED
     )
 
     if not rejected_bookings.exists():
@@ -182,7 +182,7 @@ def campaign_continue_without_replacement(request, campaign_id):
     with transaction.atomic():
         # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
         rejected_bookings = campaign.influencer_bookings.filter(
-            status=CampaignChannel.Status.REJECTED
+            status=ChannelBooking.Status.REJECTED
         )
         rejected_count = rejected_bookings.count()
 

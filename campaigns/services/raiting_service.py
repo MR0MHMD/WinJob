@@ -1,6 +1,6 @@
 from content_team.models import TeamReview, ContentOrder
-from influencers.models import InfluencerReview
-from influencers.models import CampaignChannel
+from influencers.models import ChannelReview
+from influencers.models import ChannelBooking
 from gamification.services import update_score
 from django.db import transaction
 
@@ -44,7 +44,7 @@ def submit_team_review_service(order, advertiser, rating, comment=""):
 
 def submit_influencer_review_service(campaign_booking, advertiser, rating, comment=""):
     with transaction.atomic():
-        review = InfluencerReview.objects.create(
+        review = ChannelReview.objects.create(
             channel=campaign_booking.channel,
             campaign_booking=campaign_booking,
             advertiser=advertiser,
@@ -52,7 +52,7 @@ def submit_influencer_review_service(campaign_booking, advertiser, rating, comme
             comment=comment
         )
         # فقط در صورتی که کمپین تکمیل شده باشد امتیاز بده
-        if campaign_booking.status == CampaignChannel.Status.COMPLETED:
+        if campaign_booking.status == ChannelBooking.Status.COMPLETED:
             update_score(
                 advertiser,
                 5,

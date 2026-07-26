@@ -1,4 +1,4 @@
-from influencers.models import InfluencerServiceRate, CampaignChannel
+from influencers.models import ChannelServiceRate, ChannelBooking
 from payment.services.create_invoice import create_campaign_invoice
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
@@ -24,7 +24,7 @@ def campaign_step2_calculate_price(request):
         if not rate_ids:
             return JsonResponse({'total': 0, 'breakdown': [], 'formatted': '۰'})
 
-        rates = InfluencerServiceRate.objects.select_related(
+        rates = ChannelServiceRate.objects.select_related(
             'channel', 'channel__influencer', 'ad_type'
         ).filter(id__in=rate_ids, is_active=True)
 
@@ -235,10 +235,10 @@ def calculate_influencer_replacement_commission(request):
         campaign = get_object_or_404(Campaign, id=campaign_id, advertiser=request.user.advertiser_profile)
 
         current_influencer_cost = campaign.influencer_bookings.exclude(
-            status__in=[CampaignChannel.Status.REJECTED, CampaignChannel.Status.REPLACED]
+            status__in=[ChannelBooking.Status.REJECTED, ChannelBooking.Status.REPLACED]
         ).aggregate(total=Sum('price'))['total'] or 0
 
-        selected_rates = InfluencerServiceRate.objects.filter(id__in=selected_rate_ids, is_active=True)
+        selected_rates = ChannelServiceRate.objects.filter(id__in=selected_rate_ids, is_active=True)
         new_influencer_cost = sum(rate.price for rate in selected_rates)
 
         content_cost = campaign.invoice.content_cost if hasattr(campaign, 'invoice') and campaign.invoice else 0

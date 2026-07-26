@@ -50,7 +50,7 @@ class AdvertiserScore(BaseScore):
 
 class ChannelScore(BaseScore):
     channel = models.OneToOneField(
-        'influencers.InfluencerChannel',
+        'influencers.Channel',
         on_delete=models.CASCADE,
         related_name='score',
         verbose_name=_('کانال اینفلوئنسر')

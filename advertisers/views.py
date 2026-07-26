@@ -1,6 +1,6 @@
 from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignContent
 from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery, ContentDeliveryFile
-from influencers.models import InfluencerChannel, CampaignChannel
+from influencers.models import Channel, ChannelBooking
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from payment.models import Transaction, CampaignInvoice
@@ -157,7 +157,7 @@ def campaign_detail(request, campaign_id):
                     break
 
     # ========== ۱. وضعیت رد شدن توسط اینفلوئنسرها ==========
-    rejected_influencers = channels.filter(status=CampaignChannel.Status.REJECTED)
+    rejected_influencers = channels.filter(status=ChannelBooking.Status.REJECTED)
     has_rejected = rejected_influencers.exists()
 
     # ========== ۲. وضعیت رد شدن توسط تیم محتوا ==========
@@ -466,7 +466,7 @@ def advertiser_dashboard(request):
 
     recent_campaigns = campaigns.order_by('-created_at')[:10]
 
-    top_channels = InfluencerChannel.objects.filter(
+    top_channels = Channel.objects.filter(
         campaign_bookings__campaign_id__in=campaign_ids,
         campaign_bookings__status='completed'
     ).annotate(
@@ -480,9 +480,9 @@ def advertiser_dashboard(request):
         end_date__lte=now + timedelta(days=3)
     ).order_by('end_date')
 
-    pending_review_bookings = CampaignChannel.objects.filter(
+    pending_review_bookings = ChannelBooking.objects.filter(
         campaign__advertiser=advertiser,
-        status=CampaignChannel.Status.COMPLETED,
+        status=ChannelBooking.Status.COMPLETED,
         review__isnull=True
     ).select_related('campaign', 'channel', 'channel__platform').order_by('-created_at')
 

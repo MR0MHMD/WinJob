@@ -1,6 +1,6 @@
-from influencers.models import CampaignChannel, InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
-from campaigns.models import Campaign
+from influencers.models import ChannelBooking, ChannelServiceRate, ChannelReview, Channel
 from payment.models import Transaction, Coupon, Payment
+from campaigns.models import Campaign, CampaignReport
 from django.db.models import Avg, Prefetch, Sum
 from django.contrib.auth import get_user_model
 from django.views.generic import DetailView
@@ -43,7 +43,7 @@ class TicketDetailView(SupportRequiredMixin, DetailView):
 
 class ChannelDetailView(SupportRequiredMixin, DetailView):
     """جزئیات کامل یک کانال اینفلوئنسر"""
-    model = InfluencerChannel
+    model = Channel
     template_name = 'support/channels/channel_detail.html'
     context_object_name = 'channel'
     pk_url_kwarg = 'pk'
@@ -59,13 +59,13 @@ class ChannelDetailView(SupportRequiredMixin, DetailView):
             'score__badge',
         ).prefetch_related(
             Prefetch('service_rates',
-                     queryset=InfluencerServiceRate.objects.select_related('ad_type').filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=CampaignChannel.objects.select_related(
+                     queryset=ChannelServiceRate.objects.select_related('ad_type').filter(is_active=True)),
+            Prefetch('campaign_bookings', queryset=ChannelBooking.objects.select_related(
                 'campaign',
                 'campaign__advertiser',
                 'service_rate__ad_type'
             ).order_by('-created_at')),
-            Prefetch('reviews', queryset=InfluencerReview.objects.select_related(
+            Prefetch('reviews', queryset=ChannelReview.objects.select_related(
                 'advertiser',
                 'advertiser__user'
             ).order_by('-created_at')),
@@ -139,7 +139,7 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
         ).prefetch_related(
             Prefetch(
                 'influencer_bookings',
-                queryset=CampaignChannel.objects.select_related(
+                queryset=ChannelBooking.objects.select_related(
                     'channel',
                     'channel__platform',
                     'channel__influencer',
@@ -351,7 +351,7 @@ class UserDetailView(SupportRequiredMixin, DetailView):
             context['channels'] = channels_qs[:5]
             context['channels_count'] = channels_qs.count()
 
-            bookings_qs = CampaignChannel.objects.filter(
+            bookings_qs = ChannelBooking.objects.filter(
                 channel__influencer=user.influencer_profile
             ).order_by('-created_at')
             context['campaign_bookings'] = bookings_qs[:5]

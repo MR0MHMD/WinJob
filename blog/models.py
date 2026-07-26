@@ -20,7 +20,7 @@ class Post(models.Model):
     title = models.CharField(_('عنوان'), max_length=200)
     content = models.TextField(_('متن'))
     slug = models.SlugField()
-    image = models.ImageField(_('تصویر'), upload_to=f'blog/', null=True, blank=True)
+    image = models.ImageField(_('تصویر'), upload_to=f'blog/posts/', null=True, blank=True)
     read_time = models.PositiveIntegerField(_('زمان مطالعه (دقیقه)'), help_text=_('زمان تخمینی مطالعه بلاگ به دقیقه'))
     tags = models.ManyToManyField("BlogTags", related_name='posts', blank=True, verbose_name=_('برچسب'))
     category = models.ForeignKey("BlogCategory",on_delete=models.CASCADE, related_name='posts', blank=True, verbose_name=_('دسته بندی'))

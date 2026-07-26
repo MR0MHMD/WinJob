@@ -1,15 +1,14 @@
-from influencers.models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerProfile, CampaignChannel
+from influencers.models import ChannelServiceRate, Channel, InfluencerProfile, ChannelBooking
 from django.db.models import Q, Count, Avg, Prefetch, Sum
+from campaigns.models import Campaign, CampaignReport
 from advertisers.models import AdvertiserProfile
 from django.contrib.auth import get_user_model
 from notifications.models import Notification
+from core.models import Platform, Province
 from django.views.generic import ListView
 from ..mixins import SupportRequiredMixin
 from tickets.models import TicketMessage
 from accounts.models import CustomUser
-from core.models import Platform
-from campaigns.models import Campaign
-from core.models import Province
 from tickets.models import Ticket
 from django.utils import timezone
 from core.models import Category
@@ -43,13 +42,13 @@ class TicketListView(SupportRequiredMixin, ListView):
 
 class ChannelListView(SupportRequiredMixin, ListView):
     """لیست کامل کانال‌های اینفلوئنسر با فیلترهای پیشرفته"""
-    model = InfluencerChannel
+    model = Channel
     template_name = 'support/channels/channel_list.html'
     context_object_name = 'channels'
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = InfluencerChannel.objects.select_related(
+        queryset = Channel.objects.select_related(
             'influencer',
             'influencer__user',
             'platform',
@@ -57,8 +56,8 @@ class ChannelListView(SupportRequiredMixin, ListView):
             'category',
             'score'
         ).prefetch_related(
-            Prefetch('service_rates', queryset=InfluencerServiceRate.objects.filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=CampaignChannel.objects.filter(status='completed')),
+            Prefetch('service_rates', queryset=ChannelServiceRate.objects.filter(is_active=True)),
+            Prefetch('campaign_bookings', queryset=ChannelBooking.objects.filter(status='completed')),
         ).annotate(
             avg_rating_=Avg('reviews__rating'),
             reviews_count_=Count('reviews'),
@@ -114,11 +113,11 @@ class ChannelListView(SupportRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['total_count'] = InfluencerChannel.objects.count()
-        context['pending_count'] = InfluencerChannel.objects.filter(status='pending').count()
-        context['approved_count'] = InfluencerChannel.objects.filter(status='approved').count()
-        context['rejected_count'] = InfluencerChannel.objects.filter(status='rejected').count()
-        context['active_count'] = InfluencerChannel.objects.filter(is_active=True).count()
+        context['total_count'] = Channel.objects.count()
+        context['pending_count'] = Channel.objects.filter(status='pending').count()
+        context['approved_count'] = Channel.objects.filter(status='approved').count()
+        context['rejected_count'] = Channel.objects.filter(status='rejected').count()
+        context['active_count'] = Channel.objects.filter(is_active=True).count()
         context['current_status'] = self.request.GET.get('status', '')
         context['current_platform'] = self.request.GET.get('platform', '')
         context['current_province'] = self.request.GET.get('province', '')
@@ -128,7 +127,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
         context['platforms'] = Platform.objects.filter(is_active=True)
         context['provinces'] = Province.objects.all().order_by('name')
         context['categories'] = Category.objects.filter(is_active=True)
-        context['status_choices'] = InfluencerChannel.STATUS_CHOICES
+        context['status_choices'] = Channel.STATUS_CHOICES
 
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
@@ -300,13 +299,13 @@ class UserListView(SupportRequiredMixin, ListView):
 
 class CampaignBookingListView(SupportRequiredMixin, ListView):
     """لیست رزروهای اینفلوئنسر با فیلترهای پیشرفته"""
-    model = CampaignChannel
+    model = ChannelBooking
     template_name = 'support/campaigns/booking_list.html'
     context_object_name = 'bookings'
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = CampaignChannel.objects.select_related(
+        queryset = ChannelBooking.objects.select_related(
             'campaign',
             'campaign__advertiser',
             'channel',
@@ -408,10 +407,10 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         channel_id = self.request.GET.get('channel')
         if channel_id and channel_id.isdigit():
             try:
-                channel = InfluencerChannel.objects.get(id=int(channel_id))
+                channel = Channel.objects.get(id=int(channel_id))
                 context['filtered_channel_name'] = channel.channel_name
                 context['filtered_channel_id'] = channel_id
-            except InfluencerChannel.DoesNotExist:
+            except Channel.DoesNotExist:
                 pass
 
         base_qs = self.get_queryset()
@@ -424,7 +423,7 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         context['unpaid_count'] = base_qs.filter(is_paid=False).count()
         context['platforms'] = Platform.objects.filter(is_active=True)
         context['provinces'] = Province.objects.all().order_by('name')
-        context['status_choices'] = CampaignChannel.Status.choices
+        context['status_choices'] = ChannelBooking.Status.choices
 
         return context
 

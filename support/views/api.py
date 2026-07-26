@@ -1,10 +1,10 @@
-from influencers.models import CampaignReport, InfluencerChannel
 from django.shortcuts import get_object_or_404, redirect
+from campaigns.models import CampaignReport, Campaign
 from django.contrib.auth import get_user_model
 from django.views.generic import CreateView
 from ..mixins import SupportRequiredMixin
 from tickets.models import TicketMessage
-from campaigns.models import Campaign
+from influencers.models import Channel
 from django.urls import reverse_lazy
 from django.contrib import messages
 from ..forms import TicketReplyForm
@@ -49,7 +49,7 @@ class TicketReplyView(SupportRequiredMixin, CreateView):
 
 class ChannelApproveView(SupportRequiredMixin, View):
     def post(self, request, pk):
-        channel = get_object_or_404(InfluencerChannel, pk=pk)
+        channel = get_object_or_404(Channel, pk=pk)
         if channel.status == 'pending':
             channel.status = 'approved'
             channel.is_active = True
@@ -62,7 +62,7 @@ class ChannelApproveView(SupportRequiredMixin, View):
 
 class ChannelRejectView(SupportRequiredMixin, View):
     def post(self, request, pk):
-        channel = get_object_or_404(InfluencerChannel, pk=pk)
+        channel = get_object_or_404(Channel, pk=pk)
         if channel.status == 'pending':
             channel.status = 'rejected'
             channel.is_active = False

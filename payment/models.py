@@ -151,7 +151,7 @@ class Coupon(models.Model):
     )
 
     channel = models.ForeignKey(
-        'influencers.InfluencerChannel',
+        'influencers.Channel',
         null=True,
         blank=True,
         on_delete=models.CASCADE,

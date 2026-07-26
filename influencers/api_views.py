@@ -1,7 +1,6 @@
 from campaigns.services.campaigns_notifications import approve_influencer_report_service, reject_influencer_report_service
 from campaigns.services.raiting_service import submit_influencer_review_service
-from .models import InfluencerServiceRate, InfluencerReview, InfluencerChannel
-from influencers.models import CampaignChannel, CampaignReport
+from .models import ChannelServiceRate, ChannelReview, Channel, ChannelBooking
 from .services.verification_service import VerificationService
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
@@ -9,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
+from campaigns.models import CampaignReport
 from .forms import InfluencerProfileForm
 from django.http import JsonResponse
 from django.conf import settings
@@ -56,7 +56,7 @@ def rate_inline_edit(request, channel_id, ad_type_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'متد نامعتبر'}, status=405)
 
-    channel = get_object_or_404(InfluencerChannel, pk=channel_id, influencer=influencer)
+    channel = get_object_or_404(Channel, pk=channel_id, influencer=influencer)
     ad_type = get_object_or_404(AdType, pk=ad_type_id, platform=channel.platform)
 
     try:
@@ -66,7 +66,7 @@ def rate_inline_edit(request, channel_id, ad_type_id):
         return JsonResponse({'success': False, 'error': 'داده نامعتبر'}, status=400)
 
     if not price_raw:
-        InfluencerServiceRate.objects.filter(channel=channel, ad_type=ad_type).delete()
+        ChannelServiceRate.objects.filter(channel=channel, ad_type=ad_type).delete()
         return JsonResponse({
             'success': True,
             'deleted': True,
@@ -80,7 +80,7 @@ def rate_inline_edit(request, channel_id, ad_type_id):
     except (InvalidOperation, ValueError):
         return JsonResponse({'success': False, 'error': 'قیمت وارد شده معتبر نیست'}, status=400)
 
-    rate, created = InfluencerServiceRate.objects.update_or_create(
+    rate, created = ChannelServiceRate.objects.update_or_create(
         channel=channel,
         ad_type=ad_type,
         defaults={'price': price, 'is_active': True}
@@ -117,7 +117,7 @@ def submit_influencer_review_ajax(request):
         advertiser = request.user.advertiser_profile
 
         if booking_id:
-            booking = CampaignChannel.objects.select_related('campaign__advertiser', 'channel').get(id=booking_id)
+            booking = ChannelBooking.objects.select_related('campaign__advertiser', 'channel').get(id=booking_id)
 
             if booking.campaign.advertiser != advertiser:
                 return JsonResponse({'success': False, 'message': 'شما دسترسی به این نظر ندارید.'})
@@ -131,10 +131,10 @@ def submit_influencer_review_ajax(request):
             channel_id = request.POST.get('channel_id')
             if not channel_id:
                 return JsonResponse({'success': False, 'message': 'شناسه کانال یافت نشد.'})
-            channel = InfluencerChannel.objects.get(id=channel_id)
-            if InfluencerReview.objects.filter(channel=channel, advertiser=advertiser).exists():
+            channel = Channel.objects.get(id=channel_id)
+            if ChannelReview.objects.filter(channel=channel, advertiser=advertiser).exists():
                 return JsonResponse({'success': False, 'message': 'شما قبلاً برای این کانال نظر ثبت کرده‌اید.'})
-            InfluencerReview.objects.create(
+            ChannelReview.objects.create(
                 channel=channel,
                 advertiser=advertiser,
                 rating=rating,
@@ -145,9 +145,9 @@ def submit_influencer_review_ajax(request):
             return JsonResponse(
                 {'success': True, 'message': 'نظر عمومی شما با موفقیت ثبت شد.'})
 
-    except CampaignChannel.DoesNotExist:
+    except ChannelBooking.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'همکاری مورد نظر یافت نشد.'})
-    except InfluencerChannel.DoesNotExist:
+    except Channel.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'کانال مورد نظر یافت نشد.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
@@ -174,7 +174,7 @@ def edit_influencer_review_ajax(request):
         except ValueError:
             return JsonResponse({'success': False, 'message': 'امتیاز باید بین 1 تا 5 باشد.'})
 
-        review = InfluencerReview.objects.get(id=review_id)
+        review = ChannelReview.objects.get(id=review_id)
 
         if not hasattr(request.user, 'advertiser_profile') or review.advertiser != request.user.advertiser_profile:
             return JsonResponse({'success': False, 'message': 'شما دسترسی به ویرایش این نظر ندارید.'})
@@ -185,7 +185,7 @@ def edit_influencer_review_ajax(request):
 
         return JsonResponse({'success': True, 'message': 'نظر شما با موفقیت ویرایش شد.'})
 
-    except InfluencerReview.DoesNotExist:
+    except ChannelReview.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'نظر مورد نظر یافت نشد.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
@@ -193,7 +193,7 @@ def edit_influencer_review_ajax(request):
 
 @login_required
 def verify_channel_modal(request, channel_id):
-    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+    channel = get_object_or_404(Channel, id=channel_id, influencer__user=request.user)
 
     # ریست خودکار اگر قفل تمام شده باشد
     VerificationService.reset_if_cooldown_expired(channel)
@@ -225,7 +225,7 @@ def verify_channel_modal(request, channel_id):
 @login_required
 @require_http_methods(["POST"])
 def start_verification(request, channel_id):
-    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+    channel = get_object_or_404(Channel, id=channel_id, influencer__user=request.user)
 
     # ریست خودکار اگر قفل تمام شده باشد
     VerificationService.reset_if_cooldown_expired(channel)
@@ -262,7 +262,7 @@ def start_verification(request, channel_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def verification_callback(request, channel_id):
-    channel = get_object_or_404(InfluencerChannel, id=channel_id)
+    channel = get_object_or_404(Channel, id=channel_id)
 
     try:
         data = json.loads(request.body)
@@ -293,7 +293,7 @@ def verification_callback(request, channel_id):
 
 @login_required
 def verification_status(request, channel_id):
-    channel = get_object_or_404(InfluencerChannel, id=channel_id, influencer__user=request.user)
+    channel = get_object_or_404(Channel, id=channel_id, influencer__user=request.user)
 
     # ریست خودکار اگر قفل تمام شده باشد (برای نمایش وضعیت صحیح)
     VerificationService.reset_if_cooldown_expired(channel)

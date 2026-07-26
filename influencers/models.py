@@ -39,7 +39,7 @@ class InfluencerProfile(models.Model):
         return self.full_name
 
 
-class InfluencerChannel(GamificationMixin, models.Model):
+class Channel(GamificationMixin, models.Model):
     STATUS_CHOICES = (
         ('pending', _('در انتظار تایید')),
         ('approved', _('تایید شده')),
@@ -160,8 +160,8 @@ class InfluencerChannel(GamificationMixin, models.Model):
         return self.reviews.count()
 
 
-class InfluencerServiceRate(models.Model):
-    channel = models.ForeignKey('InfluencerChannel', on_delete=models.CASCADE,
+class ChannelServiceRate(models.Model):
+    channel = models.ForeignKey('Channel', on_delete=models.CASCADE,
                                 related_name='service_rates', verbose_name=_('کانال'))
     ad_type = models.ForeignKey('core.AdType', on_delete=models.CASCADE,
                                 related_name='influencer_rates', verbose_name=_('نوع تبلیغ'))
@@ -190,61 +190,20 @@ class InfluencerServiceRate(models.Model):
     formatted_price.short_description = _('قیمت')
 
 
-class CampaignReport(models.Model):
-    class Status(models.TextChoices):
-        PENDING = 'pending', 'در انتظار بررسی'
-        APPROVED = 'approved', 'تأیید شد'
-        REJECTED = 'rejected', 'رد شد'
-
-    campaign_influencer = models.OneToOneField(
-        "CampaignChannel",
-        on_delete=models.CASCADE,
-        related_name='report',
-        verbose_name='سفارش'
-    )
-
-    post_link = models.URLField(verbose_name='لینک پست')
-    screenshot = models.ImageField(upload_to='campaign_reports/screenshots/')
-
-    # وضعیت نهایی گزارش (بعد از بررسی خودکار یا دستی)
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PENDING,
-        verbose_name='وضعیت بررسی'
-    )
-
-    # نتایج بررسی خودکار (توسط n8n پر می‌شه)
-    auto_check_details = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='جزئیات بررسی خودکار'
-    )
-
-    admin_notes = models.TextField(blank=True, verbose_name='یادداشت ادمین')
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'گزارش کمپین'
-        verbose_name_plural = 'گزارش‌های کمپین'
-
-
-class InfluencerReview(models.Model):
+class ChannelReview(models.Model):
     """
     نظرات و امتیاز تبلیغ‌دهندگان درباره اینفلوئنسرها
     """
 
     channel = models.ForeignKey(
-        'InfluencerChannel',
+        'Channel',
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name=_('کانال اینفلوئنسر'),
     )
 
     campaign_booking = models.OneToOneField(
-        'CampaignChannel',
+        'ChannelBooking',
         on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='review',
@@ -287,7 +246,7 @@ class InfluencerReview(models.Model):
         return f"نظر {self.advertiser.user.nickname} برای {self.channel.channel_name} - {self.rating}/5"
 
 
-class CampaignChannel(models.Model):
+class ChannelBooking(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"
         ACCEPTED = "accepted", "پذیرفته شد"
@@ -303,14 +262,14 @@ class CampaignChannel(models.Model):
     )
 
     channel = models.ForeignKey(
-        'influencers.InfluencerChannel',
+        'influencers.Channel',
         on_delete=models.PROTECT,
         related_name="campaign_bookings",
         verbose_name="کانال اینفلوئنسر"
     )
 
     service_rate = models.ForeignKey(
-        'influencers.InfluencerServiceRate',
+        'influencers.ChannelServiceRate',
         on_delete=models.PROTECT,
         related_name="campaign_services",
         verbose_name="تعرفه سرویس"

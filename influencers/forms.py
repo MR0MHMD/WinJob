@@ -1,6 +1,6 @@
 from django import forms
 from django.utils.safestring import mark_safe
-from influencers.models import InfluencerProfile, InfluencerChannel
+from influencers.models import InfluencerProfile, Channel
 
 
 class InfluencerProfileForm(forms.ModelForm):
@@ -40,9 +40,9 @@ class InfluencerProfileForm(forms.ModelForm):
         return ((self.cleaned_data.get("description") or "").strip()) or ""
 
 
-class InfluencerChannelForm(forms.ModelForm):
+class ChannelForm(forms.ModelForm):
     class Meta:
-        model = InfluencerChannel
+        model = Channel
 
         fields = (
             "platform",

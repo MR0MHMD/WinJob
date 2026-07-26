@@ -1,12 +1,12 @@
 from django.shortcuts import redirect, get_object_or_404
-from influencers.models import CampaignChannel
+from influencers.models import ChannelBooking
 from ..models import CampaignClick
 from django.db.models import F
 
 
 def track_click(request, code):
     influencer = get_object_or_404(
-        CampaignChannel,
+        ChannelBooking,
         tracking_code=code
     )
 

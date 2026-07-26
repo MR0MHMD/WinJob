@@ -1,8 +1,8 @@
 from ..mixins import SupportRequiredMixin, SuperUserRequiredMixin
-from influencers.models import CampaignChannel, CampaignReport, InfluencerChannel
 from payment.models import Transaction, Wallet, CampaignInvoice
-from campaigns.models import Campaign
 from content_team.models import ContentOrder, ContentTeam
+from influencers.models import ChannelBooking, Channel
+from campaigns.models import Campaign, CampaignReport
 from django.contrib.auth import get_user_model
 from django.views.generic import TemplateView
 from notifications.models import Notification
@@ -122,11 +122,11 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
         #                    ۶. آمار بدهکاری‌ها                        #
         # ============================================================ #
 
-        influencer_debts = CampaignChannel.objects.filter(
+        influencer_debts = ChannelBooking.objects.filter(
             status='completed', is_paid=False
         ).aggregate(total=Sum('price'))['total'] or 0
 
-        influencer_debt_count = CampaignChannel.objects.filter(
+        influencer_debt_count = ChannelBooking.objects.filter(
             status='completed', is_paid=False
         ).count()
 
@@ -343,9 +343,9 @@ class DashboardView(SupportRequiredMixin, TemplateView):
         completed_campaigns = Campaign.objects.filter(status='completed').count()
 
         # ===== آمار کانال‌ها =====
-        total_channels = InfluencerChannel.objects.count()
-        pending_channels = InfluencerChannel.objects.filter(status='pending').count()
-        approved_channels = InfluencerChannel.objects.filter(status='approved').count()
+        total_channels = Channel.objects.count()
+        pending_channels = Channel.objects.filter(status='pending').count()
+        approved_channels = Channel.objects.filter(status='approved').count()
 
         # ===== آمار سفارشات =====
         total_orders = ContentOrder.objects.count()
@@ -434,7 +434,7 @@ class DashboardView(SupportRequiredMixin, TemplateView):
             })
 
         # کانال‌های در انتظار تایید
-        pending_channels_list = InfluencerChannel.objects.filter(status='pending').select_related(
+        pending_channels_list = Channel.objects.filter(status='pending').select_related(
             'influencer').order_by('-created_at')[:5]
         for channel in pending_channels_list:
             pending_actions.append({

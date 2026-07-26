@@ -1,19 +1,18 @@
-from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview, CampaignReport
-from django.utils.html import format_html
+from .models import ChannelServiceRate, Channel, ChannelReview, ChannelBooking
 from django.contrib import admin
 
 
-class InfluencerServiceRateInline(admin.TabularInline):
+class ChannelServiceRateInline(admin.TabularInline):
     fields = ("ad_type", "price", "formatted_price", "is_active", "created_at",)
     readonly_fields = ("formatted_price", "created_at",)
     autocomplete_fields = ("ad_type",)
-    model = InfluencerServiceRate
+    model = ChannelServiceRate
     classes = ['collapse']
     extra = 0
 
 
-class InfluencerChannelInline(admin.TabularInline):
-    model = InfluencerChannel
+class ChannelInline(admin.TabularInline):
+    model = Channel
     extra = 0
     readonly_fields = ("followers_formatted_display", "created_at",)
     show_change_link = True
@@ -33,8 +32,8 @@ class InfluencerChannelInline(admin.TabularInline):
     followers_formatted_display.short_description = "فالوورها"
 
 
-class InfluencerReviewInline(admin.TabularInline):
-    model = InfluencerReview
+class ChannelReviewInline(admin.TabularInline):
+    model = ChannelReview
     fields = ("advertiser", "campaign_booking", "rating", "comment", "created_at",)
     autocomplete_fields = ("advertiser", "campaign_booking",)
     readonly_fields = ("created_at",)
@@ -43,42 +42,16 @@ class InfluencerReviewInline(admin.TabularInline):
     extra = 0
 
 
-class CampaignReportInline(admin.StackedInline):
-    """
-    اینلاین برای نمایش گزارش در صفحه جزئیات CampaignChannel
-    """
-    model = CampaignReport
+class ChannelBookingInline(admin.TabularInline):
+    model = ChannelBooking
     extra = 0
+    autocomplete_fields = ("channel", "service_rate")
     can_delete = False
-    max_num = 1
-    min_num = 0
-    classes = ['collapse']
-
     fields = (
-        "post_link",
-        "screenshot_preview",
-        "screenshot",
+        "channel",
+        "service_rate",
+        "price",
         "status",
-        "admin_notes",
         "created_at",
-        "updated_at",
     )
-
-    readonly_fields = (
-        "screenshot_preview",
-        "created_at",
-        "updated_at",
-    )
-
-    def screenshot_preview(self, obj):
-        if obj.screenshot:
-            return format_html(
-                '<a href="{}" target="_blank">'
-                '<img src="{}" width="150" height="auto" style="border-radius: 8px;" />'
-                '</a>',
-                obj.screenshot.url,
-                obj.screenshot.url
-            )
-        return "-"
-
-    screenshot_preview.short_description = "پیش‌نمایش اسکرین‌شات"
+    readonly_fields = ("created_at",)
