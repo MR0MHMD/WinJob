@@ -1,5 +1,5 @@
-from influencers.models import InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
-from campaigns.models import CampaignChannel, Campaign
+from influencers.models import CampaignChannel, InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
+from campaigns.models import Campaign
 from payment.models import Transaction, Coupon, Payment
 from django.db.models import Avg, Prefetch, Sum
 from django.contrib.auth import get_user_model

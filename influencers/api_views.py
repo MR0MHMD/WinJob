@@ -1,17 +1,16 @@
 from campaigns.services.campaigns_notifications import approve_influencer_report_service, reject_influencer_report_service
 from campaigns.services.raiting_service import submit_influencer_review_service
 from .models import InfluencerServiceRate, InfluencerReview, InfluencerChannel
+from influencers.models import CampaignChannel, CampaignReport
 from .services.verification_service import VerificationService
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
-from campaigns.models import CampaignChannel
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from .forms import InfluencerProfileForm
 from django.http import JsonResponse
-from .models import CampaignReport
 from django.conf import settings
 from django.urls import reverse
 from core.models import AdType

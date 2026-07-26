@@ -1,4 +1,4 @@
-from campaigns.models import CampaignChannel
+from influencers.models import CampaignChannel
 from payment.models import CampaignInvoice
 from content_team.models import ContentOrder
 

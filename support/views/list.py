@@ -1,7 +1,6 @@
-from influencers.models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerProfile
+from influencers.models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerProfile, CampaignChannel
 from django.db.models import Q, Count, Avg, Prefetch, Sum
 from advertisers.models import AdvertiserProfile
-from campaigns.models import CampaignChannel
 from django.contrib.auth import get_user_model
 from notifications.models import Notification
 from django.views.generic import ListView

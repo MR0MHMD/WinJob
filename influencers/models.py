@@ -1,3 +1,5 @@
+import uuid
+
 from core.utils.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
 from django.utils.translation import gettext_lazy as _
 from gamification.mixins import GamificationMixin
@@ -6,7 +8,7 @@ from django_resized import ResizedImageField
 from django.conf import settings
 from django.db.models import Avg
 from django.urls import reverse
-from django.db import models
+from django.db import models, IntegrityError
 
 
 class InfluencerProfile(models.Model):
@@ -195,7 +197,7 @@ class CampaignReport(models.Model):
         REJECTED = 'rejected', 'رد شد'
 
     campaign_influencer = models.OneToOneField(
-        "campaigns.CampaignChannel",
+        "CampaignChannel",
         on_delete=models.CASCADE,
         related_name='report',
         verbose_name='سفارش'
@@ -242,7 +244,7 @@ class InfluencerReview(models.Model):
     )
 
     campaign_booking = models.OneToOneField(
-        'campaigns.CampaignChannel',
+        'CampaignChannel',
         on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='review',
@@ -283,3 +285,119 @@ class InfluencerReview(models.Model):
 
     def __str__(self):
         return f"نظر {self.advertiser.user.nickname} برای {self.channel.channel_name} - {self.rating}/5"
+
+
+class CampaignChannel(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "در انتظار"
+        ACCEPTED = "accepted", "پذیرفته شد"
+        REJECTED = "rejected", "رد شد"
+        COMPLETED = "completed", "انجام شد"
+        REPLACED = "replaced", "جایگزین شد"
+
+    campaign = models.ForeignKey(
+        'campaigns.Campaign',
+        on_delete=models.CASCADE,
+        related_name="influencer_bookings",
+        verbose_name="کمپین"
+    )
+
+    channel = models.ForeignKey(
+        'influencers.InfluencerChannel',
+        on_delete=models.PROTECT,
+        related_name="campaign_bookings",
+        verbose_name="کانال اینفلوئنسر"
+    )
+
+    service_rate = models.ForeignKey(
+        'influencers.InfluencerServiceRate',
+        on_delete=models.PROTECT,
+        related_name="campaign_services",
+        verbose_name="تعرفه سرویس"
+    )
+
+    price = models.PositiveBigIntegerField(
+        verbose_name="قیمت نهایی"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name="وضعیت"
+    )
+
+    is_seen = models.BooleanField(_("دیده شده؟"), default=False)
+
+    tracking_code = models.CharField(
+        max_length=12,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="کد ردیابی"
+    )
+
+    created_at = jmodels.jDateTimeField(
+        auto_now_add=True,
+        verbose_name="زمان ایجاد"
+    )
+
+    is_paid = models.BooleanField(
+        default=False,
+        verbose_name="تسویه شده؟"
+    )
+
+    paid_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ پرداخت"
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="دلیل رد سفارش"
+    )
+    rejected_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ رد"
+    )
+
+    class Meta:
+        verbose_name = "رزرو اینفلوئنسر"
+        verbose_name_plural = "رزروهای اینفلوئنسر"
+
+    def __str__(self):
+        return f"{self.campaign} - {self.channel.channel_name} - {self.channel.platform}"
+
+    def get_absolute_url(self):
+        return reverse('influencers:order_detail', kwargs={'order_id': self.id})
+
+    def save(self, *args, **kwargs):
+
+        if not self.tracking_code:
+            self.tracking_code = uuid.uuid4().hex[:8]
+        try:
+            super().save(*args, **kwargs)
+
+        except IntegrityError:
+            self.tracking_code = uuid.uuid4().hex[:8]
+            super().save(*args, **kwargs)
+
+    def has_report(self):
+        return True if self.report else False
+
+    def set_completed(self):
+        """تغییر وضعیت به انجام شده (پرداخت توسط سیگنال انجام می‌شه)"""
+        if self.status != self.Status.COMPLETED:
+            self.status = self.Status.COMPLETED
+            self.save()
+
+    def uniq_url(self, ):
+        from django.conf import settings
+        if not self.tracking_code:
+            return "#"  # یا None
+        return f"{settings.SITE_URL}/campaigns/r/{self.tracking_code}"

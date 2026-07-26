@@ -1,5 +1,5 @@
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
-from campaigns.models import Campaign, CampaignChannel, CampaignTrackingLink, CampaignClick
+from campaigns.models import Campaign, CampaignTrackingLink, CampaignClick
 from campaigns.services.campaigns_notifications import submit_influencer_report_service
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.shortcuts import render, get_object_or_404, redirect
@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from .api_views import trigger_n8n_verification
 from payment.models import Transaction, Coupon
+from influencers.models import CampaignChannel
 from datetime import timedelta, datetime, time
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator

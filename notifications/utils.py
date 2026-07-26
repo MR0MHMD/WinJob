@@ -1,9 +1,8 @@
-import requests
-import threading
-
-from campaigns.models import CampaignChannel
 from .models import Notification, NotificationPreference
+from influencers.models import CampaignChannel
 from django.conf import settings
+import threading
+import requests
 
 
 def send_bale_message_async(chat_id, text):

@@ -1,5 +1,6 @@
+from influencers.models import CampaignChannel
+from .models import CampaignClick
 from django.contrib import admin
-from .models import CampaignChannel, CampaignClick
 
 
 class CampaignChannelInline(admin.TabularInline):

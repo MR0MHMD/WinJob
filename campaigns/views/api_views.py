@@ -1,14 +1,14 @@
+from influencers.models import InfluencerServiceRate, CampaignChannel
 from payment.services.create_invoice import create_campaign_invoice
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
-from influencers.models import InfluencerServiceRate
 from content_team.models import ContentServicePlan
-from ..models import Campaign, CampaignChannel
 from django.http import JsonResponse
 from django.contrib import messages
 from payment.models import Coupon
 from django.db.models import Sum
+from ..models import Campaign
 import traceback
 import json
 

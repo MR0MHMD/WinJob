@@ -1,5 +1,6 @@
 from django.shortcuts import redirect, get_object_or_404
-from ..models import CampaignChannel, CampaignClick
+from influencers.models import CampaignChannel
+from ..models import CampaignClick
 from django.db.models import F
 
 

@@ -1,7 +1,7 @@
 from ..mixins import SupportRequiredMixin, SuperUserRequiredMixin
-from influencers.models import CampaignReport, InfluencerChannel
+from influencers.models import CampaignChannel, CampaignReport, InfluencerChannel
 from payment.models import Transaction, Wallet, CampaignInvoice
-from campaigns.models import CampaignChannel, Campaign
+from campaigns.models import Campaign
 from content_team.models import ContentOrder, ContentTeam
 from django.contrib.auth import get_user_model
 from django.views.generic import TemplateView

@@ -1,5 +1,5 @@
 from influencers.models import InfluencerServiceRate
-from campaigns.models import CampaignChannel
+from influencers.models import CampaignChannel
 import uuid
 
 

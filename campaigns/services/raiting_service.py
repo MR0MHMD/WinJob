@@ -1,6 +1,6 @@
 from content_team.models import TeamReview, ContentOrder
 from influencers.models import InfluencerReview
-from campaigns.models import CampaignChannel
+from influencers.models import CampaignChannel
 from gamification.services import update_score
 from django.db import transaction
 

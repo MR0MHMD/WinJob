@@ -4,12 +4,12 @@ from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, Inte
 from payment.services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from notifications.utils import notify_influencer_new_campaign_orders
 from ..services.free_campaign import create_free_campaign_bookings
-from ..models import Campaign, CampaignChannel, CampaignContent
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.decorators import login_required
-from influencers.models import InfluencerServiceRate
+from influencers.models import InfluencerServiceRate, CampaignChannel
 from django.db.models.functions import Coalesce
 from payment.models import Transaction, Payment
+from ..models import Campaign, CampaignContent
 from django.core.paginator import Paginator
 from collections import defaultdict
 from django.contrib import messages

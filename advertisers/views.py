@@ -1,11 +1,11 @@
-from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignChannel, CampaignContent
+from campaigns.models import Campaign, CampaignClick, CampaignTrackingLink, CampaignContent
 from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery, ContentDeliveryFile
+from influencers.models import InfluencerChannel, CampaignChannel
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from payment.models import Transaction, CampaignInvoice
 from django.template.loader import render_to_string
 from django.db.models.functions import TruncDate
-from influencers.models import InfluencerChannel
 from core.utils.utils import convert_to_jalali
 from django.db.models import Sum, Count, Avg
 from django.core.paginator import Paginator

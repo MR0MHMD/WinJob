@@ -1,7 +1,7 @@
-from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile
-from campaigns.models import CampaignClick, Campaign, CampaignChannel
-from django.views.generic import TemplateView
+from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile, CampaignChannel
 from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
+from campaigns.models import CampaignClick, Campaign
+from django.views.generic import TemplateView
 from django.db.models import Count, Q, Avg
 from core.models import Platform
 from django.shortcuts import render
