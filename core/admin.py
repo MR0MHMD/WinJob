@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 
 from content_team.models import ContentServicePlan
-from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType
+from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType, ContentType
 
 
 @admin.register(Category)
@@ -185,5 +185,13 @@ class FAQAdmin(admin.ModelAdmin):
 class AdTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "platform", "slug", "is_active")
     list_filter = ("platform", "is_active")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(ContentType)
+class ContentTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "is_active")
+    list_filter = ("is_active",)
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}

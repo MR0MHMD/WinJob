@@ -1,4 +1,3 @@
-# payment/admin
 from .models import CampaignInvoice, Coupon, Payment, Transaction, Wallet
 from core.utils.admin_utils import RegionalFilterAdminMixin, format_datetime
 from django_jalali.admin.filters import JDateFieldListFilter
@@ -277,7 +276,9 @@ class PaymentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def amount_display(self, obj):
         """نمایش مبلغ فرمت شده"""
-        return f"{obj.amount:,} تومان"
+        if obj.amount is None:
+            return "-"
+        return f"{obj.amount:,}"
 
     amount_display.short_description = "مبلغ"
 

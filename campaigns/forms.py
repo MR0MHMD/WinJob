@@ -1,10 +1,10 @@
+from core.models import Category, Platform, Province, ContentServiceType, AdType, ContentType
 from .utils import jalali_str_to_datetime, validate_start_date, validate_end_date
-from core.models import Category, Platform, Province, ContentServiceType, AdType
 from content_team.models import ContentServicePlan, ContentOrderDescription
-from .models import ContentType, CampaignContent
 from urllib.parse import urlparse, urlencode, urlunparse
 from django.core.exceptions import ValidationError
 from influencers.models import InfluencerProfile
+from .models import CampaignContent
 from django import forms
 import json
 

@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
+from core.models import Platform, ContentType
 from django.db import transaction
-from campaigns.models import ContentType
-from core.models import Platform
 
 
 class Command(BaseCommand):

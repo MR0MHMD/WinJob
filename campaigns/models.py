@@ -9,44 +9,6 @@ import uuid
 import os
 
 
-
-class ContentType(models.Model):
-    platform = models.ManyToManyField(
-        'core.Platform',
-        related_name='content_types',
-        verbose_name=_('پلتفرم')
-    )
-    name = models.CharField(
-        max_length=100,
-        verbose_name=_('نام نوع محتوا')
-    )
-    description = models.TextField(
-        _('توضیحات'),
-        blank=True
-    )
-    icon = models.CharField(
-        _('آیکون'),
-        max_length=100,
-        blank=True,
-        help_text=_('نام کلاس آیکون (مثلاً: fa-video)')
-    )
-    slug = models.SlugField(
-        verbose_name=_('شناسه')
-    )
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_('فعال')
-    )
-
-    class Meta:
-        verbose_name = _('نوع محتوا')
-        verbose_name_plural = _('انواع محتوا')
-        ordering = ['name']
-
-    def __str__(self):
-        return f'{self.name}'
-
-
 class Campaign(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "پیش نویس"
@@ -65,7 +27,7 @@ class Campaign(models.Model):
     )
 
     content_type = models.ForeignKey(
-        'ContentType',
+        'core.ContentType',
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='نوع محتوا'

@@ -1,11 +1,11 @@
-from ..models import Campaign, CampaignInfluencer, ContentType
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from ..models import Campaign, CampaignInfluencer
 from content_team.models import ContentOrder
+from core.models import ContentType
 from django.contrib import messages
 from django.db import transaction
 from django.urls import reverse
-
 
 
 @login_required
