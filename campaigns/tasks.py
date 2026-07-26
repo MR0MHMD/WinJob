@@ -3,7 +3,7 @@
 from celery import shared_task
 from django.utils import timezone
 from django.db import transaction
-from .models import Campaign, CampaignInfluencer
+from .models import Campaign, CampaignChannel
 from content_team.models import ContentOrder
 from gamification.services import update_score
 from notifications.models import Notification

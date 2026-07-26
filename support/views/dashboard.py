@@ -1,7 +1,7 @@
 from ..mixins import SupportRequiredMixin, SuperUserRequiredMixin
 from influencers.models import CampaignReport, InfluencerChannel
 from payment.models import Transaction, Wallet, CampaignInvoice
-from campaigns.models import CampaignInfluencer, Campaign
+from campaigns.models import CampaignChannel, Campaign
 from content_team.models import ContentOrder, ContentTeam
 from django.contrib.auth import get_user_model
 from django.views.generic import TemplateView
@@ -122,11 +122,11 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
         #                    ۶. آمار بدهکاری‌ها                        #
         # ============================================================ #
 
-        influencer_debts = CampaignInfluencer.objects.filter(
+        influencer_debts = CampaignChannel.objects.filter(
             status='completed', is_paid=False
         ).aggregate(total=Sum('price'))['total'] or 0
 
-        influencer_debt_count = CampaignInfluencer.objects.filter(
+        influencer_debt_count = CampaignChannel.objects.filter(
             status='completed', is_paid=False
         ).count()
 

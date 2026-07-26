@@ -6,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
-from campaigns.models import CampaignInfluencer
+from campaigns.models import CampaignChannel
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from .forms import InfluencerProfileForm
@@ -118,7 +118,7 @@ def submit_influencer_review_ajax(request):
         advertiser = request.user.advertiser_profile
 
         if booking_id:
-            booking = CampaignInfluencer.objects.select_related('campaign__advertiser', 'channel').get(id=booking_id)
+            booking = CampaignChannel.objects.select_related('campaign__advertiser', 'channel').get(id=booking_id)
 
             if booking.campaign.advertiser != advertiser:
                 return JsonResponse({'success': False, 'message': 'شما دسترسی به این نظر ندارید.'})
@@ -146,7 +146,7 @@ def submit_influencer_review_ajax(request):
             return JsonResponse(
                 {'success': True, 'message': 'نظر عمومی شما با موفقیت ثبت شد.'})
 
-    except CampaignInfluencer.DoesNotExist:
+    except CampaignChannel.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'همکاری مورد نظر یافت نشد.'})
     except InfluencerChannel.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'کانال مورد نظر یافت نشد.'})

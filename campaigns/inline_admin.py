@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import CampaignInfluencer, CampaignClick
+from .models import CampaignChannel, CampaignClick
 
 
-class CampaignInfluencerInline(admin.TabularInline):
-    model = CampaignInfluencer
+class CampaignChannelInline(admin.TabularInline):
+    model = CampaignChannel
     extra = 0
     autocomplete_fields = ("channel", "service_rate")
     can_delete = False

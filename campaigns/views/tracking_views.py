@@ -1,11 +1,11 @@
 from django.shortcuts import redirect, get_object_or_404
-from ..models import CampaignInfluencer, CampaignClick
+from ..models import CampaignChannel, CampaignClick
 from django.db.models import F
 
 
 def track_click(request, code):
     influencer = get_object_or_404(
-        CampaignInfluencer,
+        CampaignChannel,
         tracking_code=code
     )
 

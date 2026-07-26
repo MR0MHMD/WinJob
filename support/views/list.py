@@ -1,7 +1,7 @@
 from influencers.models import InfluencerServiceRate, CampaignReport, InfluencerChannel, InfluencerProfile
 from django.db.models import Q, Count, Avg, Prefetch, Sum
 from advertisers.models import AdvertiserProfile
-from campaigns.models import CampaignInfluencer
+from campaigns.models import CampaignChannel
 from django.contrib.auth import get_user_model
 from notifications.models import Notification
 from django.views.generic import ListView
@@ -59,7 +59,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
             'score'
         ).prefetch_related(
             Prefetch('service_rates', queryset=InfluencerServiceRate.objects.filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=CampaignInfluencer.objects.filter(status='completed')),
+            Prefetch('campaign_bookings', queryset=CampaignChannel.objects.filter(status='completed')),
         ).annotate(
             avg_rating_=Avg('reviews__rating'),
             reviews_count_=Count('reviews'),
@@ -301,13 +301,13 @@ class UserListView(SupportRequiredMixin, ListView):
 
 class CampaignBookingListView(SupportRequiredMixin, ListView):
     """لیست رزروهای اینفلوئنسر با فیلترهای پیشرفته"""
-    model = CampaignInfluencer
+    model = CampaignChannel
     template_name = 'support/campaigns/booking_list.html'
     context_object_name = 'bookings'
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = CampaignInfluencer.objects.select_related(
+        queryset = CampaignChannel.objects.select_related(
             'campaign',
             'campaign__advertiser',
             'channel',
@@ -425,7 +425,7 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         context['unpaid_count'] = base_qs.filter(is_paid=False).count()
         context['platforms'] = Platform.objects.filter(is_active=True)
         context['provinces'] = Province.objects.all().order_by('name')
-        context['status_choices'] = CampaignInfluencer.Status.choices
+        context['status_choices'] = CampaignChannel.Status.choices
 
         return context
 

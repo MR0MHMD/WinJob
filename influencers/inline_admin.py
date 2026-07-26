@@ -45,7 +45,7 @@ class InfluencerReviewInline(admin.TabularInline):
 
 class CampaignReportInline(admin.StackedInline):
     """
-    اینلاین برای نمایش گزارش در صفحه جزئیات CampaignInfluencer
+    اینلاین برای نمایش گزارش در صفحه جزئیات CampaignChannel
     """
     model = CampaignReport
     extra = 0

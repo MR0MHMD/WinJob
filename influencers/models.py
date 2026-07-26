@@ -195,7 +195,7 @@ class CampaignReport(models.Model):
         REJECTED = 'rejected', 'رد شد'
 
     campaign_influencer = models.OneToOneField(
-        "campaigns.CampaignInfluencer",
+        "campaigns.CampaignChannel",
         on_delete=models.CASCADE,
         related_name='report',
         verbose_name='سفارش'
@@ -242,7 +242,7 @@ class InfluencerReview(models.Model):
     )
 
     campaign_booking = models.OneToOneField(
-        'campaigns.CampaignInfluencer',
+        'campaigns.CampaignChannel',
         on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='review',

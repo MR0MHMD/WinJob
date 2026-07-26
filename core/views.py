@@ -1,5 +1,5 @@
 from influencers.models import InfluencerChannel, InfluencerReview, InfluencerProfile
-from campaigns.models import CampaignClick, Campaign, CampaignInfluencer
+from campaigns.models import CampaignClick, Campaign, CampaignChannel
 from django.views.generic import TemplateView
 from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
 from django.db.models import Count, Q, Avg
@@ -99,8 +99,8 @@ class AboutView(TemplateView):
 
         context['total_clicks'] = CampaignClick.objects.count()
 
-        context["completed_bookings"] = CampaignInfluencer.objects.filter(
-            status=CampaignInfluencer.Status.COMPLETED
+        context["completed_bookings"] = CampaignChannel.objects.filter(
+            status=CampaignChannel.Status.COMPLETED
         ).count()
 
         context["portfolio_count"] = ContentPortfolio.objects.filter(

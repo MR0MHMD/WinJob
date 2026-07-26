@@ -1,4 +1,4 @@
-from campaigns.models import CampaignInfluencer
+from campaigns.models import CampaignChannel
 from payment.models import CampaignInvoice
 from content_team.models import ContentOrder
 
@@ -13,8 +13,8 @@ def create_campaign_invoice(campaign):
     # محاسبه هزینه پایه ناشران
     influencer_bookings = campaign.influencer_bookings.exclude(
         status__in=[
-            CampaignInfluencer.Status.REJECTED,
-            CampaignInfluencer.Status.REPLACED
+            CampaignChannel.Status.REJECTED,
+            CampaignChannel.Status.REPLACED
         ]
     ).select_related("channel__influencer")
     base_influencer_cost = sum(booking.price for booking in influencer_bookings)

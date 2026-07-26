@@ -1,5 +1,5 @@
 from django.db.models import Sum, Q, Value, IntegerField, FloatField, Avg, Count, Prefetch
-from campaigns.models import Campaign, CampaignInfluencer, CampaignTrackingLink, CampaignClick
+from campaigns.models import Campaign, CampaignChannel, CampaignTrackingLink, CampaignClick
 from campaigns.services.campaigns_notifications import submit_influencer_report_service
 from .models import InfluencerServiceRate, InfluencerChannel, InfluencerReview
 from django.shortcuts import render, get_object_or_404, redirect
@@ -135,10 +135,10 @@ def service_rates_view(request):
 def order_list(request):
     user = request.user
     if not hasattr(user, "influencer_profile"):
-        orders = CampaignInfluencer.objects.none()
+        orders = CampaignChannel.objects.none()
     else:
         influencer = user.influencer_profile
-        orders = CampaignInfluencer.objects.select_related(
+        orders = CampaignChannel.objects.select_related(
             "campaign",
             "channel",
             "campaign__content",
@@ -202,7 +202,7 @@ def order_list(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        CampaignInfluencer.objects
+        CampaignChannel.objects
         .select_related(
             "campaign",
             "campaign__platform",
@@ -255,7 +255,7 @@ def order_detail(request, order_id):
     if content and content.utm_enabled and content.link:
         utm_link = content.get_utm_link(order)
 
-    other_orders = CampaignInfluencer.objects.filter(
+    other_orders = CampaignChannel.objects.filter(
         channel=channel
     ).exclude(
         id=order.id
@@ -306,7 +306,7 @@ def influencer_respond(request, order_id):
     ویو برای قبول یا رد سفارش توسط اینفلوئنسر
     """
     order = get_object_or_404(
-        CampaignInfluencer.objects.select_related(
+        CampaignChannel.objects.select_related(
             'channel__influencer__user',
             'campaign'
         ),
@@ -345,7 +345,7 @@ def influencer_respond(request, order_id):
 @login_required
 def submit_report(request, order_id):
     order = get_object_or_404(
-        CampaignInfluencer.objects.select_related(
+        CampaignChannel.objects.select_related(
             'campaign',
             'channel__influencer__user',
             'campaign__advertiser'
@@ -356,7 +356,7 @@ def submit_report(request, order_id):
     if request.user != order.channel.influencer.user:
         raise PermissionDenied("شما دسترسی به این صفحه ندارید.")
 
-    if order.status != CampaignInfluencer.Status.ACCEPTED:
+    if order.status != CampaignChannel.Status.ACCEPTED:
         messages.error(request, "فقط سفارش‌های پذیرفته شده قابلیت گزارش دارند.")
         return redirect(order)
 
@@ -453,7 +453,7 @@ def influencer_dashboard(request):
     channel_ids = channels.values_list('id', flat=True)
     channels_count = channels.count()
 
-    campaign_bookings = CampaignInfluencer.objects.filter(
+    campaign_bookings = CampaignChannel.objects.filter(
         channel_id__in=channel_ids
     ).exclude(
         campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
@@ -925,7 +925,7 @@ def channel_detail(request, channel_id):
             ),
             Prefetch(
                 'campaign_bookings',
-                queryset=CampaignInfluencer.objects.select_related(
+                queryset=CampaignChannel.objects.select_related(
                     'campaign', 'service_rate'
                 ).prefetch_related(
                     'tracking_link__click_logs'
@@ -983,10 +983,10 @@ def channel_detail(request, channel_id):
     if request.user.is_authenticated and hasattr(request.user, 'advertiser_profile'):
         advertiser = request.user.advertiser_profile
 
-        pending_bookings = list(CampaignInfluencer.objects.filter(
+        pending_bookings = list(CampaignChannel.objects.filter(
             campaign__advertiser=advertiser,
             channel=channel,
-            status=CampaignInfluencer.Status.COMPLETED,
+            status=CampaignChannel.Status.COMPLETED,
             review__isnull=True
         ).select_related('campaign').order_by('-created_at'))
 

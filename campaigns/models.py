@@ -225,7 +225,7 @@ class Campaign(models.Model):
         return format_datetime(self.created_at)
 
 
-class CampaignInfluencer(models.Model):
+class CampaignChannel(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"
         ACCEPTED = "accepted", "پذیرفته شد"
@@ -451,7 +451,7 @@ class CampaignContent(models.Model):
 
 class CampaignTrackingLink(models.Model):
     campaign_influencer = models.OneToOneField(
-        "CampaignInfluencer",
+        "CampaignChannel",
         on_delete=models.CASCADE,
         related_name="tracking_link"
     )

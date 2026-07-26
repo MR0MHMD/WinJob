@@ -23,7 +23,7 @@ class Command(BaseCommand):
             ('influencers', 'CampaignReport'),
             ('influencers', 'InfluencerReview'),
             ('campaigns', 'Campaign'),
-            ('campaigns', 'CampaignInfluencer'),
+            ('campaigns', 'CampaignChannel'),
             ('campaigns', 'CampaignContent'),
             ('campaigns', 'CampaignTrackingLink'),
             ('campaigns', 'CampaignClick'),

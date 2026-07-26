@@ -4,7 +4,7 @@ from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, Inte
 from payment.services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from notifications.utils import notify_influencer_new_campaign_orders
 from ..services.free_campaign import create_free_campaign_bookings
-from ..models import Campaign, CampaignInfluencer, CampaignContent
+from ..models import Campaign, CampaignChannel, CampaignContent
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from influencers.models import InfluencerServiceRate
@@ -181,13 +181,13 @@ def campaign_create_step2(request):
     if is_replacement_mode:
         # 1. کانال‌های رد شده رو از لیست حذف کن (اونا رو جایگزین میکنیم)
         rejected_ids = campaign.influencer_bookings.filter(
-            status=CampaignInfluencer.Status.REJECTED
+            status=CampaignChannel.Status.REJECTED
         ).values_list('service_rate_id', flat=True)
         rates = rates.exclude(id__in=rejected_ids)
 
         # 2. کانال‌هایی که قبلاً انتخاب شدن (و رد نشدن) رو هم حذف کن
         existing_ids = campaign.influencer_bookings.exclude(
-            status=CampaignInfluencer.Status.REJECTED
+            status=CampaignChannel.Status.REJECTED
         ).values_list('service_rate_id', flat=True)
         rates = rates.exclude(id__in=existing_ids)
 
@@ -266,11 +266,11 @@ def campaign_create_step2(request):
         # فقط کانال‌های رد شده رو به عنوان قبلی در نظر بگیر
         prev_selected = list(
             campaign.influencer_bookings.filter(
-                status=CampaignInfluencer.Status.REJECTED
+                status=CampaignChannel.Status.REJECTED
             ).values_list('service_rate_id', flat=True)
         )
         rejected_bookings = campaign.influencer_bookings.filter(
-            status=CampaignInfluencer.Status.REJECTED
+            status=CampaignChannel.Status.REJECTED
         )
         total_rejected_price = rejected_bookings.aggregate(
             total=Sum('price')
@@ -306,7 +306,7 @@ def campaign_create_step2(request):
                     # ========== ۱. هزینه‌های فعلی و جدید ==========
                     # ✅ تبدیل به int
                     current_influencer_cost = int(campaign.influencer_bookings.exclude(
-                        status__in=[CampaignInfluencer.Status.REJECTED, CampaignInfluencer.Status.REPLACED]
+                        status__in=[CampaignChannel.Status.REJECTED, CampaignChannel.Status.REPLACED]
                     ).aggregate(total=Sum('price'))['total'] or 0)
 
                     new_influencer_cost = int(total_selected_price)
@@ -342,17 +342,17 @@ def campaign_create_step2(request):
 
                     # ========== ۶. رزروهای رد شده به REPLACED ==========
                     rejected_bookings.update(
-                        status=CampaignInfluencer.Status.REPLACED
+                        status=CampaignChannel.Status.REPLACED
                     )
 
                     # ========== ۷. اضافه کردن رزروهای جدید ==========
                     for rate in selected_rates_qs:
-                        CampaignInfluencer.objects.create(
+                        CampaignChannel.objects.create(
                             campaign=campaign,
                             channel=rate.channel,
                             service_rate=rate,
                             price=rate.price,
-                            status=CampaignInfluencer.Status.PENDING
+                            status=CampaignChannel.Status.PENDING
                         )
 
                     # ========== ۸. کسر مبلغ از کیف پول ==========
@@ -418,9 +418,9 @@ def campaign_create_step2(request):
                     return redirect(campaign)
                 else:
                     # ========== حالت عادی ==========
-                    CampaignInfluencer.objects.filter(campaign=campaign).delete()
+                    CampaignChannel.objects.filter(campaign=campaign).delete()
                     for rate in selected_rates_qs:
-                        CampaignInfluencer.objects.create(
+                        CampaignChannel.objects.create(
                             campaign=campaign,
                             channel=rate.channel,
                             service_rate=rate,

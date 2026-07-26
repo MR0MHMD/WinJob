@@ -16,7 +16,7 @@ import os
 
 @admin.register(Campaign)
 class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
-    inlines = [CampaignInfluencerInline]
+    inlines = [CampaignChannelInline]
 
     list_display = (
         "name",
@@ -304,8 +304,8 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             super().save_model(request, obj, form, change)
 
 
-@admin.register(CampaignInfluencer)
-class CampaignInfluencerAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+@admin.register(CampaignChannel)
+class CampaignChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "campaign_link",
@@ -432,13 +432,13 @@ class CampaignInfluencerAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     # ========== اکشن‌ها ==========
 
     def mark_as_accepted(self, request, queryset):
-        updated = queryset.update(status=CampaignInfluencer.Status.ACCEPTED)
+        updated = queryset.update(status=CampaignChannel.Status.ACCEPTED)
         self.message_user(request, f"{updated} رزرو پذیرفته شد.")
 
     mark_as_accepted.short_description = "پذیرفتن رزروهای انتخاب شده"
 
     def mark_as_completed(self, request, queryset):
-        updated = queryset.update(status=CampaignInfluencer.Status.COMPLETED)
+        updated = queryset.update(status=CampaignChannel.Status.COMPLETED)
         self.message_user(request, f"{updated} رزرو انجام شد.")
 
     mark_as_completed.short_description = "انجام شدن رزروهای انتخاب شده"

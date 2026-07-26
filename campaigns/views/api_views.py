@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 from influencers.models import InfluencerServiceRate
 from content_team.models import ContentServicePlan
-from ..models import Campaign, CampaignInfluencer
+from ..models import Campaign, CampaignChannel
 from django.http import JsonResponse
 from django.contrib import messages
 from payment.models import Coupon
@@ -235,7 +235,7 @@ def calculate_influencer_replacement_commission(request):
         campaign = get_object_or_404(Campaign, id=campaign_id, advertiser=request.user.advertiser_profile)
 
         current_influencer_cost = campaign.influencer_bookings.exclude(
-            status__in=[CampaignInfluencer.Status.REJECTED, CampaignInfluencer.Status.REPLACED]
+            status__in=[CampaignChannel.Status.REJECTED, CampaignChannel.Status.REPLACED]
         ).aggregate(total=Sum('price'))['total'] or 0
 
         selected_rates = InfluencerServiceRate.objects.filter(id__in=selected_rate_ids, is_active=True)

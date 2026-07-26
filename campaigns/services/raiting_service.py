@@ -1,6 +1,6 @@
 from content_team.models import TeamReview, ContentOrder
 from influencers.models import InfluencerReview
-from campaigns.models import CampaignInfluencer
+from campaigns.models import CampaignChannel
 from gamification.services import update_score
 from django.db import transaction
 
@@ -52,7 +52,7 @@ def submit_influencer_review_service(campaign_booking, advertiser, rating, comme
             comment=comment
         )
         # فقط در صورتی که کمپین تکمیل شده باشد امتیاز بده
-        if campaign_booking.status == CampaignInfluencer.Status.COMPLETED:
+        if campaign_booking.status == CampaignChannel.Status.COMPLETED:
             update_score(
                 advertiser,
                 5,

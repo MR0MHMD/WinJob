@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('admin_notes', models.TextField(blank=True, verbose_name='یادداشت ادمین')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('campaign_influencer', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='report', to='campaigns.campaigninfluencer', verbose_name='سفارش')),
+                ('campaign_influencer', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='report', to='campaigns.CampaignChannel', verbose_name='سفارش')),
             ],
             options={
                 'verbose_name': 'گزارش کمپین',
@@ -91,7 +91,7 @@ class Migration(migrations.Migration):
                 ('comment', models.TextField(max_length=500, verbose_name='نظر')),
                 ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')),
                 ('advertiser', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='influencer_reviews', to='advertisers.advertiserprofile', verbose_name='تبلیغ\u200cدهنده')),
-                ('campaign_booking', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='review', to='campaigns.campaigninfluencer', verbose_name='رزرو کمپین')),
+                ('campaign_booking', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='review', to='campaigns.CampaignChannel', verbose_name='رزرو کمپین')),
                 ('channel', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='influencers.influencerchannel', verbose_name='کانال اینفلوئنسر')),
             ],
             options={

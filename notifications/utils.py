@@ -1,7 +1,7 @@
 import requests
 import threading
 
-from campaigns.models import CampaignInfluencer
+from campaigns.models import CampaignChannel
 from .models import Notification, NotificationPreference
 from django.conf import settings
 
@@ -270,7 +270,7 @@ def notify_advertiser_campaign_auto_approved(campaign):
     user = campaign.advertiser.user
 
     rejected_count = campaign.influencer_bookings.filter(
-        status=CampaignInfluencer.Status.REJECTED
+        status=CampaignChannel.Status.REJECTED
     ).count()
 
     message = f'🔔 کمپین «{campaign.name}» به صورت خودکار و پس از گذشت ۲۴ ساعت از رد شدن {rejected_count} ناشر، ادامه یافت.\n'
@@ -409,7 +409,7 @@ def notify_influencer_report_approved(campaign_influencer):
                 f'مبلغ {price:,} تومان به کیف پول شما واریز شد.',
         link=f'/influencers/order_detail/{campaign_influencer.id}',
         related_object_id=campaign_influencer.id,
-        related_content_type='CampaignInfluencer'
+        related_content_type='CampaignChannel'
     )
 
 
@@ -429,7 +429,7 @@ def notify_influencer_report_rejected(campaign_influencer, reason=''):
         message=message,
         link=f'/influencers/order_detail/{campaign_influencer.id}',
         related_object_id=campaign_influencer.id,
-        related_content_type='CampaignInfluencer'
+        related_content_type='CampaignChannel'
     )
 
 

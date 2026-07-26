@@ -1,5 +1,5 @@
 from influencers.models import InfluencerServiceRate, InfluencerReview, CampaignReport, InfluencerChannel
-from campaigns.models import CampaignInfluencer, Campaign
+from campaigns.models import CampaignChannel, Campaign
 from payment.models import Transaction, Coupon, Payment
 from django.db.models import Avg, Prefetch, Sum
 from django.contrib.auth import get_user_model
@@ -60,7 +60,7 @@ class ChannelDetailView(SupportRequiredMixin, DetailView):
         ).prefetch_related(
             Prefetch('service_rates',
                      queryset=InfluencerServiceRate.objects.select_related('ad_type').filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=CampaignInfluencer.objects.select_related(
+            Prefetch('campaign_bookings', queryset=CampaignChannel.objects.select_related(
                 'campaign',
                 'campaign__advertiser',
                 'service_rate__ad_type'
@@ -139,7 +139,7 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
         ).prefetch_related(
             Prefetch(
                 'influencer_bookings',
-                queryset=CampaignInfluencer.objects.select_related(
+                queryset=CampaignChannel.objects.select_related(
                     'channel',
                     'channel__platform',
                     'channel__influencer',
@@ -351,7 +351,7 @@ class UserDetailView(SupportRequiredMixin, DetailView):
             context['channels'] = channels_qs[:5]
             context['channels_count'] = channels_qs.count()
 
-            bookings_qs = CampaignInfluencer.objects.filter(
+            bookings_qs = CampaignChannel.objects.filter(
                 channel__influencer=user.influencer_profile
             ).order_by('-created_at')
             context['campaign_bookings'] = bookings_qs[:5]

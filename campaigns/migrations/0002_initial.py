@@ -63,24 +63,24 @@ class Migration(migrations.Migration):
             field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='content', to='campaigns.campaign', verbose_name='کمپین'),
         ),
         migrations.AddField(
-            model_name='campaigninfluencer',
+            model_name='CampaignChannel',
             name='campaign',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='influencer_bookings', to='campaigns.campaign', verbose_name='کمپین'),
         ),
         migrations.AddField(
-            model_name='campaigninfluencer',
+            model_name='CampaignChannel',
             name='channel',
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='campaign_bookings', to='influencers.influencerchannel', verbose_name='کانال اینفلوئنسر'),
         ),
         migrations.AddField(
-            model_name='campaigninfluencer',
+            model_name='CampaignChannel',
             name='service_rate',
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='campaign_services', to='influencers.influencerservicerate', verbose_name='تعرفه سرویس'),
         ),
         migrations.AddField(
             model_name='campaigntrackinglink',
             name='campaign_influencer',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='tracking_link', to='campaigns.campaigninfluencer'),
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='tracking_link', to='campaigns.CampaignChannel'),
         ),
         migrations.AddField(
             model_name='campaignclick',
