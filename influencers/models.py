@@ -46,7 +46,7 @@ class InfluencerChannel(GamificationMixin, models.Model):
 
     influencer = models.ForeignKey('InfluencerProfile', on_delete=models.CASCADE,
                                    related_name='channels', verbose_name=_('اینفلوئنسر'))
-    platform = models.ForeignKey('plat_form.Platform', on_delete=models.CASCADE,
+    platform = models.ForeignKey('core.Platform', on_delete=models.CASCADE,
                                  related_name='influencer_channels', verbose_name=_('پلتفرم'))
 
     province = models.ForeignKey('location.Province', on_delete=models.CASCADE, related_name="influencers",

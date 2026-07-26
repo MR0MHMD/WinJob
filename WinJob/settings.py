@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     "campaigns.apps.CampaignsConfig",
     "blog.apps.BlogConfig",
     "location.apps.LocationConfig",
-    "plat_form.apps.PlatFormConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
     "tickets.apps.TicketsConfig",
@@ -101,14 +100,9 @@ DAISY_SETTINGS = {
             'name': 'موقعیت',
             'hide': None,
         },
-        'plat_form': {
-            'icon': 'bi bi-window-dock',
-            'name': 'سکو ها',
-            'hide': None,
-        },
         'content_team': {
             'icon': 'bi bi-file-earmark-post-fill',
-            'name': 'تیم های تولید محتوا',
+            'name': 'تولید محتوا',
             'hide': None,
         },
     },
@@ -141,7 +135,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'plat_form.context_processors.platform_info',
+                'core.context_processors.platform_info',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
             ],

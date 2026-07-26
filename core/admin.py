@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Category
+from .models import Category, Platform
 
 
 @admin.register(Category)
@@ -62,3 +62,13 @@ class CategoryAdmin(admin.ModelAdmin):
         self.message_user(request, f'{queryset.count()} دسته‌بندی کپی شدند.', messages.SUCCESS)
 
     duplicate_category.short_description = _('کپی کردن انتخاب‌ها')
+
+
+@admin.register(Platform)
+class PlatformAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {"slug": ("name",)}
+    search_fields = (
+        "name",
+        "slug",
+    )

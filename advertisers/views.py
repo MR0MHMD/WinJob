@@ -8,7 +8,7 @@ from influencers.models import InfluencerChannel
 from django.db.models import Sum, Count, Avg
 from django.core.paginator import Paginator
 from core.utils import convert_to_jalali
-from plat_form.models import Platform
+from core.models import Platform
 from django.http import JsonResponse
 from django.contrib import messages
 from django.utils import timezone

@@ -12,7 +12,7 @@ from datetime import timedelta, datetime, time
 from django.db import IntegrityError, models
 from django.core.paginator import Paginator
 from .forms import InfluencerChannelForm
-from plat_form.models import Platform
+from core.models import Platform
 from location.models import Province
 from django.contrib import messages
 from django.utils import timezone

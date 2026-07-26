@@ -8,7 +8,7 @@ from django.views.generic import ListView
 from ..mixins import SupportRequiredMixin
 from tickets.models import TicketMessage
 from accounts.models import CustomUser
-from plat_form.models import Platform
+from core.models import Platform
 from campaigns.models import Campaign
 from location.models import Province
 from tickets.models import Ticket

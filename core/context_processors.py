@@ -1,4 +1,4 @@
-from .models import Platform
+from core.models import Platform
 
 
 def platform_info(request):

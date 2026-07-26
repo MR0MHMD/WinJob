@@ -12,7 +12,7 @@ import os
 
 class ContentType(models.Model):
     platform = models.ManyToManyField(
-        'plat_form.Platform',
+        'core.Platform',
         related_name='content_types',
         verbose_name=_('پلتفرم')
     )
@@ -49,7 +49,7 @@ class ContentType(models.Model):
 
 class AdType(models.Model):
     platform = models.ForeignKey(
-        "plat_form.Platform",
+        "core.Platform",
         on_delete=models.CASCADE,
         related_name='ad_types',
         verbose_name=_('پلتفرم')
@@ -100,7 +100,7 @@ class Campaign(models.Model):
         REVISION_NEEDED = "revision_needed", "نیاز به اصلاح"
 
     platform = models.ForeignKey(
-        "plat_form.Platform",
+        "core.Platform",
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='پلتفرم'

@@ -3,7 +3,7 @@ from campaigns.models import CampaignClick, Campaign, CampaignInfluencer
 from django.views.generic import TemplateView
 from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
 from django.db.models import Count, Q, Avg
-from plat_form.models import Platform
+from core.models import Platform
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import Http404
