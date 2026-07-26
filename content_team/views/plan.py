@@ -1,7 +1,8 @@
-from content_team.models import ContentServiceType, ContentServicePlan
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from content_team.models import ContentServicePlan
 from django.core.exceptions import ValidationError
+from core.models import ContentServiceType
 from django.http import JsonResponse
 from django.contrib import messages
 import traceback

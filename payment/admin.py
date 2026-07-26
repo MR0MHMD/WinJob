@@ -1,6 +1,6 @@
 # payment/admin
 from .models import CampaignInvoice, Coupon, Payment, Transaction, Wallet
-from core.admin_utils import RegionalFilterAdminMixin, format_datetime
+from core.utils.admin_utils import RegionalFilterAdminMixin, format_datetime
 from django_jalali.admin.filters import JDateFieldListFilter
 from django.contrib import admin, messages
 from django.utils.html import format_html
@@ -153,7 +153,7 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     campaign_link.admin_order_field = "campaign__name"
 
     def formatted_created_at(self, obj):
-        from core.admin_utils import format_datetime
+        from core.utils.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ایجاد"
@@ -303,7 +303,7 @@ class PaymentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     status_badge.short_description = "وضعیت"
 
     def formatted_created_at(self, obj):
-        from core.admin_utils import format_datetime
+        from core.utils.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ایجاد"

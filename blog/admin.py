@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Post, PostComments, BlogTags, BlogCategory
-from core.admin_utils import format_datetime
+from core.utils.admin_utils import format_datetime
 
 
 class PostCommentsInline(admin.TabularInline):

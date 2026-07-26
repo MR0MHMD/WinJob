@@ -1,5 +1,6 @@
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, get_object_or_404
+from core.models import ContentServiceType
 from django.utils import timezone
 from itertools import groupby
 from django.db import models
@@ -14,7 +15,6 @@ from content_team.models import (
     ContentTeam,
     TeamReview,
     ContentTeamMember,
-    ContentServiceType,
     ContentOrder,
     ContentServicePlan
 )

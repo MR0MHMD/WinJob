@@ -1,4 +1,4 @@
-from core.admin_utils import format_datetime, RegionalFilterAdminMixin
+from core.utils.admin_utils import format_datetime, RegionalFilterAdminMixin
 from django_jalali.admin.filters import JDateFieldListFilter
 from django.utils.safestring import mark_safe
 from accounts.models import CustomUser
@@ -467,7 +467,7 @@ class InfluencerReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     short_comment.short_description = "نظر"
 
     def formatted_created_at(self, obj):
-        from core.admin_utils import format_datetime
+        from core.utils.admin_utils import format_datetime
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ثبت"

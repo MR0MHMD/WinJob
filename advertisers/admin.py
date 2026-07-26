@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django_jalali.admin.filters import JDateFieldListFilter
-from core.admin_utils import format_datetime, RegionalFilterAdminMixin
+from core.utils.admin_utils import format_datetime, RegionalFilterAdminMixin
 from .models import AdvertiserProfile
 from accounts.models import CustomUser
 

@@ -1,8 +1,11 @@
+from django import forms
 from django.contrib import admin
 from django.utils.html import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Category, Platform, Province
+
+from content_team.models import ContentServicePlan
+from .models import Category, Platform, Province, ContentServiceType
 
 
 @admin.register(Category)
@@ -79,3 +82,85 @@ class ProvinceAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ["name", "slug"]
+
+
+@admin.register(ContentServiceType)
+class ContentServiceTypeAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "icon",
+        "allowed_units_display",  # ← جدید
+        "display_order",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "name",
+        "slug",
+    )
+
+    ordering = (
+        "display_order",
+        "name",
+    )
+
+    prepopulated_fields = {
+        "slug": ("name",)
+    }
+
+    fieldsets = (
+        ("اطلاعات اصلی", {
+            "fields": (
+                "name",
+                "slug",
+                "description",
+                "icon",
+            )
+        }),
+        ("تنظیمات واحد", {  # ← جدید
+            "fields": (
+                "allowed_units",
+                "allowed_units_display",
+            ),
+            "classes": ("wide",),
+            "description": "واحدهایی که این سرویس می‌تواند داشته باشد. "
+                           "تیم‌های تولید محتوا فقط می‌توانند از این واحدها برای پلن‌های خود استفاده کنند."
+        }),
+        ("وضعیت", {
+            "fields": (
+                "is_active",
+                "display_order",
+            )
+        }),
+        ("تاریخ‌ها", {
+            "fields": (
+                "created_at",
+            ),
+            "classes": ("collapse",)
+        }),
+    )
+
+    readonly_fields = (
+        "created_at",
+        "allowed_units_display",
+    )
+
+    def allowed_units_display(self, obj):
+        """نمایش واحدهای مجاز به صورت خوانا"""
+        return obj.get_allowed_units_display() or "همه واحدها"
+
+    allowed_units_display.short_description = "واحدهای مجاز"
+
+    # ========== فیلتر فرم برای انتخاب واحدهای مجاز ==========
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == "allowed_units":
+            # استفاده از CheckboxSelectMultiple برای انتخاب راحت‌تر
+            kwargs['widget'] = forms.CheckboxSelectMultiple(
+                choices=ContentServicePlan.PricingUnit.choices
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)

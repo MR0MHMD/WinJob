@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-from core.admin_utils import format_datetime
+from core.utils.admin_utils import format_datetime
 from .models import *
 
 

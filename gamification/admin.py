@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import AdvertiserScore, ChannelScore, TeamScore, PointLog, Badge
-from core.admin_utils import format_datetime
+from core.utils.admin_utils import format_datetime
 
 
 class BaseScoreAdmin(admin.ModelAdmin):

@@ -2,8 +2,8 @@ from ..services.registration_service import RegistrationService
 from content_team.models import ContentTeam, TeamJoinRequest
 from ..services.otp_service import OTPGhasedakService, logger
 from django.contrib.auth import authenticate, login
+from core.utils.utils import generate_random_slug
 from django.shortcuts import render, redirect
-from core.utils import generate_random_slug
 from ..models import OTPRequest, CustomUser
 from django.http import JsonResponse
 from django.contrib import messages

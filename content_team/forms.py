@@ -1,4 +1,5 @@
-from .models import ContentServicePlan, ContentServiceType, ContentTeam
+from .models import ContentServicePlan, ContentTeam
+from core.models import ContentServiceType
 from django.utils.text import slugify
 from django import forms
 

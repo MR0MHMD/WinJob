@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg, Count, Q
 from payment.models import Transaction, Coupon
 from django.shortcuts import redirect, render
+from core.models import ContentServiceType
 from datetime import timedelta, datetime
 from campaigns.models import Campaign
 from django.contrib import messages
@@ -13,7 +14,6 @@ import jdatetime
 import json
 from content_team.models import (
     ContentOrder,
-    ContentServiceType,
     ContentServicePlan,
     ContentDelivery,
     ContentOrderRevision,

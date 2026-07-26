@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from advertisers.models import AdvertiserProfile
 from influencers.models import InfluencerProfile
-from core.admin_utils import format_datetime
+from core.utils.admin_utils import format_datetime
 from django.contrib import admin
 
 

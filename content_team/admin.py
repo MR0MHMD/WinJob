@@ -1,8 +1,7 @@
 from django import forms
-from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from core.admin_utils import RegionalFilterAdminMixin
+from core.utils.admin_utils import RegionalFilterAdminMixin
 from accounts.models import CustomUser
 from .forms import ContentServicePlanForm, TeamManageForm
 from .utils import get_team_province
@@ -299,88 +298,6 @@ class ContentTeamMemberAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                     pass
             kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-
-@admin.register(ContentServiceType)
-class ContentServiceTypeAdmin(admin.ModelAdmin):
-    list_display = (
-        "name",
-        "icon",
-        "allowed_units_display",  # ← جدید
-        "display_order",
-        "is_active",
-        "created_at",
-    )
-
-    list_filter = (
-        "is_active",
-    )
-
-    search_fields = (
-        "name",
-        "slug",
-    )
-
-    ordering = (
-        "display_order",
-        "name",
-    )
-
-    prepopulated_fields = {
-        "slug": ("name",)
-    }
-
-    fieldsets = (
-        ("اطلاعات اصلی", {
-            "fields": (
-                "name",
-                "slug",
-                "description",
-                "icon",
-            )
-        }),
-        ("تنظیمات واحد", {  # ← جدید
-            "fields": (
-                "allowed_units",
-                "allowed_units_display",
-            ),
-            "classes": ("wide",),
-            "description": "واحدهایی که این سرویس می‌تواند داشته باشد. "
-                           "تیم‌های تولید محتوا فقط می‌توانند از این واحدها برای پلن‌های خود استفاده کنند."
-        }),
-        ("وضعیت", {
-            "fields": (
-                "is_active",
-                "display_order",
-            )
-        }),
-        ("تاریخ‌ها", {
-            "fields": (
-                "created_at",
-            ),
-            "classes": ("collapse",)
-        }),
-    )
-
-    readonly_fields = (
-        "created_at",
-        "allowed_units_display",
-    )
-
-    def allowed_units_display(self, obj):
-        """نمایش واحدهای مجاز به صورت خوانا"""
-        return obj.get_allowed_units_display() or "همه واحدها"
-
-    allowed_units_display.short_description = "واحدهای مجاز"
-
-    # ========== فیلتر فرم برای انتخاب واحدهای مجاز ==========
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
-        if db_field.name == "allowed_units":
-            # استفاده از CheckboxSelectMultiple برای انتخاب راحت‌تر
-            kwargs['widget'] = forms.CheckboxSelectMultiple(
-                choices=ContentServicePlan.PricingUnit.choices
-            )
-        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 @admin.register(ContentServicePlan)

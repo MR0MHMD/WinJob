@@ -84,3 +84,70 @@ class Province(models.Model):
         super().save(*args, **kwargs)
 
 
+class ContentServiceType(models.Model):
+    """
+    انواع خدمات تولید محتوا - توسط ادمین تعریف می‌شود
+    """
+    ad_type = models.ManyToManyField(
+        "campaigns.AdType",
+        verbose_name=_('نوع تبلیغ'),
+        related_name='content_service_type',
+    )
+
+    name = models.CharField(
+        _('نام خدمت'),
+        max_length=100,
+        unique=True
+    )
+    slug = models.SlugField(
+        _('شناسه'),
+        unique=True,
+        allow_unicode=True
+    )
+    description = models.TextField(
+        _('توضیحات'),
+        blank=True
+    )
+    icon = models.CharField(
+        _('آیکون'),
+        max_length=50,
+        blank=True,
+        help_text=_('نام کلاس آیکون (مثلاً: fa-video)')
+    )
+
+    allowed_units = models.JSONField(
+        _('واحدهای مجاز'),
+        default=list,
+        blank=True,
+        help_text=_('واحدهایی که این سرویس می‌تواند داشته باشد. مثال: ["second", "minute", "quantity"]')
+    )
+
+    is_active = models.BooleanField(
+        _('فعال'),
+        default=True
+    )
+    display_order = models.PositiveIntegerField(
+        _('ترتیب نمایش'),
+        default=0
+    )
+    created_at = jmodels.jDateTimeField(
+        _('تاریخ ایجاد'),
+        auto_now_add=True
+    )
+
+    class Meta:
+        verbose_name = _('نوع خدمت تولید محتوا')
+        verbose_name_plural = _('انواع خدمات تولید محتوا')
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def get_allowed_units_display(self):
+        """نمایش واحدهای مجاز به صورت خوانا"""
+        unit_labels = {
+            'second': 'ثانیه',
+            'minute': 'دقیقه',
+            'quantity': 'تعدادی'
+        }
+        return ', '.join([unit_labels.get(u, u) for u in self.allowed_units])

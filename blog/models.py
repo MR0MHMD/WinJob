@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
-from core.utils import generate_random_slug
+from core.utils.utils import generate_random_slug
 from django.urls import reverse
 from django.db import models
 

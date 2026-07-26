@@ -121,7 +121,7 @@ class Campaign(models.Model):
     )
 
     content_service_type = models.ForeignKey(
-        "content_team.ContentServiceType",
+        "core.ContentServiceType",
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name=_("سرویس تولید محتوا"),
@@ -301,7 +301,7 @@ class Campaign(models.Model):
         ).count()
 
     def formated_created_at(self):
-        from core.admin_utils import format_datetime
+        from core.utils.admin_utils import format_datetime
         return format_datetime(self.created_at)
 
 
