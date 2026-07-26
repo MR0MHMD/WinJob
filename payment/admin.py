@@ -256,7 +256,7 @@ class PaymentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def invoice_link(self, obj):
         """لینک به فاکتور"""
-        url = reverse("admin:campaigns_campaigninvoice_change", args=[obj.invoice.id])
+        url = reverse("admin:payment_campaigninvoice_change", args=[obj.invoice.id])
         return format_html('<a href="{}" target="_blank">فاکتور #{}</a>', url, obj.invoice.id)
 
     invoice_link.short_description = "فاکتور"

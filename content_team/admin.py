@@ -1370,9 +1370,7 @@ class ContentDeliveryFileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ("نوع فایل", {
             "fields": (
                 "is_option",
-                "is_option_display",
                 "option_number",
-                "option_number_display",
             ),
             "description": "اگر این فایل یکی از گزینه‌های تحویلی است، گزینه بودن را فعال کنید."
         }),

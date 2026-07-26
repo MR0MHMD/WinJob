@@ -87,8 +87,6 @@ class ContentTeam(GamificationMixin, models.Model):
         """
         تولید و ذخیره QR Code برای تیم
         """
-        from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
-        from django.urls import reverse
 
         if self.qr_code and not force:
             return
@@ -157,14 +155,18 @@ class ContentTeamMember(models.Model):
         OTHER = 'other', _('سایر')
 
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.CASCADE,
         related_name='members',
         verbose_name=_('تیم')
     )
 
-    user = models.OneToOneField('accounts.CustomUser', on_delete=models.CASCADE, related_name='team_member',
-                                verbose_name=_('کاربر'))
+    user = models.OneToOneField(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name='team_member',
+        verbose_name=_('کاربر')
+    )
 
     role = models.CharField(
         _('نقش'),
@@ -614,14 +616,14 @@ class ContentOrder(models.Model):
     )
 
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.PROTECT,
         related_name="orders",
         verbose_name="تیم تولید محتوا"
     )
 
     plan = models.ForeignKey(
-        ContentServicePlan,
+        'ContentServicePlan',
         on_delete=models.PROTECT,
         related_name="orders",
         verbose_name="پلن انتخابی"
@@ -734,7 +736,7 @@ class ContentOrderDescription(models.Model):
         MOTIVATIONAL = 'motivational', _('انگیزشی')
 
     order = models.OneToOneField(
-        ContentOrder,
+        'ContentOrder',
         on_delete=models.CASCADE,
         related_name='brief',
         verbose_name=_('سفارش')
@@ -825,7 +827,7 @@ class ContentOrderFile(models.Model):
         OTHER = 'other', _('سایر')
 
     order = models.ForeignKey(
-        ContentOrder,
+        'ContentOrder',
         on_delete=models.CASCADE,
         related_name='files',
         verbose_name=_('سفارش')
@@ -908,13 +910,13 @@ class TeamReview(models.Model):
     نظرات و امتیازات تیم‌های تولید محتوا
     """
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name=_('تیم')
     )
     order = models.OneToOneField(
-        ContentOrder,
+        'ContentOrder',
         null=True, blank=True,
         on_delete=models.CASCADE,
         related_name='review',
@@ -966,7 +968,7 @@ class TeamJoinRequest(models.Model):
     )
 
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.CASCADE,
         related_name='join_requests',
         verbose_name=_('تیم')
@@ -1120,7 +1122,7 @@ class ContentDelivery(models.Model):
 
     # ========== تحویل‌دهنده ==========
     delivered_by = models.ForeignKey(
-        ContentTeamMember,
+        'ContentTeamMember',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1297,7 +1299,7 @@ class ContentPortfolio(models.Model):
     """
 
     team = models.ForeignKey(
-        ContentTeam,
+        'ContentTeam',
         on_delete=models.CASCADE,
         related_name='portfolio_items',
         verbose_name=_('تیم')
@@ -1338,7 +1340,7 @@ class ContentPortfolio(models.Model):
     )
 
     service_type = models.ForeignKey(
-        ContentServiceType,
+        'ContentServiceType',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

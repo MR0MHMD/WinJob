@@ -1,9 +1,8 @@
-from django.db import models
-from django.urls import reverse
-from django_jalali.db import models as jmodels
-from accounts.models import CustomUser
 from django.utils.translation import gettext_lazy as _
+from django_jalali.db import models as jmodels
 from core.utils import generate_random_slug
+from django.urls import reverse
+from django.db import models
 
 
 class PublishedManager(models.Manager):
@@ -17,7 +16,7 @@ class Post(models.Model):
         PUBLISHED = '1', 'Published'
         REJECTED = '-1', 'Rejected'
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='posts', verbose_name=_('کاربر'))
+    user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name='posts', verbose_name=_('کاربر'))
     title = models.CharField(_('عنوان'), max_length=200)
     content = models.TextField(_('متن'))
     slug = models.SlugField()
@@ -55,10 +54,10 @@ class Post(models.Model):
 
 
 class PostComments(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='post_comments',
+    user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name='post_comments',
                              verbose_name=_('کاربر'), null=True, blank=True)
     name = models.CharField(_('نام'), max_length=70, null=True, blank=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments", verbose_name=_('پست'))
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name="comments", verbose_name=_('پست'))
     content = models.TextField(_('متن'), max_length=1500)
     created_at = jmodels.jDateTimeField(_('تاریخ ساخت'), auto_now_add=True)
     parent_comment = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies',

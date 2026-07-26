@@ -66,7 +66,7 @@ class ChannelScore(BaseScore):
 
 class TeamScore(BaseScore):
     team = models.OneToOneField(
-        'content_team.ContentTeam',
+        "content_team.ContentTeam",
         on_delete=models.CASCADE,
         related_name='score',
         verbose_name=_('تیم تولید محتوا')

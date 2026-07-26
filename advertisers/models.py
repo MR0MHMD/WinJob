@@ -1,17 +1,14 @@
 from django.utils.translation import gettext_lazy as _
 from gamification.mixins import GamificationMixin
 from django_jalali.db import models as jmodels
-from accounts.models import CustomUser
-from location.models import Province
-from core.models import Category
 from django.db import models
 
 
 class AdvertiserProfile(GamificationMixin, models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='advertiser_profile',
+    user = models.OneToOneField("accounts.CustomUser", on_delete=models.CASCADE, related_name='advertiser_profile',
                                 verbose_name=_('کاربر'))
     business_name = models.CharField(_('نام کسب‌وکار'), max_length=200)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True,
+    category = models.ForeignKey("core.Category", on_delete=models.SET_NULL, null=True, blank=True,
                                  verbose_name=_('دسته‌بندی'))
     description = models.TextField(_('توضیحات کسب‌وکار'), blank=True)
     website = models.URLField(_('وبسایت'), blank=True)

@@ -1,8 +1,7 @@
-from django.db import models
-from accounts.models import CustomUser
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
+from django.utils import timezone
+from django.db import models
 
 
 class Notification(models.Model):
@@ -37,7 +36,7 @@ class Notification(models.Model):
         CAMPAIGN_AUTO_APPROVED = 'campaign_auto_approved', 'ادامه خودکار کمپین'
 
     user = models.ForeignKey(
-        CustomUser,
+        'accounts.CustomUser',
         on_delete=models.CASCADE,
         related_name='notifications',
         verbose_name=_('کاربر')
@@ -173,7 +172,7 @@ class Notification(models.Model):
 
 class NotificationPreference(models.Model):
     user = models.OneToOneField(
-        CustomUser,
+        'accounts.CustomUser',
         on_delete=models.CASCADE,
         related_name='notification_prefs',
         verbose_name=_('کاربر')

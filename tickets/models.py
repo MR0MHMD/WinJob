@@ -1,9 +1,8 @@
-from django.db import models
-from django.conf import settings
-from django.urls import reverse
+from .validators import validate_ticket_attachment_size
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
-from .validators import validate_ticket_attachment_size
+from django.urls import reverse
+from django.db import models
 
 
 # ==================== مدل‌های موضوع و عنوان تیکت ====================
@@ -73,7 +72,7 @@ class TicketTitle(models.Model):
     """عنوان تیکت - زیرمجموعه هر دسته‌بندی"""
 
     category = models.ForeignKey(
-        TicketCategory,
+        'TicketCategory',
         on_delete=models.CASCADE,
         related_name='titles',
         verbose_name=_('دسته‌بندی')
@@ -135,7 +134,7 @@ class TicketFAQ(models.Model):
     """پرسش‌های متداول برای هر عنوان تیکت"""
 
     title = models.ForeignKey(
-        TicketTitle,
+        'TicketTitle',
         on_delete=models.CASCADE,
         related_name='faqs',
         verbose_name=_('عنوان تیکت')
@@ -197,7 +196,7 @@ class Ticket(models.Model):
 
     # کاربری که تیکت رو ایجاد کرده
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'accounts.CustomUser',
         on_delete=models.CASCADE,
         related_name='tickets',
         verbose_name=_('کاربر')
@@ -205,14 +204,14 @@ class Ticket(models.Model):
 
     # ارتباط با مدل‌های جدید
     category = models.ForeignKey(
-        TicketCategory,
+        'TicketCategory',
         on_delete=models.PROTECT,
         related_name='tickets',
         verbose_name=_('موضوع')
     )
 
     title = models.ForeignKey(
-        TicketTitle,
+        'TicketTitle',
         on_delete=models.PROTECT,
         related_name='tickets',
         verbose_name=_('عنوان تیکت'),
@@ -254,7 +253,7 @@ class Ticket(models.Model):
 
     # فیلدهای ادمین
     assigned_to = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'accounts.CustomUser',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -327,14 +326,14 @@ class TicketMessage(models.Model):
     """پیام‌های داخل تیکت"""
 
     ticket = models.ForeignKey(
-        Ticket,
+        'Ticket',
         on_delete=models.CASCADE,
         related_name='messages',
         verbose_name=_('تیکت')
     )
 
     sender = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'accounts.CustomUser',
         on_delete=models.CASCADE,
         related_name='ticket_messages',
         verbose_name=_('فرستنده')
@@ -378,7 +377,7 @@ class TicketAttachment(models.Model):
     """فایل‌های پیوست تیکت"""
 
     message = models.ForeignKey(
-        TicketMessage,
+        'TicketMessage',
         on_delete=models.CASCADE,
         related_name='attachments',
         verbose_name=_('پیام')

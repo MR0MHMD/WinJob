@@ -1,20 +1,13 @@
-from django.urls import reverse
-
 from .utils import validate_end_date, validate_start_date
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
-from influencers.models import InfluencerProfile
-from advertisers.models import AdvertiserProfile
-from django.contrib.auth import get_user_model
 from django_jalali.db import models as jmodels
 from django.db import models, IntegrityError
 from urllib.parse import urlencode
-from django.utils import timezone
-from core.models import Category
+from django.urls import reverse
 import uuid
 import os
 
-User = get_user_model()
 
 
 class ContentType(models.Model):
@@ -56,7 +49,7 @@ class ContentType(models.Model):
 
 class AdType(models.Model):
     platform = models.ForeignKey(
-        'plat_form.Platform',
+        "plat_form.Platform",
         on_delete=models.CASCADE,
         related_name='ad_types',
         verbose_name=_('پلتفرم')
@@ -107,28 +100,28 @@ class Campaign(models.Model):
         REVISION_NEEDED = "revision_needed", "نیاز به اصلاح"
 
     platform = models.ForeignKey(
-        'plat_form.Platform',
+        "plat_form.Platform",
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='پلتفرم'
     )
 
     content_type = models.ForeignKey(
-        ContentType,
+        'ContentType',
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='نوع محتوا'
     )
 
     ad_type = models.ForeignKey(
-        AdType,
+        'AdType',
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name='نوع تبلیغ'
     )
 
     content_service_type = models.ForeignKey(
-        'content_team.ContentServiceType',
+        "content_team.ContentServiceType",
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name=_("سرویس تولید محتوا"),
@@ -149,7 +142,7 @@ class Campaign(models.Model):
     )
 
     advertiser = models.ForeignKey(
-        AdvertiserProfile,
+        "advertisers.AdvertiserProfile",
         on_delete=models.CASCADE,
         related_name="campaigns",
         verbose_name="تبلیغ دهنده"
@@ -321,14 +314,14 @@ class CampaignInfluencer(models.Model):
         REPLACED = "replaced", "جایگزین شد"
 
     campaign = models.ForeignKey(
-        Campaign,
+        'Campaign',
         on_delete=models.CASCADE,
         related_name="influencer_bookings",
         verbose_name="کمپین"
     )
 
     channel = models.ForeignKey(
-        "influencers.InfluencerChannel",
+        'influencers.InfluencerChannel',
         on_delete=models.PROTECT,
         related_name="campaign_bookings",
         verbose_name="کانال اینفلوئنسر"
@@ -430,7 +423,7 @@ class CampaignInfluencer(models.Model):
 
 class CampaignContent(models.Model):
     campaign = models.OneToOneField(
-        Campaign,
+        "Campaign",
         on_delete=models.CASCADE,
         related_name="content",
         verbose_name=_("کمپین")
@@ -538,7 +531,7 @@ class CampaignContent(models.Model):
 
 class CampaignTrackingLink(models.Model):
     campaign_influencer = models.OneToOneField(
-        CampaignInfluencer,
+        "CampaignInfluencer",
         on_delete=models.CASCADE,
         related_name="tracking_link"
     )
@@ -565,7 +558,7 @@ class CampaignTrackingLink(models.Model):
 
 class CampaignClick(models.Model):
     tracking_link = models.ForeignKey(
-        CampaignTrackingLink,
+        'CampaignTrackingLink',
         on_delete=models.CASCADE,
         related_name="click_logs"
     )

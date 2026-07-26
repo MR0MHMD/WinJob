@@ -1,17 +1,21 @@
+from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
+from django.utils.translation import gettext_lazy as _
+from gamification.mixins import GamificationMixin
+from django_jalali.db import models as jmodels
+from django_resized import ResizedImageField
 from django.conf import settings
-from django.db import models
 from django.db.models import Avg
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
-from django_resized import ResizedImageField
-import django_jalali.db.models as jmodels
-from accounts.models import CustomUser
-from gamification.mixins import GamificationMixin
+from django.db import models
 
 
 class InfluencerProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='influencer_profile',
-                                verbose_name=_('کاربر'))
+    user = models.OneToOneField(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name='influencer_profile',
+        verbose_name=_('کاربر')
+    )
     full_name = models.CharField(_('اسم کامل کانال/پیج'), max_length=200)
     description = models.TextField(_('توضیحات'), blank=True)
     is_active = models.BooleanField(_('فعال'), default=True)
@@ -40,7 +44,7 @@ class InfluencerChannel(GamificationMixin, models.Model):
         ('rejected', _('رد شده')),
     )
 
-    influencer = models.ForeignKey(InfluencerProfile, on_delete=models.CASCADE,
+    influencer = models.ForeignKey('InfluencerProfile', on_delete=models.CASCADE,
                                    related_name='channels', verbose_name=_('اینفلوئنسر'))
     platform = models.ForeignKey('plat_form.Platform', on_delete=models.CASCADE,
                                  related_name='influencer_channels', verbose_name=_('پلتفرم'))
@@ -107,8 +111,6 @@ class InfluencerChannel(GamificationMixin, models.Model):
         """
         تولید و ذخیره QR Code برای کانال
         """
-        from core.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
-        from django.urls import reverse
 
         if self.qr_code and not force:
             return
@@ -157,7 +159,7 @@ class InfluencerChannel(GamificationMixin, models.Model):
 
 
 class InfluencerServiceRate(models.Model):
-    channel = models.ForeignKey(InfluencerChannel, on_delete=models.CASCADE,
+    channel = models.ForeignKey('InfluencerChannel', on_delete=models.CASCADE,
                                 related_name='service_rates', verbose_name=_('کانال'))
     ad_type = models.ForeignKey('campaigns.AdType', on_delete=models.CASCADE,
                                 related_name='influencer_rates', verbose_name=_('نوع تبلیغ'))
@@ -233,7 +235,7 @@ class InfluencerReview(models.Model):
     """
 
     channel = models.ForeignKey(
-        'influencers.InfluencerChannel',
+        'InfluencerChannel',
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name=_('کانال اینفلوئنسر'),

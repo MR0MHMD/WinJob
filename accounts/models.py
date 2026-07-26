@@ -60,7 +60,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default=False
     )
 
-    province = models.ForeignKey('location.Province', on_delete=models.CASCADE,
+    province = models.ForeignKey("location.Province", on_delete=models.CASCADE,
                                  related_name='accounts', verbose_name=_('استان'), null=True, blank=True)
 
     is_regional_manager = models.BooleanField(
