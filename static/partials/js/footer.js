@@ -183,7 +183,7 @@
             let activeNav = null;
             if (currentPath === '/' || currentPath.startsWith('/advertisers/dashboard') || currentPath.startsWith('/influencers/dashboard') || currentPath.startsWith('/content_team/dashboard')) {
                 activeNav = 'خانه';
-            } else if (currentPath.startsWith('/advertisers/my_campaigns') || currentPath.includes('/advertisers/campaign_detail')) {
+            } else if (currentPath.startsWith('/advertisers/campaign_list') || currentPath.includes('/advertisers/campaign_detail')) {
                 activeNav = 'تبلیغات';
             } else if (currentPath.startsWith('/payment/wallet') || currentPath.startsWith('/payment/wallet/deposit/') || currentPath.startsWith('/payment/invoices/') || currentPath.startsWith('/payment/invoices/detail/')) {
                 activeNav = 'مالی';
