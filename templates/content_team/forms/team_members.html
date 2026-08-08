@@ -9,21 +9,18 @@
 
 {% block content %}
     <div class="container py-4 py-lg-5">
-        <nav aria-label="breadcrumb" class="mb-4 animate-fade-up">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{% url 'core:home' %}">
-                        <i class="fi-home me-1"></i> خانه
-                    </a>
-                </li>
-                
-                <li class="breadcrumb-item">
-                    <a href="{% url 'content_team:dashboard' %}">داشبورد {{ team.name }}</a>
-                </li>
-                
-                <li class="breadcrumb-item active" aria-current="page">{{ team.name }}</li>
-            </ol>
-        </nav>
+        <!-- بردکرامب -->
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'core:home' %}">خانه</a>
+            </li>
+            
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:dashboard_router' %}">داشبورد {{ team.name }}</a>
+            </li>
+
+            <li class="breadcrumb-item active" aria-current="page">مدیریت اعضا</li>
+        </ol>
 
         <div class="team-header p-4 mb-4 animate-fade-up">
             <div class="row align-items-center">
@@ -256,8 +253,14 @@
                                     <td class="py-3">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="member-avatar small">
+                                                {% if member.user.avatar %}
+                                                    <img class="rounded-circle" src="{{ member.user.avatar.url }}" alt="">
+                                                {% else %} 
                                                 {{ member.user.nickname|slice:":2" }}
+                                                {% endif %}
                                             </div>
+                                            
+                                            
                                         
                                             <div>
                                                 <div class="fw-semibold text-white">{{ member.user.nickname }}</div>
@@ -718,36 +721,4 @@
 
 {% block script %}
     <script src="{% static 'content_team/js/forms/team_members.js' %}"></script>
-
-    {% if messages %}
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const toastEls = document.querySelectorAll('.toast');
-                toastEls.forEach(function (toastEl) {
-                    const toast = new bootstrap.Toast(toastEl, {delay: 3000});
-                    toast.show();
-                });
-            });
-        </script>
-
-        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100; direction: ltr;">
-            {% for message in messages %}
-                <div class="toast align-items-center text-bg-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}primary{% endif %} border-0 mb-2"
-                     role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            {% if message.tags == 'success' %}
-                                <i class="fi-check-circle me-2"></i>
-                            {% elif message.tags == 'error' %}
-                                <i class="fi-alert-circle me-2"></i>
-                            {% endif %}
-                            {{ message }}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                                data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
 {% endblock %}

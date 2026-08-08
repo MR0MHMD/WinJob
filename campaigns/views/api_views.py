@@ -223,7 +223,7 @@ def campaign_delete(request, campaign_id):
 @login_required
 @require_POST
 def calculate_influencer_replacement_commission(request):
-    """محاسبه مابه‌التفاوت حق العمل برای جایگزینی کانال‌ها"""
+    """محاسبه مابه‌التفاوت حق العمل و مالیات برای جایگزینی کانال‌ها"""
     try:
         body = json.loads(request.body)
         selected_rate_ids = body.get('rate_ids', [])
@@ -234,40 +234,41 @@ def calculate_influencer_replacement_commission(request):
 
         campaign = get_object_or_404(Campaign, id=campaign_id, advertiser=request.user.advertiser_profile)
 
-        current_influencer_cost = campaign.influencer_bookings.exclude(
-            status__in=[ChannelBooking.Status.REJECTED, ChannelBooking.Status.REPLACED]
-        ).aggregate(total=Sum('price'))['total'] or 0
-
         selected_rates = ChannelServiceRate.objects.filter(id__in=selected_rate_ids, is_active=True)
         new_influencer_cost = sum(rate.price for rate in selected_rates)
 
-        content_cost = campaign.invoice.content_cost if hasattr(campaign, 'invoice') and campaign.invoice else 0
+        # ========== محاسبه با سرویس جدید ==========
+        from payment.services.tax_calculator import calculate_replacement_tax
 
-        from payment.services.create_invoice import PLATFORM_COMMISSION
-
-        old_commission = campaign.invoice.commission if hasattr(campaign, 'invoice') and campaign.invoice else 0
-        if old_commission == 0:
-            old_subtotal = int(current_influencer_cost) + int(content_cost)
-            old_commission = int(old_subtotal * PLATFORM_COMMISSION)
-
-        new_total_influencer_cost = int(current_influencer_cost) + int(new_influencer_cost)
-        new_subtotal = new_total_influencer_cost + int(content_cost)
-        new_commission = int(new_subtotal * PLATFORM_COMMISSION)
-
-        commission_diff = max(new_commission - old_commission, 0)
-        total_deduct = int(new_influencer_cost) + commission_diff
+        tax_result = calculate_replacement_tax(
+            campaign=campaign,
+            new_selected_cost=new_influencer_cost
+        )
 
         return JsonResponse({
             'success': True,
-            'current_influencer_cost': int(current_influencer_cost),
-            'new_influencer_cost': int(new_influencer_cost),
-            'old_commission': old_commission,
-            'new_commission': new_commission,
-            'commission_diff': commission_diff,
-            'total_deduct': total_deduct,
-            'total_deduct_formatted': f"{total_deduct:,}",
-            'commission_diff_formatted': f"{commission_diff:,}",
-            'new_influencer_cost_formatted': f"{int(new_influencer_cost):,}",
+            # مبالغ اصلی
+            'total_deduct': tax_result['total_deduct'],
+            'total_deduct_formatted': f"{tax_result['total_deduct']:,}",
+
+            # مابه‌التفاوت‌ها
+            'commission_diff': tax_result['commission_diff'],
+            'commission_to_pay': max(tax_result['commission_diff'], 0),
+            'commission_diff_formatted': f"{tax_result['commission_diff']:,}",
+            'vat_diff': tax_result['vat_diff'],
+            'vat_diff_formatted': f"{tax_result['vat_diff']:,}",
+
+            # هزینه‌ها
+            'new_influencer_cost': new_influencer_cost,
+            'new_influencer_cost_formatted': f"{new_influencer_cost:,}",
+            'current_influencer_cost': tax_result['old_data']['influencer_cost'],
+            'old_commission': tax_result['old_data']['commission'],
+            'new_commission': tax_result['new_data']['commission'],
+            'old_vat': tax_result['old_data']['total_vat'],
+            'new_vat': tax_result['new_data']['total_vat'],
+
+            # جزییات نمایشی
+            'breakdown': tax_result['breakdown'],
             'selected_count': len(selected_rate_ids),
         })
 

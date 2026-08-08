@@ -6,7 +6,6 @@ app_name = 'influencers'
 
 urlpatterns = [
     path('dashboard/', views.influencer_dashboard, name='dashboard'),
-    path('update/', api_views.profile_update, name='update'),
     path('my_channels/', views.influencer_channels_view, name='influencer_channels'),
     path('my_channels/edit/<int:pk>/', views.influencer_channels_view, name='edit_channel'),
     path('my_channels/delete/<int:pk>/', views.delete_channel_view, name='delete_channel'),

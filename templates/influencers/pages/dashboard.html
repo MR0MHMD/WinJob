@@ -1,7 +1,7 @@
 {% extends 'parent/base.html' %}
 {% load static %}
 
-{% block title %}داشبورد | {{ influencer.full_name }}{% endblock %}
+{% block title %}داشبورد | {{ influencer.user.nickname }}{% endblock %}
 
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'influencers/css/pages/dashboard.css' %}">
@@ -28,7 +28,7 @@
                             <h1 class="h2 text-white mb-1"> {% now "H" as current_hour %}
                                 {% if current_hour|add:"0" < 12 %} صبح بخیر  {% elif current_hour|add:"0" < 17 %} ظهر
                                     بخیر  {% elif current_hour|add:"0" < 19 %} عصر بخیر  {% else %} شب بخیر {% endif %}
-                                , {{ influencer.user.nickname|default:influencer.full_name }}! 👋 </h1>
+                                , {{ influencer.user.nickname|default:influencer.user.nickname }}! 👋 </h1>
 
                             <p class="text-muted mb-0">
                                 <i class="fi-calendar-alt ms-1"></i>
@@ -720,10 +720,12 @@
                                                 </div>
 
                                                 <div class="flex-grow-1">
-                                                    <div class="text-white fw-bold">{{ channel.channel_name|truncatechars:25 }}</div>
+                                                    <div class="text-white fw-bold">
+                                                        {{ channel.channel_name|truncatechars:25 }}
+                                                     </div>
 
                                                     <div class="small text-muted">
-                                                        {{ channel.platform.name }} | {{ channel.channel_id }}
+                                                        {{ channel.platform.name }} | {{ channel.channel_id|truncatechars:15 }}
                                                     </div>
 
                                                     <div class="small text-muted mt-1">

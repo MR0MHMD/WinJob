@@ -88,6 +88,10 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
         'id',
         "campaign_link",
+        "influencer_cost",
+        "content_cost",
+        "commission",
+        "total_vat",  # ✅ اضافه شد
         "payable_amount",
         "is_paid",
         "formatted_created_at",
@@ -96,7 +100,7 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_filter = (
         "is_paid",
         ("created_at", JDateFieldListFilter),
-        "campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ‌دهنده
+        "campaign__advertiser__user__province",
     )
 
     search_fields = (
@@ -107,12 +111,23 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     readonly_fields = (
         "campaign",
+        "base_influencer_cost",
+        "base_content_cost",
+        "base_commission",
+        "influencer_discount_amount",
+        "content_discount_amount",
+        "platform_discount_amount",
         "influencer_cost",
         "content_cost",
         "commission",
+        "discount_amount",
         "total_amount",
         "payable_amount",
-        "discount_amount",
+        # ✅ فیلدهای جدید مالیات
+        "influencer_vat",
+        "content_vat",
+        "commission_vat",
+        "total_vat",
         "formatted_created_at",
     )
 
@@ -120,14 +135,43 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ("اطلاعات کمپین", {
             "fields": (
                 "campaign",
+                "invoice_number",
             )
         }),
-        ("هزینه‌ها", {
+        ("💰 هزینه‌های پایه (قبل از تخفیف)", {
+            "fields": (
+                "base_influencer_cost",
+                "base_content_cost",
+                "base_commission",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("🎯 تخفیف‌های اعمال شده", {
+            "fields": (
+                "influencer_discount_amount",
+                "content_discount_amount",
+                "platform_discount_amount",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("💵 هزینه‌های نهایی (بعد از تخفیف)", {
             "fields": (
                 "influencer_cost",
                 "content_cost",
                 "commission",
                 "discount_amount",
+            )
+        }),
+        # ✅ بخش جدید مالیات
+        ("🧾 مالیات بر ارزش افزوده (۱۰٪)", {
+            "fields": (
+                ("influencer_vat", "content_vat", "commission_vat"),
+                "total_vat",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("📊 جمع کل", {
+            "fields": (
                 "total_amount",
                 "payable_amount",
             )
@@ -156,6 +200,28 @@ class CampaignInvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         return format_datetime(obj.created_at)
 
     formatted_created_at.short_description = "تاریخ ایجاد"
+
+    # ========== نمایش فرمت‌شده برای فیلدهای مالیات ==========
+
+    def influencer_vat_display(self, obj):
+        return f"{obj.influencer_vat:,} تومان" if obj.influencer_vat else "۰ تومان"
+    influencer_vat_display.short_description = "مالیات ناشران"
+    influencer_vat_display.admin_order_field = "influencer_vat"
+
+    def content_vat_display(self, obj):
+        return f"{obj.content_vat:,} تومان" if obj.content_vat else "۰ تومان"
+    content_vat_display.short_description = "مالیات تولید محتوا"
+    content_vat_display.admin_order_field = "content_vat"
+
+    def commission_vat_display(self, obj):
+        return f"{obj.commission_vat:,} تومان" if obj.commission_vat else "۰ تومان"
+    commission_vat_display.short_description = "مالیات کمیسیون"
+    commission_vat_display.admin_order_field = "commission_vat"
+
+    def total_vat_display(self, obj):
+        return f"{obj.total_vat:,} تومان" if obj.total_vat else "۰ تومان"
+    total_vat_display.short_description = "جمع کل مالیات"
+    total_vat_display.admin_order_field = "total_vat"
 
     # ========== اورراید متدهای میکسین ==========
 

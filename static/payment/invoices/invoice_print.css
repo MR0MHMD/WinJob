@@ -1,0 +1,324 @@
+/* --- تنظیمات کاغذ: A3 افقی --- */
+@page {
+    size: A4 landscape;
+    margin: 10mm 25mm;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* --- خیلی ساده و معمولی --- */
+body {
+    background: #f4f4f4;
+    color: #000;
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 20px 15px;
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.invoice-wrapper {
+    width: 80%;
+    max-width: 1400px;
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+/* --- هدر --- */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.header-right {
+    text-align: right;
+}
+
+.header-right .sub {
+    font-size: 10px;
+    color: #666;
+}
+
+.header-center {
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.header-left {
+    text-align: left;
+    font-size: 10px;
+}
+
+.header-left div {
+    margin-bottom: 4px;
+}
+
+/* --- اطلاعات --- */
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: #fbfbfb;
+    border: 1px solid #ddd;
+}
+
+.info-table td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    vertical-align: top;
+}
+
+.info-table .label-col {
+    background: #f0f0f0;
+    width: 12%;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* --- جدول اصلی --- */
+.main-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.main-table th, .main-table td {
+    border: 1px solid #000;
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 11px;
+}
+
+.main-table th {
+    background: #eee;
+    font-weight: bold;
+}
+
+.main-table .text-right {
+    text-align: right;
+    padding-right: 10px;
+}
+
+.main-table .sub-text {
+    font-size: 9px;
+    color: #666;
+    display: block;
+    margin-top: 2px;
+}
+
+.main-table .discount-text {
+    color: #d32f2f;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.main-table .summary-row td {
+    background: #fafafa;
+    font-weight: bold;
+    border-top: 2px solid #333;
+}
+
+.main-table .grand-total-row td {
+    font-size: 14px;
+    font-weight: 900;
+}
+
+/* --- پاورقی --- */
+.footer-section {
+    display: flex;
+    justify-content: space-between;
+    border-top: 2px solid #333;
+    padding-top: 10px;
+    margin-top: 5px;
+}
+
+.footer-right {
+    width: 65%;
+}
+
+.footer-right table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.footer-right td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: right;
+}
+
+.footer-right .label {
+    background: #f0f0f0;
+    width: 20%;
+    font-weight: bold;
+}
+
+.footer-left {
+    width: 30%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.stamp-box {
+    margin-top: 10px;
+    border: 2px solid #1a237e;
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a237e;
+    font-weight: bold;
+    font-size: 11px;
+    text-align: center;
+}
+
+/* --- مبلغ به حروف --- */
+.total-words {
+    border: 1px solid #000;
+    padding: 8px 12px;
+    text-align: right;
+    margin: 15px 0;
+    font-weight: bold;
+    background: #fafafa;
+}
+
+/* --- دکمه‌ها --- */
+.btn-bar {
+    text-align: center;
+    width: 100%;
+    max-width: 1400px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-bar button {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-bar .btn-print {
+    background: #fd5631;
+    color: #fff;
+}
+
+.btn-bar .btn-close {
+    background: #eee;
+    color: #333;
+    border: 1px solid #ccc;
+}
+
+/* --- پرینت --- */
+@media print {
+    body {
+        background: #fff;
+        padding: 0;
+        display: block;
+    }
+
+    .invoice-wrapper {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 10px;
+        width: 100%;
+        margin: 0;
+    }
+
+    .btn-bar {
+        display: none !important;
+    }
+
+    .info-table, .main-table th, .footer-right td {
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .main-table .grand-total-row td {
+        background: #f1f8ff !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .stamp-box {
+        border-color: #000 !important;
+    }
+}
+
+/* --- موبایل --- */
+@media (max-width: 720px) {
+    body {
+        padding: 10px;
+        display: block;
+    }
+
+    /* توی موبایل دیگه وسط‌چین عمودی نمی‌خوایم */
+    .header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .header-left, .header-right, .header-center {
+        text-align: center;
+        width: 100%;
+    }
+
+    .info-table td {
+        display: block;
+        width: 100%;
+        border: none;
+        padding: 4px 8px;
+    }
+
+    .info-table tr {
+        display: block;
+        border: 1px solid #ddd;
+        margin-bottom: 8px;
+    }
+
+    .main-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .main-table {
+        min-width: 750px;
+        font-size: 10px;
+    }
+
+    .footer-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .footer-right, .footer-left {
+        width: 100%;
+    }
+
+    .stamp-box {
+        margin: 10px auto;
+    }
+}

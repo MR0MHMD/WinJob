@@ -122,10 +122,18 @@ def invoice_print(request, invoice_id):
     platform_discount_rial = convert_to_rial(invoice.platform_discount_amount)
     total_discount_rial = convert_to_rial(invoice.discount_amount)
 
+    influencer_after_discount_rial = base_influencer_cost_rial - influencer_discount_rial
+    content_after_discount_rial = base_content_cost_rial - content_discount_rial
+    platform_after_discount_rial = base_commission_rial - platform_discount_rial
+
+    influencer_vat_rial = convert_to_rial(invoice.influencer_vat)
+    content_vat_rial = convert_to_rial(invoice.content_vat)
+    platform_vat_rial = convert_to_rial(invoice.commission_vat)
+
     # مبالغ نهایی (ریالی)
-    influencer_cost_rial = convert_to_rial(invoice.influencer_cost)
-    content_cost_rial = convert_to_rial(invoice.content_cost)
-    commission_rial = convert_to_rial(invoice.commission)
+    influencer_cost_rial = convert_to_rial(invoice.influencer_cost + invoice.influencer_vat)
+    content_cost_rial = convert_to_rial(invoice.content_cost + invoice.content_vat)
+    commission_rial = convert_to_rial(invoice.commission + invoice.commission_vat)
     total_amount_rial = convert_to_rial(invoice.total_amount)
     payable_amount_rial = convert_to_rial(invoice.payable_amount)
 
@@ -140,6 +148,14 @@ def invoice_print(request, invoice_id):
         'base_influencer_cost_rial': base_influencer_cost_rial,
         'base_content_cost_rial': base_content_cost_rial,
         'base_commission_rial': base_commission_rial,
+
+        'influencer_after_discount_rial': influencer_after_discount_rial,
+        'content_after_discount_rial': content_after_discount_rial,
+        'platform_after_discount_rial': platform_after_discount_rial,
+
+        'influencer_vat_rial': influencer_vat_rial,
+        'content_vat_rial': content_vat_rial,
+        'platform_vat_rial': platform_vat_rial,
 
         'influencer_discount_rial': influencer_discount_rial,
         'content_discount_rial': content_discount_rial,

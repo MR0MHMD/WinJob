@@ -1,0 +1,358 @@
+/* ===== استایل‌های اختصاصی صفحه جزئیات فاکتور ===== */
+
+.invoice-header-card {
+    background: linear-gradient(145deg, rgba(31, 27, 45, 0.97), rgba(15, 13, 25, 0.99));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 1.75rem 2rem;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+}
+
+.invoice-header-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.08), transparent 70%);
+    pointer-events: none;
+}
+
+.invoice-header-card .invoice-number-display {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #a5b4fc;
+    font-family: monospace;
+    letter-spacing: 1.5px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.3rem 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.invoice-header-card .invoice-status-badge {
+    padding: 0.4rem 1.2rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.invoice-status-badge.paid {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.invoice-status-badge.unpaid {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.invoice-status-badge .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+}
+
+.invoice-status-badge.paid .dot {
+    background: #34d399;
+    animation-delay: 0s;
+}
+
+.invoice-status-badge.unpaid .dot {
+    background: #f87171;
+    animation-delay: 0.5s;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* ===== کارت اطلاعات ===== */
+.info-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    border-color: rgba(99, 102, 241, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.info-card .info-title {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-card .info-title i {
+    font-size: 1rem;
+}
+
+.info-card .info-value {
+    color: #e5e7eb;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.info-card .info-value a {
+    color: #a5b4fc;
+    text-decoration: none;
+    transition: color 0.2s;
+    font-weight: 600;
+}
+
+.info-card .info-value a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* ===== تفکیک هزینه‌ها ===== */
+.cost-breakdown-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    padding: 1.5rem;
+}
+
+.cost-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 0.9rem;
+}
+
+.cost-row:last-child {
+    border-bottom: none;
+}
+
+.cost-row .label {
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cost-row .value {
+    color: #e5e7eb;
+    font-weight: 500;
+    direction: ltr;
+}
+
+.cost-row .value.positive {
+    color: #34d399;
+}
+
+.cost-row .value.negative {
+    color: #f87171;
+}
+
+.cost-row .value.total {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.cost-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0.5rem 0;
+}
+
+/* ===== دکمه‌های اکشن ===== */
+.action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.action-bar .btn {
+    padding: 0.6rem 1.5rem;
+    border-radius: 40px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.action-bar .btn-outline-danger:hover {
+    transform: scale(1.02);
+}
+
+/* ===== کارت تراکنش‌ها ===== */
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-item .tx-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.tx-icon.income {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+}
+
+.tx-icon.expense {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+}
+
+.transaction-item .tx-detail .tx-type {
+    color: #e5e7eb;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.transaction-item .tx-detail .tx-date {
+    color: #9ca3af;
+    font-size: 0.75rem;
+}
+
+.transaction-item .tx-amount {
+    font-weight: 700;
+    direction: ltr;
+}
+
+.tx-amount.positive {
+    color: #34d399;
+}
+
+.tx-amount.negative {
+    color: #f87171;
+}
+
+/* ===== پاسخگویی (ریسپانسیو موبایل) ===== */
+@media (max-width: 768px) {
+    .invoice-header-card {
+        padding: 1.25rem;
+    }
+
+    .invoice-header-card .invoice-number-display {
+        font-size: 1.1rem;
+        padding: 0.2rem 0.8rem;
+    }
+
+    .info-card {
+        padding: 1rem;
+    }
+
+    .cost-breakdown-card {
+        padding: 1rem;
+    }
+
+    .action-bar {
+        flex-direction: column;
+    }
+
+    .action-bar .btn {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+@media print {
+    .action-bar,
+    .btn-scroll-top,
+    .navbar,
+    .footer,
+    .btn-print {
+        display: none !important;
+    }
+
+    .invoice-header-card {
+        background: #fff !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .invoice-header-card .invoice-number-display {
+        color: #333 !important;
+        background: #f9f9f9 !important;
+        border: 1px solid #eee !important;
+    }
+
+    .info-card {
+        background: #f9f9f9 !important;
+        border: 1px solid #eee !important;
+    }
+
+    .info-card .info-value {
+        color: #333 !important;
+    }
+
+    .cost-breakdown-card {
+        background: #f9f9f9 !important;
+        border: 1px solid #eee !important;
+    }
+
+    .cost-row .value {
+        color: #333 !important;
+    }
+
+    .cost-row .value.total {
+        color: #000 !important;
+    }
+
+    .invoice-status-badge.paid {
+        background: #e8f5e9 !important;
+        color: #2e7d32 !important;
+        border-color: #a5d6a7 !important;
+    }
+
+    .invoice-status-badge.unpaid {
+        background: #ffebee !important;
+        color: #c62828 !important;
+        border-color: #ef9a9a !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .page-wrapper {
+        padding: 0 !important;
+    }
+}

@@ -300,7 +300,7 @@
                             <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
                             <div class="cost-row text-warning">
                                 <div class="d-flex flex-column">
-                                    <span><i class="fi-alert-triangle me-1"></i> حق‌العمل پلتفرم (15%)</span>
+                                    <span><i class="fi-alert-triangle"></i> حق‌العمل پلتفرم (15%)</span>
                                     {% if invoice.platform_discount_amount > 0 %}
                                     <span class="text-success ms-1">تخفیف: 
                                         {{invoice.platform_discount_amount}}
@@ -324,6 +324,31 @@
                                     <img src="{% static 'core/svg/toman-warning.svg' %}" alt="">
                                 </div>
                             </div>
+                        
+                            <div class="cost-divider"></div>
+
+                            <div class="cost-row fw-bold text-light">
+                                <span>جمع کل</span>
+                                <span id="final-total-display">
+                                    {{ invoice.total_amount|floatformat:0 }}
+                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
+                                </span>
+                            </div>
+
+                            <!-- ========== ردیف چهارم: مالیات بر ارزش افزوده ========== -->
+                            <div class="cost-row text-primary">
+                                <div class="d-flex flex-column">
+                                    <span><i class="fi-alert-triangle"></i> مالیات بر ارزش افزوده (10%)</span>
+                                </div>
+                                <div class="text-end d-flex gap-1">
+                                    <div>
+                                        <div class="fw-bold text-primary" id="commission-final-display">
+                                            + {{ invoice.total_vat|floatformat:0 }}
+                                        </div>
+                                    </div>
+                                    <img src="{% static 'core/svg/toman-primary.svg' %}" alt="">
+                                </div>
+                            </div>
 
                             <!-- ردیف جدید: نمایش مجموع تخفیف‌ها -->
                             {% if invoice.discount_amount > 0 %}
@@ -341,20 +366,12 @@
 
                             <div class="cost-divider"></div>
 
-                            <!-- ========== ردیف‌های نهایی ========== -->
-                            <div class="cost-row fw-bold text-light">
-                                <span>جمع کل (با حق‌العمل)</span>
-                                <span id="final-total-display">
-                                    {{ invoice.total_amount|floatformat:0 }} 
-                                    <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
-                                </span>
-                            </div>
-                            <div class="cost-row text-info fw-bold {% if invoice.discount_amount == 0 %}d-none{% endif %}"
+                            <div class="cost-row text-accent fw-bold fs-5"
                                  id="payable-row">
-                                <span>مبلغ قابل پرداخت (پس از تخفیف)</span>
+                                <span>مبلغ قابل پرداخت</span>
                                 <span id="payable-amount-display">
                                     {{ invoice.payable_amount|floatformat:0 }}
-                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt="">
+                                    <img src="{% static 'core/svg/toman-accent.svg' %}" alt="">
                                 </span>
                             </div>
                         </div>
@@ -430,17 +447,13 @@
                         <div>
                             <div class="text-secondary small">مبلغ قابل پرداخت</div>
                             <div class="final-price" id="final-price-value">
-                                {% if discount_amount %}
                                     {{ payable_amount|floatformat:0 }}
-                                {% else %}
-                                    {{ final_total|floatformat:0 }}
-                                {% endif %}
                                 <span class="final-price-unit">
                                     <img src="{% static 'core/svg/toman-light.svg' %}" alt="">
                                 </span>
                             </div>
-                            <div class="small text-warning mt-1">شامل {{ commission|floatformat:0 }} تومان حق‌العمل
-                            </div>
+                            <div class="small text-warning mt-1">شامل {{ commission|floatformat:0 }} تومان حق‌العمل</div>
+                            <div class="small text-primary mt-1">شامل {{ invoice.total_vat|floatformat:0 }} تومان مالیات بر ارزش افزوده</div>
                             <div id="total-discount-info"
                                  class="small text-success {% if not discount_amount %}d-none{% endif %} mt-1">
                                 ✅ تخفیف: <span id="total-discount-value">{{ discount_amount|floatformat:0 }}</span>

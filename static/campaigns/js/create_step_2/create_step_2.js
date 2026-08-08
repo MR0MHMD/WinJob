@@ -142,103 +142,114 @@
 
     // ========== دریافت قیمت دقیق از سرور (با کمیسیون) ==========
     function fetchAccuratePrice(selectedIds) {
-        if (!selectedIds.length) {
-            totalPriceEl.classList.remove('updating');
-            breakdownEl.innerHTML = '';
-            hideCommissionDisplay();
-            return;
-        }
-
-        totalPriceEl.classList.add('updating');
-
-        const url = IS_REPLACEMENT_MODE
-            ? '/campaigns/api/calculate-influencer-commission/'
-            : CALCULATE_URL;
-
-        const body = IS_REPLACEMENT_MODE
-            ? JSON.stringify({ rate_ids: selectedIds, campaign_id: CAMPAIGN_ID })
-            : JSON.stringify({ service_rate_ids: selectedIds });
-
-        console.log('📤 [fetchAccuratePrice] ارسال درخواست به:', url);
-        console.log('📤 [fetchAccuratePrice] body:', body);
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: body,
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                totalPriceEl.classList.remove('updating');
-
-                if (data.error) {
-                    console.error('❌ خطا از سرور:', data.error);
-                    return;
-                }
-
-                if (IS_REPLACEMENT_MODE && data.success) {
-                    // ========== حالت جایگزینی: نمایش با کمیسیون ==========
-                    // اطمینان از عدد بودن مقادیر (حذف کاما)
-                    const totalDeduct = sanitizeNumber(data.total_deduct);
-                    const commissionDiff = sanitizeNumber(data.commission_diff);
-                    const newInfluencerCost = sanitizeNumber(data.new_influencer_cost);
-                    const selectedCount = sanitizeNumber(data.selected_count);
-
-                    totalPriceEl.textContent = formatPrice(totalDeduct);
-
-                    if (commissionDiff > 0) {
-                        breakdownEl.innerHTML = `
-                            <span class="d-block text-light">هزینه کانال‌های جدید: ${toPersianNum(newInfluencerCost.toLocaleString('en-US'))} تومان</span>
-                            <span class="d-block" style="color:#f97316;">➕ مابه‌التفاوت حق‌العمل: ${toPersianNum(commissionDiff.toLocaleString('en-US'))} تومان</span>
-                            <span class="d-block mt-1" style="color:#22c55e; font-weight:bold; font-size:1rem;">💰 مبلغ قابل پرداخت: ${toPersianNum(totalDeduct.toLocaleString('en-US'))} تومان</span>
-                            <span class="d-block text-muted small mt-1">(تعداد کانال‌های انتخاب شده: ${toPersianNum(selectedCount)})</span>
-                        `;
-                    } else {
-                        breakdownEl.innerHTML = `
-                            <span class="d-block text-light">هزینه کانال‌های جدید: ${toPersianNum(newInfluencerCost.toLocaleString('en-US'))} تومان</span>
-                            <span class="d-block text-muted small mt-1">(تعداد کانال‌های انتخاب شده: ${toPersianNum(selectedCount)})</span>
-                            <span class="d-block mt-1" style="color:#22c55e; font-weight:bold; font-size:1rem;">💰 مبلغ قابل پرداخت: ${toPersianNum(totalDeduct.toLocaleString('en-US'))} تومان</span>
-                        `;
-                    }
-                } else {
-                    // ========== حالت عادی ==========
-                    const total = sanitizeNumber(data.total);
-                    totalPriceEl.textContent = formatPrice(total);
-
-                    if (data.breakdown && data.breakdown.length) {
-                        const totalCount = data.breakdown.length;
-                        const displayItems = data.breakdown.slice(0, 4);
-                        const remainingCount = totalCount - 4;
-
-                        let namesHtml = '';
-                        displayItems.forEach(function (item) {
-                            const price = sanitizeNumber(item.price);
-                            namesHtml += '<span class="d-block">' +
-                                '<span class="text-light">' + item.name + '</span>' +
-                                ' · ' +
-                                '<span style="color:#a5b4fc;">' + toPersianNum(price.toLocaleString('en-US')) + ' تومان</span>' +
-                                '</span>';
-                        });
-                        if (remainingCount > 0) {
-                            namesHtml += '<span class="d-block text-muted small mt-1" style="color:#a5b4fc;">و ' +
-                                toPersianNum(remainingCount) + ' نفر دیگر</span>';
-                        }
-                        breakdownEl.innerHTML = namesHtml;
-                    } else {
-                        breakdownEl.innerHTML = '';
-                    }
-                }
-            })
-            .catch(function (error) {
-                console.error('❌ [fetchAccuratePrice] خطا در fetch:', error);
-                totalPriceEl.classList.remove('updating');
-            });
+    if (!selectedIds.length) {
+        totalPriceEl.classList.remove('updating');
+        breakdownEl.innerHTML = '';
+        hideCommissionDisplay();
+        return;
     }
+
+    totalPriceEl.classList.add('updating');
+
+    const url = IS_REPLACEMENT_MODE
+        ? '/campaigns/api/calculate-influencer-commission/'
+        : CALCULATE_URL;
+
+    const body = IS_REPLACEMENT_MODE
+        ? JSON.stringify({ rate_ids: selectedIds, campaign_id: CAMPAIGN_ID })
+        : JSON.stringify({ service_rate_ids: selectedIds });
+
+    console.log('📤 [fetchAccuratePrice] ارسال درخواست به:', url);
+    console.log('📤 [fetchAccuratePrice] body:', body);
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: body,
+    })
+        .then(function (res) {
+            return res.json();
+        })
+        .then(function (data) {
+            totalPriceEl.classList.remove('updating');
+
+            if (data.error) {
+                console.error('❌ خطا از سرور:', data.error);
+                return;
+            }
+
+            if (IS_REPLACEMENT_MODE && data.success) {
+                // ========== حالت جایگزینی ==========
+                const totalDeduct = sanitizeNumber(data.total_deduct);
+                const commissionDiff = sanitizeNumber(data.commission_diff);
+                const commissionToPay = sanitizeNumber(data.commission_to_pay);
+                const vatDiff = sanitizeNumber(data.vat_diff);
+                const newInfluencerCost = sanitizeNumber(data.new_influencer_cost);
+                const selectedCount = sanitizeNumber(data.selected_count);
+
+                totalPriceEl.textContent = formatPrice(totalDeduct);
+
+                let html = '';
+
+                // ۱. هزینه کانال‌های جدید
+                html += `<span class="d-block text-light">📊 هزینه کانال‌های جدید: ${toPersianNum(newInfluencerCost.toLocaleString('en-US'))} تومان</span>`;
+
+                // ۲. مابه‌التفاوت کمیسیون (فقط اگر مثبت باشه)
+                if (commissionToPay > 0) {
+                    html += `<span class="d-block" style="color:#f97316;">➕ مابه‌التفاوت حق‌العمل: ${toPersianNum(commissionToPay.toLocaleString('en-US'))} تومان</span>`;
+                }
+                // اگر کمیسیون کاهش پیدا کرده، هیچ چیزی نمایش نمی‌دیم
+
+                // ۳. مابه‌التفاوت مالیات
+                if (vatDiff > 0) {
+                    html += `<span class="d-block" style="color:#e74c3c;">➕ مابه‌التفاوت مالیات: ${toPersianNum(vatDiff.toLocaleString('en-US'))} تومان</span>`;
+                } else if (vatDiff < 0) {
+                    html += `<span class="d-block text-success">➖ کاهش مالیات (کمک هزینه): ${toPersianNum(Math.abs(vatDiff).toLocaleString('en-US'))} تومان</span>`;
+                }
+
+                // ۴. مبلغ نهایی
+                html += `<span class="d-block mt-2" style="color:#22c55e; font-weight:bold; font-size:1.2rem;">💰 مبلغ قابل پرداخت: ${toPersianNum(totalDeduct.toLocaleString('en-US'))} تومان</span>`;
+
+                html += `<span class="d-block text-muted small mt-1">(تعداد کانال‌های انتخاب شده: ${toPersianNum(selectedCount)})</span>`;
+
+                breakdownEl.innerHTML = html;
+            } else {
+                // ========== حالت عادی ==========
+                const total = sanitizeNumber(data.total);
+                totalPriceEl.textContent = formatPrice(total);
+
+                if (data.breakdown && data.breakdown.length) {
+                    const totalCount = data.breakdown.length;
+                    const displayItems = data.breakdown.slice(0, 4);
+                    const remainingCount = totalCount - 4;
+
+                    let namesHtml = '';
+                    displayItems.forEach(function (item) {
+                        const price = sanitizeNumber(item.price);
+                        namesHtml += '<span class="d-block">' +
+                            '<span class="text-light">' + item.name + '</span>' +
+                            ' · ' +
+                            '<span style="color:#a5b4fc;">' + toPersianNum(price.toLocaleString('en-US')) + ' تومان</span>' +
+                            '</span>';
+                    });
+                    if (remainingCount > 0) {
+                        namesHtml += '<span class="d-block text-muted small mt-1" style="color:#a5b4fc;">و ' +
+                            toPersianNum(remainingCount) + ' نفر دیگر</span>';
+                    }
+                    breakdownEl.innerHTML = namesHtml;
+                } else {
+                    breakdownEl.innerHTML = '';
+                }
+            }
+        })
+        .catch(function (error) {
+            console.error('❌ [fetchAccuratePrice] خطا در fetch:', error);
+            totalPriceEl.classList.remove('updating');
+        });
+}
 
     // ========== مخفی کردن نمایش کمیسیون ==========
     function hideCommissionDisplay() {

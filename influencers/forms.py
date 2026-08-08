@@ -3,43 +3,6 @@ from django.utils.safestring import mark_safe
 from influencers.models import InfluencerProfile, Channel
 
 
-class InfluencerProfileForm(forms.ModelForm):
-    class Meta:
-        model = InfluencerProfile
-
-        fields = (
-            "full_name",
-            "description",
-        )
-
-        widgets = {
-
-            "full_name": forms.TextInput(
-                attrs={
-                    "class": "form-control form-control-light mt-3",
-                    "placeholder": "نام کامل کانال یا پیج",
-                    "data-bs-binded-element": "#full-name-value",
-                    "data-bs-unset-value": "مشخص نشده است",
-                    "id": "full-name-input",
-                }
-            ),
-
-            "description": forms.Textarea(
-                attrs={
-                    "class": "form-control form-control-light mt-3",
-                    "rows": 4,
-                    "placeholder": "درباره خودت و محتوای پیج بنویس",
-                }
-            ),
-        }
-
-    def clean_full_name(self):
-        return (self.cleaned_data.get("full_name") or "").strip()
-
-    def clean_description(self):
-        return ((self.cleaned_data.get("description") or "").strip()) or ""
-
-
 class ChannelForm(forms.ModelForm):
     class Meta:
         model = Channel
@@ -52,7 +15,8 @@ class ChannelForm(forms.ModelForm):
             "channel_name",
             "url",
             "followers_count",
-            "avatar"
+            "avatar",
+            "bio",
         )
 
         widgets = {
@@ -78,7 +42,7 @@ class ChannelForm(forms.ModelForm):
             "channel_id": forms.TextInput(
                 attrs={
                     "class": "form-control bg-dark text-light border-light",
-                    "placeholder": "@example",
+                    "placeholder": "آیدی کانال بدون @",
                 }
             ),
 
@@ -108,10 +72,40 @@ class ChannelForm(forms.ModelForm):
                     "style": "display: none;",
                 }
             ),
+
+            "bio": forms.Textarea(
+                attrs={
+                    "class": "form-control bg-dark text-light border-light",
+                    "rows": 4,
+                    "placeholder": "درباره کانال خود توضیح دهید...",
+                    "maxlength": 800,
+                }
+            ),
         }
 
     def clean_channel_id(self):
-        return (self.cleaned_data.get("channel_id") or "").strip()
+        """
+        پاک کردن @ از اول و آخر آیدی کانال
+        """
+        channel_id = self.cleaned_data.get("channel_id") or ""
+        channel_id = channel_id.strip()
+
+        # حذف @ از اول
+        if channel_id.startswith('@'):
+            channel_id = channel_id[1:]
+
+        # حذف @ از آخر (اگر کسی اشتباهی آخرش @ گذاشته باشه)
+        if channel_id.endswith('@'):
+            channel_id = channel_id[:-1]
+
+        # حذف @ های تکراری (اگه کسی @@@example رو وارد کرده باشه)
+        while channel_id.startswith('@'):
+            channel_id = channel_id[1:]
+
+        return channel_id
 
     def clean_channel_name(self):
+        """
+        پاکسازی نام کانال
+        """
         return (self.cleaned_data.get("channel_name") or "").strip()

@@ -170,21 +170,6 @@ def campaign_detail(request, campaign_id):
             not has_ready_content
     )
 
-    # progress based on campaign status
-    progress_map = {
-        "draft": 10,
-        "pending": 20,
-        "approved": 40,
-        "running": 70,
-        "completed": 100,
-        "cancelled": 0,
-        "revision_needed": 15,
-    }
-    progress_percent = progress_map.get(campaign.status, 0)
-    r = int(255 - (progress_percent * 2.55))
-    g = int(progress_percent * 2.55)
-    progress_color = f"rgb({r}, {g}, 0)"
-
     now = timezone.now()
     last_30_days = now - timedelta(days=30)
 
@@ -277,8 +262,6 @@ def campaign_detail(request, campaign_id):
         "campaign": campaign,
         "channels": channels,
         "channels_count": channels_count,
-        "progress_percent": progress_percent,
-        "progress_color": progress_color,
         "daily_labels_json": json.dumps(daily_labels, ensure_ascii=False),
         "daily_datasets_json": json.dumps(datasets, ensure_ascii=False),
         "has_click_data": has_click_data,

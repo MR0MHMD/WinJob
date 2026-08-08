@@ -1,31 +1,42 @@
-# accounts/admin
-from .forms import CustomUserChangeForm, CustomUserCreationForm
-from django_jalali.admin.filters import JDateFieldListFilter
-from django.utils.translation import gettext_lazy as _
+# accounts/admin.py
+from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
-from payment.admin import TransactionInline
 from django.utils.html import format_html
-from payment.models import Transaction
+from django.urls import reverse
 from django.contrib import messages
 from django.db.models import Sum
-from django.urls import reverse
-from .models import CustomUser
-from .models import OTPRequest
-from .inline_admin import *
+from django_jalali.admin.filters import JDateFieldListFilter
+
+from payment.admin import TransactionInline
+from payment.models import Transaction
+from core.utils.admin_utils import format_datetime
+from .models import CustomUser, OTPRequest
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+from .inline_admin import AdvertiserProfileInline, InfluencerProfileInline
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm
-    form = CustomUserChangeForm
+    """
+    مدیریت کامل کاربران با فرم‌های سفارشی و امکانات پیشرفته
+    """
     model = CustomUser
 
+    # ==================== فرم‌های مورد استفاده ====================
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
+
+    # ==================== لیست نمایش ====================
     list_display = [
         'phone_number',
         'nickname',
         'user_type_display',
         'profile_status',
+        'wallet_balance_short',
         'formatted_created_at',
     ]
 
@@ -33,113 +44,173 @@ class CustomUserAdmin(UserAdmin):
         'is_active',
         'is_staff',
         'is_superuser',
+        'is_regional_manager',
         ('created_at', JDateFieldListFilter),
-        ('province', admin.RelatedOnlyFieldListFilter),
+        'province',
     ]
 
     search_fields = [
         'phone_number',
         'nickname',
+        'email',
         'advertiser_profile__business_name',
-        'influencer_profile__full_name',
     ]
 
     ordering = ('-created_at',)
 
+    # ==================== فیلدهای فقط خواندنی ====================
     readonly_fields = [
         'last_login',
-        'formatted_date_joined',
-        'formatted_created_at',
-        'formatted_updated_at',
+        'date_joined_display',
+        'created_at_display',
+        'updated_at_display',
         'profile_link',
         'wallet_balance_display',
         'total_spent_display',
         'total_deposits_display',
-        'display_sheba',
+        'display_sheba_formatted',
     ]
 
-    # ==================== FIELDSETS ====================
+    # ==================== فیلدست‌ها ====================
 
-    def get_fieldsets(self, request, obj=None):
-        base_fieldsets = (
-            (None, {
-                'fields': ('phone_number', 'password')
-            }),
-            (_('اطلاعات شخصی'), {
-                'fields': ('nickname', 'email', 'avatar', 'display_sheba', 'province',),
-            }),
-            (_('اطلاعات مالی'), {
-                'fields': ('wallet_balance_display', 'total_spent_display', 'total_deposits_display'),
-                'classes': ('collapse',)
-            }),
-            (_('مجوزها'), {
-                'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager',),
-                'classes': ('collapse',)
-            }),
-            (_('گروه‌ها و دسترسی‌ها'), {
-                'classes': ('collapse',),
-                'fields': ('groups', 'user_permissions')
-            }),
-            (_('تاریخ‌ها'), {
-                'classes': ('collapse',),
-                'fields': ('last_login', 'formatted_date_joined', 'formatted_created_at', 'formatted_updated_at')
-            }),
-        )
+    # فیلدست برای ویرایش کاربران موجود
+    fieldsets = (
+        (None, {
+            'fields': ('phone_number', 'password')
+        }),
+        (_('اطلاعات شخصی'), {
+            'fields': ('nickname', 'email', 'avatar', 'province', 'display_sheba_formatted'),
+        }),
+        (_('اطلاعات مالی'), {
+            'fields': ('wallet_balance_display', 'total_spent_display', 'total_deposits_display'),
+            'classes': ('collapse',)
+        }),
+        (_('مجوزها و دسترسی‌ها'), {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager'),
+            'classes': ('collapse',)
+        }),
+        (_('گروه‌ها و دسترسی‌های خاص'), {
+            'classes': ('collapse',),
+            'fields': ('groups', 'user_permissions')
+        }),
+        (_('تاریخ‌ها'), {
+            'classes': ('collapse',),
+            'fields': ('last_login', 'date_joined_display', 'created_at_display', 'updated_at_display')
+        }),
+    )
 
-        if obj:
-            base_fieldsets = base_fieldsets + (
-                (_('پروفایل مرتبط'), {
-                    'classes': ('collapse',),
-                    'fields': ('profile_link',)
-                }),
-            )
+    # فیلدست برای ساخت کاربر جدید
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('phone_number', 'password1', 'password2'),
+        }),
+        (_('اطلاعات شخصی'), {
+            'fields': ('nickname', 'email', 'avatar', 'province',),
+        }),
+        (_('مجوزها'), {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager'),
+        }),
+    )
 
-        return base_fieldsets
-
-    # ==================== INLINE MANAGEMENT ====================
+    # ==================== اینلاین‌ها ====================
 
     def get_inline_instances(self, request, obj=None):
+        """
+        اضافه کردن اینلاین‌ها فقط در صورت وجود کاربر و پروفایل مرتبط
+        """
         inlines = []
 
         if obj:
+            # تراکنش‌های مالی
             inlines.append(TransactionInline(self.model, self.admin_site))
 
+            # پروفایل تبلیغ‌دهنده
             if hasattr(obj, 'advertiser_profile'):
                 inlines.append(AdvertiserProfileInline(self.model, self.admin_site))
 
-            elif hasattr(obj, 'influencer_profile'):
+            # پروفایل اینفلوئنسر
+            if hasattr(obj, 'influencer_profile'):
                 inlines.append(InfluencerProfileInline(self.model, self.admin_site))
 
         return inlines
 
-    # ==================== CUSTOM METHODS ====================
+    # ==================== متدهای نمایشی ====================
 
     def user_type_display(self, obj):
+        """نوع کاربر با آیکون و رنگ مناسب"""
         if hasattr(obj, 'advertiser_profile'):
-            return mark_safe('<span style="color: #4CAF50;">🏢 تبلیغ‌دهنده</span>')
+            return mark_safe('<span style="color: #4CAF50; font-weight: bold;">🏢 تبلیغ‌دهنده</span>')
         elif hasattr(obj, 'influencer_profile'):
-            return mark_safe('<span style="color: #2196F3;">🌟 اینفلوئنسر</span>')
+            return mark_safe('<span style="color: #2196F3; font-weight: bold;">🌟 اینفلوئنسر</span>')
         elif hasattr(obj, 'team_member'):
-            return mark_safe('<span style="color: #2196F3;">🌟 عضو تیم</span>')
+            return mark_safe('<span style="color: #9C27B0; font-weight: bold;">👥 عضو تیم</span>')
         elif obj.is_superuser:
-            return mark_safe('<span style="color: #f44336;">👑 مدیر سیستم</span>')
+            return mark_safe('<span style="color: #f44336; font-weight: bold;">👑 مدیر ارشد</span>')
         elif obj.is_staff and obj.is_regional_manager:
-            return mark_safe('<span style="color: #f44336;">👑 مدیر استانی</span>')
+            return mark_safe('<span style="color: #FF9800; font-weight: bold;">🏛️ مدیر استانی</span>')
         elif obj.is_staff:
-            return mark_safe('<span style="color: #f44336;">👑 کارمند</span>')
-
-        return '-'
+            return mark_safe('<span style="color: #607D8B; font-weight: bold;">👔 کارمند</span>')
+        return mark_safe('<span style="color: #9E9E9E;">-</span>')
 
     user_type_display.short_description = 'نوع کاربر'
+    user_type_display.admin_order_field = 'phone_number'
 
-    def wallet_balance_display(self, obj):
-        """نمایش موجودی کیف پول با استایل رنگی"""
+    def profile_status(self, obj):
+        """وضعیت پروفایل با رنگ‌بندی مناسب"""
+        try:
+            if hasattr(obj, 'advertiser_profile'):
+                if obj.advertiser_profile.is_verified:
+                    return mark_safe('<span style="color: #4CAF50;">✅ تأیید شده</span>')
+                else:
+                    return mark_safe('<span style="color: #FF9800;">⏳ در انتظار تأیید</span>')
+
+            elif hasattr(obj, 'influencer_profile'):
+                if obj.influencer_profile.is_active:
+                    return mark_safe('<span style="color: #4CAF50;">✅ فعال</span>')
+                else:
+                    return mark_safe('<span style="color: #f44336;">❌ غیرفعال</span>')
+
+            elif obj.is_superuser:
+                return mark_safe('<span style="color: #9C27B0;">👑 مدیر</span>')
+
+            return mark_safe('<span style="color: #9E9E9E;">-</span>')
+
+        except Exception:
+            return mark_safe('<span style="color: #f44336;">⚠️ خطا</span>')
+
+    profile_status.short_description = 'وضعیت پروفایل'
+
+    def wallet_balance_short(self, obj):
+        """نمایش مختصر موجودی در لیست"""
         try:
             balance = obj.wallet.balance
             color = '#4CAF50' if balance > 0 else '#f44336'
-            return format_html('<span style="color: {}; font-weight: bold;">{} تومان</span>', color, f"{balance:,}")
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{} تومان</span>',
+                color,
+                f"{balance:,}"
+            )
         except:
-            return mark_safe('<span style="color: #f44336;">کیف پول ایجاد نشده</span>')
+            return mark_safe('<span style="color: #9E9E9E;">-</span>')
+
+    wallet_balance_short.short_description = 'موجودی'
+    wallet_balance_short.admin_order_field = 'wallet__balance'
+
+    def wallet_balance_display(self, obj):
+        """نمایش کامل موجودی با جزییات"""
+        try:
+            balance = obj.wallet.balance
+            color = '#4CAF50' if balance > 0 else '#f44336'
+            return format_html(
+                '<div style="font-size: 14px; padding: 5px; background: #f5f5f5; border-radius: 4px;">'
+                '<span style="color: {}; font-weight: bold;">💰 {} تومان</span>'
+                '</div>',
+                color,
+                f"{balance:,}"
+            )
+        except:
+            return mark_safe('<span style="color: #f44336;">⚠️ کیف پول ایجاد نشده</span>')
 
     wallet_balance_display.short_description = 'موجودی کیف پول'
 
@@ -150,7 +221,11 @@ class CustomUserAdmin(UserAdmin):
             type__in=[Transaction.Type.CAMPAIGN_PAYMENT, Transaction.Type.WITHDRAW],
             status=Transaction.Status.SUCCESS
         ).aggregate(total=Sum('amount'))['total'] or 0
-        return format_html('<span style="color: #ff9800;">{} تومان</span>', f"{total:,}")
+
+        return format_html(
+            '<span style="color: #FF9800; font-weight: bold;">💰 {} تومان</span>',
+            f"{total:,}"
+        )
 
     total_spent_display.short_description = 'کل هزینه‌ها'
 
@@ -161,46 +236,28 @@ class CustomUserAdmin(UserAdmin):
             type__in=[Transaction.Type.DEPOSIT, Transaction.Type.GATEWAY_PAYMENT],
             status=Transaction.Status.SUCCESS
         ).aggregate(total=Sum('amount'))['total'] or 0
-        return format_html('<span style="color: #4CAF50;">{} تومان</span>', f"{total:,}")
+
+        return format_html(
+            '<span style="color: #4CAF50; font-weight: bold;">💰 {} تومان</span>',
+            f"{total:,}"
+        )
 
     total_deposits_display.short_description = 'کل شارژها'
 
-    def profile_status(self, obj):
-        try:
-            if hasattr(obj, 'advertiser_profile'):
-                if obj.advertiser_profile.is_verified:
-                    return mark_safe('<span style="color: #4CAF50;">✅ تأیید شده</span>')
-                else:
-                    return mark_safe('<span style="color: #ff9800;">⏳ در انتظار تأیید</span>')
-
-            elif hasattr(obj, 'influencer_profile'):
-                if obj.influencer_profile.is_active:
-                    return mark_safe('<span style="color: #4CAF50;">✅ فعال</span>')
-                else:
-                    return mark_safe('<span style="color: #f44336;">❌ غیرفعال</span>')
-
-            elif obj.is_superuser:
-                return mark_safe('<span style="color: #9c27b0;">👑 مدیر</span>')
-
-            return '-'
-
-        except Exception:
-            return "خطا"
-
-    profile_status.short_description = 'وضعیت پروفایل'
-
     def profile_link(self, obj):
+        """لینک مستقیم به پروفایل مرتبط"""
         if hasattr(obj, 'advertiser_profile'):
             try:
                 profile = obj.advertiser_profile
                 if profile and profile.id:
                     url = reverse('admin:advertisers_advertiserprofile_change', args=[profile.id])
                     return format_html(
-                        '<a href="{}" style="background-color: #4CAF50; color: white; padding: 5px 10px; '
-                        'border-radius: 4px; text-decoration: none;">📋 مشاهده پروفایل تبلیغ‌دهنده</a>',
+                        '<a href="{}" style="background: #4CAF50; color: white; padding: 5px 12px; '
+                        'border-radius: 4px; text-decoration: none; display: inline-block;">'
+                        '📋 مشاهده پروفایل تبلیغ‌دهنده</a>',
                         url
                     )
-            except (AttributeError, AdvertiserProfile.DoesNotExist):
+            except:
                 pass
 
         elif hasattr(obj, 'influencer_profile'):
@@ -209,16 +266,57 @@ class CustomUserAdmin(UserAdmin):
                 if profile and profile.id:
                     url = reverse('admin:influencers_influencerprofile_change', args=[profile.id])
                     return format_html(
-                        '<a href="{}" style="background-color: #2196F3; color: white; padding: 5px 10px; '
-                        'border-radius: 4px; text-decoration: none;">📋 مشاهده پروفایل اینفلوئنسر</a>',
+                        '<a href="{}" style="background: #2196F3; color: white; padding: 5px 12px; '
+                        'border-radius: 4px; text-decoration: none; display: inline-block;">'
+                        '📋 مشاهده پروفایل اینفلوئنسر</a>',
                         url
                     )
-            except (AttributeError, InfluencerProfile.DoesNotExist):
+            except:
                 pass
 
-        return mark_safe('<span style="color: gray;">این کاربر پروفایل خاصی ندارد</span>')
+        return mark_safe('<span style="color: #9E9E9E;">این کاربر پروفایل خاصی ندارد</span>')
 
-    profile_link.short_description = 'لینک پروفایل'
+    profile_link.short_description = 'مشاهده پروفایل'
+
+    def display_sheba_formatted(self, obj):
+        """نمایش فرمت شده شماره شبا"""
+        if not obj.sheba_code:
+            return mark_safe('<span style="color: #9E9E9E;">-</span>')
+
+        # حذف IR و فرمت‌بندی
+        raw = obj.sheba_code.replace("IR", "").strip()
+        first_two = raw[:2]
+        rest = raw[2:]
+        formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
+
+        return format_html(
+            '<code style="background: #f5f5f5; padding: 3px 8px; border-radius: 3px; direction: ltr; display: inline-block;">'
+            'IR - {} {}</code>',
+            first_two,
+            formatted_rest
+        )
+
+    display_sheba_formatted.short_description = 'شماره شبا'
+
+    # ==================== نمایش تاریخ‌ها ====================
+
+    def date_joined_display(self, obj):
+        return format_datetime(obj.date_joined)
+
+    date_joined_display.short_description = 'تاریخ عضویت'
+    date_joined_display.admin_order_field = 'date_joined'
+
+    def created_at_display(self, obj):
+        return format_datetime(obj.created_at)
+
+    created_at_display.short_description = 'تاریخ ایجاد'
+    created_at_display.admin_order_field = 'created_at'
+
+    def updated_at_display(self, obj):
+        return format_datetime(obj.updated_at)
+
+    updated_at_display.short_description = 'آخرین ویرایش'
+    updated_at_display.admin_order_field = 'updated_at'
 
     def formatted_created_at(self, obj):
         return format_datetime(obj.created_at)
@@ -226,89 +324,223 @@ class CustomUserAdmin(UserAdmin):
     formatted_created_at.short_description = 'تاریخ ایجاد'
     formatted_created_at.admin_order_field = 'created_at'
 
-    def formatted_date_joined(self, obj):
-        return format_datetime(obj.date_joined)
+    # ==================== اکشن‌های دسته‌جمعی ====================
 
-    formatted_date_joined.short_description = 'تاریخ عضویت'
-
-    def formatted_updated_at(self, obj):
-        return format_datetime(obj.updated_at)
-
-    formatted_updated_at.short_description = 'آخرین ویرایش'
-
-    # ==================== ACTIONS ====================
-
-    actions = ['activate_users', 'deactivate_users', 'delete_profiles']
+    actions = [
+        'activate_users',
+        'deactivate_users',
+        'make_regional_manager',
+        'remove_regional_manager',
+        'delete_profiles'
+    ]
 
     def activate_users(self, request, queryset):
-        updated_count = queryset.update(is_active=True)
-        self.message_user(request, f'✅ {updated_count} کاربر با موفقیت فعال شدند.', messages.SUCCESS)
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'✅ {updated} کاربر با موفقیت فعال شدند.', messages.SUCCESS)
 
-    activate_users.short_description = 'فعال کردن کاربران'
+    activate_users.short_description = 'فعال کردن کاربران انتخاب‌شده'
 
     def deactivate_users(self, request, queryset):
-        updated_count = queryset.update(is_active=False)
-        self.message_user(request, f'✅ {updated_count} کاربر با موفقیت غیرفعال شدند.', messages.SUCCESS)
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'✅ {updated} کاربر با موفقیت غیرفعال شدند.', messages.SUCCESS)
 
-    deactivate_users.short_description = 'غیرفعال کردن کاربران'
+    deactivate_users.short_description = 'غیرفعال کردن کاربران انتخاب‌شده'
+
+    def make_regional_manager(self, request, queryset):
+        updated = queryset.update(is_regional_manager=True)
+        self.message_user(request, f'✅ {updated} کاربر به عنوان مدیر استانی تعیین شدند.', messages.SUCCESS)
+
+    make_regional_manager.short_description = 'تبدیل به مدیر استانی'
+
+    def remove_regional_manager(self, request, queryset):
+        updated = queryset.update(is_regional_manager=False)
+        self.message_user(request, f'✅ نقش مدیر استانی از {updated} کاربر برداشته شد.', messages.SUCCESS)
+
+    remove_regional_manager.short_description = 'برداشتن نقش مدیر استانی'
 
     def delete_profiles(self, request, queryset):
-        deleted_count = 0
+        deleted = 0
         for user in queryset:
             if hasattr(user, 'advertiser_profile'):
                 user.advertiser_profile.delete()
-                deleted_count += 1
+                deleted += 1
             elif hasattr(user, 'influencer_profile'):
                 user.influencer_profile.delete()
-                deleted_count += 1
-        self.message_user(request, f'✅ {deleted_count} پروفایل مرتبط حذف شدند.', messages.SUCCESS)
+                deleted += 1
+        self.message_user(request, f'✅ {deleted} پروفایل مرتبط حذف شدند.', messages.SUCCESS)
 
     delete_profiles.short_description = 'حذف پروفایل‌های مرتبط'
 
+    # ==================== متدهای ذخیره‌سازی ====================
+
+    def save_model(self, request, obj, form, change):
+        """
+        ذخیره‌سازی با مدیریت رمز عبور
+        """
+        if not change:  # ساخت کاربر جدید
+            password = form.cleaned_data.get('password1')
+            if password:
+                obj.set_password(password)
+        super().save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        """
+        ذخیره‌سازی روابط بعد از ذخیره اصلی
+        """
+        super().save_related(request, form, formsets, change)
+
+        # اطمینان از ایجاد کیف پول
+        if form.instance:
+            from payment.models import Wallet
+            Wallet.objects.get_or_create(user=form.instance)
+
+
+# ==================== مدیریت OTP ====================
 
 @admin.register(OTPRequest)
 class OTPRequestAdmin(admin.ModelAdmin):
-    list_display = ['phone_number', 'code', 'get_type', 'status', 'created_at', 'expires_at', 'api_status_badge']
-    list_filter = ['status', 'type', 'api_status_code', 'created_at']
-    search_fields = ['phone_number', 'code', 'request_id']
-    readonly_fields = ['api_response_pretty', 'created_at', 'expires_at', 'verified_at']
+    """
+    مدیریت کدهای تایید یکبار مصرف
+    """
+    list_display = [
+        'phone_number',
+        'code',
+        'type_badge',
+        'status_badge',
+        'attempts',
+        'created_at',
+        'expires_at',
+        'api_status_badge'
+    ]
+
+    list_filter = [
+        'status',
+        'type',
+        'api_status_code',
+        'created_at',
+    ]
+
+    search_fields = [
+        'phone_number',
+        'code',
+        'request_id',
+    ]
+
+    readonly_fields = [
+        'api_response_pretty',
+        'created_at',
+        'expires_at',
+        'verified_at',
+    ]
+
     fieldsets = (
-        ('اطلاعات اصلی', {
+        (_('اطلاعات اصلی'), {
             'fields': ('phone_number', 'code', 'type', 'status')
         }),
-        ('جزئیات', {
+        (_('جزییات و وضعیت'), {
             'fields': ('attempts', 'request_id', 'created_at', 'expires_at', 'verified_at')
         }),
-        ('لاگ API', {
+        (_('لاگ ارتباط با API'), {
             'fields': ('api_status_code', 'api_response_pretty'),
             'classes': ('collapse',)
         }),
     )
 
-    def get_type(self, obj):
-        return obj.get_type_display()
+    # ==================== متدهای نمایشی ====================
 
-    get_type.short_description = 'نوع'
+    def type_badge(self, obj):
+        """نمایش نوع با رنگ مناسب"""
+        colors = {
+            'login': '#4CAF50',
+            'register': '#2196F3',
+            'verify': '#FF9800',
+        }
+        labels = {
+            'login': 'ورود',
+            'register': 'ثبت‌نام',
+            'verify': 'تایید',
+        }
+        color = colors.get(obj.type, '#9E9E9E')
+        label = labels.get(obj.type, obj.type)
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">{}</span>',
+            color,
+            label
+        )
+
+    type_badge.short_description = 'نوع'
+
+    def status_badge(self, obj):
+        """نمایش وضعیت با رنگ مناسب"""
+        colors = {
+            'pending': '#FF9800',
+            'verified': '#4CAF50',
+            'expired': '#f44336',
+        }
+        labels = {
+            'pending': '⏳ در انتظار',
+            'verified': '✅ تایید شده',
+            'expired': '❌ منقضی',
+        }
+        color = colors.get(obj.status, '#9E9E9E')
+        label = labels.get(obj.status, obj.status)
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            label
+        )
+
+    status_badge.short_description = 'وضعیت'
 
     def api_status_badge(self, obj):
+        """نمایش وضعیت API با رنگ مناسب"""
         if obj.api_status_code == 200:
-            color = 'green'
-            text = '✓ موفق'
+            return format_html(
+                '<span style="color: #4CAF50; font-weight: bold;">✓ موفق</span>'
+            )
         elif obj.api_status_code:
-            color = 'red'
-            text = '✗ خطا'
-        else:
-            color = 'gray'
-            text = '—'
-        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, text)
+            return format_html(
+                '<span style="color: #f44336; font-weight: bold;">✗ خطا ({})</span>',
+                obj.api_status_code
+            )
+        return format_html(
+            '<span style="color: #9E9E9E;">-</span>'
+        )
 
     api_status_badge.short_description = 'وضعیت API'
 
     def api_response_pretty(self, obj):
+        """نمایش زیبای پاسخ API"""
         import json
         if not obj.api_response:
-            return '-'
-        return format_html('<pre style="white-space: pre-wrap;">{}</pre>',
-                           json.dumps(obj.api_response, indent=2, ensure_ascii=False))
+            return mark_safe('<span style="color: #9E9E9E;">-</span>')
+
+        try:
+            formatted = json.dumps(obj.api_response, indent=2, ensure_ascii=False)
+            return format_html(
+                '<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; '
+                'white-space: pre-wrap; direction: ltr; text-align: left;">{}</pre>',
+                formatted
+            )
+        except:
+            return format_html('<pre>{}</pre>', obj.api_response)
 
     api_response_pretty.short_description = 'پاسخ API'
+
+    # ==================== اکشن‌ها ====================
+
+    actions = ['resend_otp', 'verify_manually']
+
+    def resend_otp(self, request, queryset):
+        """درخواست ارسال مجدد OTP"""
+        # این قابلیت باید در سرویس مربوطه پیاده‌سازی شود
+        self.message_user(request, '⚠️ این قابلیت باید از طریق سرویس OTP انجام شود.', messages.WARNING)
+
+    resend_otp.short_description = 'ارسال مجدد OTP (نیاز به پیاده‌سازی)'
+
+    def verify_manually(self, request, queryset):
+        """تایید دستی OTP"""
+        updated = queryset.update(status='verified', verified_at=timezone.now())
+        self.message_user(request, f'✅ {updated} کد تایید به صورت دستی تایید شدند.', messages.SUCCESS)
+
+    verify_manually.short_description = 'تایید دستی کدهای انتخاب‌شده'

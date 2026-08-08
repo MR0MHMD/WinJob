@@ -41,7 +41,6 @@ class RegistrationService:
 
         influencer = InfluencerProfile.objects.create(
             user=user,
-            full_name=nickname or f"user-{phone_number}",
             **profile_data
         )
 

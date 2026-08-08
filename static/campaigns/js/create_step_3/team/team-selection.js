@@ -291,7 +291,7 @@
                     </div>
                 </div>
                 <div class="plan-footer text-center">
-                    <a href="/content_team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
+                    <a href="/content_team/team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
                 </div>
             </div>
         `;

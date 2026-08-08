@@ -70,7 +70,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(channel_name__icontains=search) |
                 Q(channel_id__icontains=search) |
-                Q(influencer__full_name__icontains=search) |
+                Q(influencer__user__nickname__icontains=search) |
                 Q(influencer__user__phone_number__icontains=search)
             )
 
@@ -133,7 +133,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
         if influencer_id and influencer_id.isdigit():
             try:
                 influencer = InfluencerProfile.objects.get(id=int(influencer_id))
-                context['filtered_influencer_name'] = influencer.full_name
+                context['filtered_influencer_name'] = influencer.user.nickname
             except InfluencerProfile.DoesNotExist:
                 pass
 
@@ -281,7 +281,7 @@ class UserListView(SupportRequiredMixin, ListView):
                 Q(phone_number__icontains=search) |
                 Q(nickname__icontains=search) |
                 Q(advertiser_profile__business_name__icontains=search) |
-                Q(influencer_profile__full_name__icontains=search)
+                Q(influencer_profile__user__nickname__icontains=search)
             ).distinct()
 
         return queryset.order_by('-date_joined')
@@ -353,7 +353,7 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(channel__channel_name__icontains=search) |
                 Q(channel__channel_id__icontains=search) |
-                Q(channel__influencer__full_name__icontains=search) |
+                Q(channel__influencer__user__nickname__icontains=search) |
                 Q(campaign__name__icontains=search)
             )
 
@@ -390,7 +390,7 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         if influencer_id and influencer_id.isdigit():
             try:
                 influencer = InfluencerProfile.objects.get(id=int(influencer_id))
-                context['filtered_influencer_name'] = influencer.full_name
+                context['filtered_influencer_name'] = influencer.user.nickname
                 context['filtered_influencer_id'] = influencer_id
             except InfluencerProfile.DoesNotExist:
                 pass

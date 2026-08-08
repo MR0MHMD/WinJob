@@ -1,18 +1,118 @@
+# accounts/forms.py
+
+from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.contrib.auth import get_user_model
 from advertisers.models import AdvertiserProfile
 from influencers.models import InfluencerProfile
 from .models import CustomUser
-from django import forms
 
+User = get_user_model()
 
+# ویجت‌های مشترک
 COMMON_WIDGETS = {
     'class': 'form-control bg-transparent text-light',
 }
 
+
+# ==================== فرم‌های ادمین ====================
+
+class CustomUserCreationForm(forms.ModelForm):
+    """
+    فرم ساخت کاربر جدید در ادمین
+    """
+    password1 = forms.CharField(
+        label='رمز عبور',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'رمز عبور قوی وارد کنید'
+        })
+    )
+    password2 = forms.CharField(
+        label='تکرار رمز عبور',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'تکرار رمز عبور'
+        })
+    )
+
+    class Meta:
+        model = CustomUser
+        fields = ('phone_number', 'nickname', 'email', 'avatar', 'province')
+        widgets = {
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '09123456789'
+            }),
+            'nickname': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'نام مستعار'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'example@gmail.com'
+            }),
+            'province': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+        }
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("رمزهای عبور با یکدیگر مطابقت ندارند!")
+
+        if len(password1) < 8:
+            raise forms.ValidationError("رمز عبور باید حداقل ۸ کاراکتر باشد!")
+
+        return password2
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+
+        if commit:
+            user.save()
+
+        return user
+
+
+class CustomUserChangeForm(forms.ModelForm):
+    """
+    فرم ویرایش کاربر در ادمین
+    """
+    password = ReadOnlyPasswordHashField(
+        label='رمز عبور',
+        help_text=(
+            'رمز عبور به صورت هش شده ذخیره می‌شود و قابل مشاهده نیست. '
+            'برای تغییر رمز عبور <a href="../password/">این لینک</a> را کلیک کنید.'
+        )
+    )
+
+    class Meta:
+        model = CustomUser
+        fields = '__all__'
+        widgets = {
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'nickname': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'province': forms.Select(attrs={'class': 'form-select'}),
+            'avatar': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean_password(self):
+        # این فیلد فقط برای نمایش است و نباید تغییر کند
+        return self.initial.get("password")
+
+
+# ==================== فرم‌های عمومی (برای سایت) ====================
+
 class LoginForm(forms.Form):
     phone_number = forms.CharField(
         label='تلفن همراه',
-        max_length=15,
+        max_length=11,
         widget=forms.TextInput(attrs={
             'class': 'form-control form-control-light',
             'placeholder': '09123456789',
@@ -23,7 +123,7 @@ class LoginForm(forms.Form):
         label='رمز عبور',
         widget=forms.PasswordInput(attrs={
             'class': 'form-control form-control-light',
-            'placeholder': 'پسوورد خود را وارد کنید',
+            'placeholder': 'رمز عبور خود را وارد کنید',
             'required': True
         })
     )
@@ -37,7 +137,7 @@ class RegistrationForm(forms.Form):
     )
 
     phone_number = forms.CharField(
-        max_length=15,
+        max_length=11,
         widget=forms.TextInput(attrs={
             'class': 'form-control form-control-light',
             'placeholder': '09123456789',
@@ -110,7 +210,6 @@ class RegistrationForm(forms.Form):
         if password != confirm:
             raise forms.ValidationError("رمز عبور و تایید آن یکسان نیست")
 
-        # اعتبارسنجی برای نقش عضو تیم
         if role == "team_member":
             if not create_new_team and not team_slug:
                 raise forms.ValidationError("لطفاً شناسه تیم را وارد کنید یا گزینه ساخت تیم جدید را انتخاب کنید")
@@ -119,7 +218,6 @@ class RegistrationForm(forms.Form):
                 raise forms.ValidationError("لطفاً نام تیم جدید را وارد کنید")
 
             if not create_new_team and team_slug:
-                # بررسی وجود تیم
                 from content_team.models import ContentTeam
                 if not ContentTeam.objects.filter(slug=team_slug, is_active=True).exists():
                     raise forms.ValidationError("تیم مورد نظر یافت نشد")
@@ -135,47 +233,7 @@ class RegistrationForm(forms.Form):
         return phone
 
 
-class CustomUserCreationForm(forms.ModelForm):
-    """فرم ساخت کاربر در ادمین"""
-
-    password1 = forms.CharField(label="رمز عبور", widget=forms.PasswordInput)
-    password2 = forms.CharField(label="تکرار رمز عبور", widget=forms.PasswordInput)
-
-    class Meta:
-        model = CustomUser
-        fields = ("phone_number",)
-
-    def clean_password2(self):
-        p1 = self.cleaned_data.get("password1")
-        p2 = self.cleaned_data.get("password2")
-
-        if p1 and p2 and p1 != p2:
-            raise forms.ValidationError("رمزها یکسان نیستند")
-
-        return p2
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password1"])
-
-        if commit:
-            user.save()
-
-        return user
-
-
-class CustomUserChangeForm(forms.ModelForm):
-    """فرم ویرایش کاربر در ادمین"""
-
-    password = ReadOnlyPasswordHashField(label="رمز عبور")
-
-    class Meta:
-        model = CustomUser
-        fields = "__all__"
-
-    def clean_password(self):
-        return self.initial["password"]
-
+# ==================== فرم‌های پروفایل ====================
 
 class CustomUserForm(forms.ModelForm):
     class Meta:
@@ -184,9 +242,19 @@ class CustomUserForm(forms.ModelForm):
         widgets = {
             'nickname': forms.TextInput(attrs=COMMON_WIDGETS),
             'email': forms.EmailInput(attrs=COMMON_WIDGETS),
-            'sheba_code': forms.TextInput(attrs={**COMMON_WIDGETS, 'dir': 'ltr', 'placeholder': 'شماره شبا بدون IR'}),
-            'province': forms.Select(attrs={'class': 'form-select form-select-dark text-light border-secondary'}),
-            'avatar': forms.FileInput(attrs={'class': 'd-none', 'id': 'avatar-upload', 'accept': 'image/*'}),
+            'sheba_code': forms.TextInput(attrs={
+                **COMMON_WIDGETS,
+                'dir': 'ltr',
+                'placeholder': 'شماره شبا بدون IR'
+            }),
+            'province': forms.Select(attrs={
+                'class': 'form-select form-select-dark text-light border-secondary'
+            }),
+            'avatar': forms.FileInput(attrs={
+                'class': 'd-none',
+                'id': 'avatar-upload',
+                'accept': 'image/*'
+            }),
         }
 
     def clean_nickname(self):
@@ -204,7 +272,6 @@ class CustomUserForm(forms.ModelForm):
             return None
 
         sheba = sheba.replace(" ", "").replace("-", "").replace("_", "").strip()
-
         sheba = sheba.upper()
 
         if sheba.startswith("IR"):
@@ -225,17 +292,9 @@ class AdvertiserProfileForm(forms.ModelForm):
         fields = ['business_name', 'category', 'description', 'website']
         widgets = {
             'business_name': forms.TextInput(attrs=COMMON_WIDGETS),
-            'category': forms.Select(attrs={'class': 'form-select form-select-dark text-light border-secondary'}),
+            'category': forms.Select(attrs={
+                'class': 'form-select form-select-dark text-light border-secondary'
+            }),
             'description': forms.Textarea(attrs={**COMMON_WIDGETS, 'rows': 4}),
             'website': forms.URLInput(attrs={**COMMON_WIDGETS, 'dir': 'ltr'}),
-        }
-
-
-class InfluencerProfileForm(forms.ModelForm):
-    class Meta:
-        model = InfluencerProfile
-        fields = ['full_name', 'description']
-        widgets = {
-            'full_name': forms.TextInput(attrs=COMMON_WIDGETS),
-            'description': forms.Textarea(attrs={**COMMON_WIDGETS, 'rows': 4}),
         }

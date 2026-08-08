@@ -18,8 +18,6 @@ class InfluencerProfile(models.Model):
         related_name='influencer_profile',
         verbose_name=_('کاربر')
     )
-    full_name = models.CharField(_('اسم کامل کانال/پیج'), max_length=200)
-    description = models.TextField(_('توضیحات'), blank=True)
     is_active = models.BooleanField(_('فعال'), default=True)
     created_at = jmodels.jDateTimeField(_('تاریخ ایجاد'), auto_now_add=True)
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
@@ -36,7 +34,7 @@ class InfluencerProfile(models.Model):
         ).count()
 
     def __str__(self):
-        return self.full_name
+        return f"{self.user.nickname or self.user.phone_number} ناشر"
 
 
 class Channel(GamificationMixin, models.Model):
@@ -79,6 +77,14 @@ class Channel(GamificationMixin, models.Model):
         help_text=_('QR Code برای اشتراک‌گذاری پروفایل کانال')
     )
 
+    bio = models.TextField(
+        _('درباره کانال'),
+        max_length=800,
+        blank=True,
+        null=True,
+        help_text=_('توضیحات مختصر درباره کانال، موضوع محتوا، مخاطبان هدف و ...')
+    )
+
     url = models.URLField(_('آدرس کانال'), blank=True, null=True)
     followers_count = models.PositiveIntegerField(_('تعداد فالوور/مشترک'), default=0)
     status = models.CharField(_('وضعیت'), max_length=20, choices=STATUS_CHOICES, default='pending', )
@@ -104,7 +110,7 @@ class Channel(GamificationMixin, models.Model):
         ]
 
     def __str__(self):
-        return f"{self.influencer.full_name} - {self.platform.name} ({self.channel_id})"
+        return f"{self.channel_name} - {self.platform.name}"
 
     def get_absolute_url(self):
         return reverse('influencers:channel_detail', kwargs={'channel_id': self.id})

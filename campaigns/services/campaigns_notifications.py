@@ -318,23 +318,28 @@ def respond_to_influencer_order_service(order, action):
             from notifications.utils import notify_advertiser_influencer_accepted
             notify_advertiser_influencer_accepted(order)
 
-
         elif action == 'reject':
             order.status = 'rejected'
             order.rejected_at = timezone.now()
             order.save(update_fields=['status', 'rejected_at'])
 
             # ========== برگشت پول به کیف پول تبلیغ‌دهنده (فقط برای کمپین‌های غیر رایگان) ==========
-
             if not order.campaign.is_free:
                 advertiser_user = order.campaign.advertiser.user
                 wallet = advertiser_user.wallet
+
+                # ✅ قدم ۱: ذخیره مالیات قبلی قبل از هر تغییری
+                old_vat = 0
+                old_commission = 0
+                if hasattr(order.campaign, 'invoice') and order.campaign.invoice:
+                    old_vat = int(order.campaign.invoice.total_vat)
+                    old_commission = int(order.campaign.invoice.commission)
+
                 # برگشت مبلغ به کیف پول
                 wallet.balance += order.price
                 wallet.save(update_fields=['balance'])
 
                 # ثبت تراکنش برگشت
-
                 Transaction.objects.create(
                     user=advertiser_user,
                     amount=order.price,
@@ -345,25 +350,59 @@ def respond_to_influencer_order_service(order, action):
                     reference_id=f'REFUND_INFLUENCER_REJECT_{order.id}_{timezone.now().timestamp()}'
                 )
 
-                # ========== به‌روزرسانی فاکتور با حفظ کمیسیون قبلی ==========
-
+                # ========== به‌روزرسانی فاکتور با حفظ مالیات قبلی ==========
                 campaign = order.campaign
-                if hasattr(campaign, 'invoice') and campaign.invoice:
 
-                    old_commission = campaign.invoice.commission
+                if hasattr(campaign, 'invoice') and campaign.invoice:
+                    # ✅ قدم ۲: ایجاد فاکتور جدید (که مالیات رو به‌روز می‌کنه)
                     invoice = create_campaign_invoice(campaign)
 
+                    # ✅ قدم ۳: برگردوندن مالیات قبلی به فاکتور جدید
+                    if old_vat > 0:
+                        # محاسبه نسبت مالیات قبلی به کل
+                        # این کار رو می‌کنیم تا مالیات جدید رو با نسبت قبلی تنظیم کنیم
+
+                        # محاسبه مالیات جدیدی که create_campaign_invoice ساخته
+                        new_influencer_vat = invoice.influencer_vat
+                        new_content_vat = invoice.content_vat
+                        new_commission_vat = invoice.commission_vat
+                        new_total_vat = invoice.total_vat
+
+                        # محاسبه نسبت مالیات جدید به قبلی
+                        # اگه مالیات جدید صفر شد، از نسبت ۱ استفاده می‌کنیم
+                        if new_total_vat > 0:
+                            ratio = old_vat / new_total_vat
+                        else:
+                            ratio = 1
+
+                        # تنظیم مالیات‌ها با نسبت قبلی
+                        invoice.influencer_vat = int(new_influencer_vat * ratio)
+                        invoice.content_vat = int(new_content_vat * ratio)
+                        invoice.commission_vat = int(new_commission_vat * ratio)
+                        invoice.total_vat = old_vat  # ✅ حفظ مالیات قبلی
+
+
+                    # ✅ قدم ۴: حفظ کمیسیون قبلی (همون کاری که قبلاً میکردیم)
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
                         invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
                         invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
-                        invoice.save(update_fields=['commission', 'total_amount', 'payable_amount'])
+
+                    # ✅ قدم ۵: ذخیره نهایی فاکتور
+                    invoice.save(update_fields=[
+                        'influencer_vat',
+                        'content_vat',
+                        'commission_vat',
+                        'total_vat',
+                        'commission',
+                        'total_amount',
+                        'payable_amount'
+                    ])
 
                 # ========== نوتیف به تبلیغ‌دهنده ==========
                 notify_advertiser_influencer_rejected(order)
 
             # ========== تغییر وضعیت کمپین به REVISION_NEEDED ==========
-
             campaign = order.campaign
 
             if campaign.status == Campaign.Status.APPROVED:

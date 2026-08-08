@@ -1,6 +1,5 @@
-from ..forms import CustomUserForm, AdvertiserProfileForm, InfluencerProfileForm
+from ..forms import CustomUserForm, AdvertiserProfileForm
 from django.contrib.auth.decorators import login_required
-from influencers.forms import InfluencerProfileForm
 from advertisers.forms import AdvertiserProfileForm
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -15,16 +14,12 @@ def edit_profile(request):
 
     if user.is_advertiser:
         profile_form = AdvertiserProfileForm(instance=user.advertiser_profile)
-    elif user.is_influencer:
-        profile_form = InfluencerProfileForm(instance=user.influencer_profile)
 
     if request.method == 'POST':
         user_form = CustomUserForm(request.POST, request.FILES, instance=user)
 
         if user.is_advertiser:
             profile_form = AdvertiserProfileForm(request.POST, instance=user.advertiser_profile)
-        elif user.is_influencer:
-            profile_form = InfluencerProfileForm(request.POST, instance=user.influencer_profile)
 
         if user_form.is_valid() and (not profile_form or profile_form.is_valid()):
             user_form.save()

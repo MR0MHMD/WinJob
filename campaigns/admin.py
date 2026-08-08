@@ -614,7 +614,7 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     search_fields = (
         "campaign_influencer__campaign__name",
         "campaign_influencer__channel__channel_id",
-        "campaign_influencer__channel__influencer__full_name",
+        "campaign_influencer__channel__channel_name",
         "campaign_influencer__campaign__advertiser__business_name",
         "post_link",
         "admin_notes",
@@ -666,7 +666,7 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     def influencer_link(self, obj):
         influencer = obj.campaign_influencer.channel.influencer
         url = reverse("admin:influencers_influencerprofile_change", args=[influencer.id])
-        return format_html('<a href="{}" target="_blank">{}</a>', url, influencer.full_name)
+        return format_html('<a href="{}" target="_blank">{}</a>', url, influencer)
 
     influencer_link.short_description = "اینفلوئنسر"
 

@@ -95,6 +95,10 @@
         <!-- بردکرامب -->
         <ol class="breadcrumb breadcrumb-light">
             <li class="breadcrumb-item">
+                <a href="{% url 'core:home' %}">خانه</a>
+            </li>
+            
+            <li class="breadcrumb-item">
                 <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
             </li>
 
@@ -157,19 +161,50 @@
                         <div class="small text-muted">قابل پرداخت</div>
                     </div>
                 </div>
-
-                <!-- پیشرفت کمپین -->
-                <div class="mt-4">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted">پیشرفت کمپین</span>
-                        <span class="small fw-bold text-light">{{ progress_percent }}%</span>
-                    </div>
-
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar" role="progressbar"
-                             style="width: {{ progress_percent }}%; background-color: {{ progress_color }};"></div>
-                    </div>
-                </div>
+            
+                <!-- Inline steps: Light version with responsive design -->
+<div class="steps steps-light" style="margin: 1.5rem 0;">
+    <div class="step {% if campaign.invoice.is_paid %}active{% endif %}">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">1</span>
+        </div>
+        <div class="step-label">پرداخت</div>
+    </div>
+    <div class="step {% if campaign.status != 'pending' and campaign.status != 'cancelled' and campaign.status != 'draft' %}active{% endif %}">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">2</span>
+        </div>
+        <div class="step-label">بررسی</div>
+    </div>
+    <div class="step {% if campaign.status == 'approved' or campaign.status == 'running' or campaign.status == 'completed' or campaign.status == 'revision_needed' %}active{% endif %}">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">3</span>
+        </div>
+        <div class="step-label">تایید</div>
+    </div>
+    <div class="step {% if campaign.status == 'running' or campaign.status == 'completed' %}active{% endif %}">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">4</span>
+        </div>
+        <div class="step-label">اجرا</div>
+    </div>
+    <div class="step {% if campaign.status == 'completed' %}active{% endif %}">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">5</span>
+        </div>
+        <div class="step-label">اتمام</div>
+    </div>
+</div>
 
                 {% if campaign.status == 'draft' %}
                     <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
@@ -423,7 +458,7 @@
 
                         {% elif campaign.invoice %}
                             <!-- ========== ردیف اول: هزینه ناشران ========== -->
-                            <div class="cost-row">
+                            <div class=" d-flex justify-content-between my-2">
                                 <div class="d-flex flex-column">
                                     <span class="label text-light">
                                         <i class="fi-star text-warning"></i> هزینه ناشران
@@ -453,16 +488,16 @@
 
                             <!-- ========== ردیف دوم: هزینه تولید محتوا ========== -->
                             {% if campaign.invoice.content_cost > 0 %}
-                                <div class="cost-row text-light">
+                                <div class=" d-flex justify-content-between my-2 text-light">
                                     <div class="d-flex flex-column">
-                                    <span class="label text-light">
-                                        <i class="fi-video text-info me-2"></i>هزینه تولید محتوا
-                                    </span>
+                                        <span class="label text-light">
+                                            <i class="fi-video text-info me-2"></i>هزینه تولید محتوا
+                                        </span>
                                         {% if campaign.invoice.content_discount_amount > 0 %}
                                             <span class="text-success ms-1 small">
-                                            تخفیف: {{ campaign.invoice.content_discount_amount|floatformat:0|intcomma }} 
-                                            <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
-                                        </span>
+                                                تخفیف: {{ campaign.invoice.content_discount_amount|floatformat:0|intcomma }}
+                                                <img src="{% static 'core/svg/toman-success.svg' %}" alt="">
+                                            </span>
                                         {% endif %}
                                     </div>
                                     <div class="text-end d-flex align-items-center">
@@ -483,10 +518,10 @@
                             {% endif %}
 
                             <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
-                            <div class="cost-row text-warning">
+                            <div class="text-warning d-flex justify-content-between my-2">
                                 <div class="d-flex flex-column">
                                     <span class="label text-warning">
-                                        <i class="fi-percent me-1"></i> کمیسیون پلتفرم (15%)
+                                        <i class="bi bi-percent "></i> کمیسیون پلتفرم (15%)
                                     </span>
                                     {% if campaign.invoice.platform_discount_amount > 0 %}
                                         <span class="text-success ms-1 small">
@@ -511,36 +546,57 @@
                                 </div>
                             </div>
 
+                            <div class="cost-divider mt-2"></div>
+
+                            <div class="d-flex justify-content-between my-2 text-info">
+                                <span class="label fw-bold">جمع کل</span>
+                                <span class="value total fw-bold">
+                                    {{ campaign.invoice.total_amount|floatformat:0|intcomma }}
+                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt="" style="width: 16px; height: 16px;">
+                                </span>
+                            </div>
+
+                            <!-- ========== ردیف چهارم: مالیات بر ارزش افزوده ========== -->
+                            <div class=' d-flex justify-content-between my-2'>
+                                <div class="d-flex flex-column">
+                                    <span class="label text-primary">
+                                        <i class="fi-percent"></i> مالیات بر ارزش افزوده (10%)
+                                    </span>
+                                </div>
+                                <div class="text-end d-flex align-items-center">
+                                    <div>
+                                        <div class="fw-bold text-primary">
+                                            + {{ campaign.invoice.total_vat|floatformat:0|intcomma }}
+                                        </div>
+                                    </div>
+                                    <img src="{% static 'core/svg/toman-primary.svg' %}" alt="" class="ms-1"
+                                         style="width: 16px; height: 16px;">
+                                </div>
+                            </div>
+
                             {% if campaign.invoice.discount_amount > 0 %}
                                 {% if not campaign.invoice.platform_discount_amount or not campaign.invoice.content_discount_amount or not campaign.invoice.influencer_discount_amount %}
-                                    <div class="cost-row fw-bold">
+                                    <div class="fw-bold  d-flex justify-content-between my-2">
                                         <span class="label text-success">
                                             <i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده
                                         </span>
                                         <span class="value text-success">
-                                            {{ campaign.invoice.discount_amount|floatformat:0|intcomma }} -
+                                            <span class="me-2">-</span>{{ campaign.invoice.discount_amount|floatformat:0|intcomma }}
                                             <img src="{% static 'core/svg/toman-success.svg' %}" alt=""
                                                  style="width: 16px; height: 16px;">
                                         </span>
                                     </div>
                                 {% endif %}
-                                <!-- ========== ردیف‌های نهایی ========== -->
-                                <div class="cost-row">
-                                    <span class="label fw-bold text-light">مبلغ کل (جمع مبالغ پایه)</span>
-                                    <span class="value total text-light">
-                                        {{ campaign.invoice.total_amount|floatformat:0|intcomma }} 
-                                        <img src="{% static 'core/svg/toman-light.svg' %}" alt=""
-                                             style="width: 16px; height: 16px;">
-                                    </span>
-                                </div>
                             {% endif %}
 
-                            <div class="cost-row">
-                                <span class="label fw-bold text-info">مبلغ قابل پرداخت {% if campaign.invoice.discount_amount > 0 %}(پس از تخفیف){% endif %}</span>
-                                <span class="value total text-info">
+                            <div class="cost-divider mt-2"></div>
+
+                            <div class="d-flex justify-content-between mt-2 text-accent">
+                                <span class="label fs-6 fw-bold"><i class="bi bi-cash me-2"></i>مبلغ قابل پرداخت </span>
+                                <span class="value fs-5 fw-bold total">
                                     {{ campaign.invoice.payable_amount|floatformat:0|intcomma }}
-                                    <img src="{% static 'core/svg/toman-info.svg' %}" alt=""
-                                         style="width: 16px; height: 16px;">
+                                    <img src="{% static 'core/svg/toman-accent.svg' %}" alt=""
+                                         style="width: 25px; height: 25px;">
                                 </span>
                             </div>
                         {% else %}

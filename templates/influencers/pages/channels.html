@@ -44,17 +44,18 @@
                         <ul class="dropdown-menu dropdown-menu-start">
                             <li>
                                 <button class="dropdown-item edit-channel-btn"
-        data-id="{{ channel.id }}"
-        data-name="{{ channel.channel_name|escapejs }}"
-        data-platform="{{ channel.platform.id }}"
-        data-channel-id-value="{{ channel.channel_id|escapejs }}"
-        data-followers="{{ channel.followers_count|stringformat:'d' }}"
-        data-province="{{ channel.province.id|default:'' }}"
-        data-category="{{ channel.category.id|default:'' }}"
-        data-url="{{ channel.url|default:''|escapejs }}"
-        data-avatar-url="{% if channel.avatar %}{{ channel.avatar.url }}{% endif %}">
-    <i class="fi-edit me-2"></i> ویرایش
-</button>
+                                    data-id="{{ channel.id }}"
+                                    data-name="{{ channel.channel_name|escapejs }}"
+                                    data-platform="{{ channel.platform.id }}"
+                                    data-channel-id-value="{{ channel.channel_id|escapejs }}"
+                                    data-followers="{{ channel.followers_count|stringformat:'d' }}"
+                                    data-province="{{ channel.province.id|default:'' }}"
+                                    data-category="{{ channel.category.id|default:'' }}"
+                                    data-url="{{ channel.url|default:''|escapejs }}"
+                                    data-avatar-url="{% if channel.avatar %}{{ channel.avatar.url }}{% endif %}"
+                                    data-bio="{{ channel.bio|default:''|escapejs }}">  <!-- ✅ اضافه شد -->
+                                    <i class="fi-edit me-2"></i> ویرایش
+                                </button>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
@@ -197,6 +198,14 @@
                         <div class="col-md-6">
                             <label class="form-label text-light">لینک کانال</label>
                             {{ form.url }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-light">درباره کانال</label>
+                            {{ form.bio }}
+                            <small class="text-muted d-block mt-1">
+                                <span id="bioCharCount">0</span> / 500 کاراکتر
+                            </small>
+                            {{ form.bio.errors }}
                         </div>
                     </div>
                 </div>

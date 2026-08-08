@@ -68,14 +68,14 @@ function showRemoveModal(memberId, memberName) {
 
 function showApproveModal(teamSlug, requestId, memberName) {
     const form = document.getElementById('approveForm');
-    form.action = `/content_team/team/${teamSlug}/requests/${requestId}/handle/`;
+    form.action = `/content_team/members/${teamSlug}/requests/${requestId}/handle/`;
     document.getElementById('approve_member_name').innerText = memberName;
     new bootstrap.Modal(document.getElementById('confirmApproveModal')).show();
 }
 
 function showRejectModal(teamSlug, requestId, memberName) {
     const form = document.getElementById('rejectForm');
-    form.action = `/content_team/team/${teamSlug}/requests/${requestId}/handle/`;
+    form.action = `/content_team/members/${teamSlug}/requests/${requestId}/handle/`;
     document.getElementById('reject_member_name').innerText = memberName;
     new bootstrap.Modal(document.getElementById('confirmRejectModal')).show();
 }

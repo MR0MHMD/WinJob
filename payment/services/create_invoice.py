@@ -1,8 +1,11 @@
+# payment/services/create_invoice.py
+
 from influencers.models import ChannelBooking
 from payment.models import CampaignInvoice
 from content_team.models import ContentOrder
 
 PLATFORM_COMMISSION = 0.15
+VAT_PERCENT = 0.10
 
 
 def create_campaign_invoice(campaign):
@@ -85,7 +88,20 @@ def create_campaign_invoice(campaign):
     payable_amount = max(total_amount - total_discount, 0)
 
     # ============================================================
-    # ۴. ذخیره در دیتابیس (با در نظر گرفتن تمام فیلدهای جدید)
+    # ✅ ۴. محاسبه مالیات بر ارزش افزوده (جدید)
+    # ============================================================
+
+    # محاسبه مالیات روی هر بخش (بر اساس هزینه‌های نهایی بعد از تخفیف)
+    influencer_vat = int(influencer_cost * VAT_PERCENT)
+    content_vat = int(content_cost * VAT_PERCENT)
+    commission_vat = int(commission * VAT_PERCENT)
+
+    # جمع کل مالیات
+    total_vat = influencer_vat + content_vat + commission_vat
+    payable_amount += total_vat
+
+    # ============================================================
+    # ۵. ذخیره در دیتابیس (با در نظر گرفتن تمام فیلدها)
     # ============================================================
 
     invoice, created = CampaignInvoice.objects.get_or_create(
@@ -112,6 +128,12 @@ def create_campaign_invoice(campaign):
             # مبلغ کل و قابل پرداخت
             "total_amount": total_amount,
             "payable_amount": payable_amount,
+
+            # ✅ فیلدهای جدید مالیات
+            "influencer_vat": influencer_vat,
+            "content_vat": content_vat,
+            "commission_vat": commission_vat,
+            "total_vat": total_vat,
         }
     )
 
@@ -137,6 +159,12 @@ def create_campaign_invoice(campaign):
         invoice.total_amount = total_amount
         invoice.payable_amount = payable_amount
 
+        # ✅ به‌روزرسانی فیلدهای مالیات
+        invoice.influencer_vat = influencer_vat
+        invoice.content_vat = content_vat
+        invoice.commission_vat = commission_vat
+        invoice.total_vat = total_vat
+
         invoice.save(update_fields=[
             "base_influencer_cost",
             "base_content_cost",
@@ -150,6 +178,11 @@ def create_campaign_invoice(campaign):
             "discount_amount",
             "total_amount",
             "payable_amount",
+            # ✅ فیلدهای جدید
+            "influencer_vat",
+            "content_vat",
+            "commission_vat",
+            "total_vat",
         ])
 
     return invoice

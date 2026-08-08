@@ -105,6 +105,26 @@ class CampaignInvoice(models.Model):
         verbose_name="پرداخت شده"
     )
 
+    # ========== ✅ فیلدهای جدید مالیات بر ارزش افزوده ==========
+    influencer_vat = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="مالیات هزینه ناشران"
+    )
+    content_vat = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="مالیات هزینه تولید محتوا"
+    )
+    commission_vat = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="مالیات کمیسیون پلتفرم"
+    )
+
+    # جمع کل مالیات
+    total_vat = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="جمع کل مالیات بر ارزش افزوده"
+    )
+
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name="زمان ایجاد"
@@ -342,7 +362,7 @@ class Transaction(models.Model):
     # ارتباط با مدل‌های مختلف
     campaign = models.ForeignKey(
         "campaigns.Campaign",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="transactions",

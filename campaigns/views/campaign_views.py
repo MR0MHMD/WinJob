@@ -3,6 +3,7 @@ from ..utils import save_brief, save_campaign_content, handle_deleted_files, han
 from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField, Avg
 from payment.services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from notifications.utils import notify_influencer_new_campaign_orders
+from payment.services.tax_calculator import calculate_replacement_tax
 from ..services.free_campaign import create_free_campaign_bookings
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.decorators import login_required
@@ -16,6 +17,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
+
 import json
 from content_team.models import (
     ContentOrder,
@@ -288,7 +290,7 @@ def campaign_create_step2(request):
         selected_rates = request.POST.getlist("rates")
 
         if not selected_rates:
-            messages.error(request, "حداقل یک سرویس اینفلوئنسر انتخاب کنید.")
+            messages.error(request, "حداقل یک کانال انتخاب کنید.")
         else:
             selected_rates_qs = base_queryset.filter(id__in=selected_rates)
             total_selected_price = selected_rates_qs.aggregate(
@@ -301,51 +303,38 @@ def campaign_create_step2(request):
 
             with transaction.atomic():
                 if is_replacement_mode:
-                    # ========== حالت جایگزینی ==========
+                    # ========== ۱. محاسبه مالیات با سرویس جدید ==========
 
-                    # ========== ۱. هزینه‌های فعلی و جدید ==========
-                    # ✅ تبدیل به int
-                    current_influencer_cost = int(campaign.influencer_bookings.exclude(
-                        status__in=[ChannelBooking.Status.REJECTED, ChannelBooking.Status.REPLACED]
-                    ).aggregate(total=Sum('price'))['total'] or 0)
+                    tax_result = calculate_replacement_tax(
+                        campaign=campaign,
+                        new_selected_cost=total_selected_price
+                    )
 
-                    new_influencer_cost = int(total_selected_price)
+                    total_deduct = tax_result['total_deduct']
 
-                    content_cost = 0
-                    if hasattr(campaign, 'invoice') and campaign.invoice:
-                        content_cost = int(campaign.invoice.content_cost)  # ✅ تبدیل به int
-
-                    # ========== ۲. کمیسیون قبلی ==========
-                    if hasattr(campaign, 'invoice') and campaign.invoice:
-                        old_commission = int(campaign.invoice.commission)  # ✅ تبدیل به int
-                    else:
-                        old_subtotal = current_influencer_cost + content_cost
-                        old_commission = int(old_subtotal * PLATFORM_COMMISSION)
-
-                    # ========== ۳. کمیسیون جدید ==========
-                    new_total_influencer_cost = current_influencer_cost + new_influencer_cost
-                    new_subtotal = new_total_influencer_cost + content_cost
-                    new_commission = int(new_subtotal * PLATFORM_COMMISSION)
-
-                    # ========== ۴. مابه‌التفاوت ==========
-                    commission_to_pay = max(new_commission - old_commission, 0)
-                    total_deduct = total_selected_price + commission_to_pay
-
-                    # ========== ۵. بررسی موجودی کیف پول ==========
+                    # ========== ۲. بررسی موجودی کیف پول ==========
                     if total_deduct > wallet_balance:
-                        messages.error(
-                            request,
-                            f"موجودی کیف پول شما ({wallet_balance:,} تومان) کافی نیست. "
-                            f"هزینه کانال‌های جدید: {total_selected_price:,} تومان + مابه‌التفاوت حق العمل: {commission_to_pay:,} تومان = {total_deduct:,} تومان"
-                        )
+                        # ساخت پیام خطای زیبا
+                        error_parts = [
+                            f"موجودی کیف پول شما ({wallet_balance:,} تومان) کافی نیست."
+                        ]
+
+                        # اضافه کردن جزییات به پیام
+                        for item in tax_result['breakdown']:
+                            if not item.get('is_total'):
+                                error_parts.append(f"{item['label']}: {item['formatted']} تومان")
+
+                        error_parts.append(f"مبلغ نهایی: {total_deduct:,} تومان")
+
+                        messages.error(request, "\n".join(error_parts))
                         return redirect(request.path)
 
-                    # ========== ۶. رزروهای رد شده به REPLACED ==========
+                    # ========== ۳. رزروهای رد شده به REPLACED ==========
                     rejected_bookings.update(
                         status=ChannelBooking.Status.REPLACED
                     )
 
-                    # ========== ۷. اضافه کردن رزروهای جدید ==========
+                    # ========== ۴. اضافه کردن رزروهای جدید ==========
                     for rate in selected_rates_qs:
                         ChannelBooking.objects.create(
                             campaign=campaign,
@@ -355,7 +344,7 @@ def campaign_create_step2(request):
                             status=ChannelBooking.Status.PENDING
                         )
 
-                    # ========== ۸. کسر مبلغ از کیف پول ==========
+                    # ========== ۵. کسر مبلغ از کیف پول ==========
                     if total_deduct > 0:
                         wallet = request.user.wallet
                         wallet.balance -= total_deduct
@@ -372,29 +361,67 @@ def campaign_create_step2(request):
                             reference_id=f"REPLACEMENT_INFLUENCER_{campaign.id}_{timezone.now().timestamp()}"
                         )
 
-                        # تراکنش برای مابه‌التفاوت حق العمل
-                        if commission_to_pay > 0:
+                        # تراکنش برای مابه‌التفاوت کمیسیون (اگر مثبت)
+                        if tax_result['commission_diff'] > 0:
                             Transaction.objects.create(
                                 user=request.user,
-                                amount=commission_to_pay,
+                                amount=tax_result['commission_diff'],
                                 type=Transaction.Type.CAMPAIGN_PAYMENT,
                                 status=Transaction.Status.SUCCESS,
                                 campaign=campaign,
-                                description=f"پرداخت مابه‌التفاوت حق العمل به دلیل افزایش هزینه ناشران (از {old_commission:,} به {new_commission:,} تومان)",
-                                reference_id=f"COMMISSION_DIFF_INFLUENCER_{campaign.id}_{timezone.now().timestamp()}"
+                                description=f"پرداخت مابه‌التفاوت حق‌العمل (از {tax_result['old_data']['commission']:,} به {tax_result['new_data']['commission']:,} تومان)",
+                                reference_id=f"COMMISSION_DIFF_{campaign.id}_{timezone.now().timestamp()}"
                             )
 
-                    # ========== ۹. به‌روزرسانی فاکتور ==========
+                        # تراکنش برای مابه‌التفاوت مالیات (اگر مثبت)
+                        if tax_result['vat_diff'] > 0:
+                            Transaction.objects.create(
+                                user=request.user,
+                                amount=tax_result['vat_diff'],
+                                type=Transaction.Type.CAMPAIGN_PAYMENT,
+                                status=Transaction.Status.SUCCESS,
+                                campaign=campaign,
+                                description=f"پرداخت مابه‌التفاوت مالیات بر ارزش افزوده (از {tax_result['old_data']['total_vat']:,} به {tax_result['new_data']['total_vat']:,} تومان)",
+                                reference_id=f"VAT_DIFF_{campaign.id}_{timezone.now().timestamp()}"
+                            )
+
+                        # اگر مالیات کاهش پیدا کرده (تخفیف/کمک هزینه)
+                        if tax_result['vat_diff'] < 0:
+                            Transaction.objects.create(
+                                user=request.user,
+                                amount=abs(tax_result['vat_diff']),
+                                type=Transaction.Type.CAMPAIGN_REFUND,
+                                status=Transaction.Status.SUCCESS,
+                                campaign=campaign,
+                                description=f"کمک هزینه کاهش مالیات بر ارزش افزوده (از {tax_result['old_data']['total_vat']:,} به {tax_result['new_data']['total_vat']:,} تومان)",
+                                reference_id=f"TAX_ADJUSTMENT_{campaign.id}_{timezone.now().timestamp()}"
+                            )
+
+                    # ========== ۶. به‌روزرسانی فاکتور ==========
                     invoice = create_campaign_invoice(campaign)
 
-                    # اگر کمیسیون جدید کمتر از قبلی بود، مقدار قبلی رو حفظ کن
+                    # ✅ حفظ کمیسیون قبلی (اگر جدید کمتر بود)
+                    old_commission = tax_result['old_data']['commission']
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
-                        invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
-                        invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
-                        invoice.save(update_fields=['commission', 'total_amount', 'payable_amount'])
 
-                    # ========== ۱۰. تغییر وضعیت کمپین ==========
+                    # ✅ تنظیم مالیات جدید (نه قبلی!)
+                    new_vat = tax_result['new_data']['total_vat']
+                    invoice.total_vat = new_vat  # ✅ مالیات جدید رو اعمال کن
+
+                    # ✅ محاسبه مجدد مبلغ قابل پرداخت با مالیات جدید
+                    invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
+                    invoice.payable_amount = invoice.total_amount + invoice.total_vat
+
+                    # ✅ ذخیره نهایی
+                    invoice.save(update_fields=[
+                        'commission',
+                        'total_vat',
+                        'total_amount',
+                        'payable_amount'
+                    ])
+
+                    # ========== ۷. تغییر وضعیت کمپین ==========
                     campaign.status = Campaign.Status.APPROVED
                     campaign.replacement_mode = False
                     campaign.save(update_fields=['status', 'replacement_mode'])
@@ -402,18 +429,16 @@ def campaign_create_step2(request):
                     request.session.pop('replacement_campaign_id', None)
                     request.session.pop('replacement_mode', None)
 
-                    # ========== ۱۱. پیام موفقیت ==========
-                    if commission_to_pay > 0:
-                        messages.success(
-                            request,
-                            f"✅ کانال‌های جایگزین با موفقیت انتخاب شدند. مبلغ {total_deduct:,} تومان از کیف پول شما کسر شد. "
-                            f"(هزینه کانال‌ها: {total_selected_price:,} تومان + مابه‌التفاوت حق العمل: {commission_to_pay:,} تومان)"
-                        )
-                    else:
-                        messages.success(
-                            request,
-                            f"✅ کانال‌های جایگزین با موفقیت انتخاب شدند. مبلغ {total_selected_price:,} تومان از کیف پول شما کسر شد."
-                        )
+                    # ========== ۸. ساخت پیام موفقیت ==========
+                    success_parts = [f"✅ کانال‌های جایگزین با موفقیت انتخاب شدند."]
+
+                    for item in tax_result['breakdown']:
+                        if item.get('is_total'):
+                            success_parts.append(f"💰 {item['label']}: {item['formatted']} تومان")
+                        else:
+                            success_parts.append(f"• {item['label']}: {item['formatted']} تومان")
+
+                    messages.success(request, "\n".join(success_parts))
 
                     return redirect(campaign)
                 else:
@@ -692,52 +717,80 @@ def campaign_create_step3_team(request):
             old_price = old_order.price if old_order else 0
             wallet = request.user.wallet
 
-            # محاسبه کمیسیون
-            influencer_cost = sum(booking.price for booking in campaign.influencer_bookings.all())
-            if hasattr(campaign, 'invoice') and campaign.invoice:
-                old_commission = campaign.invoice.commission
-            else:
-                old_subtotal = influencer_cost + old_price
-                old_commission = int(old_subtotal * PLATFORM_COMMISSION)
+            # ========== محاسبه مالیات با سرویس جدید ==========
+            tax_result = calculate_replacement_tax(
+                campaign=campaign,
+                new_selected_cost=0,  # هزینه کانال‌ها تغییر نمی‌کنه
+                new_content_cost=new_price  # هزینه جدید تیم محتوا
+            )
 
-            new_subtotal = influencer_cost + new_price
-            new_commission = int(new_subtotal * PLATFORM_COMMISSION)
-            commission_to_pay = max(new_commission - old_commission, 0)
-            total_deduct = new_price + commission_to_pay
+            total_deduct = tax_result['total_deduct']
 
-            if wallet.balance < total_deduct:
-                messages.error(
-                    request,
-                    f"موجودی کیف پول شما ({wallet.balance:,} تومان) کافی نیست. "
-                    f"هزینه تیم جدید: {new_price:,} تومان + مابه‌التفاوت حق العمل: {commission_to_pay:,} تومان = {total_deduct:,} تومان"
-                )
+            # ========== بررسی موجودی کیف پول ==========
+            if total_deduct > wallet.balance:
+                error_parts = [
+                    f"موجودی کیف پول شما ({wallet.balance:,} تومان) کافی نیست."
+                ]
+                for item in tax_result['breakdown']:
+                    if not item.get('is_total'):
+                        error_parts.append(f"{item['label']}: {item['formatted']} تومان")
+                error_parts.append(f"مبلغ نهایی: {total_deduct:,} تومان")
+                messages.error(request, "\n".join(error_parts))
                 return redirect(request.path)
 
             with transaction.atomic():
-                wallet.balance -= total_deduct
-                wallet.save(update_fields=['balance'])
+                # کسر مبلغ از کیف پول
+                if total_deduct > 0:
+                    wallet.balance -= total_deduct
+                    wallet.save(update_fields=['balance'])
 
-                Transaction.objects.create(
-                    user=request.user,
-                    amount=new_price,
-                    type=Transaction.Type.CAMPAIGN_PAYMENT,
-                    status=Transaction.Status.SUCCESS,
-                    campaign=campaign,
-                    description=f"پرداخت تیم تولید محتوای جدید ({selected_plan.team.name}) در کمپین {campaign.name} (جایگزینی)",
-                    reference_id=f"TEAM_NEW_PAYMENT_{campaign.id}_{timezone.now().timestamp()}"
-                )
-
-                if commission_to_pay > 0:
                     Transaction.objects.create(
                         user=request.user,
-                        amount=commission_to_pay,
+                        amount=new_price,
                         type=Transaction.Type.CAMPAIGN_PAYMENT,
                         status=Transaction.Status.SUCCESS,
                         campaign=campaign,
-                        description=f"پرداخت مابه‌التفاوت حق العمل به دلیل افزایش هزینه تولید محتوا (از {old_price:,} به {new_price:,} تومان)",
-                        reference_id=f"COMMISSION_DIFF_{campaign.id}_{timezone.now().timestamp()}"
+                        description=f"پرداخت تیم تولید محتوای جدید ({selected_plan.team.name}) در کمپین {campaign.name} (جایگزینی)",
+                        reference_id=f"TEAM_NEW_PAYMENT_{campaign.id}_{timezone.now().timestamp()}"
                     )
 
+                    # تراکنش برای مابه‌التفاوت کمیسیون (اگر مثبت)
+                    if tax_result['commission_diff'] > 0:
+                        Transaction.objects.create(
+                            user=request.user,
+                            amount=tax_result['commission_diff'],
+                            type=Transaction.Type.CAMPAIGN_PAYMENT,
+                            status=Transaction.Status.SUCCESS,
+                            campaign=campaign,
+                            description=f"پرداخت مابه‌التفاوت حق‌العمل (از {tax_result['old_data']['commission']:,} به {tax_result['new_data']['commission']:,} تومان)",
+                            reference_id=f"COMMISSION_DIFF_TEAM_{campaign.id}_{timezone.now().timestamp()}"
+                        )
+
+                    # تراکنش برای مابه‌التفاوت مالیات (اگر مثبت)
+                    if tax_result['vat_diff'] > 0:
+                        Transaction.objects.create(
+                            user=request.user,
+                            amount=tax_result['vat_diff'],
+                            type=Transaction.Type.CAMPAIGN_PAYMENT,
+                            status=Transaction.Status.SUCCESS,
+                            campaign=campaign,
+                            description=f"پرداخت مابه‌التفاوت مالیات بر ارزش افزوده (از {tax_result['old_data']['total_vat']:,} به {tax_result['new_data']['total_vat']:,} تومان)",
+                            reference_id=f"VAT_DIFF_TEAM_{campaign.id}_{timezone.now().timestamp()}"
+                        )
+
+                    # اگر مالیات کاهش پیدا کرده (تخفیف/کمک هزینه)
+                    if tax_result['vat_diff'] < 0:
+                        Transaction.objects.create(
+                            user=request.user,
+                            amount=abs(tax_result['vat_diff']),
+                            type=Transaction.Type.CAMPAIGN_REFUND,
+                            status=Transaction.Status.SUCCESS,
+                            campaign=campaign,
+                            description=f"کمک هزینه کاهش مالیات بر ارزش افزوده (از {tax_result['old_data']['total_vat']:,} به {tax_result['new_data']['total_vat']:,} تومان)",
+                            reference_id=f"TAX_ADJUSTMENT_TEAM_{campaign.id}_{timezone.now().timestamp()}"
+                        )
+
+                # آپدیت سفارش قدیمی
                 if old_order and old_order.status != ContentOrder.Status.CANCELLED:
                     old_order.status = ContentOrder.Status.CANCELLED
                     old_order.save(update_fields=['status'])
@@ -795,13 +848,29 @@ def campaign_create_step3_team(request):
                         campaign_content.save(update_fields=['caption', 'link'])
 
                 # به‌روزرسانی فاکتور
+                # به‌روزرسانی فاکتور
                 if hasattr(campaign, 'invoice'):
                     invoice = create_campaign_invoice(campaign)
+
+                    # ✅ حفظ کمیسیون قبلی
+                    old_commission = tax_result['old_data']['commission']
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
-                        invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
-                        invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
-                        invoice.save(update_fields=['commission', 'total_amount', 'payable_amount'])
+
+                    # ✅ تنظیم مالیات جدید
+                    new_vat = tax_result['new_data']['total_vat']
+                    invoice.total_vat = new_vat
+
+                    # ✅ محاسبه مجدد مبلغ قابل پرداخت
+                    invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
+                    invoice.payable_amount = invoice.total_amount + invoice.total_vat
+
+                    invoice.save(update_fields=[
+                        'commission',
+                        'total_vat',
+                        'total_amount',
+                        'payable_amount'
+                    ])
 
                 # تغییر وضعیت کمپین
                 campaign.status = Campaign.Status.APPROVED
@@ -812,10 +881,15 @@ def campaign_create_step3_team(request):
                 request.session.pop('replacement_campaign_id', None)
                 request.session.pop('replacement_mode_team', None)
 
-                messages.success(
-                    request,
-                    f"✅ تیم تولید محتوا با موفقیت تغییر کرد. مبلغ {total_deduct:,} تومان از کیف پول شما کسر شد."
-                )
+                # پیام موفقیت
+                success_parts = [f"✅ تیم تولید محتوا با موفقیت تغییر کرد."]
+                for item in tax_result['breakdown']:
+                    if item.get('is_total'):
+                        success_parts.append(f"💰 {item['label']}: {item['formatted']} تومان")
+                    else:
+                        success_parts.append(f"• {item['label']}: {item['formatted']} تومان")
+
+                messages.success(request, "\n".join(success_parts))
                 return redirect(campaign)
 
         else:

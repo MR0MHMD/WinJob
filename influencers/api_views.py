@@ -9,40 +9,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from campaigns.models import CampaignReport
-from .forms import InfluencerProfileForm
 from django.http import JsonResponse
 from django.conf import settings
 from django.urls import reverse
 from core.models import AdType
 import requests
 import json
-
-
-@login_required
-def profile_update(request):
-    if request.method == 'POST':
-        form = InfluencerProfileForm(
-            request.POST,
-            request.FILES,
-            instance=request.user.influencer_profile
-        )
-
-        if form.is_valid():
-            form.save()
-            return JsonResponse({
-                'status': 'success',
-                'message': 'data save was successfully'
-            })
-
-        return JsonResponse({
-            'status': 'error',
-            'message': form.errors
-        })
-
-    return JsonResponse({
-        'status': 'error',
-        'message': 'your request must be POST'
-    })
 
 
 @login_required

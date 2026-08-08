@@ -837,7 +837,7 @@ def channel_list(request):
         channels = channels.filter(
             Q(channel_name__icontains=search_query) |
             Q(channel_id__icontains=search_query) |
-            Q(influencer__full_name__icontains=search_query)
+            Q(influencer__user__nickname__icontains=search_query)
         )
 
     # ========== مرتب‌سازی ==========

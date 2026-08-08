@@ -17,7 +17,6 @@ from django.urls import reverse
 @admin.register(InfluencerProfile)
 class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
-        "full_name",
         "user_phone_display",
         "user_province",
         "channels_count",
@@ -31,10 +30,8 @@ class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     )
 
     search_fields = (
-        "full_name",
         "user__phone_number",
         "user__nickname",
-        "description",
     )
 
     autocomplete_fields = (
@@ -53,8 +50,6 @@ class InfluencerProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ("اطلاعات اصلی", {
             "fields": (
                 "user",
-                "full_name",
-                "description",
             )
         }),
         ("وضعیت", {
@@ -141,7 +136,7 @@ class ChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "qr_code_preview",  # اضافه شد
     )
     list_filter = ('platform', 'province', "is_active", 'created_at',)
-    search_fields = ("channel_id", "channel_name", "influencer__full_name", "influencer__user__phone_number",)
+    search_fields = ("channel_id", "channel_name", "influencer__user__phone_number",)
     autocomplete_fields = ("influencer", "platform", "category", "province",)
     ordering = ("created_at", 'followers_count')
     inlines = [ChannelServiceRateInline, ChannelReviewInline]
@@ -162,6 +157,7 @@ class ChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "channel_id",
                 "channel_name",
                 "url",
+                'bio',
             )
         }),
         ("موقعیت مکانی کانال", {
@@ -327,7 +323,7 @@ class ChannelAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 @admin.register(ChannelServiceRate)
 class ChannelServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_filter = ("is_active", "ad_type", "channel__platform", "channel__province",)
-    search_fields = ("channel__channel_id", "channel__channel_name", "channel__influencer__full_name", "ad_type__name",)
+    search_fields = ("channel__channel_id", "channel__channel_name", "ad_type__name",)
     autocomplete_fields = ("channel", "ad_type",)
     readonly_fields = ("formatted_price", "formatted_created_at", "formatted_updated_at",)
     list_display = (
@@ -358,10 +354,10 @@ class ChannelServiceRateAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     channel_display.short_description = "کانال"
 
     def influencer_name(self, obj):
-        return obj.channel.influencer.full_name
+        return obj.channel.influencer.user.nickname or obj.channel.influencer.user.phone_number
 
-    influencer_name.short_description = "اینفلوئنسر"
-    influencer_name.admin_order_field = "channel__influencer__full_name"
+    influencer_name.short_description = "ناشر"
+    influencer_name.admin_order_field = "channel__influencer__user__nickname"
 
     def formatted_price(self, obj):
         return obj.formatted_price()
@@ -423,7 +419,7 @@ class ChannelReviewAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     search_fields = (
         "channel__channel_name",
-        "channel__influencer__full_name",
+        "channel__influencer__user__nickname",
         "channel__influencer__user__phone_number",
         "advertiser__user__phone_number",
         "advertiser__user__nickname",
@@ -533,7 +529,7 @@ class ChannelBookingAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "campaign__name",
         "channel__channel_id",
         "channel__channel_name",
-        "channel__influencer__full_name",
+        "channel__influencer__user__nickname",
         "tracking_code",
     )
 
