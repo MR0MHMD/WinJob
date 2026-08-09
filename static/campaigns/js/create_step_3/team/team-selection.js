@@ -41,15 +41,27 @@
         return Math.floor(subtotal * COMMISSION_RATE);
     }
 
+    // ========== دریافت CSRF Token ==========
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(function(cookie) {
+                const c = cookie.trim();
+                if (c.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(c.slice(name.length + 1));
+                }
+            });
+        }
+        return cookieValue;
+    }
+
     // ========== دریافت اطلاعات از DOM ==========
     function getInfluencerCost() {
         const el = document.getElementById('influencer-total-cost');
         if (!el) return 0;
         const raw = el.dataset.cost || '0';
-        // حذف کاما برای اطمینان (اگر از سمت سرور درست نیومده باشه)
         const cleaned = raw.replace(/,/g, '');
         const val = parseInt(cleaned, 10) || 0;
-        console.log('influencerCost:', val);
         return val;
     }
 
@@ -59,7 +71,6 @@
         const raw = el.dataset.cost || '0';
         const cleaned = raw.replace(/,/g, '');
         const val = parseInt(cleaned, 10) || 0;
-        console.log('oldContentCost:', val);
         return val;
     }
 
@@ -67,8 +78,143 @@
         return window.IS_REPLACEMENT_MODE === true;
     }
 
-    // ========== به‌روزرسانی نوار قیمت ==========
-    // ========== به‌روزرسانی نوار قیمت ==========
+    function getCampaignId() {
+        return window.CAMPAIGN_ID || null;
+    }
+
+    // ========== دریافت قیمت دقیق از سرور ==========
+    function fetchAccuratePrice(planId, planPrice, teamName, planName) {
+        if (!planId) return;
+
+        const isReplacementMode = getIsReplacementMode();
+        if (!isReplacementMode) return;
+
+        const campaignId = getCampaignId();
+        if (!campaignId) {
+            updatePriceUIWithTax(planPrice, 0, 0, planPrice, teamName, planName, null);
+            return;
+        }
+
+        const url = '/campaigns/api/calculate-team-replacement/';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                plan_id: planId,
+                campaign_id: campaignId
+            }),
+        })
+        .then(function(res) {
+            return res.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                updatePriceUIWithTax(
+                    planPrice,
+                    data.commission_diff || 0,
+                    data.vat_diff || 0,
+                    data.total_deduct || planPrice,
+                    teamName,
+                    planName,
+                    data
+                );
+            } else {
+                console.error('❌ خطا از سرور:', data.error);
+                updatePriceUIWithTax(planPrice, 0, 0, planPrice, teamName, planName, null);
+            }
+        })
+        .catch(function(error) {
+            console.error('❌ خطا در fetch:', error);
+            updatePriceUIWithTax(planPrice, 0, 0, planPrice, teamName, planName, null);
+        });
+    }
+
+    // ========== به‌روزرسانی نوار قیمت با مالیات ==========
+    function updatePriceUIWithTax(price, commissionDiff, vatDiff, totalDeduct, teamName, planName, data) {
+        const isReplacementMode = getIsReplacementMode();
+
+        if (!isReplacementMode) {
+            updatePriceUI({ price, teamName, name: planName });
+            return;
+        }
+
+        // به‌روزرسانی قیمت کلی
+        if (totalPriceEl) {
+            totalPriceEl.textContent = formatPrice(price);
+        }
+
+        // ========== استفاده از breakdown ارسالی از سرور ==========
+        let html = '';
+        if (data && data.breakdown && data.breakdown.length) {
+            data.breakdown.forEach(function(item) {
+                let color = '';
+                let icon = '';
+                if (item.is_total) {
+                    color = 'color:#22c55e; font-weight:bold; font-size:1.2rem;';
+                    icon = '💰 ';
+                } else if (item.is_warning) {
+                    color = 'color:#f97316;';
+                } else if (item.is_success) {
+                    color = 'color:#22c55e;';
+                }
+                html += `<span class="d-block" style="${color}">${icon}${escapeHtml(item.label)}: ${escapeHtml(item.formatted)} تومان</span>`;
+            });
+        } else {
+            // fallback
+            html += `<span class="d-block text-light">📊 ${escapeHtml(teamName)} - ${escapeHtml(planName)}</span>`;
+            html += `<span class="d-block text-light">هزینه تیم جدید: ${formatPrice(price)}</span>`;
+
+            if (commissionDiff > 0) {
+                html += `<span class="d-block" style="color:#f97316;">➕ مابه‌التفاوت حق‌العمل: ${formatPrice(commissionDiff)}</span>`;
+            }
+            if (vatDiff > 0) {
+                html += `<span class="d-block" style="color:#e74c3c;">➕ مابه‌التفاوت مالیات: ${formatPrice(vatDiff)}</span>`;
+            } else if (vatDiff < 0) {
+                html += `<span class="d-block text-success">➖ کاهش مالیات (کمک هزینه): ${formatPrice(Math.abs(vatDiff))}</span>`;
+            }
+            html += `<span class="d-block mt-2" style="color:#22c55e; font-weight:bold; font-size:1.2rem;">💰 مبلغ قابل پرداخت: ${formatPrice(totalDeduct)}</span>`;
+        }
+
+        if (breakdownEl) {
+            breakdownEl.innerHTML = html;
+        }
+
+        // به‌روزرسانی نمایش مبلغ نهایی
+        if (finalTotalDisplay) {
+            finalTotalDisplay.textContent = formatPrice(totalDeduct);
+            finalTotalDisplay.style.color = '#22c55e';
+            finalTotalDisplay.style.fontWeight = 'bold';
+            finalTotalDisplay.style.display = 'block';
+        }
+
+        // نمایش مابه‌التفاوت کمیسیون
+        if (commissionDiffDisplay) {
+            if (commissionDiff > 0) {
+                commissionDiffDisplay.style.display = 'block';
+                commissionDiffAmount.textContent = formatPrice(commissionDiff);
+                commissionDiffAmount.style.color = '#f97316';
+            } else {
+                commissionDiffDisplay.style.display = 'none';
+            }
+        }
+
+        // فعال کردن دکمه submit
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ انتخاب تیم جایگزین';
+            submitBtn.classList.remove('opacity-50');
+        }
+
+        if (summaryBar) {
+            summaryBar.classList.add('has-selection');
+        }
+    }
+
+    // ========== به‌روزرسانی نوار قیمت (حالت عادی) ==========
     function updatePriceUI(plan, commissionDiff = 0, totalDeduct = 0) {
         const isReplacementMode = getIsReplacementMode();
 
@@ -79,7 +225,6 @@
             if (selectedCountEl) selectedCountEl.textContent = toPersianNum(0);
             if (submitBtn) submitBtn.disabled = true;
 
-            // ========== مخفی کردن نمایش مابه‌التفاوت حق العمل (در هر دو حالت) ==========
             if (commissionDiffDisplay) {
                 commissionDiffDisplay.style.display = 'none';
             }
@@ -93,15 +238,13 @@
         if (selectedCountEl) selectedCountEl.textContent = toPersianNum(1);
         if (totalPriceEl) totalPriceEl.textContent = formatPrice(plan.price);
 
-        // ========== نمایش عادی (هزینه تیم) ==========
         if (breakdownEl) {
             breakdownEl.innerHTML = `
-            <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
-            <span class="d-block mt-1" style="color:#a5b4fc;">${formatPrice(plan.price)}</span>
-        `;
+                <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
+                <span class="d-block mt-1" style="color:#a5b4fc;">${formatPrice(plan.price)}</span>
+            `;
         }
 
-        // ========== نمایش مابه‌التفاوت حق العمل (فقط در حالت جایگزینی و اگر مثبت باشد) ==========
         if (isReplacementMode && commissionDiff > 0) {
             if (commissionDiffDisplay) {
                 commissionDiffDisplay.style.display = 'block';
@@ -116,26 +259,22 @@
                 finalTotalDisplay.style.color = '#22c55e';
                 finalTotalDisplay.style.fontWeight = 'bold';
             }
-            // به‌روزرسانی breakdown با مبلغ کل
             if (breakdownEl) {
                 breakdownEl.innerHTML = `
-                <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
-                <span class="d-block mt-1" style="color:#a5b4fc;">هزینه تیم: ${formatPrice(plan.price)}</span>
-                <span class="d-block" style="color:#f97316;">مابه‌التفاوت حق العمل: +${formatPrice(commissionDiff)}</span>
-                <span class="d-block mt-1" style="color:#22c55e; font-weight:bold;">مبلغ قابل پرداخت: ${formatPrice(totalDeduct)}</span>
-            `;
+                    <span class="d-block text-light">${escapeHtml(plan.teamName)} - ${escapeHtml(plan.name)}</span>
+                    <span class="d-block mt-1" style="color:#a5b4fc;">هزینه تیم: ${formatPrice(plan.price)}</span>
+                    <span class="d-block" style="color:#f97316;">مابه‌التفاوت حق العمل: +${formatPrice(commissionDiff)}</span>
+                    <span class="d-block mt-1" style="color:#22c55e; font-weight:bold;">مبلغ قابل پرداخت: ${formatPrice(totalDeduct)}</span>
+                `;
             }
         } else {
-            // ========== در حالت عادی یا وقتی کمیسیون صفر هست، مخفی کن ==========
             if (commissionDiffDisplay) {
                 commissionDiffDisplay.style.display = 'none';
             }
-            // در حالت عادی، فقط هزینه تیم رو نشون بده
             if (finalTotalDisplay && !isReplacementMode) {
-                finalTotalDisplay.textContent = '';  // یا مخفی کن
+                finalTotalDisplay.textContent = '';
                 finalTotalDisplay.style.display = 'none';
             } else if (finalTotalDisplay && isReplacementMode) {
-                // در حالت جایگزینی با کمیسیون صفر، مبلغ قابل پرداخت = هزینه تیم
                 finalTotalDisplay.textContent = formatPrice(plan.price);
                 finalTotalDisplay.style.color = '#22c55e';
                 finalTotalDisplay.style.fontWeight = 'bold';
@@ -152,31 +291,19 @@
         currentSelectedPlan = planObj;
 
         const isReplacementMode = getIsReplacementMode();
-        let commissionDiff = 0;
-        let totalDeduct = planObj.price;
 
-        // ========== محاسبه مابه‌التفاوت حق العمل (فقط در حالت جایگزینی) ==========
         if (isReplacementMode) {
-            const influencerCost = getInfluencerCost();
-            const oldContentCost = getOldContentCost();
-            const newContentCost = planObj.price;
-
-            // محاسبه کل مبلغ قبلی و جدید
-            const oldSubtotal = influencerCost + oldContentCost;
-            const newSubtotal = influencerCost + newContentCost;
-
-            // محاسبه کمیسیون قبلی و جدید
-            const oldCommission = calculateCommission(oldSubtotal);
-            const newCommission = calculateCommission(newSubtotal);
-
-            // مابه‌التفاوت (فقط مثبت)
-            commissionDiff = Math.max(newCommission - oldCommission, 0);
-            totalDeduct = newContentCost + commissionDiff;
+            const campaignId = getCampaignId();
+            if (campaignId) {
+                updatePriceUI(planObj, 0, planObj.price);
+                fetchAccuratePrice(planId, planObj.price, planObj.teamName, planObj.name);
+            } else {
+                updatePriceUI(planObj, 0, planObj.price);
+            }
+        } else {
+            updatePriceUI(planObj);
         }
 
-        updatePriceUI(planObj, commissionDiff, totalDeduct);
-
-        // علامت‌گذاری کارت انتخاب شده
         document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected-plan-card'));
         const selectedCard = document.querySelector(`.plan-card[data-plan-id="${planId}"]`);
         if (selectedCard) selectedCard.classList.add('selected-plan-card');
@@ -184,8 +311,7 @@
         document.dispatchEvent(new CustomEvent('planSelected', {
             detail: {
                 planId,
-                commissionDiff,
-                totalDeduct
+                plan: planObj
             }
         }));
     }
@@ -202,21 +328,17 @@
         plans.forEach((plan, idx) => {
             const isPopular = plan.is_most_popular || false;
 
-            // ========== تشخیص نوع واحد ==========
             const isTimeUnit = (plan.pricing_unit === 'second' || plan.pricing_unit === 'minute');
             const isQuantityUnit = (plan.pricing_unit === 'quantity');
 
-            // محدوده برای SECOND/MINUTE
             const hasRange = isTimeUnit && plan.min_quantity && plan.max_quantity &&
                 plan.min_quantity !== plan.max_quantity;
 
-            // ========== ✅ نمایش تعداد برای QUANTITY (از delivery_options_count) ==========
             let quantityDisplay = '';
             if (isQuantityUnit && plan.delivery_options_count) {
                 quantityDisplay = `${plan.delivery_options_count} گزینه`;
             }
 
-            // محدوده نمایشی برای SECOND/MINUTE
             let rangeDisplay = '';
             if (hasRange) {
                 rangeDisplay = plan.quantity_display || '';
@@ -234,67 +356,63 @@
             const currentPage = new URLSearchParams(window.location.search).get('page') || '1';
             col.className = 'col-md-6 col-lg-4 mb-4';
             col.innerHTML = `
-            <div class="plan-card ${isPopular ? 'plan-card-popular' : ''}" data-plan-id="${plan.id}">
-                <div class="plan-selection-indicator">
-                    <i class="fi-check-circle selected-icon"></i>
-                    <i class="fi-circle unselected-icon"></i>
-                </div>
-                ${isPopular ? '<div class="popular-badge">⭐ محبوب‌ترین</div>' : ''}
-                <div class="plan-preview">
-                    <div class="plan-preview-icon">
-                        <i class="${plan.service_type_icon || 'fi-star'}"></i>
+                <div class="plan-card ${isPopular ? 'plan-card-popular' : ''}" data-plan-id="${plan.id}">
+                    <div class="plan-selection-indicator">
+                        <i class="fi-check-circle selected-icon"></i>
+                        <i class="fi-circle unselected-icon"></i>
                     </div>
-                </div>
-                <div class="plan-header">
-                    <h4 class="plan-name">${escapeHtml(plan.name)}</h4>
-                    <div class="plan-price">
-                        <span class="price-number">${formatPrice(plan.price)}</span>
-                    </div>
-                    
-                    <!-- ========== ✅ نمایش محدوده یا تعداد گزینه‌ها ========== -->
-                    ${(rangeDisplay || quantityDisplay) ? `
-                        <div class="plan-range mt-1">
-                            <span class="badge bg-faded-light">
-                                ${escapeHtml(rangeDisplay || quantityDisplay)}
-                            </span>
+                    ${isPopular ? '<div class="popular-badge">⭐ محبوب‌ترین</div>' : ''}
+                    <div class="plan-preview">
+                        <div class="plan-preview-icon">
+                            <i class="${plan.service_type_icon || 'fi-star'}"></i>
                         </div>
-                    ` : ''}
-                    
-                    <!-- ========== ✅ میانگین امتیاز ========== -->
-                    <div class="plan-rating mt-1">
-                        ${plan.avg_rating ? `
-                            <span class="badge bg-warning bg-opacity-10 text-warning">
-                                <i class="fi-star-filled me-1"></i> ${plan.avg_rating}
-                            </span>
-                        ` : `
-                            <span class="badge bg-secondary bg-opacity-10 text-muted">
-                                <i class="fi-star me-1"></i> بدون امتیاز
-                            </span>
-                        `}
                     </div>
-                </div>
-                <div class="plan-body">
-                    <p class="plan-description">${escapeHtml(plan.description) || 'توضیحاتی ثبت نشده است.'}</p>
-                    ${plan.features && plan.features.length ? `
-                        <div class="plan-features">
-                            <div class="fw-semibold text-light mb-1">✨ ویژگی‌ها:</div>
-                            <ul>
-                                ${plan.features.slice(0, 3).map(f => `<li><i class="fi-check-circle text-success me-1"></i> ${escapeHtml(f)}</li>`).join('')}
-                                ${plan.features.length > 3 ? `<li class="text-secondary">...</li>` : ''}
-                            </ul>
+                    <div class="plan-header">
+                        <h4 class="plan-name">${escapeHtml(plan.name)}</h4>
+                        <div class="plan-price">
+                            <span class="price-number">${formatPrice(plan.price)}</span>
                         </div>
-                    ` : ''}
-                    <div class="plan-delivery">
-                        <i class="fi-clock text-primary"></i> <span>تحویل: ${plan.delivery_days} روز کاری</span>
-                        <span class="mx-1 text-muted">•</span>
-                        <span class="text-muted">${escapeHtml(plan.delivery_type_display || '')}</span>
+                        ${(rangeDisplay || quantityDisplay) ? `
+                            <div class="plan-range mt-1">
+                                <span class="badge bg-faded-light">
+                                    ${escapeHtml(rangeDisplay || quantityDisplay)}
+                                </span>
+                            </div>
+                        ` : ''}
+                        <div class="plan-rating mt-1">
+                            ${plan.avg_rating ? `
+                                <span class="badge bg-warning bg-opacity-10 text-warning">
+                                    <i class="fi-star-filled me-1"></i> ${plan.avg_rating}
+                                </span>
+                            ` : `
+                                <span class="badge bg-secondary bg-opacity-10 text-muted">
+                                    <i class="fi-star me-1"></i> بدون امتیاز
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                    <div class="plan-body">
+                        <p class="plan-description">${escapeHtml(plan.description) || 'توضیحاتی ثبت نشده است.'}</p>
+                        ${plan.features && plan.features.length ? `
+                            <div class="plan-features">
+                                <div class="fw-semibold text-light mb-1">✨ ویژگی‌ها:</div>
+                                <ul>
+                                    ${plan.features.slice(0, 3).map(f => `<li><i class="fi-check-circle text-success me-1"></i> ${escapeHtml(f)}</li>`).join('')}
+                                    ${plan.features.length > 3 ? `<li class="text-secondary">...</li>` : ''}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        <div class="plan-delivery">
+                            <i class="fi-clock text-primary"></i> <span>تحویل: ${plan.delivery_days} روز کاری</span>
+                            <span class="mx-1 text-muted">•</span>
+                            <span class="text-muted">${escapeHtml(plan.delivery_type_display || '')}</span>
+                        </div>
+                    </div>
+                    <div class="plan-footer text-center">
+                        <a href="/content_team/team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
                     </div>
                 </div>
-                <div class="plan-footer text-center">
-                    <a href="/content_team/team/plan/${plan.id}/?from=create_campaign&page=${currentPage}" onclick="event.stopPropagation();" class="btn-view-profile">مشاهده بیشتر <i class="fi-arrow-left"></i></a>
-                </div>
-            </div>
-        `;
+            `;
             if (plansContainer) plansContainer.appendChild(col);
         });
 
@@ -316,7 +434,6 @@
 
     // ========== تابع اصلی ==========
     function initTeamSelection() {
-        // کلیک روی کارت تیم
         document.querySelectorAll('.team-card-wrapper').forEach(wrapper => {
             const teamInner = wrapper.querySelector('.team-card-inner');
             if (!teamInner) return;
@@ -433,12 +550,10 @@
             }
         }
 
-        // ========== اگه حالت جایگزینی نباشه، نمایش مابه‌التفاوت رو مخفی کن ==========
         if (!getIsReplacementMode()) {
             if (commissionDiffDisplay) commissionDiffDisplay.style.display = 'none';
         }
     }
 
-    // ========== مقداردهی اولیه ==========
     window.initTeamSelection = initTeamSelection;
 })();

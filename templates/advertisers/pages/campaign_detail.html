@@ -162,47 +162,68 @@
                     </div>
                 </div>
             
-                <!-- Inline steps: Light version with responsive design -->
-<div class="steps steps-light" style="margin: 1.5rem 0;">
-    <div class="step {% if campaign.invoice.is_paid %}active{% endif %}">
-        <div class="step-progress">
-            <span class="step-progress-start"></span>
-            <span class="step-progress-end"></span>
-            <span class="step-number">1</span>
+                <!-- ==================== مسیر پیشرفت حرفه‌ای ==================== -->
+<div class="campaign-stepper">
+    <div class="stepper-track">
+        <!-- Step 1 -->
+        <div class="stepper-item {% if campaign.invoice.is_paid %}active completed{% endif %}">
+            <div class="stepper-dot">
+                <span class="stepper-number">1</span>
+                <span class="stepper-icon"><i class="fi-wallet"></i></span>
+            </div>
+            <div class="stepper-label">
+                <span class="stepper-title">پرداخت</span>
+                <span class="stepper-desc">تکمیل فاکتور</span>
+            </div>
         </div>
-        <div class="step-label">پرداخت</div>
-    </div>
-    <div class="step {% if campaign.status != 'pending' and campaign.status != 'cancelled' and campaign.status != 'draft' %}active{% endif %}">
-        <div class="step-progress">
-            <span class="step-progress-start"></span>
-            <span class="step-progress-end"></span>
-            <span class="step-number">2</span>
+
+        <!-- Step 2 -->
+        <div class="stepper-item {% if campaign.status != 'pending' or campaign.status != 'cancelled' or campaign.status != 'draft' %}active completed{% endif %}">
+            <div class="stepper-dot">
+                <span class="stepper-number">2</span>
+                <span class="stepper-icon"><i class="fi-search"></i></span>
+            </div>
+            <div class="stepper-label">
+                <span class="stepper-title">بررسی</span>
+                <span class="stepper-desc">توسط کارشناسان</span>
+            </div>
         </div>
-        <div class="step-label">بررسی</div>
-    </div>
-    <div class="step {% if campaign.status == 'approved' or campaign.status == 'running' or campaign.status == 'completed' or campaign.status == 'revision_needed' %}active{% endif %}">
-        <div class="step-progress">
-            <span class="step-progress-start"></span>
-            <span class="step-progress-end"></span>
-            <span class="step-number">3</span>
+
+        <!-- Step 3 -->
+        <div class="stepper-item {% if campaign.status == 'approved' or campaign.status == 'running' or campaign.status == 'completed' or campaign.status == 'revision_needed' %}active completed{% endif %}">
+            <div class="stepper-dot">
+                <span class="stepper-number">3</span>
+                <span class="stepper-icon"><i class="fi-check-circle"></i></span>
+            </div>
+            <div class="stepper-label">
+                <span class="stepper-title">تایید</span>
+                <span class="stepper-desc">نهایی شدن</span>
+            </div>
         </div>
-        <div class="step-label">تایید</div>
-    </div>
-    <div class="step {% if campaign.status == 'running' or campaign.status == 'completed' %}active{% endif %}">
-        <div class="step-progress">
-            <span class="step-progress-start"></span>
-            <span class="step-progress-end"></span>
-            <span class="step-number">4</span>
+
+        <!-- Step 4 -->
+        <div class="stepper-item {% if campaign.status == 'running' or campaign.status == 'completed' %}active{% endif %}">
+            <div class="stepper-dot">
+                <span class="stepper-number">4</span>
+                <span class="stepper-icon"><i class="fi-play-circle"></i></span>
+            </div>
+            <div class="stepper-label">
+                <span class="stepper-title">اجرا</span>
+                <span class="stepper-desc">انتشار تبلیغ</span>
+            </div>
         </div>
-        <div class="step-label">اجرا</div>
-    </div>
-    <div class="step {% if campaign.status == 'completed' %}active{% endif %}">
-        <div class="step-progress">
-            <span class="step-progress-start"></span>
-            <span class="step-progress-end"></span>
-            <span class="step-number">5</span>
+
+        <!-- Step 5 -->
+        <div class="stepper-item {% if campaign.status == 'completed' %}active completed{% endif %}">
+            <div class="stepper-dot">
+                <span class="stepper-number">5</span>
+                <span class="stepper-icon"><i class="fi-flag"></i></span>
+            </div>
+            <div class="stepper-label">
+                <span class="stepper-title">اتمام</span>
+                <span class="stepper-desc">کمپین تمام شد</span>
+            </div>
         </div>
-        <div class="step-label">اتمام</div>
     </div>
 </div>
 

@@ -1,11 +1,16 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
 from influencers.models import ChannelBooking
 from content_team.models import ContentOrder
 from core.models import ContentType
 from django.contrib import messages
 from django.db import transaction
 from django.urls import reverse
+
+from payment.models import Transaction
+from payment.services.create_invoice import create_campaign_invoice
 from ..models import Campaign
 
 
@@ -180,20 +185,91 @@ def campaign_continue_without_replacement(request, campaign_id):
         return redirect(campaign)
 
     with transaction.atomic():
+        # ========== دریافت اطلاعات فعلی فاکتور ==========
+        old_content_cost = 0
+        old_commission = 0
+        old_vat = 0
+        old_influencer_cost = 0
+        old_invoice = None
+
+        if hasattr(campaign, 'invoice') and campaign.invoice:
+            old_invoice = campaign.invoice
+            old_influencer_cost = int(old_invoice.influencer_cost)
+            old_content_cost = int(old_invoice.content_cost)
+            old_commission = int(old_invoice.commission)
+            old_vat = int(old_invoice.total_vat)
+
         # ========== ناشران رد شده رو به REPLACED تغییر بده ==========
         rejected_bookings = campaign.influencer_bookings.filter(
             status=ChannelBooking.Status.REJECTED
         )
         rejected_count = rejected_bookings.count()
+        rejected_bookings.update(
+            status=ChannelBooking.Status.REPLACED
+        )
+
+        # ========== هزینه ناشران جدید = هزینه فعلی (که قبلاً به‌روز شده) ==========
+        new_influencer_cost = old_influencer_cost  # ✅ درسته، هیچ تغییری نمی‌کنه
+
+        # ========== محاسبه مالیات جدید با هزینه‌های فعلی ==========
+        # مالیات جدید = (هزینه ناشران فعلی + هزینه محتوا + کمیسیون) × ۱۰٪
+        tax_base = new_influencer_cost + old_content_cost + old_commission
+        new_vat = int(tax_base * 0.10)
+
+        # ========== مابه‌التفاوت مالیات ==========
+        vat_diff = new_vat - old_vat  # این عدد منفی خواهد بود
+
+        # ========== برگشت مبلغ به کیف پول کاربر ==========
+        if vat_diff < 0:
+            refund_amount = abs(vat_diff)
+            wallet = request.user.wallet
+            wallet.balance += refund_amount
+            wallet.save(update_fields=['balance'])
+
+            Transaction.objects.create(
+                user=request.user,
+                amount=refund_amount,
+                type=Transaction.Type.CAMPAIGN_REFUND,
+                status=Transaction.Status.SUCCESS,
+                campaign=campaign,
+                invoice=old_invoice,
+                description=f'برگشت مابه‌التفاوت مالیات بابت ادامه بدون جایگزینی (از {old_vat:,} به {new_vat:,} تومان)',
+                reference_id=f'TAX_REFUND_CONTINUE_WITHOUT_REPLACEMENT_{campaign.id}_{timezone.now().timestamp()}'
+            )
+
+        # ========== به‌روزرسانی فاکتور ==========
+        invoice = create_campaign_invoice(campaign)
+
+        # ========== تنظیم مقادیر درست روی فاکتور ==========
+        invoice.influencer_cost = new_influencer_cost
+        invoice.content_cost = old_content_cost
+        invoice.commission = old_commission
+        invoice.total_vat = new_vat
+        invoice.total_amount = new_influencer_cost + old_content_cost + old_commission
+        invoice.payable_amount = invoice.total_amount + new_vat
+
+        # اگه تخفیفی وجود داره، اعمال کن
+        if invoice.discount_amount > 0:
+            invoice.payable_amount = max(invoice.payable_amount - invoice.discount_amount, 0)
+
+        invoice.save(update_fields=[
+            'influencer_cost',
+            'content_cost',
+            'commission',
+            'total_vat',
+            'total_amount',
+            'payable_amount'
+        ])
 
         # ========== کمپین رو به APPROVED برگردون ==========
         campaign.status = Campaign.Status.APPROVED
         campaign.replacement_mode = False
         campaign.save(update_fields=['status', 'replacement_mode'])
 
-        messages.success(
-            request,
-            f"✅ کمپین با موفقیت ادامه یافت. {rejected_count} ناشر رد شده نادیده گرفته شدند."
-        )
+        success_message = f"✅ کمپین با موفقیت ادامه یافت. {rejected_count} ناشر رد شده نادیده گرفته شدند."
+        if vat_diff < 0:
+            success_message += f" 💰 {refund_amount:,} تومان به کیف پول شما برگشت داده شد."
+
+        messages.success(request, success_message)
 
         return redirect(campaign)

@@ -5,6 +5,7 @@
 
     const IS_REPLACEMENT_MODE = window.IS_REPLACEMENT_MODE || false;
     const WALLET_BALANCE = window.WALLET_BALANCE || 0;
+    const CAMPAIGN_ID = window.CAMPAIGN_ID || null;
 
     if (!IS_REPLACEMENT_MODE) return;
 
@@ -13,8 +14,6 @@
         const briefSection = document.getElementById('brief-section');
         if (briefSection) {
             briefSection.style.display = 'none';
-            briefSection.classList.remove('d-block');
-            // حذف از DOM یا مخفی کردن کامل
             briefSection.style.visibility = 'hidden';
             briefSection.style.height = '0';
             briefSection.style.overflow = 'hidden';
@@ -44,9 +43,8 @@
         // ========== ۴. گوش دادن به انتخاب پلن ==========
         document.addEventListener('planSelected', function(e) {
             if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '✅ انتخاب تیم جایگزین';
-                submitBtn.classList.remove('opacity-50');
+                // دکمه توسط team-selection.js فعال میشه
+                // اینجا فقط برای اطمینان
             }
         });
 
@@ -94,7 +92,12 @@
             header.parentNode.insertBefore(alertDiv, walletDisplay.nextSibling);
         }
 
-        // ========== ۸. مخفی کردن بخش‌های اضافی با CSS ==========
+        // ========== ۸. اضافه کردن CAMPAIGN_ID به window ==========
+        if (CAMPAIGN_ID) {
+            window.CAMPAIGN_ID = CAMPAIGN_ID;
+        }
+
+        // ========== ۹. مخفی کردن بخش‌های اضافی با CSS ==========
         const style = document.createElement('style');
         style.textContent = `
             .replacement-mode-hidden {
@@ -113,6 +116,10 @@
         // اضافه کردن کلاس به بخش‌ها
         if (briefSection) briefSection.classList.add('replacement-mode-hidden');
         if (adContentSection) adContentSection.classList.add('replacement-mode-hidden');
+
+        console.log('✅ حالت جایگزینی تیم محتوا فعال شد');
+        console.log('💰 موجودی کیف پول:', WALLET_BALANCE);
+        console.log('🆔 شناسه کمپین:', CAMPAIGN_ID);
     }
 
     if (document.readyState === 'loading') {

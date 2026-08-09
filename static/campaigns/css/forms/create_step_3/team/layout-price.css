@@ -7,7 +7,7 @@
 }
 
 /* ========================================
-   Price Summary Bar
+   Price Summary Bar - Responsive
 ======================================== */
 .price-summary-bar {
     position: sticky;
@@ -17,7 +17,7 @@
     background: #1f1b2d;
     border-top: 1px solid rgba(253, 86, 49, 0.25);
     border-radius: 16px 16px 0 0;
-    padding: 16px 24px;
+    padding: 12px 16px;
     z-index: 100;
     backdrop-filter: blur(12px);
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
@@ -29,16 +29,165 @@
     box-shadow: 0 -8px 40px rgba(253, 86, 49, 0.2);
 }
 
-.total-price-display {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #fd5631;
-    letter-spacing: -0.5px;
-    min-width: 160px;
+/* ===== محتوای داخلی ===== */
+.price-summary-bar .d-flex {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem;
+}
+
+/* ===== بخش سمت راست (breakdown) ===== */
+.price-breakdown-wrapper {
+    flex: 1 1 auto;
+    min-width: 120px;
     text-align: left;
 }
 
 .price-breakdown {
     font-size: 0.75rem;
-    line-height: 1.8;
+    line-height: 1.6;
+    text-align: left;
+    direction: ltr;
+}
+
+.price-breakdown span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ===== بخش سمت چپ (قیمت) ===== */
+.price-summary-bar .d-flex .d-flex {
+    flex-wrap: wrap;
+    gap: 0.3rem 0.75rem;
+}
+
+.total-price-display {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fd5631;
+    letter-spacing: -0.5px;
+    min-width: 100px;
+    text-align: left;
+}
+
+/* ===== آیتم‌های اضافی (کمیسیون و ...) ===== */
+#commission-diff-display,
+#final-total-display {
+    font-size: 0.85rem;
+}
+
+/* ========================================
+   Responsive - Mobile
+======================================== */
+@media (max-width: 576px) {
+    .price-summary-bar {
+        padding: 10px 12px;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .price-summary-bar .d-flex {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.4rem;
+    }
+
+    /* بخش سمت چپ و راست رو زیر هم قرار بده */
+    .price-summary-bar .d-flex .d-flex {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        width: 100%;
+    }
+
+    .price-breakdown-wrapper {
+        width: 100% !important;
+        text-align: center !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 6px;
+        margin-top: 4px;
+    }
+
+    .price-breakdown {
+        font-size: 0.7rem;
+        text-align: center;
+    }
+
+    .price-breakdown span {
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .total-price-display {
+        font-size: 1rem;
+        min-width: 80px;
+    }
+
+    #commission-diff-display,
+    #final-total-display {
+        font-size: 0.75rem;
+    }
+
+    /* مخفی کردن بعضی آیتم‌ها در موبایل (اختیاری) */
+    .price-summary-bar .text-secondary.small {
+        font-size: 0.65rem !important;
+    }
+}
+
+/* ========================================
+   Responsive - Tablet
+======================================== */
+@media (min-width: 577px) and (max-width: 768px) {
+    .price-summary-bar {
+        padding: 12px 16px;
+    }
+
+    .total-price-display {
+        font-size: 1.1rem;
+        min-width: 90px;
+    }
+
+    .price-breakdown {
+        font-size: 0.7rem;
+    }
+
+    .price-summary-bar .d-flex {
+        gap: 0.3rem;
+    }
+}
+
+/* ========================================
+   Responsive - Very Small Screens
+======================================== */
+@media (max-width: 400px) {
+    .price-summary-bar {
+        padding: 8px 10px;
+    }
+
+    .total-price-display {
+        font-size: 0.9rem;
+        min-width: 70px;
+    }
+
+    .price-breakdown {
+        font-size: 0.65rem;
+        line-height: 1.4;
+    }
+
+    .price-summary-bar .text-secondary.small {
+        font-size: 0.6rem !important;
+    }
+
+    #commission-diff-display,
+    #final-total-display {
+        font-size: 0.7rem !important;
+    }
+
+    .price-summary-bar .d-flex .d-flex {
+        gap: 0.2rem 0.5rem;
+    }
 }

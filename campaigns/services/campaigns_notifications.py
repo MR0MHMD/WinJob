@@ -383,10 +383,11 @@ def respond_to_influencer_order_service(order, action):
 
 
                     # ✅ قدم ۴: حفظ کمیسیون قبلی (همون کاری که قبلاً میکردیم)
+                    # ✅ قدم ۴: حفظ کمیسیون قبلی
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
                         invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
-                        invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
+                        invoice.payable_amount = max(invoice.total_amount + invoice.total_vat - invoice.discount_amount, 0)
 
                     # ✅ قدم ۵: ذخیره نهایی فاکتور
                     invoice.save(update_fields=[

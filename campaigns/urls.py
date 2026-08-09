@@ -29,4 +29,6 @@ urlpatterns = [
     path('delete/<int:campaign_id>/', campaign_delete, name='campaign_delete'),
     path('campaign_create_step2/calculate', campaign_step2_calculate_price, name='step2_calculate'),
     path('campaign_create_step4/apply_discount', apply_discount_code, name='apply_discount'),
+    path('api/calculate-team-replacement/', calculate_team_replacement_commission, name='calculate_team_replacement'),
+    path('api/campaign-tax-info/<int:campaign_id>/', api_campaign_tax_info, name='api_campaign_tax_info'),
 ]

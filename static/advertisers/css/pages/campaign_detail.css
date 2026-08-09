@@ -227,7 +227,7 @@
 .chart-container {
     position: relative;
     width: 100%;
-    height: 400px;  /* ارتفاع دسکتاپ */
+    height: 400px;
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.02);
     padding: 1rem;
@@ -244,5 +244,330 @@
 @media (max-width: 768px) {
     .chart-container {
         height: 250px;
+    }
+}
+
+/* ============================================
+   استپر نهایی با خطوط درست
+   ============================================ */
+
+.campaign-stepper {
+    padding: 1.5rem 1rem 1rem;
+    margin-top: 2rem;
+}
+
+/* ====== ترک استپ‌ها ====== */
+.stepper-track {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    width: 100%;
+    padding: 0 10px;
+}
+
+/* ====== خط زمینه بین استپ‌ها ====== */
+.stepper-track::before {
+    content: '';
+    position: absolute;
+    top: 22px;
+    right: 40px;
+    left: 40px;
+    height: 2px;
+    background: rgba(253, 86, 49, 0.15);
+    z-index: 0;
+    border-radius: 2px;
+}
+
+/* ====== هر استپ ====== */
+.stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+}
+
+/* ====== دایره استپ ====== */
+.stepper-dot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(253, 86, 49, 0.12);
+    border: 2.5px solid #fd5631;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+    z-index: 2;
+    margin-bottom: 0.5rem;
+}
+
+.stepper-number {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fd5631;
+    transition: all 0.3s;
+}
+
+.stepper-icon {
+    position: absolute;
+    font-size: 1.1rem;
+    color: #fff;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ====== استپ اکتیو (سبز) ====== */
+.stepper-item.active .stepper-dot {
+    background: #07c98b;
+    border-color: #07c98b;
+    box-shadow: 0 0 0 6px rgba(7, 201, 139, 0.2), 0 8px 24px rgba(7, 201, 139, 0.3);
+    transform: scale(1.05);
+}
+
+.stepper-item.active .stepper-number {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+.stepper-item.active .stepper-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ====== استپ کامل شده (سبز) ====== */
+.stepper-item.completed .stepper-dot {
+    background: #07c98b;
+    border-color: #07c98b;
+    box-shadow: 0 0 0 4px rgba(7, 201, 139, 0.15);
+}
+
+.stepper-item.completed .stepper-number {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+.stepper-item.completed .stepper-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ====== لیبل استپ ====== */
+.stepper-label {
+    text-align: center;
+    width: 100%;
+    padding: 0 2px;
+}
+
+.stepper-title {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fd5631;
+    transition: color 0.3s;
+    white-space: nowrap;
+}
+
+.stepper-item.active .stepper-title {
+    color: #07c98b;
+}
+
+.stepper-desc {
+    display: block;
+    font-size: 0.70rem;
+    color: rgb(253, 86, 49);
+    margin-top: 1px;
+    white-space: nowrap;
+}
+
+.stepper-item.active .stepper-desc {
+    color: rgb(7, 201, 139);
+}
+
+/* ============================================
+   خطوط اتصال بین استپ‌ها (راه‌حل جدید)
+   ============================================ */
+
+/* خط بعد از هر استپ (به جز آخرین) */
+.stepper-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 22px;
+    right: calc(50% + 24px);
+    left: calc(-50% + 24px);
+    height: 3px;
+    background: rgba(253, 86, 49, 0.15);
+    z-index: 1;
+    border-radius: 3px;
+    transition: background 0.6s ease;
+}
+
+/* خط بعد از استپ‌های active و completed */
+.stepper-item.active:not(:last-child)::after,
+.stepper-item.completed:not(:last-child)::after {
+    background: linear-gradient(90deg, #fd5631, #5d3cf2);
+}
+
+/* ====== نوار پیشرفت ====== */
+.stepper-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(253, 86, 49, 0.15);
+    border-radius: 4px;
+    margin-top: 1.25rem;
+    overflow: hidden;
+}
+
+.stepper-progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #fd5631, #5d3cf2);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 16px rgba(253, 86, 49, 0.3);
+}
+
+/* ====== اطلاعات پیشرفت ====== */
+.stepper-progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: rgba(253, 86, 49, 0.6);
+}
+
+.stepper-progress-info span:last-child {
+    color: #fd5631;
+    font-weight: 600;
+}
+
+/* ============================================
+   ریسپانسیو
+   ============================================ */
+
+@media (max-width: 768px) {
+    .campaign-stepper {
+        padding: 1rem 0.5rem 0.75rem;
+    }
+
+    .stepper-track {
+        padding: 0 5px;
+    }
+
+    .stepper-track::before {
+        top: 18px;
+        right: 30px;
+        left: 30px;
+    }
+
+    .stepper-item:not(:last-child)::after {
+        top: 18px;
+        right: calc(50% + 20px);
+        left: calc(-50% + 20px);
+        height: 2px;
+    }
+
+    .stepper-dot {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 0.4rem;
+    }
+
+    .stepper-number {
+        font-size: 0.7rem;
+    }
+
+    .stepper-icon {
+        font-size: 0.9rem;
+    }
+
+    .stepper-title {
+        font-size: 0.6rem;
+    }
+
+    .stepper-desc {
+        font-size: 0.5rem;
+    }
+
+    .stepper-progress {
+        height: 3px;
+        margin-top: 1rem;
+    }
+
+    .stepper-progress-info {
+        font-size: 0.6rem;
+    }
+
+    .stepper-item.active .stepper-dot {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 4px rgba(7, 201, 139, 0.15);
+    }
+}
+
+@media (max-width: 480px) {
+    .campaign-stepper {
+        padding: 0.75rem 0.25rem 0.5rem;
+        border-radius: 0.75rem;
+    }
+
+    .stepper-track {
+        padding: 0 2px;
+    }
+
+    .stepper-track::before {
+        top: 14px;
+        right: 22px;
+        left: 22px;
+        height: 2px;
+    }
+
+    .stepper-item:not(:last-child)::after {
+        top: 14px;
+        right: calc(50% + 16px);
+        left: calc(-50% + 16px);
+        height: 2px;
+    }
+
+    .stepper-dot {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 0.3rem;
+    }
+
+    .stepper-number {
+        font-size: 0.55rem;
+    }
+
+    .stepper-icon {
+        font-size: 0.7rem;
+    }
+
+    .stepper-title {
+        font-size: 0.5rem;
+        font-weight: 500;
+    }
+
+    .stepper-desc {
+        display: none;
+    }
+
+    .stepper-progress {
+        height: 2px;
+        margin-top: 0.75rem;
+    }
+
+    .stepper-progress-info {
+        font-size: 0.5rem;
+        margin-top: 0.35rem;
+    }
+
+    .stepper-item.active .stepper-dot {
+        transform: scale(1);
+        box-shadow: 0 0 0 3px rgba(7, 201, 139, 0.15);
     }
 }

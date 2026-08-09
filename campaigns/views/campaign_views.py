@@ -721,7 +721,7 @@ def campaign_create_step3_team(request):
             tax_result = calculate_replacement_tax(
                 campaign=campaign,
                 new_selected_cost=0,  # هزینه کانال‌ها تغییر نمی‌کنه
-                new_content_cost=new_price  # هزینه جدید تیم محتوا
+                new_content_cost=new_price  # ✅ هزینه جدید تیم محتوا
             )
 
             total_deduct = tax_result['total_deduct']
@@ -739,11 +739,12 @@ def campaign_create_step3_team(request):
                 return redirect(request.path)
 
             with transaction.atomic():
-                # کسر مبلغ از کیف پول
+                # ========== کسر مبلغ از کیف پول ==========
                 if total_deduct > 0:
                     wallet.balance -= total_deduct
                     wallet.save(update_fields=['balance'])
 
+                    # تراکنش برای هزینه تیم جدید
                     Transaction.objects.create(
                         user=request.user,
                         amount=new_price,
@@ -754,7 +755,7 @@ def campaign_create_step3_team(request):
                         reference_id=f"TEAM_NEW_PAYMENT_{campaign.id}_{timezone.now().timestamp()}"
                     )
 
-                    # تراکنش برای مابه‌التفاوت کمیسیون (اگر مثبت)
+                    # ✅ تراکنش برای مابه‌التفاوت کمیسیون (اگر مثبت)
                     if tax_result['commission_diff'] > 0:
                         Transaction.objects.create(
                             user=request.user,
@@ -766,7 +767,7 @@ def campaign_create_step3_team(request):
                             reference_id=f"COMMISSION_DIFF_TEAM_{campaign.id}_{timezone.now().timestamp()}"
                         )
 
-                    # تراکنش برای مابه‌التفاوت مالیات (اگر مثبت)
+                    # ✅ تراکنش برای مابه‌التفاوت مالیات (اگر مثبت)
                     if tax_result['vat_diff'] > 0:
                         Transaction.objects.create(
                             user=request.user,
@@ -778,7 +779,7 @@ def campaign_create_step3_team(request):
                             reference_id=f"VAT_DIFF_TEAM_{campaign.id}_{timezone.now().timestamp()}"
                         )
 
-                    # اگر مالیات کاهش پیدا کرده (تخفیف/کمک هزینه)
+                    # ✅ اگر مالیات کاهش پیدا کرده (تخفیف/کمک هزینه)
                     if tax_result['vat_diff'] < 0:
                         Transaction.objects.create(
                             user=request.user,
@@ -790,12 +791,12 @@ def campaign_create_step3_team(request):
                             reference_id=f"TAX_ADJUSTMENT_TEAM_{campaign.id}_{timezone.now().timestamp()}"
                         )
 
-                # آپدیت سفارش قدیمی
+                # ========== آپدیت سفارش قدیمی ==========
                 if old_order and old_order.status != ContentOrder.Status.CANCELLED:
                     old_order.status = ContentOrder.Status.CANCELLED
                     old_order.save(update_fields=['status'])
 
-                # ایجاد سفارش جدید
+                # ========== ایجاد سفارش جدید ==========
                 new_order = ContentOrder.objects.create(
                     campaign=campaign,
                     team=selected_plan.team,
@@ -809,7 +810,7 @@ def campaign_create_step3_team(request):
                 old_order.replaced_at = timezone.now()
                 old_order.save(update_fields=['replaced_by', 'replaced_at'])
 
-                # کپی بریف
+                # ========== کپی بریف ==========
                 if old_order and hasattr(old_order, 'brief'):
                     old_brief = old_order.brief
                     ContentOrderDescription.objects.create(
@@ -825,7 +826,7 @@ def campaign_create_step3_team(request):
                         do_not_include=old_brief.do_not_include,
                     )
 
-                # کپی فایل‌های پیوست
+                # ========== کپی فایل‌های پیوست ==========
                 if old_order:
                     for old_file in old_order.files.all():
                         if old_file.file:
@@ -838,7 +839,7 @@ def campaign_create_step3_team(request):
                                 file_size=old_file.file_size,
                             )
 
-                # اطمینان از وجود CampaignContent
+                # ========== اطمینان از وجود CampaignContent ==========
                 campaign_content, created = CampaignContent.objects.get_or_create(campaign=campaign)
                 if old_order and hasattr(old_order, 'brief') and not campaign_content.caption:
                     old_brief = old_order.brief
@@ -847,12 +848,11 @@ def campaign_create_step3_team(request):
                         campaign_content.link = old_brief.ad_link or ''
                         campaign_content.save(update_fields=['caption', 'link'])
 
-                # به‌روزرسانی فاکتور
-                # به‌روزرسانی فاکتور
+                # ========== به‌روزرسانی فاکتور ==========
                 if hasattr(campaign, 'invoice'):
                     invoice = create_campaign_invoice(campaign)
 
-                    # ✅ حفظ کمیسیون قبلی
+                    # ✅ حفظ کمیسیون قبلی (اگر جدید کمتر بود)
                     old_commission = tax_result['old_data']['commission']
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
@@ -872,7 +872,7 @@ def campaign_create_step3_team(request):
                         'payable_amount'
                     ])
 
-                # تغییر وضعیت کمپین
+                # ========== تغییر وضعیت کمپین ==========
                 campaign.status = Campaign.Status.APPROVED
                 campaign.replacement_mode = False
                 campaign.content_team_rejected = False
@@ -881,7 +881,7 @@ def campaign_create_step3_team(request):
                 request.session.pop('replacement_campaign_id', None)
                 request.session.pop('replacement_mode_team', None)
 
-                # پیام موفقیت
+                # ========== پیام موفقیت ==========
                 success_parts = [f"✅ تیم تولید محتوا با موفقیت تغییر کرد."]
                 for item in tax_result['breakdown']:
                     if item.get('is_total'):
@@ -1047,20 +1047,81 @@ def campaign_create_step3_ready(request):
                 # ========== ذخیره محتوا ==========
                 form.save()
 
-                # ========== ذخیره کمیسیون قبلی (قبل از به‌روزرسانی فاکتور) ==========
+                # ========== دریافت اطلاعات قبلی فاکتور ==========
+                old_content_cost = 0
                 old_commission = 0
-                if hasattr(campaign, 'invoice') and campaign.invoice:
-                    old_commission = campaign.invoice.commission
+                old_vat = 0
+                old_influencer_cost = 0
+                old_invoice = None
 
-                # ========== به‌روزرسانی فاکتور (هزینه محتوا صفر میشه) ==========
+                if hasattr(campaign, 'invoice') and campaign.invoice:
+                    old_invoice = campaign.invoice
+                    old_content_cost = int(old_invoice.content_cost)
+                    old_commission = int(old_invoice.commission)
+                    old_vat = int(old_invoice.total_vat)
+                    old_influencer_cost = int(old_invoice.influencer_cost)
+
+                # ========== محاسبه دقیق هزینه‌های جدید ==========
+                # هزینه ناشران جدید (همون قبلی)
+                new_influencer_cost = old_influencer_cost
+
+                # هزینه محتوا = ۰ (چون حذف میشه)
+                new_content_cost = 0
+
+                # کمیسیون = همون قبلی (تغییر نمیکنه)
+                new_commission = old_commission
+
+                # ========== محاسبه مالیات جدید با فرمول درست ==========
+                # مالیات جدید = (هزینه ناشران + کمیسیون) × ۱۰٪
+                # دقت: اینجا نباید هزینه محتوا رو حساب کنیم!
+                tax_base = new_influencer_cost + new_commission
+                new_vat = int(tax_base * 0.10)  # ۱۱,۴۰۰,۰۰۰ + ۱,۸۰۰,۰۰۰ = ۱۳,۲۰۰,۰۰۰ × ۰.۱۰ = ۱,۳۲۰,۰۰۰ ✅
+
+                # ========== مابه‌التفاوت مالیات ==========
+                vat_diff = new_vat - old_vat  # ۱,۳۲۰,۰۰۰ - ۱,۳۸۰,۰۰۰ = -۶۰,۰۰۰ ✅
+
+                # ========== برگشت مبلغ به کیف پول کاربر ==========
+                if vat_diff < 0:
+                    refund_amount = abs(vat_diff)  # ۶۰,۰۰۰ ✅
+                    wallet = request.user.wallet
+                    wallet.balance += refund_amount
+                    wallet.save(update_fields=['balance'])
+
+                    Transaction.objects.create(
+                        user=request.user,
+                        amount=refund_amount,
+                        type=Transaction.Type.CAMPAIGN_REFUND,
+                        status=Transaction.Status.SUCCESS,
+                        campaign=campaign,
+                        invoice=old_invoice,
+                        description=f'برگشت مابه‌التفاوت مالیات بابت حذف هزینه تولید محتوا (از {old_vat:,} به {new_vat:,} تومان)',
+                        reference_id=f'TAX_REFUND_CONTENT_REMOVAL_{campaign.id}_{timezone.now().timestamp()}'
+                    )
+
+                # ========== به‌روزرسانی فاکتور ==========
+                # ابتدا فاکتور رو با create_campaign_invoice به‌روز می‌کنیم
                 invoice = create_campaign_invoice(campaign)
 
-                # ========== اگر کمیسیون جدید کمتر از قبلی بود، مقدار قبلی رو حفظ کن ==========
-                if invoice.commission < old_commission:
-                    invoice.commission = old_commission
-                    invoice.total_amount = invoice.influencer_cost + invoice.content_cost + invoice.commission
-                    invoice.payable_amount = max(invoice.total_amount - invoice.discount_amount, 0)
-                    invoice.save(update_fields=['commission', 'total_amount', 'payable_amount'])
+                # ========== سپس مقادیر درست رو روی فاکتور تنظیم می‌کنیم ==========
+                invoice.influencer_cost = new_influencer_cost
+                invoice.content_cost = new_content_cost  # ۰
+                invoice.commission = new_commission
+                invoice.total_vat = new_vat  # ۱,۳۲۰,۰۰۰ ✅
+                invoice.total_amount = new_influencer_cost + new_content_cost + new_commission  # ۱۱,۴۰۰,۰۰۰ + ۰ + ۱,۸۰۰,۰۰۰ = ۱۳,۲۰۰,۰۰۰
+                invoice.payable_amount = invoice.total_amount + new_vat  # ۱۳,۲۰۰,۰۰۰ + ۱,۳۲۰,۰۰۰ = ۱۴,۵۲۰,۰۰۰ ✅
+
+                # اگه تخفیفی وجود داره، اعمال کن
+                if invoice.discount_amount > 0:
+                    invoice.payable_amount = max(invoice.payable_amount - invoice.discount_amount, 0)
+
+                invoice.save(update_fields=[
+                    'influencer_cost',
+                    'content_cost',
+                    'commission',
+                    'total_vat',
+                    'total_amount',
+                    'payable_amount'
+                ])
 
                 # کمپین رو به APPROVED برگردون
                 campaign.status = Campaign.Status.APPROVED

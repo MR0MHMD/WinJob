@@ -99,7 +99,9 @@
 
 {% block content %}
     <div class="container mt-4 pb-5" dir="rtl">
-        {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% if not is_replacement_mode %}
+            {% include 'partials/form-steps.html' with step_name1='اطلاعات پایه' step_name2='انتخاب ناشران' step_name3='انتخاب محتوا' step_name4='پرداخت' %}
+        {% endif %} 
 
         <div class="card border-0 shadow-sm page-card bg-dark">
             <div class="card-body p-4">
@@ -436,24 +438,10 @@
         <!-- در بخش price-summary-bar -->
         <div class="price-summary-bar" id="price-summary-bar">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-3">
                     <div>
                         <div class="text-secondary small mb-0">هزینه تولید محتوا</div>
                         <div class="total-price-display" id="total-price-display">۰ تومان</div>
                     </div>
-
-                    <!-- ========== فقط در حالت جایگزینی ========== -->
-                    {% if is_replacement_mode %}
-                        <div id="commission-diff-display" style="display: none;">
-                            <div class="text-secondary small mb-0">مابه‌التفاوت حق العمل</div>
-                            <div class="text-warning" id="commission-diff-amount">۰ تومان</div>
-                        </div>
-                        <div>
-                            <div class="text-secondary small mb-0">مبلغ قابل پرداخت</div>
-                            <div class="text-success fw-bold" id="final-total-display">۰ تومان</div>
-                        </div>
-                    {% endif %}
-                </div>
                 <div class="text-secondary small text-start price-breakdown-wrapper">
                     <div id="price-breakdown" class="text-secondary price-breakdown"></div>
                 </div>
@@ -508,6 +496,7 @@
         window.IS_REPLACEMENT_MODE = {{ is_replacement_mode|yesno:"true,false" }};
         window.REJECTED_TEAM_ID = {{ rejected_team_id|default:'null' }};
         window.WALLET_BALANCE = {{ wallet_balance|floatformat:"0"|cut:","|default:"0" }};
+        window.CAMPAIGN_ID = {{ campaign.id|default:'null' }};
     </script>
     <script src="{% static 'campaigns/js/create_step_3/team/team-selection.js' %}"></script>
     <script src="{% static 'campaigns/js/create_step_3/team/brief-control.js' %}"></script>

@@ -275,3 +275,119 @@ def calculate_influencer_replacement_commission(request):
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def calculate_team_replacement_commission(request):
+    """محاسبه مابه‌التفاوت حق العمل و مالیات برای جایگزینی تیم محتوا"""
+    try:
+        body = json.loads(request.body)
+        plan_id = body.get('plan_id')
+        campaign_id = body.get('campaign_id')
+
+        if not campaign_id or not plan_id:
+            return JsonResponse({'success': False, 'error': 'اطلاعات ناقص است'}, status=400)
+
+        campaign = get_object_or_404(Campaign, id=campaign_id, advertiser=request.user.advertiser_profile)
+
+        try:
+            plan = ContentServicePlan.objects.get(id=plan_id, is_active=True)
+        except ContentServicePlan.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'پلن یافت نشد'}, status=404)
+
+        new_price = plan.price
+
+        # ========== محاسبه با سرویس جدید ==========
+        from payment.services.tax_calculator import calculate_replacement_tax
+
+        tax_result = calculate_replacement_tax(
+            campaign=campaign,
+            new_selected_cost=0,
+            new_content_cost=new_price
+        )
+
+        return JsonResponse({
+            'success': True,
+            'total_deduct': tax_result['total_deduct'],
+            'total_deduct_formatted': f"{tax_result['total_deduct']:,}",
+            'commission_diff': tax_result['commission_diff'],
+            'commission_diff_formatted': f"{tax_result['commission_diff']:,}",
+            'vat_diff': tax_result['vat_diff'],
+            'vat_diff_formatted': f"{tax_result['vat_diff']:,}",
+            'new_price': new_price,
+            'new_price_formatted': f"{new_price:,}",
+            'old_price': tax_result['old_data']['content_cost'],
+            'old_commission': tax_result['old_data']['commission'],
+            'new_commission': tax_result['new_data']['commission'],
+            'old_vat': tax_result['old_data']['total_vat'],
+            'new_vat': tax_result['new_data']['total_vat'],
+            'breakdown': tax_result['breakdown'],
+            'is_refund': tax_result['is_refund'],
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_campaign_tax_info(request, campaign_id):
+    """دریافت اطلاعات مالیاتی کمپین برای نمایش در مودال"""
+    try:
+        campaign = get_object_or_404(
+            Campaign,
+            id=campaign_id,
+            advertiser=request.user.advertiser_profile
+        )
+
+        if hasattr(campaign, 'invoice') and campaign.invoice:
+            invoice = campaign.invoice
+
+            # ========== دریافت ناشران رد شده ==========
+            rejected_channels = campaign.influencer_bookings.filter(
+                status=ChannelBooking.Status.REJECTED
+            ).select_related('channel')
+
+            rejected_channels_data = [
+                {
+                    'channel_name': ch.channel.channel_name,
+                    'price': ch.price
+                }
+                for ch in rejected_channels
+            ]
+
+            # ========== محاسبه هزینه ناشران جدید (بدون ناشران رد شده) ==========
+            # هزینه فعلی ناشران در فاکتور
+            current_influencer_cost = invoice.influencer_cost
+
+            # جمع قیمت ناشران رد شده
+            rejected_total = sum(ch.price for ch in rejected_channels)
+
+            # هزینه جدید = هزینه فعلی - قیمت ناشران رد شده
+            new_influencer_cost = max(current_influencer_cost - rejected_total, 0)
+
+            return JsonResponse({
+                'success': True,
+                'content_cost': int(invoice.content_cost),
+                'content_vat': int(invoice.content_vat),
+                'influencer_cost': int(invoice.influencer_cost),
+                'commission': int(invoice.commission),
+                'total_vat': int(invoice.total_vat),
+                'total_amount': int(invoice.total_amount),
+                'payable_amount': int(invoice.payable_amount),
+                'new_influencer_cost': int(new_influencer_cost),
+                'rejected_channels': rejected_channels_data,
+                'rejected_total': int(rejected_total),
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'فاکتوری برای این کمپین وجود ندارد'
+            }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
