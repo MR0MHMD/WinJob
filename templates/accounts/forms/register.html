@@ -3,172 +3,152 @@
 
 {% block title %}ثبت نام در سایت{% endblock %}
 
-{% block extra_style %}
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'accounts/css/forms/auth_forms.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <div class="bg-dark border-light rounded-4 overflow-hidden">
-                    <div class="row g-0 align-items-center">
-                        <div class="col-md-6 border-end-md border-light p-4 p-sm-5">
-                            <h2 class="h4 text-light mb-4 mb-sm-5">در سایت ما با اطمینان ثبت نام کنید.</h2>
-                            <ul class="list-unstyled mb-4 mb-sm-5">
-                                <li class="d-flex mb-2">
-                                    <i class="fi-check-circle text-primary mt-1 me-2"></i>
-                                    <span class="text-light">ثبت و بروزرسانی آگهی</span>
-                                </li>
+<div class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-visual">
+            <div>
+                <h1>اینجا فقط ثبت‌نام نمی‌کنی؛<br><span>وارد بازی می‌شی.</span></h1>
+                <p>پروفایلت رو بساز، فرصت های تبلیغاتی رو پیدا کن و کسب و کارت رو ارتقاء بده</p>
+            </div>
 
-                                <li class="d-flex mb-2">
-                                    <i class="fi-check-circle text-primary mt-1 me-2"></i>
-                                    <span class="text-light">مدیریت لیست علاقه مندی ها</span>
-                                </li>
+            <img class="auth-art" src="{% static 'finder/img/signin-modal/signup-dark.svg' %}"
+                 width="520" alt="ثبت نام در وینجاب">
 
-                                <li class="d-flex mb-0">
-                                    <i class="fi-check-circle text-primary mt-1 me-2"></i>
-                                    <span class="text-light">ثبت نظر</span>
-                                </li>
-                            </ul>
+            <div class="auth-switch">
+                قبلاً عضو شدی؟
+                <a href="{% url 'accounts:login' %}">ورود به حساب ←</a>
+            </div>
+        </section>
 
-                            <img class="d-block mx-auto rotate-img" src="{% static 'finder/img/signin-modal/signup-dark.svg' %}" width="344" alt="Illustration">
+        <section class="auth-form">
+            <div class="auth-form-head">
+                <div class="eyebrow">CREATE YOUR WIN</div>
+                <h2>ساخت حساب وینجاب</h2>
+                <p>چند قدم کوتاه تا ورود دنیای وینجاب.</p>
+            </div>
 
-                            <div class="text-light mt-sm-4 pt-md-3">
-                                <span class="opacity-60">ثبت نام کرده اید؟</span>
-                                <a class="text-light" href="{% url 'accounts:login' %}">ورود به حساب کاربری</a>
-                            </div>
+            <div class="auth-social">
+                <a class="btn" href="#"><i class="fi-google fs-lg me-1"></i> گوگل</a>
+                <a class="btn" href="#"><i class="fi-facebook fs-lg me-1"></i> فیسبوک</a>
+            </div>
+
+            <div class="auth-divider">یا ثبت نام با اطلاعات</div>
+
+            <form method="POST" action="{% url 'accounts:register' %}" id="registerForm" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
+                    {% endfor %}
+                {% endif %}
 
-                        <div class="col-md-6 p-4 p-sm-5">
-                            <a class="btn btn-outline-info w-100 mb-3" href="#">
-                                <i class="fi-google fs-lg me-1"></i>ورود با اکانت گوگل
-                            </a>
+                <div class="mb-4">
+                    <label class="form-label-light">نام مستعار</label>
+                    {{ register_form.nickname }}
+                    {% if register_form.nickname.errors %}
+                        <div class="text-danger small mt-1">{{ register_form.nickname.errors.0 }}</div>
+                    {% endif %}
+                </div>
 
-                            <a class="btn btn-outline-info w-100 mb-3" href="#">
-                                <i class="fi-facebook fs-lg me-1"></i>ورود با اکانت فیسبوک
-                            </a>
+                <div class="mb-4">
+                    <label class="form-label-light">تلفن همراه</label>
+                    {{ register_form.phone_number }}
+                    {% if register_form.phone_number.errors %}
+                        <div class="text-danger small mt-1">{{ register_form.phone_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
 
-                            <div class="d-flex align-items-center py-3 mb-3">
-                                <hr class="hr-light w-100">
-                                <div class="text-light opacity-70 px-3">یـا</div>
-                                <hr class="hr-light w-100">
-                            </div>
+                <div class="mb-4">
+                    <label class="form-label-light">نوع کاربری</label>
+                    {{ register_form.role }}
+                    {% if register_form.role.errors %}
+                        <div class="text-danger small mt-1">{{ register_form.role.errors.0 }}</div>
+                    {% endif %}
+                </div>
 
-                            <form method="POST" action="{% url 'accounts:register' %}" id="registerForm" class="needs-validation" novalidate>
-                                {% csrf_token %}
-
-                                {% if messages %}
-                                    {% for message in messages %}
-                                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                            {{ message }}
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                        </div>
-                                    {% endfor %}
-                                {% endif %}
-
-                                <div class="mb-4">
-                                    <label class="form-label-light">نام مستعار</label>
-                                    {{ register_form.nickname }}
-                                    {% if register_form.nickname.errors %}
-                                        <div class="text-danger small mt-1">{{ register_form.nickname.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label-light">تلفن همراه</label>
-                                    {{ register_form.phone_number }}
-                                    {% if register_form.phone_number.errors %}
-                                        <div class="text-danger small mt-1">{{ register_form.phone_number.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label-light">نوع کاربری</label>
-                                    {{ register_form.role }}
-                                    {% if register_form.role.errors %}
-                                        <div class="text-danger small mt-1">{{ register_form.role.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div id="team-fields-wrapper" style="display: none;">
-                                    <div class="mb-4">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <input type="checkbox" name="create_new_team" id="create-new-team" class="form-check-input" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
-                                            <label for="create-new-team" style="cursor: pointer; color: #e5e7eb; margin: 0;" class="form-check-label">
-                                                مدیر تیم تولید محتوا هستم
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div id="team-slug-field" class="mb-4">
-                                        <label class="form-label-light">شناسه تیم</label>
-                                        {{ register_form.team_slug }}
-                                        <small class="text-muted d-block">شناسه تیم را از مدیر تیم دریافت کنید</small>
-                                        {% if register_form.team_slug.errors %}
-                                            <div class="text-danger small mt-1">{{ register_form.team_slug.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div id="team-name-field" class="mb-4" style="display: none;">
-                                        <label class="form-label-light">نام تیم جدید</label>
-                                        {{ register_form.team_name }}
-                                        {% if register_form.team_name.errors %}
-                                            <div class="text-danger small mt-1">{{ register_form.team_name.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label text-light">رمز عبور</label>
-                                    <div class="password-toggle">
-                                        {{ register_form.password }}
-                                        <label class="password-toggle-btn" aria-label="Show/hide password">
-                                            <input class="password-toggle-check" type="checkbox">
-                                            <span class="password-toggle-indicator"></span>
-                                        </label>
-                                    </div>
-                                    {% if register_form.password.errors %}
-                                        <div class="text-danger small mt-1">{{ register_form.password.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label text-light">تایید رمز عبور</label>
-                                    <div class="password-toggle">
-                                        {{ register_form.password_confirm }}
-                                        <label class="password-toggle-btn" aria-label="Show/hide password">
-                                            <input class="password-toggle-check" type="checkbox">
-                                            <span class="password-toggle-indicator"></span>
-                                        </label>
-                                    </div>
-                                    {% if register_form.password_confirm.errors %}
-                                        <div class="text-danger small mt-1">{{ register_form.password_confirm.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="form-check form-check-light mb-4">
-                                    <input class="form-check-input" type="checkbox" id="agree-to-terms" required>
-                                    <label class="form-check-label" for="agree-to-terms">
-                                        <span class='opacity-70'>با ثبت نام در این سایت</span>
-                                        <a href='#' class='text-light'>شرایط و قوانین</a>
-                                        سایت را قبول دارم.
-                                    </label>
-                                    <div class="invalid-feedback">
-                                        برای ثبت نام باید قوانین و شرایط را بپذیرید.
-                                    </div>
-                                </div>
-
-                                <button class="btn btn-primary btn-lg w-100" type="submit">
-                                    ثبت نام
-                                </button>
-                            </form>
+                <div id="team-fields-wrapper" style="display:none;">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="checkbox" name="create_new_team" id="create-new-team"
+                                   class="form-check-input" style="width:18px;height:18px;margin:0;cursor:pointer;">
+                            <label for="create-new-team" style="cursor:pointer;color:#e5e7eb;margin:0;" class="form-check-label">
+                                مدیر تیم تولید محتوا هستم
+                            </label>
                         </div>
                     </div>
+
+                    <div id="team-slug-field" class="mb-4">
+                        <label class="form-label-light">شناسه تیم</label>
+                        {{ register_form.team_slug }}
+                        <small class="text-muted d-block">شناسه تیم را از مدیر تیم دریافت کنید</small>
+                        {% if register_form.team_slug.errors %}
+                            <div class="text-danger small mt-1">{{ register_form.team_slug.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div id="team-name-field" class="mb-4" style="display:none;">
+                        <label class="form-label-light">نام تیم جدید</label>
+                        {{ register_form.team_name }}
+                        {% if register_form.team_name.errors %}
+                            <div class="text-danger small mt-1">{{ register_form.team_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-        </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-light">رمز عبور</label>
+                    <div class="password-toggle">
+                        {{ register_form.password }}
+                        <label class="password-toggle-btn" aria-label="نمایش/پنهان کردن رمز عبور">
+                            <input class="password-toggle-check" type="checkbox">
+                            <span class="password-toggle-indicator"></span>
+                        </label>
+                    </div>
+                    {% if register_form.password.errors %}
+                        <div class="text-danger small mt-1">{{ register_form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-light">تایید رمز عبور</label>
+                    <div class="password-toggle">
+                        {{ register_form.password_confirm }}
+                        <label class="password-toggle-btn" aria-label="نمایش/پنهان کردن رمز عبور">
+                            <input class="password-toggle-check" type="checkbox">
+                            <span class="password-toggle-indicator"></span>
+                        </label>
+                    </div>
+                    {% if register_form.password_confirm.errors %}
+                        <div class="text-danger small mt-1">{{ register_form.password_confirm.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-check form-check-light mb-4 auth-terms">
+                    <input class="form-check-input" type="checkbox" id="agree-to-terms" required>
+                    <label class="form-check-label" for="agree-to-terms">
+                        با ثبت نام در این سایت
+                        <a href="#">شرایط و قوانین</a>
+                        سایت را قبول دارم.
+                    </label>
+                    <div class="invalid-feedback">برای ثبت نام باید قوانین و شرایط را بپذیرید.</div>
+                </div>
+
+                <button class="btn btn-primary btn-lg w-100" type="submit">
+                    ساخت حساب و شروع کار <span class="ms-1">←</span>
+                </button>
+            </form>
+        </section>
     </div>
+</div>
 {% endblock %}
 
 {% block script %}

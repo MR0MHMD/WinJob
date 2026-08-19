@@ -150,6 +150,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'core.context_processors.platform_info',
+                'core.context_processors.domain',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
             ],

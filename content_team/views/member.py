@@ -334,12 +334,12 @@ def team_manage_view(request):
         team_member = ContentTeamMember.objects.select_related('team').get(user=request.user, is_active=True)
     except ContentTeamMember.DoesNotExist:
         messages.error(request, "شما عضو هیچ تیم فعالی نیستید.")
-        return redirect('home')
+        return redirect('core:home')
 
     # بررسی نقش مدیر بودن
     if team_member.role != ContentTeamMember.Role.MANAGER:
         messages.error(request, "شما دسترسی مدیریت این تیم را ندارید.")
-        return redirect('home')
+        return redirect('accounts:dashboard_router')
 
     team = team_member.team
 

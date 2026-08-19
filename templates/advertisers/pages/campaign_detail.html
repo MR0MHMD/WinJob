@@ -6,88 +6,9 @@
     جزئیات کمپین {{ campaign.name }}
 {% endblock %}
 
-{% block extra_style %}
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'advertisers/css/pages/campaign_detail.css' %}">
     <link rel="stylesheet" href="{% static 'campaigns/css/previews/bale_preview.css' %}">
-    <style>
-        /* ============================================
-       Cost Breakdown Card
-       ============================================ */
-        .cost-breakdown-card .cost-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background 0.2s;
-        }
-
-        .cost-breakdown-card .cost-row:last-of-type {
-            border-bottom: none;
-        }
-
-        .cost-breakdown-card .cost-row .label {
-            font-size: 0.9rem;
-            color: #adb5bd;
-        }
-
-        .cost-breakdown-card .cost-row .value {
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        .cost-breakdown-card .cost-row .value.total {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .cost-breakdown-card .cost-row img {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
-            margin-left: 4px;
-        }
-
-        .cost-breakdown-card .cost-divider {
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            margin: 6px 0;
-        }
-
-        .cost-breakdown-card .action-bar {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-        }
-
-        .cost-breakdown-card .action-bar .btn {
-            font-size: 0.85rem;
-            padding: 8px 16px;
-        }
-
-        /* Hover effect for rows */
-        .cost-breakdown-card .cost-row:hover {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 6px;
-            padding-left: 8px;
-            padding-right: 8px;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 576px) {
-            .cost-breakdown-card .cost-row {
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-
-            .cost-breakdown-card .action-bar {
-                flex-direction: column;
-            }
-
-            .cost-breakdown-card .action-bar .btn {
-                width: 100%;
-            }
-        }
-    </style>
 {% endblock %}
 
 {% block content %}
@@ -1245,7 +1166,7 @@
                                                                             <td>
                                                                                 {% if file_obj.file %}
                                                                                     {% with ext=file_obj.file.name|lower|slice:"-3:" %}
-                                                                                        {% if ext in "jpg,jpeg,png,gif,webp,svg" %}
+                                                                                        {% if ext in "jpg,jpeg,webp,gif,webp,svg" %}
                                                                                             <img src="{{ file_obj.file.url }}"
                                                                                                  class="rounded-2 {% if file_obj.is_selected %}border border-success border-2{% endif %}"
                                                                                                  style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"

@@ -390,7 +390,7 @@ class CampaignContentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         url = obj.media.url
         ext = os.path.splitext(url)[1].lower()
 
-        image_ext = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        image_ext = ['.jpg', '.jpeg', '.webp', '.gif', '.webp']
         video_ext = ['.mp4', '.webm', '.ogg']
 
         if ext in image_ext:

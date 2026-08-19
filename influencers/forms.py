@@ -68,7 +68,7 @@ class ChannelForm(forms.ModelForm):
 
             "avatar": forms.FileInput(
                 attrs={
-                    "accept": "image/png, image/jpeg",
+                    "accept": "image/webp, image/jpeg",
                     "style": "display: none;",
                 }
             ),

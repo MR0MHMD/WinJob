@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return res.blob();
                 })
                 .then(blob => {
-                    const file = new File([blob], `QR_${name}.png`, { type: 'image/png' });
+                    const file = new File([blob], `QR_${name}.webp`, { type: 'image/webp' });
                     navigator.share({
                         title: `QR Code ${name}`,
                         text: `QR Code ${name} - WinJob`,
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Fetch error:', err);
                     const link = document.createElement('a');
                     link.href = qrUrl;
-                    link.download = `QR_${name}.png`;
+                    link.download = `QR_${name}.webp`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             const link = document.createElement('a');
             link.href = qrUrl;
-            link.download = `QR_${name}.png`;
+            link.download = `QR_${name}.webp`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

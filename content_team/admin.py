@@ -1386,7 +1386,7 @@ class ContentDeliveryFileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
         ext = obj.file.name.lower().split('.')[-1] if '.' in obj.file.name else ''
 
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+        if ext in ['jpg', 'jpeg', 'webp', 'gif', 'webp', 'svg']:
             return format_html(
                 '<img src="{}" style="max-width: 400px; max-height: 300px; '
                 'border-radius: 8px; border: 1px solid #ddd; object-fit: contain;" />',
@@ -1596,7 +1596,7 @@ class ContentOrderRevisionAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
         ext = obj.file.name.lower().split('.')[-1] if '.' in obj.file.name else ''
 
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        if ext in ['jpg', 'jpeg', 'webp', 'gif', 'webp']:
             return format_html(
                 '<img src="{}" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;" />',
                 obj.file.url

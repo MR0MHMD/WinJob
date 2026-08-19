@@ -132,7 +132,7 @@ window.shareQrCode = function (qrUrl, name) {
                 return res.blob();
             })
             .then(function (blob) {
-                const file = new File([blob], `QR_${safeName}.png`, {type: 'image/png'});
+                const file = new File([blob], `QR_${safeName}.webp`, {type: 'image/webp'});
                 navigator.share({
                     title: `QR Code ${safeName}`,
                     text: `QR Code ${safeName} - WinJob`,
@@ -154,7 +154,7 @@ window.shareQrCode = function (qrUrl, name) {
 function downloadQrCode(url, name) {
     const link = document.createElement('a');
     link.href = url;
-    link.download = `QR_${name}.png`;
+    link.download = `QR_${name}.webp`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -8,115 +8,110 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <div class="bg-dark border-light rounded-4 overflow-hidden">
-                    <div class="row g-0 align-items-center">
-                        <div class="col-md-6 border-end-md border-light p-4 p-sm-5">
-                            <h2 class="h4 text-light mb-4 mb-sm-5">
-                                سلام!
-                                <br>
-                                به سایت وینجاب خوش آمدید.
-                            </h2>
-
-                            <img class="d-block mx-auto" src="{% static 'finder/img/signin-modal/signin-dark.svg' %}" width="344" alt="Illustartion">
-
-                            <div class="text-light mt-4 mt-sm-5">
-                                <span class="opacity-60">هنوز ثبت نام نکرده اید؟</span>
-                                <a class="text-light" href="{% url 'accounts:register' %}">
-                                    ثبت نام
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 p-4 p-sm-5">
-                            <a class="btn btn-outline-info w-100 mb-3" id="google-login-btn" href="#">
-                                <i class="fi-google fs-lg me-1"></i>ورود با اکانت گوگل
-                            </a>
-
-                            <div id="initial-buttons">
-                                <a class="btn btn-outline-info w-100 mb-3" id="otp-mode-btn" href="javascript:void(0);">
-                                    <i class="fi-device-mobile fs-lg me-1"></i>ورود با کد یکبار مصرف
-                                </a>
-                                <div class="d-flex align-items-center py-3 mb-3">
-                                    <hr class="hr-light w-100">
-                                    <div class="text-light opacity-70 px-3">یـا</div>
-                                    <hr class="hr-light w-100">
-                                </div>
-                            </div>
-
-                            <div id="password-mode-btn-container" style="display: none;">
-                                <a class="btn btn-outline-info w-100 mb-3" id="password-mode-btn" href="javascript:void(0);">
-                                    <i class="fi-lock me-1"></i>ورود با رمز عبور
-                                </a>
-                                <div class="d-flex align-items-center py-3 mb-3">
-                                    <hr class="hr-light w-100">
-                                    <div class="text-light opacity-70 px-3">یـا</div>
-                                    <hr class="hr-light w-100">
-                                </div>
-                            </div>
-
-                            <div id="password-login-section">
-                                <form method="POST" action="{% url 'accounts:login' %}" id="password-login-form">
-                                    {% csrf_token %}
-
-                                    {% if error %}
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        {{ error }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                    {% endif %}
-
-                                    <div class="mb-4">
-                                        <label class="form-label text-light mb-2">تلفن همراه</label>
-                                        {{ login_form.phone_number }}
-                                        {% if login_form.phone_number.errors %}
-                                            <div class="text-danger small mt-1">{{ login_form.phone_number.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="mb-4">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <label class="form-label text-light mb-0">رمز عبور</label>
-                                            <a class="fs-sm text-light" href="#">رمز عبور را فراموش کرده اید؟</a>
-                                        </div>
-                                        <div class="password-toggle">
-                                            {{ login_form.password }}
-                                            <label class="password-toggle-btn" aria-label="نمایش/پنهان کردن رمز عبور">
-                                                <input class="password-toggle-check" type="checkbox">
-                                                <span class="password-toggle-indicator"></span>
-                                            </label>
-                                        </div>
-                                        {% if login_form.password.errors %}
-                                            <div class="text-danger small mt-1">{{ login_form.password.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <button class="btn btn-primary btn-lg w-100" type="submit">
-                                        ورود به حساب کاربری
-                                    </button>
-                                </form>
-                            </div>
-
-                            <div id="otp-login-section" style="display: none;">
-                                <div class="mb-4">
-                                    <label for="otp-phone-input" class="form-label text-light mb-2">تلفن همراه</label>
-                                    <input type="tel" name="phone_number" class="form-control form-control-light" placeholder="09123456789" id="otp-phone-input" required>
-                                </div>
-
-                                <div id="otp-error" class="alert alert-danger d-none"></div>
-
-                                <button class="btn btn-primary btn-lg w-100" id="send-otp-submit">
-                                    دریافت کد تایید
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-visual">
+            <div>
+                <h1>دوباره برگرد به دنیای<br><span>رشد کسب و کارت</span></h1>
+                <p>حساب وینجاب تو، نقطه اتصال تو به کمپین‌ها، تیم‌ها و فرصت‌های برنده است.</p>
             </div>
-        </div>
+
+            <img class="auth-art" src="{% static 'finder/img/signin-modal/signin-dark.svg' %}"
+                 width="520" alt="ورود به وینجاب">
+
+            <div class="auth-switch">
+                هنوز حساب نداری؟
+                <a href="{% url 'accounts:register' %}">ساخت حساب جدید ←</a>
+            </div>
+        </section>
+
+        <section class="auth-form">
+            <div class="auth-form-head">
+                <div class="eyebrow">WELCOME BACK</div>
+                <h2>ورود به حساب</h2>
+                <p>اطلاعاتت رو وارد کن و ادامه بده.</p>
+            </div>
+
+            <div class="auth-social">
+                <a class="btn" id="google-login-btn" href="#">
+                    <i class="fi-google fs-lg me-1"></i> گوگل
+                </a>
+                <a class="btn" id="otp-mode-btn" href="javascript:void(0);">
+                    <i class="fi-device-mobile fs-lg me-1"></i> کد یکبار مصرف
+                </a>
+            </div>
+
+            <div id="initial-buttons">
+                <div class="auth-divider">یا ورود با رمز</div>
+            </div>
+
+            <div id="password-mode-btn-container" style="display:none;">
+                <div class="auth-choice">
+                    <a class="btn" id="password-mode-btn" href="javascript:void(0);">
+                        <i class="fi-lock me-1"></i> ورود با رمز عبور
+                    </a>
+                </div>
+                <div class="auth-divider">یا</div>
+            </div>
+
+            <div id="password-login-section">
+                <form method="POST" action="{% url 'accounts:login' %}" id="password-login-form">
+                    {% csrf_token %}
+
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ error }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <label class="form-label text-light mb-2">تلفن همراه</label>
+                        {{ login_form.phone_number }}
+                        {% if login_form.phone_number.errors %}
+                            <div class="text-danger small mt-1">{{ login_form.phone_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label text-light mb-0">رمز عبور</label>
+                            <a class="auth-mini-link" href="#">رمز عبور را فراموش کرده‌اید؟</a>
+                        </div>
+                        <div class="password-toggle">
+                            {{ login_form.password }}
+                            <label class="password-toggle-btn" aria-label="نمایش/پنهان کردن رمز عبور">
+                                <input class="password-toggle-check" type="checkbox">
+                                <span class="password-toggle-indicator"></span>
+                            </label>
+                        </div>
+                        {% if login_form.password.errors %}
+                            <div class="text-danger small mt-1">{{ login_form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button class="btn btn-primary btn-lg w-100" type="submit">
+                        ورود به حساب کاربری <span class="ms-1">←</span>
+                    </button>
+                </form>
+            </div>
+
+            <div id="otp-login-section" style="display:none;">
+                <div class="mb-4">
+                    <label for="otp-phone-input" class="form-label text-light mb-2">تلفن همراه</label>
+                    <input type="tel" name="phone_number" class="form-control form-control-light"
+                           placeholder="09123456789" id="otp-phone-input" required>
+                </div>
+
+                <div id="otp-error" class="alert alert-danger d-none"></div>
+
+                <button class="btn btn-primary btn-lg w-100" id="send-otp-submit">
+                    دریافت کد تایید <span class="ms-1">←</span>
+                </button>
+            </div>
+        </section>
     </div>
+</div>
 {% endblock %}
 
 {% block script %}

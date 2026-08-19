@@ -119,7 +119,7 @@ function formatFileSize(bytes) {
 function getFileIcon(fileName) {
     const ext = fileName.split('.').pop().toLowerCase();
     const icons = {
-        'jpg': 'fi-image', 'jpeg': 'fi-image', 'png': 'fi-image', 'gif': 'fi-image',
+        'jpg': 'fi-image', 'jpeg': 'fi-image', 'webp': 'fi-image', 'gif': 'fi-image',
         'mp4': 'fi-video', 'avi': 'fi-video', 'mov': 'fi-video',
         'mp3': 'fi-music', 'wav': 'fi-music',
         'pdf': 'fi-file', 'doc': 'fi-file', 'docx': 'fi-file',

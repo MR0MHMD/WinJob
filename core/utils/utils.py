@@ -199,7 +199,7 @@ def generate_qr_code(data, size=300, logo_path=None, color1=(0, 119, 255), color
 
     # ذخیره در بافر با کیفیت بالا
     buffer = BytesIO()
-    img.save(buffer, format='PNG', quality=95, optimize=True)
+    img.save(buffer, format='png', quality=95, optimize=True)
     buffer.seek(0)
 
     return buffer
@@ -224,9 +224,9 @@ def get_site_logo_path():
     logo_paths = [
         os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'icons', 'favicon.ico'),
         os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'logo', 'Untitled03.png'),
-        os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png'),
-        os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png'),
-        os.path.join(settings.BASE_DIR, 'media', 'logo', 'logo.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.webp'),
+        os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp'),
+        os.path.join(settings.BASE_DIR, 'media', 'logo', 'logo.webp'),
     ]
 
     for path in logo_paths:

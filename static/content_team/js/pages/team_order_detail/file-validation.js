@@ -1,8 +1,8 @@
 const SERVICE_FILE_TYPES = {
     'طراحی استوری': {
-        extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.mov'],
+        extensions: ['.jpg', '.jpeg', '.webp', '.gif', '.webp', '.svg', '.mp4', '.mov'],
         mimeTypes: ['image/*', 'video/mp4', 'video/quicktime'],
-        message: 'فایل‌های مجاز: تصاویر (JPG, PNG, GIF, WEBP) و ویدیوهای کوتاه (MP4, MOV)'
+        message: 'فایل‌های مجاز: تصاویر (JPG, webp, GIF, WEBP) و ویدیوهای کوتاه (MP4, MOV)'
     },
     'تولید ویدیو کوتاه': {
         extensions: ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v'],
@@ -15,14 +15,14 @@ const SERVICE_FILE_TYPES = {
         message: 'فایل‌های مجاز: ویدیو (MP4, MOV, WEBM) و GIF'
     },
     'عکاسی تبلیغاتی': {
-        extensions: ['.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp', '.raw'],
+        extensions: ['.jpg', '.jpeg', '.webp', '.webp', '.tiff', '.bmp', '.raw'],
         mimeTypes: ['image/*'],
-        message: 'فایل‌های مجاز: تصاویر با کیفیت بالا (JPG, PNG, TIFF, RAW)'
+        message: 'فایل‌های مجاز: تصاویر با کیفیت بالا (JPG, webp, TIFF, RAW)'
     },
     'طراحی پوستر و بنر': {
-        extensions: ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.pdf', '.psd', '.ai', '.eps'],
+        extensions: ['.jpg', '.jpeg', '.webp', '.webp', '.svg', '.pdf', '.psd', '.ai', '.eps'],
         mimeTypes: ['image/*', 'application/pdf', 'application/postscript', 'image/vnd.adobe.photoshop'],
-        message: 'فایل‌های مجاز: تصاویر (JPG, PNG, SVG) و فایل‌های طراحی (PSD, AI, EPS, PDF)'
+        message: 'فایل‌های مجاز: تصاویر (JPG, webp, SVG) و فایل‌های طراحی (PSD, AI, EPS, PDF)'
     },
     'پادکست و محتوای صوتی': {
         extensions: ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.wma'],

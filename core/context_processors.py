@@ -1,3 +1,4 @@
+from django.conf import settings
 from core.models import Platform
 
 
@@ -10,4 +11,12 @@ def platform_info(request):
 
     return {
         'platforms': platforms,
+    }
+
+def domain(request):
+    """
+    نام دامنه رو برمیگردونه
+    """
+    return {
+        'domain': settings.SITE_URL,
     }

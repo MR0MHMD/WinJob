@@ -41,7 +41,6 @@ class InfluencerProfileInline(admin.StackedInline):
     verbose_name_plural = _('اطلاعات اینفلوئنسر')
 
     fields = [
-        'description',
         'is_active',
         'formatted_created_at',
         'formatted_updated_at'

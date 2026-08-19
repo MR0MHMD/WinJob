@@ -45,24 +45,58 @@
                         <a href="#" class="social-icon-btn" data-bs-toggle="tooltip" title="آپارات"><i class="bi bi-play-circle"></i></a>
                     </div>
                 </div>
+                {% if request.user.is_advertiser %}
+                	<div class="col-lg-2 col-6 col-sm-4">
+                        <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای تبلیغ‌دهندگان</h6>
+                        <ul class="list-unstyled footer-links-list">
+                            <li><a href="{% url 'accounts:dashboard_router' %}"><i class="bi bi-chevron-left"></i>داشبورد</a></li>
+                            <li><a href="{% url 'advertisers:campaigns_list' %}"><i class="bi bi-chevron-left"></i>مدیریت کمپین های من</a></li>
+                            <li><a href="{% url 'influencers:channel_list' %}"><i class="bi bi-chevron-left"></i>لیست کانال‌ها و پیج‌ها</a></li>
+                            <li><a href="{% url 'content_team:team_list' %}"><i class="bi bi-chevron-left"></i>تیم‌های تخصصی محتوا</a></li>
+                        </ul>
+                    </div>
+                {% elif request.user.is_influencer %}
+                    <div class="col-lg-2 col-6 col-sm-4">
+                        <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای ناشران</h6>
+                        <ul class="list-unstyled footer-links-list">
+                            <li><a href="{% url 'accounts:dashboard_router' %}"><i class="bi bi-chevron-left"></i>داشبورد</a></li>
+                            <li><a href="{% url 'influencers:order_list' %}"><i class="bi bi-chevron-left"></i>سفارشات من</a></li>
+                            <li><a href="{% url 'influencers:influencer_channels' %}"><i class="bi bi-chevron-left"></i>مدیریت کانال ها</a></li>
+                            <li><a href="{% url 'influencers:service_rates' %}"><i class="bi bi-chevron-left"></i>مدیریت تعرفه ها</a></li>
+                            <li><a href="{% url 'influencers:coupon_list' %}"><i class="bi bi-chevron-left"></i>مدیریت کد های تخفیف</a></li>
+                        </ul>
+                    </div>
+                {% elif request.user.is_team_member %}
+                    {% if request.user.team_member.role == "manager"  %}
+                    	<div class="col-lg-2 col-6 col-sm-4">
+                            <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای مدیر تیم</h6>
+                            <ul class="list-unstyled footer-links-list">
+                            <li><a href="{% url 'accounts:dashboard_router' %}"><i class="bi bi-chevron-left"></i>داشبورد تیم</a></li>
+                                <li><a href="{% url 'content_team:team_orders_list' %}"><i class="bi bi-chevron-left"></i>سفارشات تیم</a></li>
+                                <li><a href="{% url 'content_team:team_manage' %}"><i class="bi bi-chevron-left"></i>مدیریت تیم</a></li>
+                                <li><a href="{% url 'content_team:plans_dashboard' %}"><i class="bi bi-chevron-left"></i>مدیریت پلن ها</a></li>
+                                <li><a href="{% url 'content_team:team_coupons' %}"><i class="bi bi-chevron-left"></i>مدیریت کد های تخفیف</a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="col-lg-2 col-6 col-sm-4">
+                            <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای اعضای تیم</h6>
+                            <ul class="list-unstyled footer-links-list">
+                            <li><a href="{% url 'accounts:dashboard_router' %}"><i class="bi bi-chevron-left"></i>داشبورد تیم</a></li>
+                                <li><a href="{% url 'content_team:team_orders_list' %}"><i class="bi bi-chevron-left"></i>سفارشات تیم</a></li>
+                                <li><a href="{% url 'content_team:team_coupons' %}"><i class="bi bi-chevron-left"></i>مدیریت کد های تخفیف</a></li>
+                            </ul>
+                        </div>
+                    {% endif %}
+                {% endif %}
+                
 
                 <div class="col-lg-2 col-6 col-sm-4">
-                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای تبلیغ‌دهندگان</h6>
+                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای همه کاربران</h6>
                     <ul class="list-unstyled footer-links-list">
-                        <li><a href="{% url 'influencers:channel_list' %}"><i class="bi bi-chevron-left"></i>لیست کانال‌ها و پیج‌ها</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>تعرفه‌های عادلانه پلتفرم</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>تضمین امنیت پرداخت</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>تیم‌های تخصصی محتوا</a></li>
-                    </ul>
-                </div>
-
-                <div class="col-lg-2 col-6 col-sm-4">
-                    <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای ناشران محتوا</h6>
-                    <ul class="list-unstyled footer-links-list">
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>کسب درآمد از کانال</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>سیستم گیمیفیکیشن و لول</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>قوانین تسویه حساب سریع</a></li>
-                        <li><a href="#"><i class="bi bi-chevron-left"></i>نحوه احراز هویت کانال</a></li>
+                        <li><a href="{% url 'core:pending' %}"><i class="bi bi-chevron-left"></i>راهنما</a></li>
+                        <li><a href="{% url 'blog:list' %}"><i class="bi bi-chevron-left"></i>بلاگ</a></li>
+                        <li><a href="{% url 'core:about' %}"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
                     </ul>
                 </div>
 
@@ -75,13 +109,19 @@
                     </div>
                     <div class="trust-badges-wrapper d-flex gap-2">
                         <div class="trust-badge-card" data-bs-toggle="tooltip" title="اینماد">
-                            <div class="badge-placeholder">
-                                <img src="{% static 'core/images/footer/enamad.png' %}" alt="">
-                            </div>
+                            {% if domain == 'http://127.0.0.1:8000' %}
+                            	<div class="badge-placeholder">
+                                    <img src="{% static 'core/images/footer/enamad.png' %}" alt="">
+                                </div>
+                            {% else %}
+                                <div class="badge-placeholder">
+                                    <a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=773375&Code=6KDxtf8Tl0szgYiE9Jv0cCVERTD3csNy'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=773375&Code=6KDxtf8Tl0szgYiE9Jv0cCVERTD3csNy' alt='' style='cursor:pointer' code='6KDxtf8Tl0szgYiE9Jv0cCVERTD3csNy'></a>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="trust-badge-card" data-bs-toggle="tooltip" title="ساماندهی">
                             <div class="badge-placeholder">
-                                <img src="{% static 'core/images/footer/samandehi.png' %}" alt="">
+                                <img src="{% static 'core/images/footer/samandehi.webp' %}" alt="">
                             </div>
                         </div>
                     </div>

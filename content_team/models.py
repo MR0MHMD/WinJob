@@ -103,7 +103,7 @@ class ContentTeam(GamificationMixin, models.Model):
             color1=color1,
             color2=color2,
             gradient_direction=gradient_direction,
-            use_gradient=True  # فعال کردن گرادیانت
+            use_gradient=True
         )
 
         self.qr_code.save(filename, qr_file, save=False)

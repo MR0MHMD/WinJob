@@ -295,7 +295,7 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['max_file_size'] = 10  # مگابایت
-        context['allowed_file_types'] = '.jpg,.jpeg,.png,.gif,.pdf,.zip,.rar,.doc,.docx'
+        context['allowed_file_types'] = '.jpg,.jpeg,.webp,.gif,.pdf,.zip,.rar,.doc,.docx'
         return context
 
     def post(self, request, *args, **kwargs):

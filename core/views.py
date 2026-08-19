@@ -45,17 +45,17 @@ def home(request):
     blog_posts = Post.published.order_by('-created_at')[:4]
 
     brand_testimonials = [
-        {'name': 'دیجیکالا', 'logo': 'digikala.png',
+        {'name': 'دیجیکالا', 'logo': 'digikala.webp',
          'text': 'همکاری با وینجاب نرخ تبدیل کمپین‌های ما رو ۳ برابر کرد. آنالیز دقیق و ناشران حرفه‌ای، برگ برنده ما بود.',
          'rating': 5},
-        {'name': 'اسنپ', 'logo': 'snap.png',
+        {'name': 'اسنپ', 'logo': 'snap.webp',
          'text': 'سرعت اجرا و شفافیت گزارش‌ها بی‌نظیره. تیم وینجاب واقعاً مفهوم مارکتینگ مدرن رو پیاده کردن.',
          'rating': 5},
-        {'name': 'تپسی', 'logo': 'tapsi.png',
+        {'name': 'تپسی', 'logo': 'tapsi.webp',
          'text': 'قیمت‌گذاری منصفانه و دسترسی به کانال‌های هدف، هزینه‌های تبلیغاتی مون رو نصف کرد.', 'rating': 4},
-        {'name': 'همراه اول', 'logo': 'hamrah-aval.png',
+        {'name': 'همراه اول', 'logo': 'hamrah-aval.webp',
          'text': 'بزرگترین چالش ما پیدا کردن اینفلوئنسر واقعی بود که وینجاب به بهترین شکل حلش کرد.', 'rating': 5},
-        {'name': 'فیلیمو', 'logo': 'filimo.png',
+        {'name': 'فیلیمو', 'logo': 'filimo.webp',
          'text': 'کمپین معرفی سریال جدیدمون با وینجاب ۲.۵ میلیون بازدید ارگانیک گرفت.', 'rating': 4},
     ]
 
@@ -157,17 +157,17 @@ def platform_landing_page(request, slug):
     content_teams = []
 
     brand_testimonials = [
-        {'name': 'دیجیکالا', 'logo': 'digikala.png',
+        {'name': 'دیجیکالا', 'logo': 'digikala.webp',
          'text': 'همکاری با وینجاب نرخ تبدیل کمپین‌های ما رو ۳ برابر کرد. آنالیز دقیق و ناشران حرفه‌ای، برگ برنده ما بود.',
          'rating': 5},
-        {'name': 'اسنپ', 'logo': 'snap.png',
+        {'name': 'اسنپ', 'logo': 'snap.webp',
          'text': 'سرعت اجرا و شفافیت گزارش‌ها بی‌نظیره. تیم وینجاب واقعاً مفهوم مارکتینگ مدرن رو پیاده کردن.',
          'rating': 5},
-        {'name': 'تپسی', 'logo': 'tapsi.png',
+        {'name': 'تپسی', 'logo': 'tapsi.webp',
          'text': 'قیمت‌گذاری منصفانه و دسترسی به کانال‌های هدف، هزینه‌های تبلیغاتیمون رو نصف کرد.', 'rating': 4},
-        {'name': 'همراه اول', 'logo': 'hamrah-aval.png',
+        {'name': 'همراه اول', 'logo': 'hamrah-aval.webp',
          'text': 'بزرگترین چالش ما پیدا کردن اینفلوئنسر واقعی بود که وینجاب به بهترین شکل حلش کرد.', 'rating': 5},
-        {'name': 'فیلیمو', 'logo': 'filimo.png',
+        {'name': 'فیلیمو', 'logo': 'filimo.webp',
          'text': 'کمپین معرفی سریال جدیدمون با وینجاب ۲.۵ میلیون بازدید ارگانیک گرفت.', 'rating': 4},
     ]
 

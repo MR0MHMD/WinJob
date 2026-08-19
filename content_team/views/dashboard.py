@@ -467,12 +467,12 @@ def plans_dashboard(request):
     """صفحه داشبورد مدیریت پلن‌ها - نمایش لیست خدمات به صورت کارتی"""
     if not hasattr(request.user, 'team_member'):
         messages.error(request, 'شما عضو هیچ تیمی نیستید.')
-        return redirect('dashboard')
+        return redirect('core:home')
 
     team_member = request.user.team_member
     if not team_member.is_manager():
         messages.error(request, 'شما دسترسی مدیریت پلن‌ها را ندارید.')
-        return redirect('team:dashboard')
+        return redirect('accounts:dashboard_router')
 
     team = team_member.team
 
