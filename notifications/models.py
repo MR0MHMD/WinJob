@@ -184,7 +184,7 @@ class NotificationPreference(models.Model):
     marketing_messages = models.BooleanField(_('اخبار، آپدیت‌ها و کدهای تخفیف'), default=False)
     financial_alerts = models.BooleanField(_('تراکنش‌های مالی (واریز، برداشت، فاکتور)'), default=True)
 
-    # ==================== تنظیمات تبلیغ‌دهنده ====================
+    # ==================== تنظیمات تبلیغ دهنده ====================
     adv_campaign_status = models.BooleanField(
         _('وضعیت کمپین‌ها (تایید، رد، اکران، پایان)'), default=True
     )
@@ -208,7 +208,7 @@ class NotificationPreference(models.Model):
         _('دریافت سفارش تولید محتوای جدید'), default=True
     )
     team_revisions = models.BooleanField(
-        _('درخواست ویرایش توسط تبلیغ‌دهنده'), default=True
+        _('درخواست ویرایش توسط تبلیغ دهنده'), default=True
     )
     team_financial = models.BooleanField(
         _('تایید نهایی فایل و واریز وجه'), default=True

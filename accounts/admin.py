@@ -125,7 +125,7 @@ class CustomUserAdmin(UserAdmin):
             # تراکنش‌های مالی
             inlines.append(TransactionInline(self.model, self.admin_site))
 
-            # پروفایل تبلیغ‌دهنده
+            # پروفایل تبلیغ دهنده
             if hasattr(obj, 'advertiser_profile'):
                 inlines.append(AdvertiserProfileInline(self.model, self.admin_site))
 
@@ -140,7 +140,7 @@ class CustomUserAdmin(UserAdmin):
     def user_type_display(self, obj):
         """نوع کاربر با آیکون و رنگ مناسب"""
         if hasattr(obj, 'advertiser_profile'):
-            return mark_safe('<span style="color: #4CAF50; font-weight: bold;">🏢 تبلیغ‌دهنده</span>')
+            return mark_safe('<span style="color: #4CAF50; font-weight: bold;">🏢 تبلیغ دهنده</span>')
         elif hasattr(obj, 'influencer_profile'):
             return mark_safe('<span style="color: #2196F3; font-weight: bold;">🌟 اینفلوئنسر</span>')
         elif hasattr(obj, 'team_member'):
@@ -254,7 +254,7 @@ class CustomUserAdmin(UserAdmin):
                     return format_html(
                         '<a href="{}" style="background: #4CAF50; color: white; padding: 5px 12px; '
                         'border-radius: 4px; text-decoration: none; display: inline-block;">'
-                        '📋 مشاهده پروفایل تبلیغ‌دهنده</a>',
+                        '📋 مشاهده پروفایل تبلیغ دهنده</a>',
                         url
                     )
             except:
@@ -495,7 +495,7 @@ class OTPRequestAdmin(admin.ModelAdmin):
     def api_status_badge(self, obj):
         """نمایش وضعیت API با رنگ مناسب"""
         if obj.api_status_code == 200:
-            return format_html(
+            return mark_safe(
                 '<span style="color: #4CAF50; font-weight: bold;">✓ موفق</span>'
             )
         elif obj.api_status_code:
@@ -503,7 +503,7 @@ class OTPRequestAdmin(admin.ModelAdmin):
                 '<span style="color: #f44336; font-weight: bold;">✗ خطا ({})</span>',
                 obj.api_status_code
             )
-        return format_html(
+        return mark_safe(
             '<span style="color: #9E9E9E;">-</span>'
         )
 
@@ -518,7 +518,7 @@ class OTPRequestAdmin(admin.ModelAdmin):
         try:
             formatted = json.dumps(obj.api_response, indent=2, ensure_ascii=False)
             return format_html(
-                '<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; '
+                '<pre style="background: #000; padding: 10px; border-radius: 4px; '
                 'white-space: pre-wrap; direction: ltr; text-align: left;">{}</pre>',
                 formatted
             )

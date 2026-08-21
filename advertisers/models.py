@@ -18,8 +18,8 @@ class AdvertiserProfile(GamificationMixin, models.Model):
     updated_at = jmodels.jDateTimeField(_('تاریخ ویرایش'), auto_now=True)
 
     class Meta:
-        verbose_name = _('تبلیغ‌دهنده')
-        verbose_name_plural = _('تبلیغ‌دهندگان')
+        verbose_name = _('تبلیغ دهنده')
+        verbose_name_plural = _('تبلیغ دهندگان')
         ordering = ['-created_at']
 
     def __str__(self): return self.business_name

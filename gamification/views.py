@@ -52,13 +52,13 @@ def points_guide(request, channel_id=None):
                 {'action': 'قبول کردن سفارش', 'points': 20},
                 {'action': 'تحویل گزارش (تکمیل سفارش)', 'points': 15},
                 {'action': 'تایید شدن گزارش توسط ادمین', 'points': 5},
-                {'action': 'دریافت امتیاز ۵ از تبلیغ‌دهنده', 'points': 15},
-                {'action': 'دریافت امتیاز ۴ از تبلیغ‌دهنده', 'points': 5},
+                {'action': 'دریافت امتیاز ۵ از تبلیغ دهنده', 'points': 15},
+                {'action': 'دریافت امتیاز ۴ از تبلیغ دهنده', 'points': 5},
             ],
             'negative': [
                 {'action': 'رد کردن سفارش', 'points': -40},
-                {'action': 'دریافت امتیاز ۲ از تبلیغ‌دهنده', 'points': -20},
-                {'action': 'دریافت امتیاز ۱ از تبلیغ‌دهنده', 'points': -30},
+                {'action': 'دریافت امتیاز ۲ از تبلیغ دهنده', 'points': -20},
+                {'action': 'دریافت امتیاز ۱ از تبلیغ دهنده', 'points': -30},
             ]
         },
         'team_member': {
@@ -67,15 +67,15 @@ def points_guide(request, channel_id=None):
                 {'action': 'تحویل سفارش قبل از ددلاین', 'points': 20},
                 {'action': 'قبول کردن ویرایش (هر بار)', 'points': 10},
                 {'action': 'تایید نهایی کاربر بدون درخواست ویرایش', 'points': 30},
-                {'action': 'دریافت امتیاز ۵ از تبلیغ‌دهنده', 'points': 15},
-                {'action': 'دریافت امتیاز ۴ از تبلیغ‌دهنده', 'points': 5},
+                {'action': 'دریافت امتیاز ۵ از تبلیغ دهنده', 'points': 15},
+                {'action': 'دریافت امتیاز ۴ از تبلیغ دهنده', 'points': 5},
             ],
             'negative': [
                 {'action': 'رد کردن سفارش', 'points': -50},
                 {'action': 'رد کردن درخواست ویرایش', 'points': -30},
                 {'action': 'تحویل سفارش بعد از ددلاین', 'points': -20},
-                {'action': 'دریافت امتیاز ۲ از تبلیغ‌دهنده', 'points': -10},
-                {'action': 'دریافت امتیاز ۱ از تبلیغ‌دهنده', 'points': -20},
+                {'action': 'دریافت امتیاز ۲ از تبلیغ دهنده', 'points': -10},
+                {'action': 'دریافت امتیاز ۱ از تبلیغ دهنده', 'points': -20},
             ]
         }
     }
@@ -96,14 +96,14 @@ def points_guide(request, channel_id=None):
         # حالت عادی (نمایش همه نقش‌ها)
     roles_data = []
 
-    # تبلیغ‌دهنده
+    # تبلیغ دهنده
     if hasattr(user, 'advertiser_profile'):
         profile = user.advertiser_profile
         score_obj, _ = AdvertiserScore.objects.get_or_create(profile=profile)
         status = profile.gamification_status
         roles_data.append({
             'role': 'advertiser',
-            'title': 'تبلیغ‌دهنده',
+            'title': 'تبلیغ دهنده',
             'icon': 'bi-person-badge',
             'status': status,
             'score_obj': score_obj,

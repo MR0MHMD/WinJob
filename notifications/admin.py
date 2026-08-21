@@ -21,7 +21,7 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
         'receive_in_bale',
         'ticket_replies',
         'financial_alerts',
-        'adv_campaign_status',  # وضعیت تبلیغ‌دهنده
+        'adv_campaign_status',  # وضعیت تبلیغ دهنده
         'inf_new_orders',       # وضعیت اینفلوئنسر
         'team_new_orders',      # وضعیت تیم محتوا
     )
@@ -51,7 +51,7 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
         (_('⚙️ تنظیمات عمومی و بسترها'), {
             'fields': ('receive_in_bale', 'ticket_replies', 'financial_alerts', 'marketing_messages'),
         }),
-        (_('🎯 اعلان‌های اختصاصی تبلیغ‌دهنده'), {
+        (_('🎯 اعلان‌های اختصاصی تبلیغ دهنده'), {
             'fields': ('adv_campaign_status', 'adv_influencer_actions', 'adv_content_orders'),
             'classes': ('collapse',),  # به صورت کشویی باز و بسته می‌شود
         }),

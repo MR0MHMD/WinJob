@@ -83,7 +83,7 @@ def create_notification(user, notification_type, title, message, link='', relate
     return notification
 
 
-# ==================== 🎯 تبلیغ‌دهنده ====================
+# ==================== 🎯 تبلیغ دهنده ====================
 
 def notify_advertiser_campaign_pending(campaign):
     user = campaign.advertiser.user
@@ -189,7 +189,7 @@ def notify_advertiser_influencer_accepted(campaign_influencer):
 
 def notify_advertiser_influencer_rejected(campaign_influencer):
     """
-    نوتیف به تبلیغ‌دهنده وقتی ناشر سفارش رو رد میکنه
+    نوتیف به تبلیغ دهنده وقتی ناشر سفارش رو رد میکنه
     """
     campaign = campaign_influencer.campaign
     user = campaign.advertiser.user
@@ -215,7 +215,7 @@ def notify_advertiser_influencer_rejected(campaign_influencer):
 
 def notify_advertiser_influencer_report_rejected(campaign_influencer, reason=''):
     """
-    نوتیف به تبلیغ‌دهنده وقتی گزارش ناشر توسط ادمین رد میشه
+    نوتیف به تبلیغ دهنده وقتی گزارش ناشر توسط ادمین رد میشه
     """
     campaign = campaign_influencer.campaign
     user = campaign.advertiser.user
@@ -242,7 +242,7 @@ def notify_advertiser_influencer_report_rejected(campaign_influencer, reason='')
 
 
 def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
-    """نوتیف به تبلیغ‌دهنده وقتی کمپین نیاز به اصلاح دارد"""
+    """نوتیف به تبلیغ دهنده وقتی کمپین نیاز به اصلاح دارد"""
     user = campaign.advertiser.user
 
     channel_name = rejected_channel.channel_name if rejected_channel else "یک ناشر"
@@ -265,7 +265,7 @@ def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
 
 
 def notify_advertiser_campaign_auto_approved(campaign):
-    """نوتیف به تبلیغ‌دهنده وقتی کمپین به صورت خودکار تایید شد"""
+    """نوتیف به تبلیغ دهنده وقتی کمپین به صورت خودکار تایید شد"""
     user = campaign.advertiser.user
 
     rejected_count = campaign.influencer_bookings.filter(
@@ -301,7 +301,7 @@ def notify_advertiser_content_order_accepted(order):
 
 
 def notify_advertiser_content_order_rejected(campaign, team=None):
-    """نوتیف به تبلیغ‌دهنده وقتی تیم محتوا سفارش رو رد میکنه"""
+    """نوتیف به تبلیغ دهنده وقتی تیم محتوا سفارش رو رد میکنه"""
     user = campaign.advertiser.user
 
     team_name = team.name if team else "تیم تولید محتوا"
@@ -474,7 +474,7 @@ def notify_content_team_order_accepted(user, order, share_amount):
         user=user,
         notification_type='final_accept',
         title='💳 تسویه حساب، خسته نباشید',
-        message=f'فایل تحویلی کمپین «{campaign.name}» توسط تبلیغ‌دهنده تأیید نهایی شد.\n'
+        message=f'فایل تحویلی کمپین «{campaign.name}» توسط تبلیغ دهنده تأیید نهایی شد.\n'
                 f'مبلغ {share_amount:,} تومان بابت سهم شما از این پروژه به کیف پول واریز شد.',
         link=f'/content_team/team/orders/{order.id}',
         related_object_id=order.id,

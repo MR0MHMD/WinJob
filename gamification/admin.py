@@ -29,7 +29,7 @@ class BaseScoreAdmin(admin.ModelAdmin):
 class AdvertiserScoreAdmin(BaseScoreAdmin):
     def get_owner_name(self, obj):
         return obj.profile.business_name or obj.profile.user.nickname
-    get_owner_name.short_description = 'تبلیغ‌دهنده'
+    get_owner_name.short_description = 'تبلیغ دهنده'
 
     list_display = ('get_owner_name', 'points', 'display_badge', 'updated_at')
 

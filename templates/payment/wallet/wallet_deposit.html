@@ -5,134 +5,165 @@
 
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'accounts/css/forms/wallet_deposit.css' %}">
+    <style>
+        
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
-        <ol class="breadcrumb breadcrumb-light">
-            <li class="breadcrumb-item">
-                <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{% url 'payment:wallet_dashboard' %}">تراکنش های من</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">شارژ کیف پول</li>
-        </ol>
-    </nav>
-    <div class="row">
-        <div class="col-lg-6 mx-auto">
-            <!-- کارت اصلی با افکت شیشه‌ای -->
-            <div class="card glass-card border-0">
-                <!-- هدر گرادینت خفن -->
-                <div class="card-header charge-header bg-transparent">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="flex-shrink-0">
-                            <div class="icon-box-media bg-white bg-opacity-10 rounded-3">
-                                <i class="fi-wallet fs-4 text-white"></i>
+<div class="wallet-deposit-page">
+    <div class="container  py-4 position-relative" style="z-index: 1; padding-top: 5rem !important;">
+        
+        <!-- ===== مسیر ===== -->
+        <nav class="mb-4 pt-md-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb breadcrumb-light">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'payment:wallet_dashboard' %}">کیف پول</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">شارژ کیف پول</li>
+            </ol>
+        </nav>
+        
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                
+                <!-- ===== کارت اصلی ===== -->
+                <div class="deposit-card" id="depositCard">
+                    
+                    <!-- هدر -->
+                    <div class="deposit-header">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="icon-wrapper">
+                                <i class="fi-wallet"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-white mb-0 fw-bold" style="font-family: 'vazir-bold', sans-serif;">
+                                    شارژ کیف پول
+                                </h4>
+                                <p class="text-white-50 small mb-0" style="opacity: 0.7;">
+                                    موجودی خود را افزایش دهید
+                                </p>
                             </div>
                         </div>
-                        <div class="flex-grow-1">
-                            <h4 class="text-white mb-0 fw-bold">شارژ کیف پول</h4>
-                            <p class="text-white-50 small mb-0 mt-1">
-                                موجودی خود را افزایش دهید
-                            </p>
+                    </div>
+                    
+                    <div class="p-4">
+                        
+                        <!-- ===== نمایش موجودی ===== -->
+                        <div class="balance-display mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="label">موجودی فعلی</span>
+                                <span class="amount">
+                                    {{ request.user.wallet.balance|floatformat:0|default:"۰" }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
                         </div>
+                        
+                        <form method="post" id="chargeForm">
+                            {% csrf_token %}
+                            
+                            <!-- ===== مقادیر پیشنهادی ===== -->
+                            <div class="mb-4">
+                                <label class="text-white-50 small fw-semibold mb-2 d-block">
+                                    <i class="fi-flame text-warning me-1"></i>
+                                    مقادیر پیشنهادی
+                                </label>
+                                <div class="preset-grid">
+                                    <button type="button" class="preset-btn-new" data-amount="100000">
+                                        <span class="icon">💰</span>
+                                        ۱۰۰ هزار
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                    <button type="button" class="preset-btn-new" data-amount="500000">
+                                        <span class="icon">💎</span>
+                                        ۵۰۰ هزار
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                    <button type="button" class="preset-btn-new" data-amount="1000000">
+                                        <span class="icon">🌟</span>
+                                        ۱ میلیون
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                    <button type="button" class="preset-btn-new" data-amount="5000000">
+                                        <span class="icon">🚀</span>
+                                        ۵ میلیون
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                    <button type="button" class="preset-btn-new" data-amount="10000000">
+                                        <span class="icon">💫</span>
+                                        ۱۰ میلیون
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                    <button type="button" class="preset-btn-new" data-amount="50000000">
+                                        <span class="icon">🔥</span>
+                                        ۵۰ میلیون
+                                        <span class="amount-text">تومان</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- ===== فیلد مبلغ ===== -->
+                            <div class="mb-3">
+                                <label class="text-white-50 small fw-semibold mb-2 d-block">
+                                    <i class="fi-coin text-info me-1"></i>
+                                    مبلغ مورد نظر
+                                </label>
+                                <div class="amount-input-wrapper">
+                                    <input type="text" 
+                                           name="amount" 
+                                           id="chargeAmount"
+                                           class="form-control" 
+                                           placeholder="مبلغ را وارد کنید" 
+                                           autocomplete="off"
+                                           required>
+                                    <span class="currency-badge">تومان</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span class="text-muted small">
+                                        <i class="fi-info-circle me-1"></i>
+                                        حداقل: 100,000 - حداکثر: 50,000,000 تومان
+                                    </span>
+                                    <button type="button" id="resetAmount" class="btn-reset">
+                                        <i class="fi-trash me-1"></i>
+                                        پاک کردن
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback-custom" id="amountFeedback">
+                                    لطفاً مبلغ معتبر وارد کنید
+                                </div>
+                            </div>
+                            
+                            <!-- ===== دکمه شارژ ===== -->
+                            <button type="submit" id="submitCharge" class="btn-charge w-100">
+                                <i class="fi-check-circle me-2"></i>
+                                شارژ کیف پول
+                            </button>
+                            
+                        </form>
+                        
+                        <!-- ===== اطلاعات امنیت ===== -->
+                        <div class="d-flex flex-wrap gap-2 mt-4 justify-content-center">
+                            <span class="info-badge">
+                                <i class="fi-shield"></i>
+                                پرداخت امن
+                            </span>
+                            <span class="info-badge">
+                                <i class="fi-lock"></i>
+                                اطلاعات محفوظ
+                            </span>
+                            <span class="info-badge">
+                                <i class="fi-credit-card"></i>
+                                زرین‌پال
+                            </span>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="card-body p-4">
-                    <form method="post" id="chargeForm">
-                        {% csrf_token %}
-                        
-                        <!-- دکمه‌های مقادیر آماده -->
-                        <div class="mb-4">
-                            <label class="form-label text-white-50 small fw-semibold mb-2">
-                                <i class="fi-flame fs-xs me-1"></i>
-                                مقادیر پیشنهادی
-                            </label>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <button type="button" class="preset-btn flex-grow-1" data-amount="10000000">
-                                    <i class="fi-cash"></i>
-                                    ۱۰ میلیون تومان
-                                </button>
-                                <button type="button" class="preset-btn flex-grow-1" data-amount="30000000">
-                                    <i class="fi-cash"></i>
-                                    ۳۰ میلیون تومان
-                                </button>
-                                <button type="button" class="preset-btn flex-grow-1" data-amount="50000000">
-                                    <i class="fi-cash"></i>
-                                    ۵۰ میلیون تومان
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- فیلد مبلغ با برچسب تومان داخلش -->
-                        <div class="mb-4">
-                            <label class="form-label text-white-50 small fw-semibold mb-2">
-                                <i class="fi-coin fs-xs me-1"></i>
-                                مبلغ (تومان)
-                            </label>
-                            <div class="amount-input-group">
-                                <input type="text" 
-                                       name="amount" 
-                                       id="chargeAmount"
-                                       class="form-control amount-input" 
-                                       placeholder="مبلغ را وارد کنید" 
-                                       min="1000" 
-                                       max="50000000" 
-                                       required>
-                                <span class="amount-currency">تومان</span>
-                            </div>
-                            <div class="form-text text-muted small mt-2">
-                                <i class="fi-info-circle ms-1"></i>
-                                حداقل: ۱,۰۰۰ تومان - حداکثر: ۵۰,۰۰۰,۰۰۰ تومان
-                            </div>
-                            <div class="invalid-feedback mt-2">
-                                لطفاً مبلغ معتبر وارد کنید
-                            </div>
-                        </div>
-                        
-                        <!-- دکمه‌های اقدام -->
-                        <div class="d-flex gap-3 mt-4">
-                            <a href="{% url 'payment:wallet_dashboard' %}" class="btn btn-outline-danger flex-grow-1 text-decoration-none">
-                                <i class="fi-x-circle ms-1"></i>
-                                انصراف
-                            </a>
-                            <button type="submit" id="submitCharge" class="btn btn-gradient-primary flex-grow-1 text-light">
-                                <i class="fi-check-circle ms-1"></i>
-                                شارژ کیف پول
-                            </button>
-                        </div>
-                        
-                        <!-- دکمه ریست مقادیر -->
-                        <div class="text-center mt-3">
-                            <button type="button" id="resetAmount" class="reset-btn">
-                                <i class="fi-trash ms-1"></i>
-                                پاک کردن مبلغ
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <!-- هشدار آزمایشی -->
-                    <div class="demo-alert mt-4 p-3 rounded-3">
-                        <div class="d-flex gap-2 align-items-start">
-                            <i class="fi-info-circle fs-5 flex-shrink-0 mt-1"></i>
-                            <div class="small">
-                                <strong class="d-block mb-1">💳 حالت آزمایشی</strong>
-                                این یک روش شارژ آزمایشی است. مبلغ مستقیماً به کیف پول شما اضافه می‌شود بدون نیاز به درگاه پرداخت.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- کارت اطلاعات تکمیلی -->
-            <div class="text-center mt-4">
-                <p class="text-white-50 small mb-0">
-                    <i class="fi-shield ms-1"></i>
-                    اطلاعات شما محفوظ است
-                </p>
             </div>
         </div>
     </div>

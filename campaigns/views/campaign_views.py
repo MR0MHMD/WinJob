@@ -1,13 +1,14 @@
 from ..services.campaigns_notifications import submit_campaign_for_review, approve_campaign_by_admin
 from ..utils import save_brief, save_campaign_content, handle_deleted_files, handle_new_files
 from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, IntegerField, Avg
-from payment.services.create_invoice import create_campaign_invoice, PLATFORM_COMMISSION
 from notifications.utils import notify_influencer_new_campaign_orders
 from payment.services.tax_calculator import calculate_replacement_tax
+from payment.services.create_invoice import create_campaign_invoice
 from ..services.free_campaign import create_free_campaign_bookings
-from django.shortcuts import redirect, get_object_or_404, render
-from django.contrib.auth.decorators import login_required
 from influencers.models import ChannelServiceRate, ChannelBooking
+from django.shortcuts import redirect, get_object_or_404, render
+from django_iranian_payment.contrib.django import services
+from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Coalesce
 from payment.models import Transaction, Payment
 from ..models import Campaign, CampaignContent
@@ -1231,9 +1232,11 @@ def campaign_create_step4(request):
     total_price = invoice.influencer_cost + invoice.content_cost
     step3_page = request.session.get('step3_team_page', '1')
 
+    # ========== پردازش POST ==========
     if request.method == "POST":
         payment_method = request.POST.get("payment_method", "gateway")
 
+        # ========== پرداخت از کیف پول ==========
         if payment_method == "wallet":
             if wallet.balance < invoice.payable_amount:
                 messages.error(request, "موجودی کیف پول کافی نیست.")
@@ -1273,47 +1276,42 @@ def campaign_create_step4(request):
                 campaign.status = Campaign.Status.PENDING
                 campaign.save(update_fields=["status"])
 
+                submit_campaign_for_review(campaign)
+
             del request.session["campaign_draft_id"]
             messages.success(request, "کمپین با موفقیت ثبت شد.")
             return redirect("advertisers:campaigns_list")
 
+        # ========== پرداخت از درگاه (تغییر کرده) ==========
         else:
-            with transaction.atomic():
-                payment = Payment.objects.create(
-                    user=request.user,
-                    invoice=invoice,
+            try:
+                # ========== شروع فرآیند پرداخت در زرین‌پال ==========
+                payment_result, redirect_url = services.start_payment(
+                    slug="zarinpal",
                     amount=invoice.payable_amount,
-                    status=Payment.Status.SUCCESS,
-                    payment_method=Payment.Method.GATEWAY
+                    callback_url=request.build_absolute_uri(
+                        reverse('payment:campaign_payment_callback')
+                    ),
+                    order_id=f"campaign_{campaign.id}_{int(timezone.now().timestamp())}",
+                    description=f"پرداخت کمپین {campaign.name} - مبلغ {invoice.payable_amount:,} تومان",
+                    mobile=request.user.phone_number,
+                    email=request.user.email or '',
                 )
 
-                Transaction.objects.create(
-                    user=request.user,
-                    amount=invoice.payable_amount,
-                    type=Transaction.Type.GATEWAY_PAYMENT,
-                    status=Transaction.Status.SUCCESS,
-                    campaign=campaign,
-                    invoice=invoice,
-                    payment=payment,
-                    description=f"پرداخت کمپین {campaign.name} از طریق درگاه (شبیه‌سازی)",
-                    reference_id=f"GATEWAY_{invoice.id}_{timezone.now().timestamp()}"
-                )
+                # ========== ذخیره اطلاعات در سشن ==========
+                request.session['campaign_payment_authority'] = payment_result.authority
+                request.session['campaign_payment_campaign_id'] = campaign.id
+                request.session['campaign_payment_amount'] = invoice.payable_amount
+                request.session['campaign_payment_invoice_id'] = invoice.id
 
-                invoice.is_paid = True
-                invoice.save(update_fields=["is_paid"])
+                # ========== هدایت مستقیم به درگاه ==========
+                return redirect(redirect_url)
 
-                # افزایش تعداد استفاده برای هر سه نوع کوپن
-                for coupon in [campaign.influencer_coupon, campaign.content_team_coupon, campaign.platform_coupon]:
-                    if coupon:
-                        coupon.used_count += 1
-                        coupon.save(update_fields=["used_count"])
+            except Exception as e:
+                messages.error(request, f"خطا در اتصال به درگاه پرداخت: {str(e)}")
+                return redirect("campaigns:campaign_create_step4")
 
-                submit_campaign_for_review(campaign)
-
-            del request.session["campaign_draft_id"]
-            messages.success(request, "پرداخت با موفقیت انجام شد. کمپین ثبت گردید.")
-            return redirect("advertisers:campaigns_list")
-
+    # ========== GET ==========
     context = {
         "campaign": campaign,
         "influencer_bookings": influencer_bookings,
@@ -1326,10 +1324,6 @@ def campaign_create_step4(request):
         "final_total": invoice.total_amount,
         "discount_amount": invoice.discount_amount,
         "payable_amount": invoice.payable_amount,
-
-        # ============================================================
-        # پاس دادن فیلدهای تخفیف جدید به تمپلیت
-        # ============================================================
         "discount_breakdown": {
             'influencer_discount': invoice.influencer_discount_amount,
             'content_discount': invoice.content_discount_amount,
@@ -1338,7 +1332,6 @@ def campaign_create_step4(request):
             'base_content_cost': invoice.base_content_cost,
             'base_commission': invoice.base_commission,
         },
-
         "invoice": invoice,
         "wallet": wallet,
         "campaign_content": campaign_content,

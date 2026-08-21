@@ -333,7 +333,7 @@ class UserDetailView(SupportRequiredMixin, DetailView):
         context['transactions'] = all_transactions[:5]
         context['transactions_count'] = all_transactions.count()
 
-        # پروفایل تبلیغ‌دهنده
+        # پروفایل تبلیغ دهنده
         if hasattr(user, 'advertiser_profile'):
             context['advertiser_profile'] = user.advertiser_profile
             campaigns_qs = user.advertiser_profile.campaigns.all().order_by('-created_at')

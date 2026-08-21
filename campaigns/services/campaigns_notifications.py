@@ -235,7 +235,7 @@ def reject_revision_service(order, revision):
         update_score(order.team, -30, 'رد درخواست ویرایش',
                      f'رد درخواست اصلاحیه کمپین {revision.order.campaign.name}')
 
-        # ========== ۶. نوتیف به تبلیغ‌دهنده ==========
+        # ========== ۶. نوتیف به تبلیغ دهنده ==========
         notify_advertiser_revision_rejected(revision)
 
     return True
@@ -323,7 +323,7 @@ def respond_to_influencer_order_service(order, action):
             order.rejected_at = timezone.now()
             order.save(update_fields=['status', 'rejected_at'])
 
-            # ========== برگشت پول به کیف پول تبلیغ‌دهنده (فقط برای کمپین‌های غیر رایگان) ==========
+            # ========== برگشت پول به کیف پول تبلیغ دهنده (فقط برای کمپین‌های غیر رایگان) ==========
             if not order.campaign.is_free:
                 advertiser_user = order.campaign.advertiser.user
                 wallet = advertiser_user.wallet
@@ -400,7 +400,7 @@ def respond_to_influencer_order_service(order, action):
                         'payable_amount'
                     ])
 
-                # ========== نوتیف به تبلیغ‌دهنده ==========
+                # ========== نوتیف به تبلیغ دهنده ==========
                 notify_advertiser_influencer_rejected(order)
 
             # ========== تغییر وضعیت کمپین به REVISION_NEEDED ==========
@@ -464,14 +464,14 @@ def reject_influencer_report_service(report, reason=''):
             channel = campaign_influencer.channel
             price = campaign_influencer.price
 
-            # ========== برگشت پول به کیف پول تبلیغ‌دهنده ==========
+            # ========== برگشت پول به کیف پول تبلیغ دهنده ==========
             if not campaign.is_free and not campaign_influencer.is_paid and price > 0:
-                # ۱. برگشت به کیف پول تبلیغ‌دهنده
+                # ۱. برگشت به کیف پول تبلیغ دهنده
                 advertiser_wallet = advertiser_user.wallet
                 advertiser_wallet.balance += price
                 advertiser_wallet.save(update_fields=['balance'])
 
-                # ۲. ثبت تراکنش برگشت برای تبلیغ‌دهنده
+                # ۲. ثبت تراکنش برگشت برای تبلیغ دهنده
                 Transaction.objects.create(
                     user=advertiser_user,
                     amount=price,
@@ -483,7 +483,7 @@ def reject_influencer_report_service(report, reason=''):
                     reference_id=f'REFUND_INFLUENCER_REPORT_REJECT_{campaign_influencer.id}_{timezone.now().timestamp()}'
                 )
 
-                # ========== نوتیف به تبلیغ‌دهنده ==========
+                # ========== نوتیف به تبلیغ دهنده ==========
                 notify_advertiser_influencer_report_rejected(campaign_influencer, reason)
 
             # ========== نوتیف به اینفلوئنسر ==========

@@ -120,12 +120,12 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     # ========== متدهای نمایش ==========
 
     def advertiser_display(self, obj):
-        """نمایش نام تبلیغ‌دهنده با لینک به پروفایل"""
+        """نمایش نام تبلیغ دهنده با لینک به پروفایل"""
 
         url = reverse("admin:advertisers_advertiserprofile_change", args=[obj.advertiser.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, obj.advertiser.business_name)
 
-    advertiser_display.short_description = "تبلیغ‌دهنده"
+    advertiser_display.short_description = "تبلیغ دهنده"
     advertiser_display.admin_order_field = "advertiser__business_name"
 
     def advertisers_count(self, obj):
@@ -203,11 +203,11 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     content_cost_display.short_description = "هزینه تولید محتوا"
 
     def advertiser_province(self, obj):
-        """نمایش استان تبلیغ‌دهنده (فقط خوندنی)"""
+        """نمایش استان تبلیغ دهنده (فقط خوندنی)"""
         province = obj.advertiser.user.province
         return province.name if province else "-"
 
-    advertiser_province.short_description = "استان تبلیغ‌دهنده"
+    advertiser_province.short_description = "استان تبلیغ دهنده"
 
     def formatted_created_at(self, obj):
         return format_datetime(obj.created_at)
@@ -281,7 +281,7 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if request.user.is_regional_manager and request.user.province:
             if obj.advertiser.user.province != request.user.province:
                 from django.core.exceptions import ValidationError
-                raise ValidationError('شما فقط می‌توانید کمپین‌های تبلیغ‌دهندگان استان خودتان را ایجاد کنید.')
+                raise ValidationError('شما فقط می‌توانید کمپین‌های تبلیغ دهندگان استان خودتان را ایجاد کنید.')
 
         # ۲. منطق هوشمند نوتیفیکیشن برای ویرایش کمپین
         if change:
@@ -328,7 +328,7 @@ class CampaignContentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_filter = (
         "utm_enabled",
         ("created_at", JDateFieldListFilter),
-        "campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ‌دهنده
+        "campaign__advertiser__user__province",  # فیلتر بر اساس استان تبلیغ دهنده
     )
 
     readonly_fields = (
@@ -377,10 +377,10 @@ class CampaignContentAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     campaign_link.short_description = "کمپین"
 
     def advertiser_name(self, obj):
-        """نام تبلیغ‌دهنده"""
+        """نام تبلیغ دهنده"""
         return obj.campaign.advertiser.business_name
 
-    advertiser_name.short_description = "تبلیغ‌دهنده"
+    advertiser_name.short_description = "تبلیغ دهنده"
     advertiser_name.admin_order_field = "campaign__advertiser__business_name"
 
     def media_preview(self, obj):
@@ -675,7 +675,7 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         url = reverse("admin:advertisers_advertiserprofile_change", args=[advertiser.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, advertiser.business_name)
 
-    advertiser_link.short_description = "تبلیغ‌دهنده"
+    advertiser_link.short_description = "تبلیغ دهنده"
 
     def status_badge(self, obj):
         colors = {'pending': '#fdbc31', 'approved': '#07c98b', 'rejected': '#f23c49'}
@@ -753,7 +753,7 @@ class CampaignReportAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             advertiser.business_name, advertiser.website or "-"
         )
 
-    advertiser_details.short_description = "جزئیات تبلیغ‌دهنده"
+    advertiser_details.short_description = "جزئیات تبلیغ دهنده"
 
     def auto_check_details_display(self, obj):
         import json

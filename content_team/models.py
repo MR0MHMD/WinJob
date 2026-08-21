@@ -856,7 +856,7 @@ class TeamReview(models.Model):
         'advertisers.AdvertiserProfile',
         on_delete=models.CASCADE,
         related_name='team_reviews',
-        verbose_name=_('تبلیغ‌دهنده')
+        verbose_name=_('تبلیغ دهنده')
     )
     rating = models.PositiveSmallIntegerField(
         _('امتیاز'),
@@ -1170,11 +1170,11 @@ class ContentDeliveryFile(models.Model):
         help_text='شماره گزینه (۱، ۲، ۳، ...)'
     )
 
-    # ۳. ✅ آیا این فایل توسط تبلیغ‌دهنده انتخاب شده است؟
+    # ۳. ✅ آیا این فایل توسط تبلیغ دهنده انتخاب شده است؟
     is_selected = models.BooleanField(
         _('انتخاب شده'),
         default=False,
-        help_text='آیا این فایل توسط تبلیغ‌دهنده به عنوان فایل نهایی انتخاب شده است؟'
+        help_text='آیا این فایل توسط تبلیغ دهنده به عنوان فایل نهایی انتخاب شده است؟'
     )
 
     created_at = jmodels.jDateTimeField(

@@ -6,7 +6,7 @@ from django.db import transaction
 
 def submit_team_review_service(order, advertiser, rating, comment=""):
     """
-    سرویس ثبت نظر تبلیغ‌دهنده برای تیم تولید محتوا
+    سرویس ثبت نظر تبلیغ دهنده برای تیم تولید محتوا
     فقط در صورتی که سفارش واقعی و تکمیل شده باشد امتیاز تعلق می‌گیرد.
     """
     with transaction.atomic():
@@ -20,7 +20,7 @@ def submit_team_review_service(order, advertiser, rating, comment=""):
 
         # فقط در صورتی که سفارش تکمیل شده باشد امتیاز بده
         if order.status == ContentOrder.Status.COMPLETED:
-            # امتیاز برای تبلیغ‌دهنده
+            # امتیاز برای تبلیغ دهنده
             update_score(
                 advertiser,
                 5,

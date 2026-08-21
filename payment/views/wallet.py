@@ -1,11 +1,14 @@
+from payment.services.wallet_invoice import create_wallet_invoice_for_payment, complete_wallet_payment
+from django_iranian_payment.contrib.django import services
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
 from django.views.decorators.http import require_GET
+from payment.models import Transaction, Invoice
 from django.shortcuts import render, redirect
-from payment.models import Transaction
 from django.http import JsonResponse
 from django.contrib import messages
-from django.db import transaction
+from django.utils import timezone
+from django.urls import reverse
 
 
 @login_required
@@ -98,14 +101,15 @@ def load_more_transactions(request):
 @login_required
 def wallet_deposit(request):
     """
-    صفحه شارژ کیف پول (تستی - بدون درگاه)
+    صفحه شارژ کیف پول با درگاه زرین‌پال
     """
     if request.method == 'POST':
         amount = request.POST.get('amount')
 
+        # ========== اعتبارسنجی مبلغ ==========
         try:
             amount = int(amount)
-            if amount < 1000:
+            if amount < 100000:
                 messages.error(request, "حداقل مبلغ شارژ ۱,۰۰۰ تومان است.")
                 return redirect('payment:wallet_deposit')
 
@@ -117,20 +121,98 @@ def wallet_deposit(request):
             messages.error(request, "مبلغ وارد شده معتبر نیست.")
             return redirect('payment:wallet_deposit')
 
-        with transaction.atomic():
-            wallet = request.user.wallet
-            wallet.balance += amount
-            wallet.save(update_fields=['balance'])
-
-            Transaction.objects.create(
-                user=request.user,
+        # ========== شروع فرآیند پرداخت ==========
+        try:
+            payment_result, redirect_url = services.start_payment(
+                slug="zarinpal",
                 amount=amount,
-                type=Transaction.Type.DEPOSIT,
-                status=Transaction.Status.SUCCESS,
-                description=f"شارژ آزمایشی کیف پول - مبلغ {amount:,} تومان"
+                callback_url=request.build_absolute_uri(
+                    reverse('payment:payment_callback')
+                ),
+                order_id=f"wallet_{request.user.id}_{int(timezone.now().timestamp())}",
+                description=f"شارژ کیف پول کاربر {request.user.phone_number} - مبلغ {amount:,} تومان",
+                mobile=request.user.phone_number,
             )
 
-        messages.success(request, f"کیف پول شما به مبلغ {amount:,} تومان شارژ شد.")
-        return redirect('payment:wallet_dashboard')
+            # ========== ساخت فاکتور و پرداخت ==========
+            invoice, payment = create_wallet_invoice_for_payment(
+                user=request.user,
+                amount=amount,
+                authority=payment_result.authority,
+                description=f"شارژ کیف پول کاربر {request.user.phone_number} - مبلغ {amount:,} تومان"
+            )
+
+            # ذخیره در سشن
+            request.session['payment_authority'] = payment_result.authority
+            request.session['payment_invoice_id'] = invoice.id
+            request.session['payment_amount'] = amount
+
+            return redirect(redirect_url)
+
+        except Exception as e:
+            messages.error(request, f"خطا در اتصال به درگاه پرداخت: {str(e)}")
+            return redirect('payment:wallet_deposit')
 
     return render(request, 'payment/wallet/wallet_deposit.html')
+
+
+@login_required
+def payment_callback(request):
+    """
+    کالبک بازگشت از درگاه زرین‌پال
+    """
+    authority = request.GET.get('Authority')
+    status = request.GET.get('Status')
+
+    if not authority:
+        messages.error(request, "اطلاعات پرداخت یافت نشد.")
+        return redirect('payment:wallet_deposit')
+
+    invoice_id = request.session.get('payment_invoice_id')
+    amount = request.session.get('payment_amount', 0)
+
+    if not invoice_id:
+        messages.error(request, "اطلاعات فاکتور یافت نشد.")
+        return redirect('payment:wallet_deposit')
+
+    try:
+        invoice = Invoice.objects.get(id=invoice_id, user=request.user, is_paid=False)
+    except Invoice.DoesNotExist:
+        messages.error(request, "فاکتور معتبر نیست.")
+        return redirect('payment:wallet_deposit')
+
+    if status == 'OK':
+        try:
+            result = services.verify_payment(
+                slug="zarinpal",
+                authority=authority
+            )
+
+            if result.status.lower() == 'complete':
+
+                # ========== تکمیل پرداخت ==========
+                complete_wallet_payment(invoice, result.reference_id)
+
+                # پاک کردن سشن
+                for key in ['payment_authority', 'payment_invoice_id', 'payment_amount']:
+                    if key in request.session:
+                        del request.session[key]
+
+                messages.success(
+                    request,
+                    f"کیف پول شما به مبلغ {amount:,} تومان با موفقیت شارژ شد. "
+                    f"کد پیگیری: {result.reference_id}"
+                )
+                return redirect('payment:wallet_dashboard')
+
+            else:
+                messages.error(request, f"پرداخت ناموفق بود. وضعیت: {result.status}")
+                return redirect('payment:wallet_deposit')
+
+        except Exception as e:
+            messages.error(request, f"خطا در تأیید پرداخت: {str(e)}")
+            return redirect('payment:wallet_deposit')
+
+    else:
+        messages.warning(request, "پرداخت توسط کاربر لغو شد یا ناموفق بود.")
+        return redirect('payment:wallet_deposit')

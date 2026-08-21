@@ -222,8 +222,9 @@ def generate_and_save_qr(data, filename, logo_path=None, color1=(0, 119, 255), c
 def get_site_logo_path():
     """دریافت مسیر لوگوی سایت برای قرارگیری روی QR Code"""
     logo_paths = [
+        os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'icons', 'icon_transparency.png'),
         os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'icons', 'favicon.ico'),
-        os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'logo', 'Untitled03.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'finder', 'img', 'logo', 'logo.webp'),
         os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.webp'),
         os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp'),
         os.path.join(settings.BASE_DIR, 'media', 'logo', 'logo.webp'),

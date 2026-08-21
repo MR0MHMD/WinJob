@@ -1,5 +1,5 @@
 from ..mixins import SupportRequiredMixin, SuperUserRequiredMixin
-from payment.models import Transaction, Wallet, CampaignInvoice
+from payment.models import Transaction, Wallet, Invoice
 from content_team.models import ContentOrder, ContentTeam
 from influencers.models import ChannelBooking, Channel
 from campaigns.models import Campaign, CampaignReport
@@ -27,7 +27,7 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
         # ============================================================ #
 
         # فاکتورهای پرداخت شده
-        paid_invoices = CampaignInvoice.objects.filter(is_paid=True)
+        paid_invoices = Invoice.objects.filter(is_paid=True)
 
         # ===== هزینه ناشران (اینفلوئنسرها) =====
         total_influencer_cost = paid_invoices.aggregate(
@@ -147,7 +147,7 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
         )
 
         # ✅ امروز - سود از فاکتورها
-        today_invoices = CampaignInvoice.objects.filter(
+        today_invoices = Invoice.objects.filter(
             is_paid=True,
             created_at__range=(today_start, today_end)
         )
@@ -157,7 +157,7 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
 
         # ✅ هفته گذشته - سود از فاکتورها
         week_ago = timezone.now() - timedelta(days=7)
-        week_invoices = CampaignInvoice.objects.filter(
+        week_invoices = Invoice.objects.filter(
             is_paid=True,
             created_at__gte=week_ago
         )
@@ -167,7 +167,7 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
 
         # ✅ ماه گذشته - سود از فاکتورها
         month_ago = timezone.now() - timedelta(days=30)
-        month_invoices = CampaignInvoice.objects.filter(
+        month_invoices = Invoice.objects.filter(
             is_paid=True,
             created_at__gte=month_ago
         )
@@ -208,7 +208,7 @@ class FinanceDashboardView(SuperUserRequiredMixin, TemplateView):
             weekday_fa = weekdays_fa.get(jalali_date.weekday(), '')
             chart_daily_labels.append(weekday_fa)
 
-            day_invoices = CampaignInvoice.objects.filter(
+            day_invoices = Invoice.objects.filter(
                 is_paid=True,
                 created_at__range=(day_start, day_end)
             )
@@ -423,7 +423,7 @@ class DashboardView(SupportRequiredMixin, TemplateView):
                 'type': 'campaign',
                 'id': campaign.id,
                 'title': campaign.name,
-                'subtitle': f'تبلیغ‌دهنده: {campaign.advertiser.business_name}',
+                'subtitle': f'تبلیغ دهنده: {campaign.advertiser.business_name}',
                 'icon': 'fi-flag',
                 'color': '#fd5631',
                 'url': 'support:campaign_detail',

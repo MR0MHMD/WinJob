@@ -37,12 +37,12 @@ class AdvertiserScore(BaseScore):
         'advertisers.AdvertiserProfile',
         on_delete=models.CASCADE,
         related_name='score',
-        verbose_name=_('تبلیغ‌دهنده')
+        verbose_name=_('تبلیغ دهنده')
     )
 
     class Meta:
-        verbose_name = _('امتیاز تبلیغ‌دهنده')
-        verbose_name_plural = _('امتیازات تبلیغ‌دهندگان')
+        verbose_name = _('امتیاز تبلیغ دهنده')
+        verbose_name_plural = _('امتیازات تبلیغ دهندگان')
 
     def __str__(self):
         return f"{self.profile.business_name}"

@@ -32,12 +32,38 @@ class Wallet(models.Model):
         verbose_name_plural = "کیف پول‌ها"
 
 
-class CampaignInvoice(models.Model):
+# payment/models.py
+
+class Invoice(models.Model):
+    class Type(models.TextChoices):
+        CAMPAIGN = 'campaign', 'فاکتور کمپین'
+        WALLET = 'wallet', 'فاکتور شارژ کیف پول'
+
+    # ========== فیلدهای جدید ==========
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.CAMPAIGN,
+        verbose_name="نوع فاکتور"
+    )
+
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name="invoices",
+        verbose_name="کاربر",
+        null=True,
+        blank=True  # برای کمپین‌ها از campaign.advertiser.user استفاده میشه
+    )
+
+    # ========== فیلدهای موجود (با تغییرات جزئی) ==========
     campaign = models.OneToOneField(
         'campaigns.Campaign',
         on_delete=models.CASCADE,
         related_name="invoice",
-        verbose_name="کمپین"
+        verbose_name="کمپین",
+        null=True,
+        blank=True  # برای کیف پول خالی باشه
     )
 
     invoice_number = models.CharField(
@@ -77,12 +103,15 @@ class CampaignInvoice(models.Model):
 
     # ========== هزینه‌های نهایی (بعد از تخفیف) ==========
     influencer_cost = models.PositiveBigIntegerField(
+        default=0,
         verbose_name="هزینه نهایی اینفلوئنسر"
     )
     content_cost = models.PositiveBigIntegerField(
+        default=0,
         verbose_name="هزینه نهایی تولید محتوا"
     )
     commission = models.PositiveBigIntegerField(
+        default=0,
         verbose_name="کمیسیون نهایی پلتفرم"
     )
 
@@ -92,10 +121,12 @@ class CampaignInvoice(models.Model):
     )
 
     total_amount = models.PositiveBigIntegerField(
+        default=0,
         verbose_name="مبلغ کل"
     )
 
     payable_amount = models.PositiveBigIntegerField(
+        default=0,
         verbose_name="مبلغ قابل پرداخت"
     )
 
@@ -105,7 +136,13 @@ class CampaignInvoice(models.Model):
         verbose_name="پرداخت شده"
     )
 
-    # ========== ✅ فیلدهای جدید مالیات بر ارزش افزوده ==========
+    paid_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ پرداخت"
+    )
+
+    # ========== فیلدهای مالیات بر ارزش افزوده ==========
     influencer_vat = models.PositiveBigIntegerField(
         default=0,
         verbose_name="مالیات هزینه ناشران"
@@ -119,10 +156,20 @@ class CampaignInvoice(models.Model):
         verbose_name="مالیات کمیسیون پلتفرم"
     )
 
-    # جمع کل مالیات
     total_vat = models.PositiveBigIntegerField(
         default=0,
         verbose_name="جمع کل مالیات بر ارزش افزوده"
+    )
+
+    # ========== فیلدهای جدید برای کیف پول ==========
+    wallet_deposit_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="مبلغ شارژ کیف پول"
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name="توضیحات"
     )
 
     created_at = jmodels.jDateTimeField(
@@ -130,23 +177,49 @@ class CampaignInvoice(models.Model):
         verbose_name="زمان ایجاد"
     )
 
+    updated_at = jmodels.jDateTimeField(
+        auto_now=True,
+        verbose_name="آخرین بروزرسانی"
+    )
+
     class Meta:
-        verbose_name = "فاکتور کمپین"
-        verbose_name_plural = "فاکتورهای کمپین"
+        verbose_name = "فاکتور"
+        verbose_name_plural = "فاکتورها"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['type', 'is_paid']),
+            models.Index(fields=['invoice_number']),
+        ]
+
+    def __str__(self):
+        return f"{self.invoice_number}"
 
     def get_absolute_url(self):
         return reverse('payment:invoice_detail', kwargs={'invoice_id': self.id})
 
-    def payable_amount_display(self):
-        return f"{self.payable_amount:,} تومان"
-
     @classmethod
-    def generate_invoice_number(cls, invoice_id, created_at):
+    def generate_invoice_number(cls, invoice_id, created_at, invoice_type):
         year = created_at.year
         month = str(created_at.month).zfill(2)
         day = str(created_at.day).zfill(2)
-        return f"INV-{year}{month}{day}-{invoice_id}"
+        prefix = 'INV'
+        if invoice_type == cls.Type.WALLET:
+            prefix = 'WAL'
+        elif invoice_type == cls.Type.CAMPAIGN:
+            prefix = 'CMP'
+        return f"{prefix}-{year}{month}{day}-{invoice_id}"
 
+    def payable_amount_display(self):
+        return f"{self.payable_amount:,} تومان"
+
+    @property
+    def is_campaign_invoice(self):
+        return self.type == self.Type.CAMPAIGN
+
+    @property
+    def is_wallet_invoice(self):
+        return self.type == self.Type.WALLET
 
 class Coupon(models.Model):
     class Scope(models.TextChoices):
@@ -264,7 +337,7 @@ class Payment(models.Model):
     )
 
     invoice = models.ForeignKey(
-        'CampaignInvoice',
+        'Invoice',
         on_delete=models.CASCADE,
         related_name="payments",
         verbose_name="فاکتور"
@@ -370,7 +443,7 @@ class Transaction(models.Model):
     )
 
     invoice = models.ForeignKey(
-        'CampaignInvoice',
+        'Invoice',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

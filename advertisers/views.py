@@ -3,7 +3,7 @@ from content_team.models import ContentOrder, ContentTeamMember, ContentDelivery
 from influencers.models import Channel, ChannelBooking
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from payment.models import Transaction, CampaignInvoice
+from payment.models import Transaction, Invoice
 from django.template.loader import render_to_string
 from django.db.models.functions import TruncDate
 from core.utils.utils import convert_to_jalali
@@ -385,9 +385,10 @@ def advertiser_dashboard(request):
     active_campaigns = campaigns.filter(status='running').count()
     completed_campaigns = campaigns.filter(status='completed').count()
 
-    total_spent = CampaignInvoice.objects.filter(
-        campaign__advertiser=advertiser,
-        is_paid=True
+    total_spent = Invoice.objects.filter(
+        user=request.user,
+        is_paid=True,
+        payments__payment_method='gateway',
     ).aggregate(total=Sum('payable_amount'))['total'] or 0
 
     tracking_links = CampaignTrackingLink.objects.filter(
@@ -423,9 +424,10 @@ def advertiser_dashboard(request):
     now = timezone.now()
     last_30_days = now - timedelta(days=30)
 
-    daily_spending = CampaignInvoice.objects.filter(
-        campaign__advertiser=advertiser,
+    daily_spending = Invoice.objects.filter(
+        user=request.user,
         is_paid=True,
+        payments__payment_method='gateway',
         created_at__gte=last_30_days
     ).annotate(
         day=TruncDate('created_at')
@@ -504,7 +506,7 @@ def advertiser_dashboard(request):
 @login_required
 def request_revision(request, order_id):
     """
-    درخواست ویرایش سفارش توسط تبلیغ‌دهنده - با یک فایل مرجع
+    درخواست ویرایش سفارش توسط تبلیغ دهنده - با یک فایل مرجع
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -558,7 +560,7 @@ def request_revision(request, order_id):
 @login_required
 def final_accept_order(request, order_id):
     """
-    تأیید نهایی سفارش توسط تبلیغ‌دهنده
+    تأیید نهایی سفارش توسط تبلیغ دهنده
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)

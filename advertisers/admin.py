@@ -72,9 +72,9 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if user.is_superuser:
             return "👑 مدیر سیستم"
         elif hasattr(user, 'advertiser_profile') and hasattr(user, 'influencer_profile'):
-            return "🎯 تبلیغ‌دهنده + اینفلوئنسر"
+            return "🎯 تبلیغ دهنده + اینفلوئنسر"
         elif hasattr(user, 'advertiser_profile'):
-            return "🏢 تبلیغ‌دهنده"
+            return "🏢 تبلیغ دهنده"
         elif hasattr(user, 'influencer_profile'):
             return "🌟 اینفلوئنسر"
         elif user.is_regional_manager:
@@ -97,7 +97,7 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         return format_datetime(obj.updated_at)
 
     def get_queryset(self, request):
-        """فقط تبلیغ‌دهندگانی که استانشون با استان مدیر یکی هست"""
+        """فقط تبلیغ دهندگانی که استانشون با استان مدیر یکی هست"""
         qs = super().get_queryset(request)
 
         if request.user.is_regional_manager and request.user.province:
@@ -119,7 +119,7 @@ class AdvertiserProfileAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if request.user.is_regional_manager and request.user.province:
             if obj.user.province != request.user.province:
                 from django.core.exceptions import ValidationError
-                raise ValidationError('شما فقط می‌توانید تبلیغ‌دهندگانی را مدیریت کنید که در استان شما هستند.')
+                raise ValidationError('شما فقط می‌توانید تبلیغ دهندگانی را مدیریت کنید که در استان شما هستند.')
         super().save_model(request, obj, form, change)
 
     user_phone_display.short_description = _('شماره تماس')

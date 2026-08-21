@@ -8,8 +8,8 @@ from django.contrib import admin
 class AdvertiserProfileInline(admin.StackedInline):
     model = AdvertiserProfile
     can_delete = False
-    verbose_name = _('پروفایل تبلیغ‌دهنده')
-    verbose_name_plural = _('اطلاعات تبلیغ‌دهنده')
+    verbose_name = _('پروفایل تبلیغ دهنده')
+    verbose_name_plural = _('اطلاعات تبلیغ دهنده')
     fields = [
         'business_name',
         'category',

@@ -27,7 +27,7 @@ class Command(BaseCommand):
             ('campaigns', 'CampaignContent'),
             ('campaigns', 'CampaignTrackingLink'),
             ('campaigns', 'CampaignClick'),
-            ('campaigns', 'CampaignInvoice'),
+            ('campaigns', 'Invoice'),
             ('campaigns', 'Payment'),
             ('content_team', 'ContentTeam'),
             ('content_team', 'ContentTeamMember'),

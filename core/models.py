@@ -6,7 +6,7 @@ from django_jalali.db import models as jmodels
 
 
 class Category(models.Model):
-    """دسته‌بندی ساده برای تبلیغ‌دهنده و اینفلوئنسر"""
+    """دسته‌بندی ساده برای تبلیغ دهنده و اینفلوئنسر"""
 
     name = models.CharField(_('نام دسته‌بندی'), max_length=100, unique=True)
     slug = models.SlugField(_('اسلاگ'), max_length=100, unique=True)

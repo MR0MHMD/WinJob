@@ -4,7 +4,7 @@ from core.models import Category
 
 
 class Command(BaseCommand):
-    help = 'ایجاد دسته‌بندی‌های جامع برای تبلیغ‌دهنده و اینفلوئنسر'
+    help = 'ایجاد دسته‌بندی‌های جامع برای تبلیغ دهنده و اینفلوئنسر'
 
     CATEGORIES_DATA = [
         # 1. ورزشی

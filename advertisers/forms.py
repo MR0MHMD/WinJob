@@ -3,7 +3,7 @@ from .models import AdvertiserProfile
 
 
 class AdvertiserProfileForm(forms.ModelForm):
-    """فرم ساخت/ویرایش پروفایل تبلیغ‌دهنده."""
+    """فرم ساخت/ویرایش پروفایل تبلیغ دهنده."""
 
     class Meta:
         model = AdvertiserProfile

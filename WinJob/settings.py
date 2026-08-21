@@ -3,6 +3,8 @@ from pathlib import Path
 from django.templatetags.static import static
 from dotenv import load_dotenv
 
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-284%)x7e&c@%q(gdi)j!74x++r+z24(@3+6(hziks__er5wh7r'
@@ -24,6 +26,7 @@ INSTALLED_APPS = [
     'django_jalali',
     "django_resized",
     "django_cleanup",
+    'django_iranian_payment.contrib.django',
     # apps
     'accounts.apps.AccountsConfig',
     "core.apps.CoreConfig",
@@ -44,7 +47,7 @@ DAISY_SETTINGS = {
     'SITE_TITLE': 'پنل ادمین',
     'SITE_HEADER': 'ناحیه مدیریتی',
     'INDEX_TITLE': 'سلام به پنل مدیریتی سایت وینجاب خوش آمدید',
-    'SITE_LOGO': '/static/finder/img/logo/Untitled03.png',
+    'SITE_LOGO': '/static/finder/img/logo/logo.webp',
 
 
     'EXTRA_STYLES': ['/static/finder/css/them.min.css', '/static/finder/css/bootstrap-icons.css'],
@@ -118,6 +121,20 @@ DAISY_SETTINGS = {
             'icon': 'bi bi-star',
             'name': 'امتیاز ها',
             'hide': None,
+        },
+    },
+}
+
+# ========== درگاه پرداخت زرین پال ==========
+ZARINPAL_MERCHANT_CODE = os.getenv('ZARINPAL_MERCHANT_CODE', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
+
+IRANIAN_PAYMENT = {
+    "sandbox": True if ZARINPAL_MERCHANT_CODE == "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" else False,
+    "currency": "toman",
+    "gateways": {
+        "zarinpal": {
+            "merchant_id": ZARINPAL_MERCHANT_CODE,
+            "sandbox": True if ZARINPAL_MERCHANT_CODE == "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" else False,
         },
     },
 }
@@ -210,8 +227,6 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-load_dotenv()
 
 GHASEDAK_OTP_API = os.getenv("GHASEDAK_OTP_API")
 GHASEDAK_OTP_TEMPLATE = os.getenv('GHASEDAK_OTP_TEMPLATE')

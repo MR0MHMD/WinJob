@@ -198,7 +198,7 @@ class ChannelServiceRate(models.Model):
 
 class ChannelReview(models.Model):
     """
-    نظرات و امتیاز تبلیغ‌دهندگان درباره اینفلوئنسرها
+    نظرات و امتیاز تبلیغ دهندگان درباره اینفلوئنسرها
     """
 
     channel = models.ForeignKey(
@@ -220,7 +220,7 @@ class ChannelReview(models.Model):
         'advertisers.AdvertiserProfile',
         on_delete=models.CASCADE,
         related_name='influencer_reviews',
-        verbose_name=_('تبلیغ‌دهنده')
+        verbose_name=_('تبلیغ دهنده')
     )
 
     rating = models.PositiveSmallIntegerField(

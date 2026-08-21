@@ -329,13 +329,13 @@ def influencer_respond(request, order_id):
         respond_to_influencer_order_service(order, action)
 
         if action == 'accept':
-            messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ‌دهنده باشید.")
+            messages.success(request, "🎉 سفارش با موفقیت پذیرفته شد. منتظر جزئیات بیشتر از سمت تبلیغ دهنده باشید.")
         else:
             # ========== پیام اختصاصی برای رد ==========
             if order.campaign.is_free:
                 messages.info(request, "❌ سفارش کمپین خیریه رد شد. امتیازی کسر نشد.")
             else:
-                messages.success(request, "❌ سفارش رد شد. مبلغ مربوطه به کیف پول تبلیغ‌دهنده برگشت داده شد.")
+                messages.success(request, "❌ سفارش رد شد. مبلغ مربوطه به کیف پول تبلیغ دهنده برگشت داده شد.")
     else:
         messages.error(request, "عملیات نامعتبر است.")
         return redirect(order)

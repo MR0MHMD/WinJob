@@ -17,6 +17,8 @@ urlpatterns = [
     path('gamification/', include("gamification.urls", namespace="gamification")),
     path('support/', include("support.urls", namespace="support")),
     path('payment/', include("payment.urls", namespace="payment")),
+    # 👇 آدرس جدید برای درگاه پرداخت (با prefix مجزا)
+    path('gateway/', include("django_iranian_payment.contrib.django.urls")),
     path('', include("core.urls", namespace="core")),
 ]
 

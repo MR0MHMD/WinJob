@@ -53,6 +53,8 @@
         .stat-card.total .stat-number { color: #a5b4fc; }
         .stat-card.paid .stat-number { color: #34d399; }
         .stat-card.unpaid .stat-number { color: #f87171; }
+        .stat-card.wallet .stat-number { color: #fbbf24; }
+        .stat-card.campaign .stat-number { color: #60a5fa; }
         
         /* ===== جدول فاکتورها ===== */
         .invoice-table-wrap {
@@ -104,6 +106,28 @@
             color: #a5b4fc;
             font-weight: 600;
             letter-spacing: 0.5px;
+        }
+        
+        .invoice-table .type-badge {
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .type-badge.campaign {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }
+        
+        .type-badge.wallet {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
         }
         
         .invoice-table .campaign-name {
@@ -252,7 +276,7 @@
         /* ===== پاسخگویی ===== */
         @media (max-width: 768px) {
             .invoice-stats {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
                 gap: 0.75rem;
             }
             
@@ -306,12 +330,6 @@
                 justify-content: space-between;
             }
         }
-        
-        @media (max-width: 480px) {
-            .invoice-stats {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 {% endblock %}
 
@@ -323,19 +341,19 @@
             <li class="breadcrumb-item">
                 <a href="{% url 'accounts:dashboard_router' %}">داشبورد</a>
             </li>
-            <li class="breadcrumb-item text-primary active" aria-current="page">تراکنش های من</li>
+            <li class="breadcrumb-item text-primary active" aria-current="page">فاکتورهای من</li>
         </ol>
     </nav>
     
     <!-- ===== هدر صفحه ===== -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between my-4 ">
+    <div class="d-flex flex-wrap align-items-center justify-content-between my-4">
         <div>
             <h4 class="text-light mb-1">
                 <i class="fi-file text-primary me-2"></i>
                 فاکتورهای من
             </h4>
             <p class="text-secondary small m-0">
-                لیست تمام فاکتورهای ثبت‌شده برای کمپین‌های شما
+                لیست تمام فاکتورهای ثبت‌شده برای کمپین‌ها و شارژ کیف پول
             </p>
         </div>
     </div>
@@ -349,6 +367,24 @@
                     <div class="stat-label">کل فاکتورها</div>
                 </div>
                 <div class="stat-icon fi-file"></div>
+            </div>
+        </div>
+        <div class="stat-card campaign">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ campaign_count }}</div>
+                    <div class="stat-label">کمپین</div>
+                </div>
+                <div class="stat-icon fi-flag"></div>
+            </div>
+        </div>
+        <div class="stat-card wallet">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ wallet_count }}</div>
+                    <div class="stat-label">شارژ کیف پول</div>
+                </div>
+                <div class="stat-icon fi-wallet"></div>
             </div>
         </div>
         <div class="stat-card paid">
@@ -373,6 +409,20 @@
     
     <!-- ===== نوار فیلتر ===== -->
     <div class="filter-bar">
+        <div class="filter-group">
+            <label class="m-2" for="type-filter"><i class="fi-filter me-1"></i> نوع:</label>
+            <select id="type-filter" onchange="window.location.href=this.value">
+                <option value="{% url 'payment:invoice_list' %}" {% if not type_filter %}selected{% endif %}>همه</option>
+                <option value="{% url 'payment:invoice_list' %}?type=campaign" {% if type_filter == 'campaign' %}selected{% endif %}>کمپین</option>
+                <option value="{% url 'payment:invoice_list' %}?type=wallet" {% if type_filter == 'wallet' %}selected{% endif %}>شارژ کیف پول</option>
+            </select>
+            {% if type_filter %}
+                <a href="{% url 'payment:invoice_list' %}" class="btn-clear">
+                    <i class="fi-x me-1"></i> پاک کردن
+                </a>
+            {% endif %}
+        </div>
+        
         <div class="filter-group">
             <label class="m-2" for="status-filter"><i class="fi-filter me-1"></i> وضعیت:</label>
             <select id="status-filter" onchange="window.location.href=this.value">
@@ -401,10 +451,10 @@
                     <thead>
                         <tr>
                             <th>شماره فاکتور</th>
-                            <th>کمپین</th>
+                            <th>نوع</th>
+                            <th>عنوان</th>
                             <th>تاریخ</th>
-                            <th>مبلغ کل</th>
-                            <th>قابل پرداخت</th>
+                            <th>مبلغ</th>
                             <th>وضعیت</th>
                             <th>عملیات</th>
                         </tr>
@@ -415,21 +465,41 @@
                                 <td data-label="شماره فاکتور">
                                     <span class="invoice-number">{{ invoice.invoice_number }}</span>
                                 </td>
-                                <td data-label="کمپین">
-                                    <span class="campaign-name">
-                                        <a href="{{ invoice.campaign.get_absolute_url }}">
-                                            {{ invoice.campaign.name|truncatechars:30 }}
-                                        </a>
-                                    </span>
+                                <td data-label="نوع">
+                                    {% if invoice.type == 'campaign' %}
+                                        <span class="type-badge campaign">
+                                            <i class="fi-flag me-1"></i> کمپین
+                                        </span>
+                                    {% else %}
+                                        <span class="type-badge wallet">
+                                            <i class="fi-wallet me-1"></i> کیف پول
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="عنوان">
+                                    {% if invoice.type == 'campaign' %}
+                                        <span class="campaign-name">
+                                            <a href="{{ invoice.campaign.get_absolute_url }}">
+                                                {{ invoice.campaign.name|truncatechars:30 }}
+                                            </a>
+                                        </span>
+                                    {% else %}
+                                        <span class="campaign-name">
+                                            شارژ کیف پول
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td data-label="تاریخ">
                                     {{ invoice.created_at|jformat:"%Y/%m/%d" }}
                                 </td>
-                                <td data-label="مبلغ کل">
-                                    <span class="price-amount">{{ invoice.total_amount|floatformat:0|intcomma }}</span>
-                                </td>
-                                <td data-label="قابل پرداخت">
-                                    <span class="price-amount text-info">{{ invoice.payable_amount|floatformat:0|intcomma }}</span>
+                                <td data-label="مبلغ">
+                                    <span class="price-amount text-info">
+                                        {% if invoice.type == 'campaign' %}
+                                            {{ invoice.payable_amount|floatformat:0|intcomma }}
+                                        {% else %}
+                                            {{ invoice.wallet_deposit_amount|floatformat:0|intcomma }}
+                                        {% endif %}
+                                    </span>
                                 </td>
                                 <td data-label="وضعیت">
                                     {% if invoice.is_paid %}
@@ -450,7 +520,7 @@
                                            class="btn btn-primary btn-sm rounded-pill px-3">
                                             <i class="fi-eye me-1"></i> مشاهده
                                         </a>
-                                        {% if not invoice.is_paid %}
+                                        {% if not invoice.is_paid and invoice.type == 'campaign' %}
                                             <a href="{% url 'payment:redirect_to_payment' invoice_id=invoice.id %}"
                                                class="btn btn-success btn-sm rounded-pill px-3">
                                                 <i class="fi-cart me-1"></i> پرداخت
@@ -482,8 +552,4 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
-
-{% block script %}
-{{ block.super }}
 {% endblock %}
