@@ -32,8 +32,6 @@ class Wallet(models.Model):
         verbose_name_plural = "کیف پول‌ها"
 
 
-# payment/models.py
-
 class Invoice(models.Model):
     class Type(models.TextChoices):
         CAMPAIGN = 'campaign', 'فاکتور کمپین'
@@ -402,6 +400,9 @@ class Transaction(models.Model):
 
         TEAM_PAYMENT = "team_payment", "پرداخت به تیم تولید محتوا"
 
+        INFLUENCER_WITHDRAWAL = 'influencer_withdrawal', _('تسویه ناشر')
+        CONTENT_TEAM_WITHDRAWAL = 'content_team_withdrawal', _('تسویه تیم محتوا')
+
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"
         SUCCESS = "success", "موفق"
@@ -522,3 +523,213 @@ class Transaction(models.Model):
             return f"+ {self.amount:,} تومان"
         else:
             return f"- {self.amount:,} تومان"
+
+
+class BankAccount(models.Model):
+    """حساب بانکی کاربر برای تسویه حساب"""
+
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name='bank_accounts',
+        verbose_name=_('کاربر')
+    )
+
+    sheba_code = models.CharField(
+        _('شماره شبا'),
+        max_length=24,
+        help_text=_('شماره شبا بدون IR')
+    )
+
+    bank = models.ForeignKey(
+        'core.Bank',
+        on_delete=models.PROTECT,
+        related_name='accounts',
+        verbose_name=_('بانک'),
+        null=True,
+        blank=True
+    )
+
+    account_holder_name = models.CharField(
+        _('نام صاحب حساب'),
+        max_length=100
+    )
+
+    is_default = models.BooleanField(
+        _('حساب پیش‌فرض'),
+        default=False
+    )
+
+    is_verified = models.BooleanField(
+        _('تأیید شده'),
+        default=True
+    )
+
+    created_at = jmodels.jDateTimeField(
+        _('تاریخ ایجاد'),
+        auto_now_add=True
+    )
+
+    updated_at = jmodels.jDateTimeField(
+        _('تاریخ ویرایش'),
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = _('حساب بانکی')
+        verbose_name_plural = _('حساب‌های بانکی')
+        unique_together = [['user', 'sheba_code']]
+        ordering = ['-created_at']
+
+    def sheba_display(self):
+        if not self.sheba_code:
+            return "-"
+        raw = self.sheba_code.replace(" ", "").strip()
+        if len(raw) >= 2:
+            first_two = raw[:2]
+            rest = raw[2:]
+            formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
+            return f"IR {first_two} {formatted_rest}"
+        return self.sheba_code
+
+    @property
+    def bank_name(self):
+        return self.bank.name if self.bank else "بانک نامشخص"
+
+    def __str__(self):
+        return f"{self.user} - {self.sheba_code}"
+
+    def save(self, *args, **kwargs):
+        if self.sheba_code and self.sheba_code.upper().startswith('IR'):
+            self.sheba_code = self.sheba_code[2:]
+        super().save(*args, **kwargs)
+
+
+class WithdrawalRequest(models.Model):
+    """درخواست تسویه حساب"""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', _('در انتظار بررسی')
+        PROCESSING = 'processing', _('در حال پردازش')
+        COMPLETED = 'completed', _('انجام شده')
+        REJECTED = 'rejected', _('رد شده')
+        CANCELLED = 'cancelled', _('لغو شده')
+
+    class Type(models.TextChoices):
+        INFLUENCER = 'influencer', _('تسویه ناشر')
+        CONTENT_TEAM = 'content_team', _('تسویه تیم محتوا')
+
+    # ارتباط با کاربر و حساب بانکی
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name='withdrawal_requests',
+        verbose_name=_('کاربر')
+    )
+
+    bank_account = models.ForeignKey(
+        'BankAccount',
+        on_delete=models.PROTECT,
+        related_name='withdrawal_requests',
+        verbose_name=_('حساب بانکی مقصد')
+    )
+
+    withdrawal_type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        verbose_name=_('نوع تسویه')
+    )
+
+    # مبلغ
+    amount = models.PositiveBigIntegerField(
+        _('مبلغ درخواستی (تومان)')
+    )
+
+    # وضعیت
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name=_('وضعیت')
+    )
+
+    # پیگیری
+    tracking_code = models.CharField(
+        _('کد پیگیری'),
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    # اطلاعات تکمیلی
+    description = models.TextField(
+        _('توضیحات'),
+        blank=True
+    )
+
+    admin_note = models.TextField(
+        _('یادداشت ادمین'),
+        blank=True
+    )
+
+    # تاریخ‌ها
+    requested_at = jmodels.jDateTimeField(
+        _('تاریخ درخواست'),
+        auto_now_add=True
+    )
+
+    processed_at = jmodels.jDateTimeField(
+        _('تاریخ پردازش'),
+        null=True,
+        blank=True
+    )
+
+    completed_at = jmodels.jDateTimeField(
+        _('تاریخ تسویه'),
+        null=True,
+        blank=True
+    )
+
+    # ارتباط با تراکنش
+    transaction = models.ForeignKey(
+        'payment.Transaction',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='withdrawal_requests',
+        verbose_name=_('تراکنش مرتبط')
+    )
+
+    class Meta:
+        verbose_name = _('درخواست تسویه')
+        verbose_name_plural = _('درخواست‌های تسویه')
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['status', '-requested_at']),
+            models.Index(fields=['tracking_code']),
+        ]
+
+    def __str__(self):
+        return f"تسویه {self.user} - {self.amount:,} تومان - {self.get_status_display()}"
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            import random
+            import string
+            code = ''.join(random.choices(string.digits, k=8))
+            self.tracking_code = f"WDL-{code}"
+        super().save(*args, **kwargs)
+
+    @property
+    def formatted_amount(self):
+        return f"{self.amount:,} تومان"
+
+    def complete(self, transaction):
+        """تکمیل تسویه"""
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.transaction = transaction
+        self.save()

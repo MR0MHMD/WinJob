@@ -1,13 +1,14 @@
-from django.contrib.admin import SimpleListFilter
-from django.db import models
-from django.utils.safestring import mark_safe
-
-from .models import Invoice, Coupon, Payment, Transaction, Wallet
+from .models import Invoice, Coupon, Payment, Transaction, Wallet, BankAccount, WithdrawalRequest
 from core.utils.admin_utils import RegionalFilterAdminMixin, format_datetime
 from django_jalali.admin.filters import JDateFieldListFilter
+from django.utils.translation import gettext_lazy as _
+from django.contrib.admin import SimpleListFilter
+from django.utils.safestring import mark_safe
 from django.contrib import admin, messages
 from django.utils.html import format_html
+from django.utils import timezone
 from django.urls import reverse
+from django.db import models
 
 
 
@@ -87,7 +88,6 @@ class CouponAdmin(admin.ModelAdmin):
     )
 
 
-# ========== فیلتر سفارشی برای نوع فاکتور ==========
 class InvoiceTypeFilter(SimpleListFilter):
     title = 'نوع فاکتور'
     parameter_name = 'type'
@@ -104,7 +104,6 @@ class InvoiceTypeFilter(SimpleListFilter):
         return queryset
 
 
-# ========== ادمین Invoice ==========
 @admin.register(Invoice)
 class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_display = (
@@ -686,3 +685,693 @@ class TransactionAdmin(admin.ModelAdmin):
         self.message_user(request, f'⏳ {updated} تراکنش به حالت در انتظار برگشت.', messages.SUCCESS)
 
     mark_as_pending.short_description = 'برگشت به حالت در انتظار'
+
+
+@admin.register(BankAccount)
+class BankAccountAdmin(admin.ModelAdmin):
+    """
+    مدیریت حساب‌های بانکی کاربران
+    """
+
+    list_display = (
+        'id',
+        'user_display',
+        'sheba_display',
+        'bank_logo_and_name',  # ✅ تغییر: نمایش لوگو و نام بانک
+        'account_holder_name_display',
+        'is_default',
+        'is_verified',
+        'formatted_created_at',
+    )
+
+    list_filter = (
+        'is_default',
+        'is_verified',
+        ('created_at', JDateFieldListFilter),
+        'user__province',
+    )
+
+    search_fields = (
+        'user__phone_number',
+        'user__nickname',
+        'sheba_code',
+        'account_holder_name',
+    )
+
+    autocomplete_fields = ('user',)
+
+    readonly_fields = (
+        'formatted_created_at',
+        'formatted_updated_at',
+        'user_display',
+        'sheba_full_display',
+        'bank_logo_and_name_display',  # ✅ جدید
+    )
+
+    fieldsets = (
+        ('👤 اطلاعات کاربر', {
+            'fields': ('user', 'user_display')
+        }),
+        ('🏦 اطلاعات حساب بانکی', {
+            'fields': (
+                'sheba_code',
+                'sheba_full_display',
+                'bank_logo_and_name_display',  # ✅ جدید
+                'account_holder_name',
+            )
+        }),
+        ('⚙️ وضعیت', {
+            'fields': (
+                'is_default',
+                'is_verified',
+            )
+        }),
+        ('📅 تاریخ‌ها', {
+            'fields': ('formatted_created_at', 'formatted_updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    # ========== متدهای نمایش ==========
+
+    def user_display(self, obj):
+        """نمایش کاربر با لینک به ادمین"""
+        if obj.user:
+            url = reverse("admin:accounts_customuser_change", args=[obj.user.id])
+            return format_html(
+                '<a href="{}" target="_blank"><strong>{}</strong><br><span style="color: #666; font-size: 11px;">{}</span></a>',
+                url,
+                obj.user.nickname or obj.user.phone_number,
+                obj.user.phone_number
+            )
+        return "-"
+
+    user_display.short_description = "کاربر"
+    user_display.admin_order_field = "user__phone_number"
+
+    def sheba_display(self, obj):
+        """نمایش شبا به صورت فرمت شده"""
+        if not obj.sheba_code:
+            return "-"
+        raw = obj.sheba_code.replace(" ", "").strip()
+        if len(raw) >= 2:
+            first_two = raw[:2]
+            rest = raw[2:]
+            formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
+            return f"IR {first_two} {formatted_rest}"
+        return obj.sheba_code
+
+    sheba_display.short_description = "شماره شبا"
+    sheba_display.admin_order_field = "sheba_code"
+
+    def sheba_full_display(self, obj):
+        """نمایش کامل شبا برای صفحه جزئیات"""
+        if not obj.sheba_code:
+            return "-"
+        raw = obj.sheba_code.replace(" ", "").strip()
+        if len(raw) >= 2:
+            first_two = raw[:2]
+            rest = raw[2:]
+            formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
+            return format_html(
+                '<code style="font-size: 1.1rem; padding: 0.3rem 0.8rem; border-radius: 4px;">IR {}</code>',
+                f"{first_two} {formatted_rest}"
+            )
+        return obj.sheba_code
+
+    sheba_full_display.short_description = "شماره شبا (فرمت شده)"
+
+    # ✅ جدید: نمایش لوگو و نام بانک در لیست
+    def bank_logo_and_name(self, obj):
+        """نمایش لوگو و نام بانک در لیست"""
+        if not obj.bank:
+            return "-"
+
+        # اگر لوگو وجود داشته باشد
+        if obj.bank.logo and hasattr(obj.bank.logo, 'url'):
+            return format_html(
+                '<div style="display: flex; align-items: center; gap: 8px;">'
+                '<img src="{}" alt="{}" style="width: 30px; height: 30px; object-fit: contain; border-radius: 4px; padding: 2px;">'
+                '</div>',
+                obj.bank.logo.url,
+                obj.bank.name,
+            )
+        else:
+            # اگر لوگو وجود نداشته باشد، فقط نام بانک نمایش داده شود
+            return format_html(
+                '<span>🏦 {}</span>',
+                obj.bank.name
+            )
+
+    bank_logo_and_name.short_description = "بانک"
+    bank_logo_and_name.admin_order_field = "bank__name"
+
+    # ✅ جدید: نمایش لوگو و نام بانک در صفحه جزئیات
+    def bank_logo_and_name_display(self, obj):
+        """نمایش لوگو و نام بانک در صفحه جزئیات"""
+        if not obj.bank:
+            return "-"
+
+        # اگر لوگو وجود داشته باشد
+        if obj.bank.logo and hasattr(obj.bank.logo, 'url'):
+            return format_html(
+                '<div style="display: flex; align-items: center; gap: 12px; padding: 8px 12px;">'
+                '<img src="{}" alt="{}" style="width: 30px; height: 30px; object-fit: contain; border-radius: 8px; padding: 4px;">'
+                '{}'
+                '</div>',
+                obj.bank.logo.url,
+                obj.bank.name,
+                obj.bank.name,
+            )
+        else:
+            return format_html(
+                '<div style="padding: 8px 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">'
+                '<span style="font-size: 1.2rem; font-weight: 600; color: #1a1a1a;">🏦 {}</span>'
+                '<div style="font-size: 0.85rem; color: #6c757d;">کد بانک: {}</div>'
+                '</div>',
+                obj.bank.name,
+                obj.bank.code
+            )
+
+    bank_logo_and_name_display.short_description = "اطلاعات بانک"
+
+    # متدهای قبلی
+    def account_holder_name_display(self, obj):
+        """نمایش نام صاحب حساب"""
+        if not obj.account_holder_name:
+            return "-"
+        return format_html(
+            '<span style="font-weight: 500;">{}</span>',
+            obj.account_holder_name
+        )
+
+    account_holder_name_display.short_description = "نام صاحب حساب"
+    account_holder_name_display.admin_order_field = "account_holder_name"
+
+    def formatted_created_at(self, obj):
+        return format_datetime(obj.created_at)
+
+    formatted_created_at.short_description = "تاریخ ایجاد"
+
+    def formatted_updated_at(self, obj):
+        return format_datetime(obj.updated_at)
+
+    formatted_updated_at.short_description = "آخرین بروزرسانی"
+
+    # ========== اکشن‌ها ==========
+
+    actions = ['mark_as_verified', 'mark_as_unverified', 'mark_as_default']
+
+    def mark_as_verified(self, request, queryset):
+        """تأیید حساب‌های بانکی انتخاب شده"""
+        updated = queryset.update(is_verified=True)
+        self.message_user(
+            request,
+            f'✅ {updated} حساب بانکی با موفقیت تأیید شدند.',
+            messages.SUCCESS
+        )
+
+    mark_as_verified.short_description = "تأیید حساب‌های بانکی انتخاب شده"
+
+    def mark_as_unverified(self, request, queryset):
+        """لغو تأیید حساب‌های بانکی انتخاب شده"""
+        updated = queryset.update(is_verified=False)
+        self.message_user(
+            request,
+            f'⏳ تأیید {updated} حساب بانکی لغو شد.',
+            messages.WARNING
+        )
+
+    mark_as_unverified.short_description = "لغو تأیید حساب‌های بانکی انتخاب شده"
+
+    def mark_as_default(self, request, queryset):
+        """تنظیم به عنوان پیش‌فرض برای هر کاربر"""
+        for bank in queryset:
+            BankAccount.objects.filter(user=bank.user).update(is_default=False)
+            bank.is_default = True
+            bank.save()
+        self.message_user(
+            request,
+            f'✅ {queryset.count()} حساب بانکی به عنوان پیش‌فرض تنظیم شد.',
+            messages.SUCCESS
+        )
+
+    mark_as_default.short_description = "تنظیم به عنوان حساب پیش‌فرض"
+
+
+@admin.register(WithdrawalRequest)
+class WithdrawalRequestAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+    """
+    مدیریت درخواست‌های تسویه حساب
+    """
+
+    list_display = (
+        'id',
+        'tracking_code_display',
+        'user_display',
+        'withdrawal_type_badge',
+        'amount_display',
+        'bank_account_info',
+        'status_badge',
+        'formatted_requested_at',
+        'action_buttons',
+    )
+
+    list_filter = (
+        'status',
+        'withdrawal_type',
+        ('requested_at', JDateFieldListFilter),
+        ('processed_at', JDateFieldListFilter),
+        ('completed_at', JDateFieldListFilter),
+        'user__province',  # فیلتر بر اساس استان
+    )
+
+    search_fields = (
+        'tracking_code',
+        'user__phone_number',
+        'user__nickname',
+        'bank_account__sheba_code',
+        'bank_account__bank_name',
+        'description',
+        'admin_note',
+    )
+
+    autocomplete_fields = ('user', 'bank_account')
+    raw_id_fields = ('transaction',)
+
+    readonly_fields = (
+        'tracking_code',
+        'formatted_requested_at',
+        'formatted_processed_at',
+        'formatted_completed_at',
+        'user_display',
+        'bank_account_full_info',
+        'amount_display',
+        'status_badge',
+        'transaction_link',
+    )
+
+    fieldsets = (
+        ('📋 اطلاعات درخواست', {
+            'fields': (
+                ('tracking_code', 'user', 'user_display'),
+                ('withdrawal_type', 'amount', 'amount_display'),
+            )
+        }),
+        ('🏦 اطلاعات حساب بانکی', {
+            'fields': (
+                ('bank_account', 'bank_account_full_info'),
+            )
+        }),
+        ('📊 وضعیت', {
+            'fields': (
+                ('status', 'status_badge'),
+            )
+        }),
+        ('📝 توضیحات', {
+            'fields': (
+                'description',
+                'admin_note',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('🔗 ارتباط با تراکنش', {
+            'fields': ('transaction', 'transaction_link'),
+            'classes': ('collapse',)
+        }),
+        ('📅 تاریخ‌ها', {
+            'fields': (
+                'formatted_requested_at',
+                'formatted_processed_at',
+                'formatted_completed_at',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    # ========== متدهای نمایش ==========
+
+    def tracking_code_display(self, obj):
+        """نمایش کد پیگیری با استایل"""
+        if obj.tracking_code:
+            return format_html(
+                '<code style="font-size: 0.9rem; background: #1a1a2e; color: #ff6b35; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold;">{}</code>',
+                obj.tracking_code
+            )
+        return "-"
+
+    tracking_code_display.short_description = "کد پیگیری"
+    tracking_code_display.admin_order_field = "tracking_code"
+
+    def user_display(self, obj):
+        """نمایش کاربر با لینک"""
+        if obj.user:
+            url = reverse("admin:accounts_customuser_change", args=[obj.user.id])
+            return format_html(
+                '<a href="{}" target="_blank"><strong>{}</strong><br><span style="color: #666; font-size: 11px;">{}</span></a>',
+                url,
+                obj.user.nickname or obj.user.phone_number,
+                obj.user.phone_number
+            )
+        return "-"
+
+    user_display.short_description = "کاربر"
+    user_display.admin_order_field = "user__phone_number"
+
+    def withdrawal_type_badge(self, obj):
+        """نوع تسویه با بج"""
+        colors = {
+            'influencer': 'primary',
+            'content_team': 'success',
+        }
+        labels = {
+            'influencer': '📢 ناشر',
+            'content_team': '🎯 تیم محتوا',
+        }
+        color = colors.get(obj.withdrawal_type, 'secondary')
+        label = labels.get(obj.withdrawal_type, obj.withdrawal_type)
+        return format_html(
+            '<span class="badge bg-{}">{}</span>',
+            color,
+            label
+        )
+
+    withdrawal_type_badge.short_description = "نوع تسویه"
+    withdrawal_type_badge.admin_order_field = "withdrawal_type"
+
+    def amount_display(self, obj):
+        """نمایش مبلغ با رنگ و فرمت"""
+        formatted_amount = f"{obj.amount:,}"
+        return format_html(
+            '<span style="font-size: 1.1rem; font-weight: bold; color: #ff6b35;">{}</span> <span style="color: #888;">تومان</span>',
+            formatted_amount
+        )
+
+    amount_display.short_description = "مبلغ"
+    amount_display.admin_order_field = "amount"
+
+    def bank_account_info(self, obj):
+        """اطلاعات مختصر حساب بانکی"""
+        if obj.bank_account:
+            return format_html(
+                '<div style="font-size: 0.85rem;">'
+                '<span style="color: #fff;">{}</span><br>'
+                '<span style="color: #888; font-family: monospace;">IR {}</span>'
+                '</div>',
+                obj.bank_account.bank_name or 'بانک',
+                obj.bank_account.sheba_code or '---'
+            )
+        return "-"
+
+    bank_account_info.short_description = "حساب بانکی"
+
+    def bank_account_full_info(self, obj):
+        """اطلاعات کامل حساب بانکی برای صفحه جزئیات"""
+        if not obj.bank_account:
+            return "-"
+
+        account = obj.bank_account
+        # فرمت شبا
+        sheba = account.sheba_code or '---'
+        if len(sheba) >= 2:
+            first_two = sheba[:2]
+            rest = sheba[2:]
+            formatted_rest = " ".join(rest[i:i + 4] for i in range(0, len(rest), 4))
+            sheba_formatted = f"IR {first_two} {formatted_rest}"
+        else:
+            sheba_formatted = sheba
+
+        return format_html(
+            '<div style="background: rgba(255,255,255,0.05); padding: 0.8rem 1rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">'
+            '<div><strong>🏦 بانک:</strong> {}</div>'
+            '<div><strong>👤 صاحب حساب:</strong> {}</div>'
+            '<div><strong>🔢 شماره شبا:</strong> <code style="background: #1a1a2e; padding: 0.2rem 0.5rem; border-radius: 3px;">{}</code></div>'
+            '<div><strong>✅ وضعیت:</strong> {}</div>'
+            '</div>',
+            account.bank_name or '---',
+            account.account_holder_name or '---',
+            sheba_formatted,
+            '✅ تأیید شده' if account.is_verified else '⏳ در انتظار تأیید'
+        )
+
+    bank_account_full_info.short_description = "اطلاعات کامل حساب بانکی"
+
+    def status_badge(self, obj):
+        """وضعیت درخواست با بج رنگی"""
+        colors = {
+            'pending': 'warning',
+            'processing': 'info',
+            'completed': 'success',
+            'rejected': 'danger',
+            'cancelled': 'secondary',
+        }
+        icons = {
+            'pending': '⏳',
+            'processing': '🔄',
+            'completed': '✅',
+            'rejected': '❌',
+            'cancelled': '🚫',
+        }
+        color = colors.get(obj.status, 'secondary')
+        icon = icons.get(obj.status, '')
+        return format_html(
+            '<span class="badge bg-{}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">{} {}</span>',
+            color,
+            icon,
+            obj.get_status_display()
+        )
+
+    status_badge.short_description = "وضعیت"
+    status_badge.admin_order_field = "status"
+
+    def formatted_requested_at(self, obj):
+        return format_datetime(obj.requested_at)
+
+    formatted_requested_at.short_description = "تاریخ درخواست"
+
+    def formatted_processed_at(self, obj):
+        if obj.processed_at:
+            return format_datetime(obj.processed_at)
+        return "-"
+
+    formatted_processed_at.short_description = "تاریخ پردازش"
+
+    def formatted_completed_at(self, obj):
+        if obj.completed_at:
+            return format_datetime(obj.completed_at)
+        return "-"
+
+    formatted_completed_at.short_description = "تاریخ تسویه"
+
+    def transaction_link(self, obj):
+        """لینک به تراکنش مرتبط"""
+        if obj.transaction:
+            url = reverse("admin:payment_transaction_change", args=[obj.transaction.id])
+            return format_html(
+                '<a href="{}" target="_blank">تراکنش #{}</a>',
+                url,
+                obj.transaction.id
+            )
+        return "بدون تراکنش"
+
+    transaction_link.short_description = "تراکنش مرتبط"
+
+    def action_buttons(self, obj):
+        """دکمه‌های عملیات سریع در لیست"""
+        buttons = []
+
+        # فقط برای درخواست‌های در انتظار
+        if obj.status == WithdrawalRequest.Status.PENDING:
+            process_url = reverse("admin:payment_withdrawalrequest_change", args=[obj.id])
+            buttons.append(
+                f'<a href="{process_url}" class="button" style="background: #ff6b35; color: #fff; padding: 2px 10px; border-radius: 4px; text-decoration: none; font-size: 11px;">🔍 بررسی</a>'
+            )
+
+        if obj.transaction:
+            trx_url = reverse("admin:payment_transaction_change", args=[obj.transaction.id])
+            buttons.append(
+                f'<a href="{trx_url}" target="_blank" class="button" style="background: #17a2b8; color: #fff; padding: 2px 10px; border-radius: 4px; text-decoration: none; font-size: 11px;">💰 تراکنش</a>'
+            )
+
+        return mark_safe(" ".join(buttons))
+
+    action_buttons.short_description = "عملیات"
+
+    # ========== اکشن‌ها ==========
+
+    actions = [
+        'mark_as_processing',
+        'mark_as_completed',
+        'mark_as_rejected',
+        'mark_as_cancelled',
+    ]
+
+    def mark_as_processing(self, request, queryset):
+        """تغییر وضعیت به در حال پردازش"""
+        updated = queryset.filter(status=WithdrawalRequest.Status.PENDING).update(
+            status=WithdrawalRequest.Status.PROCESSING,
+            processed_at=timezone.now()
+        )
+        self.message_user(
+            request,
+            f'🔄 {updated} درخواست به وضعیت "در حال پردازش" تغییر یافت.',
+            messages.SUCCESS
+        )
+
+    mark_as_processing.short_description = "تغییر وضعیت به در حال پردازش"
+
+    def mark_as_completed(self, request, queryset):
+        """تغییر وضعیت به انجام شده (با احتیاط)"""
+        from django.utils import timezone
+
+        count = 0
+        for withdrawal in queryset.filter(
+                status__in=[WithdrawalRequest.Status.PENDING, WithdrawalRequest.Status.PROCESSING]
+        ):
+            # بررسی موجودی کیف پول
+            if withdrawal.user.wallet.balance < withdrawal.amount:
+                self.message_user(
+                    request,
+                    f'⚠️ موجودی کیف پول کاربر {withdrawal.user} کافی نیست!',
+                    messages.ERROR
+                )
+                continue
+
+            # ایجاد تراکنش
+            from .models import Transaction
+            transaction = Transaction.objects.create(
+                user=withdrawal.user,
+                amount=withdrawal.amount,
+                type=(
+                    Transaction.Type.INFLUENCER_WITHDRAWAL
+                    if withdrawal.withdrawal_type == WithdrawalRequest.Type.INFLUENCER
+                    else Transaction.Type.CONTENT_TEAM_WITHDRAWAL
+                ),
+                status=Transaction.Status.SUCCESS,
+                description=f'تسویه حساب - کد پیگیری: {withdrawal.tracking_code}',
+                reference_id=f'WDL-{withdrawal.id}-{int(timezone.now().timestamp())}',
+            )
+
+            # تکمیل تسویه
+            withdrawal.status = WithdrawalRequest.Status.COMPLETED
+            withdrawal.processed_at = timezone.now()
+            withdrawal.completed_at = timezone.now()
+            withdrawal.transaction = transaction
+            withdrawal.save()
+
+            # کاهش موجودی کیف پول
+            wallet = withdrawal.user.wallet
+            wallet.balance -= withdrawal.amount
+            wallet.save()
+
+            count += 1
+
+        self.message_user(
+            request,
+            f'✅ {count} درخواست با موفقیت تسویه شد.',
+            messages.SUCCESS
+        )
+
+    mark_as_completed.short_description = "تأیید و تسویه (ایجاد تراکنش)"
+
+    def mark_as_rejected(self, request, queryset):
+        """رد درخواست‌ها"""
+        updated = queryset.filter(
+            status__in=[WithdrawalRequest.Status.PENDING, WithdrawalRequest.Status.PROCESSING]
+        ).update(
+            status=WithdrawalRequest.Status.REJECTED,
+            processed_at=timezone.now(),
+            admin_note='رد شده توسط ادمین'
+        )
+        self.message_user(
+            request,
+            f'❌ {updated} درخواست رد شد.',
+            messages.WARNING
+        )
+
+    mark_as_rejected.short_description = "رد درخواست‌های انتخاب شده"
+
+    def mark_as_cancelled(self, request, queryset):
+        """لغو درخواست‌ها"""
+        updated = queryset.filter(
+            status__in=[WithdrawalRequest.Status.PENDING, WithdrawalRequest.Status.PROCESSING]
+        ).update(
+            status=WithdrawalRequest.Status.CANCELLED
+        )
+        self.message_user(
+            request,
+            f'🚫 {updated} درخواست لغو شد.',
+            messages.WARNING
+        )
+
+    mark_as_cancelled.short_description = "لغو درخواست‌های انتخاب شده"
+
+    # ========== اورراید متدهای میکسین ==========
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        # محدودیت برای مدیران استانی
+        if request.user.is_regional_manager and request.user.province:
+            qs = qs.filter(user__province=request.user.province)
+
+        return qs.select_related(
+            'user',
+            'user__wallet',
+            'bank_account',
+            'transaction',
+            'user__province',
+        )
+
+    def has_change_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.user.province != request.user.province:
+                return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and request.user.is_regional_manager and request.user.province:
+            if obj.user.province != request.user.province:
+                return False
+        return super().has_delete_permission(request, obj)
+
+    # ========== ذخیره‌سازی با اعتبارسنجی ==========
+
+    def save_model(self, request, obj, form, change):
+        """ذخیره با اعتبارسنجی"""
+        if change and obj.status == WithdrawalRequest.Status.COMPLETED:
+            # اگر وضعیت به completed تغییر کرده، حتماً تراکنش باید داشته باشد
+            if not obj.transaction:
+                from django.contrib import messages
+                messages.error(
+                    request,
+                    '⚠️ برای تسویه کامل، ابتدا باید تراکنش ایجاد شود!'
+                )
+                return
+
+        # اگر پردازش شد و زمان پردازش ثبت نشده
+        if obj.status in [WithdrawalRequest.Status.COMPLETED, WithdrawalRequest.Status.REJECTED]:
+            if not obj.processed_at:
+                obj.processed_at = timezone.now()
+
+        super().save_model(request, obj, form, change)
+
+    # ========== تغییر وضعیت با سیگنال ==========
+
+    def response_change(self, request, obj):
+        """پس از تغییر وضعیت در صفحه ادمین"""
+        msg = None
+
+        if obj.status == WithdrawalRequest.Status.COMPLETED:
+            msg = f'✅ درخواست تسویه #{obj.tracking_code} با موفقیت تکمیل شد.'
+
+        elif obj.status == WithdrawalRequest.Status.REJECTED:
+            msg = f'❌ درخواست تسویه #{obj.tracking_code} رد شد.'
+
+        elif obj.status == WithdrawalRequest.Status.CANCELLED:
+            msg = f'🚫 درخواست تسویه #{obj.tracking_code} لغو شد.'
+
+        if msg:
+            self.message_user(request, msg, messages.SUCCESS)
+
+        return super().response_change(request, obj)

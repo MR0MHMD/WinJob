@@ -4,7 +4,7 @@ from django.db.models import Count, Q
 from django.contrib.admin import SimpleListFilter
 from .models import (
     TicketCategory, TicketTitle,
-    Ticket, TicketMessage, TicketAttachment
+    Ticket, TicketMessage, TicketAttachment, ContactRequest
 )
 from core.models import FAQ
 
@@ -245,3 +245,47 @@ class TicketAttachmentAdmin(admin.ModelAdmin):
     def delete_model(self, request, obj):
         obj.file.delete(save=False)
         super().delete_model(request, obj)
+
+
+@admin.register(ContactRequest)
+class ContactRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'name', 'phone', 'category', 'status',
+        'user', 'created_at'
+    ]
+    list_display_links = ['id', 'name']
+    list_filter = ['status', 'category', 'created_at']
+    search_fields = ['name', 'phone', 'email', 'message']
+    readonly_fields = ['created_at', 'updated_at', 'user']
+    list_per_page = 25
+    actions = ['mark_completed', 'mark_cancelled', 'mark_pending']
+
+
+
+    fieldsets = (
+        (_('اطلاعات درخواست'), {
+            'fields': ('name', 'phone', 'email', 'category', 'message')
+        }),
+        (_('وضعیت و کاربر'), {
+            'fields': ('status', 'user', 'admin_notes')
+        }),
+        (_('زمان‌ها'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def mark_completed(self, request, queryset):
+        updated = queryset.update(status=ContactRequest.Status.COMPLETED)
+        self.message_user(request, _('{} درخواست به عنوان تمام‌شده علامت‌گذاری شد.').format(updated))
+    mark_completed.short_description = _('علامت‌گذاری به عنوان تمام‌شده')
+
+    def mark_cancelled(self, request, queryset):
+        updated = queryset.update(status=ContactRequest.Status.CANCELLED)
+        self.message_user(request, _('{} درخواست لغو شد.').format(updated))
+    mark_cancelled.short_description = _('لغو درخواست‌های انتخاب‌شده')
+
+    def mark_pending(self, request, queryset):
+        updated = queryset.update(status=ContactRequest.Status.PENDING)
+        self.message_user(request, _('{} درخواست به حالت در انتظار برگشت.').format(updated))
+    mark_pending.short_description = _('بازگرداندن به در انتظار')

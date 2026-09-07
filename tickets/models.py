@@ -379,3 +379,89 @@ class TicketAttachment(models.Model):
     @property
     def file_extension(self):
         return self.file_name.split('.')[-1].lower() if '.' in self.file_name else ''
+
+
+# ==================== درخواست تماس از صفحه تماس با ما ====================
+
+class ContactRequest(models.Model):
+    """درخواست تماس از فرم صفحه تماس با ما"""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', _('در انتظار')
+        CANCELLED = 'cancelled', _('لغو شده')
+        COMPLETED = 'completed', _('تمام شده')
+
+    name = models.CharField(
+        max_length=150,
+        verbose_name=_('نام و نام خانوادگی')
+    )
+
+    phone = models.CharField(
+        max_length=15,
+        verbose_name=_('شماره موبایل'),
+        db_index=True
+    )
+
+    email = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name=_('ایمیل')
+    )
+
+    category = models.ForeignKey(
+        'TicketCategory',
+        on_delete=models.PROTECT,
+        related_name='contact_requests',
+        verbose_name=_('موضوع')
+    )
+
+    message = models.TextField(
+        verbose_name=_('پیام')
+    )
+
+    # اگر شماره قبلاً در سیستم ثبت شده باشد، به یوزر وصل می‌شود
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='contact_requests',
+        verbose_name=_('کاربر مرتبط')
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name=_('وضعیت')
+    )
+
+    admin_notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('یادداشت ادمین'),
+        help_text=_('فقط برای ادمین قابل مشاهده است')
+    )
+
+    created_at = jmodels.jDateTimeField(
+        auto_now_add=True,
+        verbose_name=_('تاریخ ایجاد')
+    )
+
+    updated_at = jmodels.jDateTimeField(
+        auto_now=True,
+        verbose_name=_('آخرین بروزرسانی')
+    )
+
+    class Meta:
+        verbose_name = _('درخواست تماس')
+        verbose_name_plural = _('درخواست‌های تماس')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['phone']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.phone} ({self.get_status_display()})"

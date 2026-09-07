@@ -1,0 +1,350 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}حساب‌های بانکی من{% endblock %}
+
+{% block extra_style %}
+<style>
+    .bank-list-header {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .bank-card-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0.75rem;
+        padding: 1.25rem 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        height: 100%;
+    }
+    .bank-card-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.12);
+        transform: translateY(-2px);
+    }
+    
+    .bank-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .bank-badge.default {
+        background: rgba(7, 201, 139, 0.15);
+        color: #07c98b;
+    }
+    .bank-badge.verified {
+        background: rgba(60, 118, 242, 0.15);
+        color: #3c76f2;
+    }
+    .bank-badge.pending {
+        background: rgba(253, 188, 49, 0.15);
+        color: #fdbc31;
+    }
+    
+    .bank-name {
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .bank-sheba {
+        color: rgba(255, 255, 255, 0.45);
+        direction: ltr;
+        letter-spacing: 1px;
+    }
+    .bank-holder {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 0.875rem;
+    }
+    
+    .bank-actions .btn {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .empty-state-bank {
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+    .empty-state-bank .empty-icon {
+        font-size: 4rem;
+        color: rgba(255, 255, 255, 0.08);
+        margin-bottom: 1.5rem;
+    }
+
+    /* استایل مودال‌های تأیید */
+    .confirm-modal .modal-content {
+        background: #1f1b2d;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .confirm-modal .modal-header,
+    .confirm-modal .modal-footer {
+        border-color: rgba(255,255,255,0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- هدر -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between my-4">
+        <div>
+            <h4 class="text-light mb-1">
+                <i class="fi-credit-card me-2 text-primary"></i>
+                حساب‌های بانکی من
+            </h4>
+                <i class="ibl128 ibl-tt"></i>
+    <i class="ibl128 ibl-tt"></i>
+
+            <p class="text-muted fs-sm mb-0">
+                مدیریت حساب‌های بانکی برای تسویه حساب
+            </p>
+        </div>
+        <div>
+            <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#bankAccountModal">
+                <i class="fi-plus me-1"></i>
+                افزودن حساب جدید
+            </button>
+        </div>
+    </div>
+
+    <!-- آمار -->
+    <div class="bank-list-header mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted fs-sm">تعداد حساب‌ها:</span>
+                    <span class="text-light fw-bold">{{ total_accounts }}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted fs-sm">حساب پیش‌فرض:</span>
+                    {% if has_default %}
+                        <span class="badge bg-success">تنظیم شده</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">تنظیم نشده</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- لیست حساب‌ها -->
+    {% if bank_accounts %}
+    <div class="row g-3">
+        {% for bank in bank_accounts %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="bank-card-item">
+                
+                <!-- وضعیت‌ها -->
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    {% if bank.is_default %}
+                        <span class="bank-badge default">پیش‌فرض</span>
+                    {% endif %}
+                    
+                    {% if bank.is_verified %}
+                        <span class="bank-badge verified">تأیید شده</span>
+                    {% else %}
+                        <span class="bank-badge pending">در انتظار تأیید</span>
+                    {% endif %}
+                </div>
+
+                <!-- اطلاعات اصلی -->
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    {% if bank.bank.logo %}
+                    <img src="{{ bank.bank.logo.url }}" 
+                         alt="{{ bank.bank.name }}"
+                         style="width: 36px; height: 36px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,0.05); padding: 4px;">
+                    {% endif %}
+                    <div>
+                        <div class="bank-name">{{ bank.bank.name|default:'بانک' }}</div>
+                        <div class="bank-sheba">{{ bank.sheba_display }}</div>
+                    </div>
+                </div>
+                <div class="bank-holder mt-1">
+                    <i class="fi-user me-1" style="font-size: 0.75rem;"></i>
+                    {{ bank.account_holder_name }}
+                </div>
+
+                <!-- عملیات -->
+                <div class="bank-actions mt-3 pt-2 border-top" style="border-color: rgba(255,255,255,0.06);">
+                    <div class="d-flex flex-wrap gap-1">
+                        
+                        {% if bank.is_verified and not bank.is_default %}
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-success rounded-pill btn-set-default"
+                                data-bank-id="{{ bank.id }}"
+                                data-bank-name="{{ bank.bank_name|default:'بانک' }}">
+                            <i class="fi-check me-1"></i>
+                            تنظیم پیش‌فرض
+                        </button>
+                        {% endif %}
+
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-danger rounded-pill btn-delete-bank"
+                                data-bank-id="{{ bank.id }}"
+                                data-bank-name="{{ bank.bank_name|default:'بانک' }}"
+                                data-sheba="{{ bank.sheba_code }}">
+                            <i class="fi-trash me-1"></i>
+                            حذف
+                        </button>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% else %}
+    <!-- حالت خالی -->
+    <div class="empty-state-bank">
+        <div class="empty-icon">
+            <i class="fi-credit-card"></i>
+        </div>
+        <h5 class="text-light">هیچ حساب بانکی ثبت نشده است</h5>
+        <p class="text-muted">
+            برای تسویه حساب، ابتدا باید یک حساب بانکی ثبت کنید.
+        </p>
+        <a href="#" class="btn btn-primary rounded-pill px-4 mt-3" 
+           data-bs-toggle="modal" data-bs-target="#bankAccountModal">
+            <i class="fi-plus me-1"></i>
+            افزودن حساب جدید
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+{% include 'payment/bank_account/bank_account_modal.html' %}
+
+<!-- ==================== مودال تأیید تنظیم پیش‌فرض ==================== -->
+<div class="modal fade confirm-modal" id="setDefaultModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-light">
+                    <i class="fi-check-circle me-2 text-success"></i>
+                    تنظیم حساب پیش‌فرض
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="text-light mb-2">
+                    آیا می‌خواهید حساب بانکی 
+                    <strong id="setDefaultBankName" class="text-primary"></strong>
+                    را به عنوان حساب پیش‌فرض تنظیم کنید؟
+                </p>
+                <p class="text-muted fs-sm mb-0">
+                    حساب پیش‌فرض قبلی دیگر پیش‌فرض نخواهد بود.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">
+                    انصراف
+                </button>
+                <form id="setDefaultForm" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success rounded-pill px-4">
+                        <i class="fi-check me-1"></i>
+                        بله، تنظیم شود
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== مودال تأیید حذف ==================== -->
+<div class="modal fade confirm-modal" id="deleteBankModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-light">
+                    <i class="fi-trash me-2 text-danger"></i>
+                    حذف حساب بانکی
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="text-light mb-2">
+                    آیا از حذف حساب بانکی 
+                    <strong id="deleteBankName" class="text-danger"></strong>
+                    مطمئن هستید؟
+                </p>
+                <p class="text-muted fs-sm mb-1">
+                    شماره شبا: <span id="deleteSheba" class="font-monospace" dir="ltr"></span>
+                </p>
+                <p class="text-warning fs-sm mb-0">
+                    این عمل قابل بازگشت نیست.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">
+                    انصراف
+                </button>
+                <form id="deleteBankForm" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">
+                        <i class="fi-trash me-1"></i>
+                        بله، حذف شود
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ========== تنظیم پیش‌فرض ==========
+    const setDefaultModal = new bootstrap.Modal(document.getElementById('setDefaultModal'));
+    const setDefaultBankName = document.getElementById('setDefaultBankName');
+    const setDefaultForm = document.getElementById('setDefaultForm');
+    
+    document.querySelectorAll('.btn-set-default').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const bankId = this.dataset.bankId;
+            const bankName = this.dataset.bankName;
+    
+            setDefaultBankName.textContent = bankName;
+            setDefaultForm.action = `{% url 'payment:bank_account_set_default' 0 %}`.replace('0', bankId);
+            
+            setDefaultModal.show();
+        });
+    });
+
+    // ========== حذف حساب ==========
+    const deleteBankModal = new bootstrap.Modal(document.getElementById('deleteBankModal'));
+    const deleteBankName = document.getElementById('deleteBankName');
+    const deleteSheba = document.getElementById('deleteSheba');
+    const deleteBankForm = document.getElementById('deleteBankForm');
+
+    document.querySelectorAll('.btn-delete-bank').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const bankId = this.dataset.bankId;
+            const bankName = this.dataset.bankName;
+            const sheba = this.dataset.sheba;
+
+            deleteBankName.textContent = bankName;
+            deleteSheba.textContent = 'IR ' + sheba;
+            deleteBankForm.action = `{% url 'payment:bank_account_delete' 0 %}`.replace('0', bankId);
+            
+            deleteBankModal.show();
+        });
+    });
+
+});
+</script>
+{% endblock %}

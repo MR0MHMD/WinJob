@@ -1,0 +1,432 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}تسویه حساب{% endblock %}
+
+{% block extra_style %}
+<style>
+    .wallet-card {
+        background: linear-gradient(135deg, rgba(253, 86, 49, 0.18), rgba(93, 60, 242, 0.15));
+        border: 1px solid rgba(253, 86, 49, 0.25);
+        border-radius: 1rem;
+        padding: 1.75rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .wallet-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 280px;
+        height: 280px;
+        background: radial-gradient(circle, rgba(253,86,49,0.15) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .wallet-balance {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.5px;
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.875rem;
+        padding: 1.25rem;
+        transition: all 0.25s ease;
+        height: 100%;
+    }
+    .stat-card:hover {
+        background: rgba(255, 255, 255, 0.07);
+        transform: translateY(-3px);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+    }
+    .stat-label {
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 0.8125rem;
+        margin-top: 2px;
+    }
+    .filter-section {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 0.875rem;
+        padding: 1.15rem 1.35rem;
+    }
+    .filter-section .form-control,
+    .filter-section .form-select {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-radius: 0.5rem;
+    }
+    .filter-section .form-control:focus,
+    .filter-section .form-select:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #fd5631;
+        box-shadow: 0 0 0 0.15rem rgba(253, 86, 49, 0.2);
+        color: #fff;
+    }
+    .filter-section .form-select option {
+        background: #1f1b2d;
+        color: #fff;
+    }
+    .withdrawal-table {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 0.875rem;
+        overflow: hidden;
+    }
+    .withdrawal-table thead th {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.65);
+        font-weight: 500;
+        font-size: 0.8125rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: center;
+        white-space: nowrap;
+    }
+    .withdrawal-table tbody td {
+        padding: 1.05rem 1.25rem;
+        color: rgba(255, 255, 255, 0.85);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        text-align: center;
+        vertical-align: middle;
+    }
+    .withdrawal-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .withdrawal-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.035);
+    }
+    .status-badge {
+        padding: 0.35rem 0.9rem;
+        border-radius: 50rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+        min-width: 95px;
+    }
+    .status-badge.pending {
+        background: rgba(253, 188, 49, 0.15);
+        color: #fdbc31;
+    }
+    .status-badge.processing {
+        background: rgba(60, 118, 242, 0.15);
+        color: #3c76f2;
+    }
+    .status-badge.completed {
+        background: rgba(7, 201, 139, 0.15);
+        color: #07c98b;
+    }
+    .status-badge.rejected {
+        background: rgba(242, 60, 73, 0.15);
+        color: #f23c49;
+    }
+    .status-badge.cancelled {
+        background: rgba(150, 145, 164, 0.15);
+        color: #9691a4;
+    }
+    .tracking-code {
+        font-family: monospace;
+        font-size: 0.875rem;
+        color: #fd5631;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+    .amount-display {
+        font-weight: 700;
+        color: #fff;
+        font-size: 0.95rem;
+    }
+    .empty-state {
+        padding: 4rem 1.5rem;
+        text-align: center;
+    }
+    .empty-state .empty-icon {
+        font-size: 4.5rem;
+        color: rgba(255, 255, 255, 0.08);
+        margin-bottom: 1.25rem;
+    }
+    .pagination-custom .page-link {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.7);
+        border-radius: 0.5rem;
+        margin: 0 0.15rem;
+        min-width: 36px;
+        text-align: center;
+    }
+    .pagination-custom .page-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    .pagination-custom .page-item.active .page-link {
+        background: #fd5631;
+        border-color: #fd5631;
+        color: #fff;
+    }
+    .pagination-custom .page-item.disabled .page-link {
+        opacity: 0.35;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- هدر -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h4 class="text-light mb-1 d-flex align-items-center gap-2">
+                <i class="fi-wallet text-primary"></i>
+                تسویه حساب
+            </h4>
+            <p class="text-muted fs-sm mb-0">مدیریت درخواست‌های برداشت وجه از کیف پول</p>
+        </div>
+        <a href="{% url 'payment:withdrawal_create' %}" class="btn btn-primary rounded-pill px-4">
+            <i class="fi-plus me-1"></i>
+            درخواست جدید
+        </a>
+    </div>
+
+    <!-- کارت موجودی -->
+    <div class="wallet-card mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <div class="text-white-50 fs-sm mb-1">
+                    <i class="fi-cash me-1"></i>
+                    موجودی قابل برداشت
+                </div>
+                <div class="wallet-balance">
+                    {{ wallet_balance|intcomma }}
+                    <span class="fs-6 fw-normal text-white-50">تومان</span>
+                </div>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                <span class="badge bg-faded-warning px-3 py-2">
+                    <i class="fi-info-circle me-1"></i>
+                    حداقل مبلغ: ۱۰۰,۰۰۰ تومان
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- آمار -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-faded-warning">
+                        <i class="fi-clock text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="stat-number">{{ total_pending }}</div>
+                        <div class="stat-label">در انتظار</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-faded-success">
+                        <i class="fi-check-circle text-success"></i>
+                    </div>
+                    <div>
+                        <div class="stat-number">{{ total_completed }}</div>
+                        <div class="stat-label">انجام شده</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-faded-danger">
+                        <i class="fi-x-circle text-danger"></i>
+                    </div>
+                    <div>
+                        <div class="stat-number">{{ total_rejected }}</div>
+                        <div class="stat-label">رد شده</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-faded-info">
+                        <i class="fi-list text-info"></i>
+                    </div>
+                    <div>
+                        <div class="stat-number">{{ page_obj.paginator.count }}</div>
+                        <div class="stat-label">کل درخواست‌ها</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فیلتر -->
+    <div class="filter-section mb-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="text-muted fs-sm mb-1">وضعیت</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">همه</option>
+                    <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>در انتظار</option>
+                    <option value="processing" {% if current_status == 'processing' %}selected{% endif %}>در حال پردازش</option>
+                    <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>انجام شده</option>
+                    <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>رد شده</option>
+                    <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>لغو شده</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="text-muted fs-sm mb-1">نوع تسویه</label>
+                <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">همه</option>
+                    <option value="influencer" {% if current_type == 'influencer' %}selected{% endif %}>ناشر</option>
+                    <option value="content_team" {% if current_type == 'content_team' %}selected{% endif %}>تیم محتوا</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="text-muted fs-sm mb-1">جستجو</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" placeholder="کد پیگیری یا مبلغ..." value="{{ search_query }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- جدول -->
+    <div class="withdrawal-table">
+        <div class="table-responsive">
+            <table class="table table-dark table-borderless mb-0">
+                <thead>
+                    <tr>
+                        <th>کد پیگیری</th>
+                        <th>نوع</th>
+                        <th>مبلغ</th>
+                        <th>وضعیت</th>
+                        <th>تاریخ درخواست</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for withdrawal in page_obj %}
+                    <tr>
+                        <td>
+                            <span class="tracking-code">{{ withdrawal.tracking_code }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-faded-light">
+                                {{ withdrawal.get_withdrawal_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="amount-display">{{ withdrawal.amount|intcomma }}</span>
+                            <span class="text-muted fs-xs">تومان</span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ withdrawal.status }}">
+                                {{ withdrawal.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-muted fs-sm">
+                            {{ withdrawal.requested_at|date:"Y/m/d H:i" }}
+                        </td>
+                        <td>
+                            <a href="{% url 'payment:withdrawal_detail' withdrawal.id %}"
+                               class="btn btn-sm btn-outline-light rounded-pill px-3">
+                                <i class="bi bi-eye me-1"></i>
+                                مشاهده
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <i class="fi-wallet"></i>
+                                </div>
+                                <h5 class="text-light mb-2">هیچ درخواستی یافت نشد</h5>
+                                <p class="text-muted mb-3">شما تاکنون درخواست تسویه‌ای ثبت نکرده‌اید</p>
+                                <a href="{% url 'payment:withdrawal_create' %}" class="btn btn-primary rounded-pill">
+                                    <i class="fi-plus me-1"></i>
+                                    ثبت درخواست جدید
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted fs-sm">
+            نمایش {{ page_obj.start_index }} تا {{ page_obj.end_index }} از {{ page_obj.paginator.count }}
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm pagination-custom mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                        <i class="fi-chevron-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="fi-chevron-right"></i></span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                        <i class="fi-chevron-left"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="fi-chevron-left"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

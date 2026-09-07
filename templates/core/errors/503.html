@@ -1,0 +1,297 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}سرویس موقتاً در دسترس نیست | WinJob{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'core/css/errors.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+<style>
+
+    .wj503-data {
+        stroke-dasharray: 5 13;
+        animation: wj503Data 4.8s linear infinite;
+    }
+
+    .wj503-core {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wj503Core 4s ease-in-out infinite;
+    }
+
+    .wj503-signal {
+        animation: wj503Signal 2.8s ease-in-out infinite;
+    }
+
+    @keyframes wj503Data {
+        to { stroke-dashoffset: -72; }
+    }
+
+    @keyframes wj503Core {
+        0%,100% { opacity: .62; transform: scale(.985); }
+        50% { opacity: .9; transform: scale(1.015); }
+    }
+
+    @keyframes wj503Signal {
+        0%,100% { opacity: .3; }
+        50% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+        .wj503-data,.wj503-core,.wj503-signal { animation: none !important; }
+        .wj404__button { transition: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj404" aria-labelledby="wj503-title">
+    <div class="wj404__grid" aria-hidden="true"></div>
+
+    <div class="wj404__container">
+        <div class="wj404__content">
+            <div class="wj404__eyebrow">
+                <span class="wj404__eyebrow-dot"></span>
+                ERROR 503 / SERVICE UNAVAILABLE
+            </div>
+
+            <h1 id="wj503-title" class="wj404__title">
+                سرویس فعلاً
+                <span class="wj404__title-highlight">در دسترس نیست.</span>
+            </h1>
+
+            <p class="wj404__description">
+                سرویس WinJob در حال حاضر قادر به پردازش این درخواست نیست.
+                ممکن است سیستم در حال بروزرسانی، بازیابی یا انجام عملیات
+                نگهداری باشد. لطفاً چند لحظه بعد دوباره تلاش کنید.
+            </p>
+
+            <div class="wj404__actions">
+                <a href="javascript:location.reload()" class="wj404__button wj404__button--primary">
+                    <i class="fi-refresh"></i>
+                    تلاش دوباره
+                </a>
+
+                <a href="/" class="wj404__button wj404__button--secondary">
+                    <i class="fi-home"></i>
+                    صفحه اصلی
+                </a>
+            </div>
+
+            <div class="wj404__status">
+                <span class="wj404__status-line"></span>
+                WINJOB SYSTEM
+                <span>•</span>
+                SERVICE_RECOVERY
+            </div>
+        </div>
+
+        <div class="wj404__visual">
+            <div class="wj404__art">
+                <svg class="wj404__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob 503 Service Unavailable">
+                    <defs>
+                        <linearGradient id="wj503Main" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj503Orange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wj503CoreGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#5d3cf2" stop-opacity=".14"/>
+                            <stop offset=".62" stop-color="#fd5631" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="300" cy="300" r="250"
+                            fill="none"
+                            stroke="rgba(255,255,255,.025)"/>
+
+                    <circle cx="300" cy="300" r="232"
+                            fill="none"
+                            stroke="rgba(255,255,255,.035)"
+                            stroke-dasharray="1 13"/>
+
+                    <circle cx="300" cy="300" r="190"
+                            fill="url(#wj503CoreGlow)"/>
+
+                    <g fill="none" stroke="url(#wj503Main)" stroke-width="1" opacity=".55">
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+                    </g>
+
+                    <!-- Service Network -->
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M55 190 L108 145 L163 181 L213 137 L252 168"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M545 190 L492 145 L437 181 L387 137 L348 168"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M62 405 L112 450 L164 419 L211 463 L252 435"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path d="M538 405 L488 450 L436 419 L389 463 L348 435"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path class="wj503-data"
+                              d="M55 190 L108 145 L163 181 L213 137 L252 168"
+                              stroke="url(#wj503Main)"
+                              stroke-width="2"
+                              opacity=".7"/>
+
+                        <path class="wj503-data"
+                              d="M545 190 L492 145 L437 181 L387 137 L348 168"
+                              stroke="url(#wj503Orange)"
+                              stroke-width="2"
+                              opacity=".7"/>
+                    </g>
+
+                    <!-- Service Nodes -->
+                    <g>
+                        <circle cx="55" cy="190" r="4" fill="#5d3cf2"/>
+                        <circle cx="108" cy="145" r="3" fill="#a08cff"/>
+                        <circle cx="163" cy="181" r="3.5" fill="#fff"/>
+                        <circle cx="213" cy="137" r="4" fill="#5d3cf2"/>
+                        <circle cx="252" cy="168" r="3" fill="#8870ff"/>
+
+                        <circle cx="545" cy="190" r="4" fill="#fd5631"/>
+                        <circle cx="492" cy="145" r="3" fill="#ff8068"/>
+                        <circle cx="437" cy="181" r="3.5" fill="#fff"/>
+                        <circle cx="387" cy="137" r="4" fill="#fd5631"/>
+                        <circle cx="348" cy="168" r="3" fill="#ff775b"/>
+                    </g>
+
+                    <!-- Recovery Core -->
+                    <g class="wj503-core">
+                        <circle cx="300" cy="300"
+                                r="128"
+                                fill="#1f1b2d"
+                                stroke="rgba(255,255,255,.07)"
+                                stroke-width="1"/>
+
+                        <circle cx="300" cy="300"
+                                r="108"
+                                fill="none"
+                                stroke="url(#wj503Main)"
+                                stroke-width="1.5"
+                                stroke-dasharray="3 10"
+                                opacity=".72"/>
+
+                        <!-- Server Core -->
+                        <rect x="244"
+                              y="245"
+                              width="112"
+                              height="38"
+                              fill="none"
+                              stroke="rgba(255,255,255,.20)"
+                              stroke-width="1.5"/>
+
+                        <rect x="244"
+                              y="317"
+                              width="112"
+                              height="38"
+                              fill="none"
+                              stroke="rgba(255,255,255,.20)"
+                              stroke-width="1.5"/>
+
+                        <circle cx="263" cy="264" r="4" fill="#5d3cf2"/>
+                        <circle cx="263" cy="336" r="4" fill="#fd5631"/>
+
+                        <path d="M278 264 H340"
+                              stroke="rgba(255,255,255,.12)"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
+
+                        <path d="M278 336 H340"
+                              stroke="rgba(255,255,255,.12)"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
+
+                        <!-- Recovery Connection -->
+                        <path d="M300 283 V317"
+                              stroke="url(#wj503Main)"
+                              stroke-width="2"/>
+
+                        <path d="M285 300 H315"
+                              stroke="url(#wj503Orange)"
+                              stroke-width="2"/>
+
+                        <!-- Recovery Signal -->
+                        <path class="wj503-signal"
+                              d="M282 300 L294 300 L300 288 L307 312 L314 300 H327"
+                              fill="none"
+                              stroke="url(#wj503Main)"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </g>
+
+                    <!-- Recovery Indicator -->
+                    <g>
+                        <circle cx="300"
+                                cy="194"
+                                r="5"
+                                fill="none"
+                                stroke="#fd5631"
+                                stroke-width="1.5"
+                                opacity=".65"/>
+
+                        <circle class="wj503-signal"
+                                cx="300"
+                                cy="194"
+                                r="2.5"
+                                fill="#fd5631"/>
+
+                        <path d="M300 205 V225"
+                              stroke="url(#wj503Orange)"
+                              stroke-width="1"
+                              stroke-dasharray="2 5"
+                              opacity=".5"/>
+                    </g>
+
+                    <g text-anchor="middle"
+                       font-family="Arial,sans-serif"
+                       font-weight="900">
+                        <text x="300"
+                              y="435"
+                              font-size="76"
+                              letter-spacing="-5"
+                              fill="url(#wj503Main)">
+                            503
+                        </text>
+                    </g>
+
+                    <g font-family="monospace"
+                       font-size="8"
+                       letter-spacing="1"
+                       fill="rgba(255,255,255,.27)">
+                        <text x="42" y="178">SERVICE_NODE_01</text>
+                        <text x="423" y="178">SERVICE_NODE_08</text>
+                        <text x="225" y="491">WINJOB://503</text>
+                        <text x="252" y="126">RECOVERY_MODE</text>
+                    </g>
+
+                    <circle cx="300"
+                            cy="300"
+                            r="103"
+                            fill="none"
+                            stroke="url(#wj503Main)"
+                            stroke-width="1"
+                            stroke-dasharray="2 10"
+                            opacity=".5"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

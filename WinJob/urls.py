@@ -3,6 +3,13 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+handler404 = 'core.views.errors.custom_404'
+handler502 = 'core.views.errors.custom_502'
+handler500 = 'core.views.errors.custom_500'
+handler403 = 'core.views.errors.custom_403'
+handler401 = 'core.views.errors.custom_401'
+handler429 = 'core.views.errors.custom_429'
+handler503 = 'core.views.errors.custom_503'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -17,7 +24,6 @@ urlpatterns = [
     path('gamification/', include("gamification.urls", namespace="gamification")),
     path('support/', include("support.urls", namespace="support")),
     path('payment/', include("payment.urls", namespace="payment")),
-    # 👇 آدرس جدید برای درگاه پرداخت (با prefix مجزا)
     path('gateway/', include("django_iranian_payment.contrib.django.urls")),
     path('', include("core.urls", namespace="core")),
 ]

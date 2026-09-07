@@ -1,0 +1,286 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}درخواست تسویه جدید{% endblock %}
+
+{% block extra_style %}
+<style>
+    .form-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 1rem;
+        padding: 2rem;
+    }
+    .form-card .form-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+        margin-bottom: 0.4rem;
+    }
+    .form-card .form-control,
+    .form-card .form-select {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-radius: 0.5rem;
+        padding: 0.7rem 1rem;
+    }
+    .form-card .form-control:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #fd5631;
+        box-shadow: 0 0 0 0.15rem rgba(253, 86, 49, 0.2);
+        color: #fff !important;
+    }
+    .form-card .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+    .form-card .form-text {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 0.8rem;
+    }
+    .balance-info {
+        background: rgba(7, 201, 139, 0.08);
+        border: 1px solid rgba(7, 201, 139, 0.18);
+        border-radius: 0.75rem;
+        padding: 1.15rem 1.35rem;
+    }
+    .balance-info .label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.85rem;
+    }
+    .balance-info .amount {
+        color: #07c98b;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+    .bank-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px solid rgba(255, 255, 255, 0.07);
+        border-radius: 0.75rem;
+        padding: 1.1rem 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+    .bank-card:hover {
+        border-color: rgba(253, 86, 49, 0.35);
+        background: rgba(253, 86, 49, 0.04);
+    }
+    .bank-card.active {
+        border-color: #fd5631;
+        background: rgba(253, 86, 49, 0.08);
+        box-shadow: 0 0 0 1px rgba(253, 86, 49, 0.2);
+    }
+    .bank-card .bank-name {
+        color: #fff;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+    .bank-card .bank-sheba {
+        color: rgba(255, 255, 255, 0.4);
+        font-family: monospace;
+        font-size: 0.8rem;
+        direction: ltr;
+        text-align: left;
+        margin-top: 0.25rem;
+    }
+    .user-type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 50rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .user-type-badge.influencer {
+        background: rgba(253, 86, 49, 0.15);
+        color: #fd5631;
+    }
+    .user-type-badge.team {
+        background: rgba(7, 201, 139, 0.15);
+        color: #07c98b;
+    }
+    .btn-submit {
+        padding: 0.75rem 2.25rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="{% url 'payment:withdrawal_list' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+            <i class="fi-arrow-right me-1"></i>
+            بازگشت
+        </a>
+        <h4 class="text-light mb-0">درخواست تسویه جدید</h4>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- نوع کاربر -->
+            <div class="alert mb-4" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.75);">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fi-info-circle text-primary" style="font-size: 1.3rem;"></i>
+                    <div>
+                        <span class="user-type-badge {% if user_type == 'influencer' %}influencer{% else %}team{% endif %}">
+                            {% if user_type == 'influencer' %}
+                                <i class="fi-megaphone"></i> تسویه ناشر
+                            {% else %}
+                                <i class="fi-users"></i> تسویه تیم محتوا
+                            {% endif %}
+                        </span>
+                        <span class="text-muted fs-sm me-2">
+                            (نوع تسویه بر اساس نقش شما به‌صورت خودکار تعیین شده)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-card">
+
+                <!-- موجودی -->
+                <div class="balance-info mb-4">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="label">موجودی قابل برداشت</div>
+                            <div class="amount">{{ wallet_balance|intcomma }} تومان</div>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-faded-warning px-3 py-2">
+                                حداقل: {{ min_amount|intcomma }} تومان
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" novalidate id="withdrawalForm">
+                    {% csrf_token %}
+
+                    <!-- انتخاب حساب بانکی -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">حساب بانکی مقصد</label>
+                            <a href="{% url 'payment:bank_account_list' %}" class="text-primary text-decoration-none fs-sm fw-medium">
+                                <i class="fi-plus me-1"></i>
+                                مدیریت حساب‌ها
+                            </a>
+                        </div>
+
+                        {% if bank_accounts %}
+                        <div class="row g-2" id="bankCards">
+                            {% for bank in bank_accounts %}
+                            <div class="col-12 col-md-6">
+                                <div class="bank-card {% if forloop.first %}active{% endif %}"
+                                     data-id="{{ bank.id }}"
+                                     onclick="selectBank(this)">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="bank-name">
+                                                {% if bank.bank and bank.bank.logo %}
+                                                    <img src="{{ bank.bank.logo.url }}" alt="" width="20" height="20" class="me-1 rounded-circle" style="object-fit:cover;">
+                                                {% endif %}
+                                                {{ bank.bank_name }}
+                                            </div>
+                                            <div class="bank-sheba">{{ bank.sheba_display }}</div>
+                                            <div class="text-muted fs-xs mt-1">{{ bank.account_holder_name }}</div>
+                                        </div>
+                                        {% if bank.is_default %}
+                                        <span class="badge bg-faded-success">پیش‌فرض</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="bank_account" id="id_bank_account" value="{{ bank_accounts.0.id }}">
+                        {% else %}
+                        <div class="text-center py-4" style="border: 1px dashed rgba(255,255,255,0.12); border-radius: 0.75rem;">
+                            <i class="fi-credit-card" style="font-size: 2.2rem; color: rgba(255,255,255,0.2);"></i>
+                            <p class="text-muted mt-2 mb-3">هیچ حساب بانکی تأیید شده‌ای یافت نشد</p>
+                            <a href="{% url 'payment:bank_account_list' %}" class="btn btn-sm btn-primary rounded-pill">
+                                <i class="fi-plus me-1"></i>
+                                افزودن حساب بانکی
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- مبلغ -->
+                    <div class="mb-4">
+                        <label class="form-label">{{ form.amount.label }}</label>
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control amount-input"
+                                   name="amount"
+                                   id="id_amount"
+                                   placeholder="مبلغ مورد نظر را وارد کنید"
+                                   value="{{ form.amount.value|default:'' }}"
+                                   autocomplete="off"
+                                   inputmode="numeric">
+                            <span class="input-group-text" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
+                                تومان
+                            </span>
+                        </div>
+                        <div class="form-text">{{ form.amount.help_text }}</div>
+                        {% if form.amount.errors %}
+                        <div class="text-danger fs-sm mt-1">{{ form.amount.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- توضیحات -->
+                    <div class="mb-4">
+                        <label class="form-label">{{ form.description.label }}</label>
+                        <textarea class="form-control" name="description" id="id_description" rows="3"
+                                  placeholder="توضیحات اضافی (اختیاری)...">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+
+                    <!-- دکمه -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <span class="text-muted fs-sm">
+                            <i class="fi-info-circle me-1"></i>
+                            پس از ثبت، درخواست توسط ادمین بررسی می‌شود
+                        </span>
+                        <button type="submit" class="btn btn-primary rounded-pill btn-submit">
+                            <i class="fi-send me-2"></i>
+                            ثبت درخواست
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    function selectBank(el) {
+        document.querySelectorAll('.bank-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('id_bank_account').value = el.dataset.id;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountInput = document.getElementById('id_amount');
+        if (!amountInput) return;
+
+        amountInput.addEventListener('input', function() {
+            let raw = this.value.replace(/[^\d]/g, '');
+            if (raw === '') {
+                this.value = '';
+                return;
+            }
+            this.value = parseInt(raw, 10).toLocaleString('en-US');
+        });
+
+        amountInput.addEventListener('focus', function() {
+            this.select();
+        });
+    });
+</script>
+{% endblock %}

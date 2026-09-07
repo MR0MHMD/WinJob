@@ -28,10 +28,23 @@
                     </div>
                     <p class="text-white-50 small mb-4">موجودی فعلی کیف پول شما</p>
                     
-                    <a href="{% url 'payment:wallet_deposit' %}" class="btn btn-gradient-primary text-light">
-                        <i class="fi-plus ms-1"></i>
-                        شارژ کیف پول
-                    </a>
+                    {% if request.user.is_advertiser %}
+                    	<a href="{% url 'payment:wallet_deposit' %}" class="btn btn-gradient-primary text-light">
+                            <i class="fi-plus ms-1"></i>
+                            شارژ کیف پول
+                        </a>
+                    {% elif request.user.is_team_member or request.user.is_influencer %}
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="{% url 'payment:bank_account_list' %}" class="btn btn-gradient-primary text-light">
+                                <i class="fi-plus ms-1"></i>
+                                حساب های بانکی
+                            </a>
+                            <a href="{% url 'payment:withdrawal_list' %}" class="btn btn-gradient-primary text-light">
+                                <i class="fi-plus ms-1"></i>
+                                درخواست تسویه
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
             

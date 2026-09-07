@@ -1,0 +1,282 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}تعداد درخواست‌ها بیش از حد مجاز است | WinJob{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'core/css/errors.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    .wj404-data {
+        stroke-dasharray: 5 13;
+        animation: wj429Data 4.5s linear infinite;
+    }
+
+    .wj429-pulse {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wj429Pulse 3.6s ease-in-out infinite;
+    }
+
+    .wj429-limit {
+        animation: wj429Limit 2.8s ease-in-out infinite;
+    }
+
+    @keyframes wj429Data {
+        to { stroke-dashoffset: -72; }
+    }
+
+    @keyframes wj429Pulse {
+        0%,100% { opacity: .4; transform: scale(.98); }
+        50% { opacity: .8; transform: scale(1.02); }
+    }
+
+    @keyframes wj429Limit {
+        0%,100% { opacity: .35; }
+        50% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+        .wj404-data,.wj429-pulse,.wj429-limit { animation: none !important; }
+        .wj404__button { transition: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj404" aria-labelledby="wj429-title">
+    <div class="wj404__grid" aria-hidden="true"></div>
+
+    <div class="wj404__container">
+        <div class="wj404__content">
+            <div class="wj404__eyebrow">
+                <span class="wj404__eyebrow-dot"></span>
+                ERROR 429 / TOO MANY REQUESTS
+            </div>
+
+            <h1 id="wj429-title" class="wj404__title">
+                کمی بیش از حد
+                <span class="wj404__title-highlight">درخواست فرستادی.</span>
+            </h1>
+
+            <p class="wj404__description">
+                تعداد درخواست‌های ارسال‌شده در این بازه زمانی از حد مجاز عبور کرده است.
+                سیستم WinJob برای حفظ پایداری و امنیت سرویس، فعلاً درخواست‌های جدید
+                را محدود کرده است. لطفاً کمی صبر کنید و دوباره تلاش کنید.
+            </p>
+
+            <div class="wj404__actions">
+                <a href="javascript:location.reload()" class="wj404__button wj404__button--primary">
+                    <i class="fi-refresh"></i>
+                    تلاش دوباره
+                </a>
+
+                <a href="/" class="wj404__button wj404__button--secondary">
+                    <i class="fi-home"></i>
+                    صفحه اصلی
+                </a>
+            </div>
+
+            <div class="wj404__status">
+                <span class="wj404__status-line"></span>
+                WINJOB TRAFFIC
+                <span>•</span>
+                RATE_LIMIT_ACTIVE
+            </div>
+        </div>
+
+        <div class="wj404__visual">
+            <div class="wj404__art">
+                <svg class="wj404__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob 429 Too Many Requests">
+                    <defs>
+                        <linearGradient id="wj429Main" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj429Orange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wj429Core" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#fd5631" stop-opacity=".12"/>
+                            <stop offset=".68" stop-color="#5d3cf2" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="300" cy="300" r="250"
+                            fill="none"
+                            stroke="rgba(255,255,255,.025)"/>
+
+                    <circle cx="300" cy="300" r="232"
+                            fill="none"
+                            stroke="rgba(255,255,255,.035)"
+                            stroke-dasharray="1 13"/>
+
+                    <circle cx="300" cy="300" r="190"
+                            fill="url(#wj429Core)"/>
+
+                    <g fill="none" stroke="url(#wj429Main)" stroke-width="1" opacity=".55">
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+                    </g>
+
+                    <!-- Traffic Network -->
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M54 178 L105 143 L151 175 L202 132 L250 162"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M546 178 L495 143 L449 175 L398 132 L350 162"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M54 422 L105 457 L151 425 L202 468 L250 438"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path d="M546 422 L495 457 L449 425 L398 468 L350 438"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path class="wj404-data"
+                              d="M54 178 L105 143 L151 175 L202 132 L250 162"
+                              stroke="url(#wj429Main)"
+                              stroke-width="2"
+                              opacity=".72"/>
+
+                        <path class="wj404-data"
+                              d="M546 178 L495 143 L449 175 L398 132 L350 162"
+                              stroke="url(#wj429Orange)"
+                              stroke-width="2"
+                              opacity=".72"/>
+                    </g>
+
+                    <!-- Request Nodes -->
+                    <g>
+                        <circle cx="54" cy="178" r="4" fill="#5d3cf2"/>
+                        <circle cx="105" cy="143" r="3" fill="#a08cff"/>
+                        <circle cx="151" cy="175" r="3.5" fill="#fff"/>
+                        <circle cx="202" cy="132" r="4" fill="#5d3cf2"/>
+                        <circle cx="250" cy="162" r="3" fill="#8870ff"/>
+
+                        <circle cx="546" cy="178" r="4" fill="#fd5631"/>
+                        <circle cx="495" cy="143" r="3" fill="#ff8068"/>
+                        <circle cx="449" cy="175" r="3.5" fill="#fff"/>
+                        <circle cx="398" cy="132" r="4" fill="#fd5631"/>
+                        <circle cx="350" cy="162" r="3" fill="#ff775b"/>
+                    </g>
+
+                    <!-- Rate Limit Core -->
+                    <g class="wj429-pulse">
+                        <circle cx="300" cy="300"
+                                r="128"
+                                fill="#1f1b2d"
+                                stroke="rgba(255,255,255,.07)"
+                                stroke-width="1"/>
+
+                        <circle cx="300" cy="300"
+                                r="108"
+                                fill="none"
+                                stroke="url(#wj429Main)"
+                                stroke-width="1.5"
+                                stroke-dasharray="3 10"
+                                opacity=".7"/>
+
+                        <!-- Traffic Gate -->
+                        <path d="M238 247 H362"
+                              stroke="rgba(255,255,255,.14)"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
+
+                        <path d="M238 353 H362"
+                              stroke="rgba(255,255,255,.14)"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
+
+                        <path d="M262 247 V353"
+                              stroke="url(#wj429Main)"
+                              stroke-width="2"/>
+
+                        <path d="M338 247 V353"
+                              stroke="url(#wj429Orange)"
+                              stroke-width="2"/>
+
+                        <!-- Request Bars -->
+                        <path d="M275 332 V302"
+                              stroke="#5d3cf2"
+                              stroke-width="8"
+                              stroke-linecap="round"/>
+
+                        <path d="M300 332 V282"
+                              stroke="#8061f5"
+                              stroke-width="8"
+                              stroke-linecap="round"/>
+
+                        <path d="M325 332 V263"
+                              stroke="#fd5631"
+                              stroke-width="8"
+                              stroke-linecap="round"/>
+
+                        <!-- Limit Line -->
+                        <path d="M250 270 H350"
+                              stroke="#fd5631"
+                              stroke-width="1"
+                              stroke-dasharray="3 5"
+                              opacity=".75"/>
+
+                        <circle class="wj429-limit"
+                                cx="350"
+                                cy="270"
+                                r="4"
+                                fill="#fd5631"/>
+
+                        <!-- Blocked Requests -->
+                        <g stroke="rgba(253,86,49,.65)"
+                           stroke-width="1.5"
+                           stroke-linecap="round">
+                            <path d="M220 284 L233 297"/>
+                            <path d="M233 284 L220 297"/>
+
+                            <path d="M367 304 L380 317"/>
+                            <path d="M380 304 L367 317"/>
+                        </g>
+                    </g>
+
+                    <g text-anchor="middle"
+                       font-family="Arial,sans-serif"
+                       font-weight="900">
+                        <text x="300" y="432"
+                              font-size="76"
+                              letter-spacing="-5"
+                              fill="url(#wj429Main)">
+                            429
+                        </text>
+                    </g>
+
+                    <g font-family="monospace"
+                       font-size="8"
+                       letter-spacing="1"
+                       fill="rgba(255,255,255,.27)">
+                        <text x="42" y="166">REQ_STREAM_01</text>
+                        <text x="430" y="166">REQ_STREAM_08</text>
+                        <text x="225" y="491">WINJOB://429</text>
+                        <text x="253" y="126">RATE_LIMIT</text>
+                    </g>
+
+                    <circle cx="300" cy="300"
+                            r="103"
+                            fill="none"
+                            stroke="url(#wj429Main)"
+                            stroke-width="1"
+                            stroke-dasharray="2 10"
+                            opacity=".5"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

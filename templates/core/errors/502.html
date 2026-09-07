@@ -1,0 +1,484 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}خطای سرور | WinJob{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'core/css/errors.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+<style>
+
+    /* ==========================================================
+       SVG — LIGHTWEIGHT ANIMATION
+       ========================================================== */
+
+    .wj404-data {
+        stroke-dasharray: 5 13;
+        animation: wj404Data 4.5s linear infinite;
+    }
+
+    .wj404-pulse {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wj404Pulse 3.8s ease-in-out infinite;
+    }
+
+    .wj404-signal {
+        animation: wj404Signal 2.8s ease-in-out infinite;
+    }
+
+    @keyframes wj404Data {
+        to {
+            stroke-dashoffset: -72;
+        }
+    }
+
+    @keyframes wj404Pulse {
+        0%, 100% {
+            opacity: .38;
+            transform: scale(.97);
+        }
+        50% {
+            opacity: .72;
+            transform: scale(1.025);
+        }
+    }
+
+    @keyframes wj404Signal {
+        0%, 100% {
+            opacity: .25;
+        }
+        50% {
+            opacity: .8;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .wj404-data,
+        .wj404-pulse,
+        .wj404-signal {
+            animation: none !important;
+        }
+
+        .wj404__button {
+            transition: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj404" aria-labelledby="wj404-title">
+    <div class="wj404__grid" aria-hidden="true"></div>
+
+    <div class="wj404__container">
+        <div class="wj404__content">
+            <div class="wj404__eyebrow">
+                <span class="wj404__eyebrow-dot"></span>
+                ERROR 502 / BAD GATEWAY
+            </div>
+
+            <h1 id="wj404-title" class="wj404__title">
+                ارتباط بین سرورها
+                <span class="wj404__title-highlight">به مشکل خورده.</span>
+            </h1>
+
+            <p class="wj404__description">
+                سرور WinJob پاسخ معتبری از سرویس مقصد دریافت نکرد.
+                این خطا معمولاً موقتیه و ممکنه با چند لحظه صبر
+                و تلاش دوباره برطرف بشه.
+            </p>
+
+            <div class="wj404__actions">
+                <a href="javascript:location.reload()" class="wj404__button wj404__button--primary">
+                    <i class="fi-refresh"></i>
+                    تلاش دوباره
+                </a>
+
+                <a href="/" class="wj404__button wj404__button--secondary">
+                    <i class="fi-home"></i>
+                    صفحه اصلی
+                </a>
+            </div>
+
+            <div class="wj404__status">
+                <span class="wj404__status-line"></span>
+                WINJOB GATEWAY
+                <span>•</span>
+                UPSTREAM UNAVAILABLE
+            </div>
+        </div>
+
+        <div class="wj404__visual">
+            <div class="wj404__art">
+                <svg class="wj404__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob 502 Bad Gateway">
+
+                    <defs>
+                        <linearGradient id="wj502Main" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj502Purple" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#a08cff"/>
+                            <stop offset="1" stop-color="#5d3cf2"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj502Orange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wj502Core" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#5d3cf2" stop-opacity=".13"/>
+                            <stop offset=".7" stop-color="#5d3cf2" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+
+                        <filter id="wj502Glow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="3" result="blur"/>
+                            <feMerge>
+                                <feMergeNode in="blur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+
+                    <!-- =========================================================
+                         ATMOSPHERE
+                         ========================================================= -->
+
+                    <circle cx="300" cy="300" r="250" fill="none" stroke="rgba(255,255,255,.025)" stroke-width="1"/>
+                    <circle cx="300" cy="300" r="232" fill="none" stroke="rgba(255,255,255,.035)" stroke-width="1" stroke-dasharray="1 13"/>
+                    <circle cx="300" cy="300" r="190" fill="url(#wj502Core)"/>
+
+
+                    <!-- =========================================================
+                         OUTER FRAME
+                         ========================================================= -->
+
+                    <g fill="none" stroke="url(#wj502Main)" stroke-width="1" opacity=".55">
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+                    </g>
+
+
+                    <!-- =========================================================
+                         SERVER NETWORK
+                         ========================================================= -->
+
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+                        <path d="M65 210 L118 162 L175 182 L218 140"
+                              stroke="rgba(255,255,255,.065)" stroke-width="1"/>
+
+                        <path d="M535 210 L482 162 L425 182 L382 140"
+                              stroke="rgba(255,255,255,.065)" stroke-width="1"/>
+
+                        <path d="M65 210 L95 300 L65 390 L125 440"
+                              stroke="rgba(255,255,255,.055)" stroke-width="1"/>
+
+                        <path d="M535 210 L505 300 L535 390 L475 440"
+                              stroke="rgba(255,255,255,.055)" stroke-width="1"/>
+
+                        <path d="M125 440 L190 405 L235 445 L300 478"
+                              stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+
+                        <path d="M475 440 L410 405 L365 445 L300 478"
+                              stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+
+
+                        <!-- ACTIVE CONNECTIONS -->
+
+                        <path class="wj404-data"
+                              d="M65 210 L118 162 L175 182 L218 140"
+                              stroke="url(#wj502Purple)"
+                              stroke-width="2"
+                              opacity=".7"/>
+
+                        <path class="wj404-data"
+                              d="M535 210 L482 162 L425 182 L382 140"
+                              stroke="url(#wj502Orange)"
+                              stroke-width="2"
+                              opacity=".7"/>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         NODES
+                         ========================================================= -->
+
+                    <g>
+                        <circle cx="65" cy="210" r="4" fill="#5d3cf2"/>
+                        <circle cx="118" cy="162" r="3" fill="#a08cff"/>
+                        <circle cx="175" cy="182" r="3.5" fill="#fff"/>
+                        <circle cx="218" cy="140" r="4" fill="#5d3cf2"/>
+
+                        <circle cx="535" cy="210" r="4" fill="#fd5631"/>
+                        <circle cx="482" cy="162" r="3" fill="#ff8068"/>
+                        <circle cx="425" cy="182" r="3.5" fill="#fff"/>
+                        <circle cx="382" cy="140" r="4" fill="#fd5631"/>
+
+                        <circle cx="65" cy="390" r="3" fill="#5d3cf2"/>
+                        <circle cx="125" cy="440" r="4" fill="#fd5631"/>
+                        <circle cx="190" cy="405" r="3" fill="#8870ff"/>
+
+                        <circle cx="535" cy="390" r="3" fill="#fd5631"/>
+                        <circle cx="475" cy="440" r="4" fill="#5d3cf2"/>
+                        <circle cx="410" cy="405" r="3" fill="#8870ff"/>
+
+                        <circle cx="235" cy="445" r="3" fill="#fff"/>
+                        <circle cx="300" cy="478" r="4" fill="#fd5631"/>
+                        <circle cx="365" cy="445" r="3" fill="#fff"/>
+                    </g>
+
+
+                    <!-- =========================================================
+                         LEFT SERVER
+                         ========================================================= -->
+
+                    <g transform="translate(146 252)">
+                        <rect x="0" y="0" width="92" height="96" rx="3"
+                              fill="#1f1b2d"
+                              stroke="rgba(255,255,255,.09)"
+                              stroke-width="1"/>
+
+                        <rect x="12" y="15" width="68" height="18"
+                              fill="rgba(255,255,255,.025)"
+                              stroke="rgba(255,255,255,.055)"
+                              stroke-width="1"/>
+
+                        <rect x="12" y="42" width="68" height="18"
+                              fill="rgba(255,255,255,.025)"
+                              stroke="rgba(255,255,255,.055)"
+                              stroke-width="1"/>
+
+                        <circle cx="21" cy="24" r="2.5" fill="#5d3cf2"/>
+                        <circle cx="21" cy="51" r="2.5" fill="#5d3cf2"/>
+
+                        <path d="M32 24 H67" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
+                        <path d="M32 51 H58" stroke="rgba(255,255,255,.09)" stroke-width="1"/>
+
+                        <text x="46" y="80"
+                              text-anchor="middle"
+                              font-family="monospace"
+                              font-size="7"
+                              letter-spacing="1"
+                              fill="rgba(255,255,255,.28)">
+                            SERVER_A
+                        </text>
+                    </g>
+
+
+                    <!-- =========================================================
+                         RIGHT SERVER
+                         ========================================================= -->
+
+                    <g transform="translate(362 252)">
+                        <rect x="0" y="0" width="92" height="96" rx="3"
+                              fill="#1f1b2d"
+                              stroke="rgba(255,255,255,.09)"
+                              stroke-width="1"/>
+
+                        <rect x="12" y="15" width="68" height="18"
+                              fill="rgba(255,255,255,.025)"
+                              stroke="rgba(255,255,255,.055)"
+                              stroke-width="1"/>
+
+                        <rect x="12" y="42" width="68" height="18"
+                              fill="rgba(255,255,255,.025)"
+                              stroke="rgba(255,255,255,.055)"
+                              stroke-width="1"/>
+
+                        <circle cx="21" cy="24" r="2.5" fill="#fd5631"/>
+                        <circle cx="21" cy="51" r="2.5" fill="#fd5631"/>
+
+                        <path d="M32 24 H67" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
+                        <path d="M32 51 H58" stroke="rgba(255,255,255,.09)" stroke-width="1"/>
+
+                        <text x="46" y="80"
+                              text-anchor="middle"
+                              font-family="monospace"
+                              font-size="7"
+                              letter-spacing="1"
+                              fill="rgba(255,255,255,.28)">
+                            SERVER_B
+                        </text>
+                    </g>
+
+
+                    <!-- =========================================================
+                         GATEWAY CONNECTION
+                         ========================================================= -->
+
+                    <g fill="none" stroke-linecap="round">
+
+                        <path d="M238 300 H269"
+                              stroke="url(#wj502Purple)"
+                              stroke-width="2"/>
+
+                        <path d="M331 300 H362"
+                              stroke="url(#wj502Orange)"
+                              stroke-width="2"/>
+
+                        <path d="M269 300 L281 288"
+                              stroke="rgba(255,255,255,.18)"
+                              stroke-width="1"/>
+
+                        <path d="M331 300 L319 312"
+                              stroke="rgba(255,255,255,.18)"
+                              stroke-width="1"/>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         CENTRAL GATEWAY
+                         ========================================================= -->
+
+                    <circle cx="300" cy="300" r="88"
+                            fill="#1f1b2d"
+                            stroke="rgba(255,255,255,.07)"
+                            stroke-width="1"/>
+
+                    <circle class="wj404-pulse"
+                            cx="300" cy="300" r="77"
+                            fill="none"
+                            stroke="url(#wj502Main)"
+                            stroke-width="1.5"
+                            opacity=".5"/>
+
+
+                    <!-- GATEWAY SYMBOL -->
+
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+                        <path d="M272 276 H328"
+                              stroke="url(#wj502Main)"
+                              stroke-width="3"/>
+
+                        <path d="M272 324 H328"
+                              stroke="url(#wj502Main)"
+                              stroke-width="3"/>
+
+                        <path d="M278 276 V324"
+                              stroke="rgba(255,255,255,.3)"
+                              stroke-width="1"/>
+
+                        <path d="M322 276 V324"
+                              stroke="rgba(255,255,255,.3)"
+                              stroke-width="1"/>
+
+                        <path d="M286 288 H314"
+                              stroke="#fff"
+                              stroke-width="1"
+                              opacity=".6"/>
+
+                        <path d="M286 312 H304"
+                              stroke="#fff"
+                              stroke-width="1"
+                              opacity=".35"/>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         ERROR SIGNAL
+                         ========================================================= -->
+
+                    <g class="wj404-signal">
+
+                        <circle cx="300" cy="244" r="5"
+                                fill="#1f1b2d"
+                                stroke="#fd5631"
+                                stroke-width="1.5"/>
+
+                        <path d="M300 229 V216"
+                              stroke="#fd5631"
+                              stroke-width="1.5"
+                              stroke-linecap="round"/>
+
+                        <path d="M294 216 H306"
+                              stroke="#fd5631"
+                              stroke-width="1.5"
+                              stroke-linecap="round"/>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         STATUS TEXT
+                         ========================================================= -->
+
+                    <g text-anchor="middle"
+                       font-family="monospace"
+                       font-size="8"
+                       letter-spacing="1"
+                       fill="rgba(255,255,255,.27)">
+
+                        <text x="300" y="188">GATEWAY</text>
+                        <text x="300" y="405">502 / BAD_GATEWAY</text>
+                        <text x="300" y="422">UPSTREAM_TIMEOUT</text>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         BROKEN SIGNAL
+                         ========================================================= -->
+
+                    <g fill="none" stroke-linecap="round">
+
+                        <path d="M505 300 H530"
+                              stroke="url(#wj502Orange)"
+                              stroke-width="2"/>
+
+                        <path d="M545 300 H563"
+                              stroke="rgba(253,86,49,.18)"
+                              stroke-width="1"
+                              stroke-dasharray="2 7"/>
+
+                        <circle cx="538"
+                                cy="300"
+                                r="7"
+                                fill="none"
+                                stroke="#fd5631"
+                                stroke-width="1"
+                                opacity=".45"/>
+
+                        <circle cx="538"
+                                cy="300"
+                                r="2.5"
+                                fill="#fd5631"/>
+
+                    </g>
+
+
+                    <!-- =========================================================
+                         CORNER DATA
+                         ========================================================= -->
+
+                    <g font-family="monospace"
+                       font-size="8"
+                       letter-spacing="1"
+                       fill="rgba(255,255,255,.25)">
+
+                        <text x="52" y="202">EDGE_01</text>
+                        <text x="460" y="202">EDGE_08</text>
+                        <text x="225" y="492">WINJOB://502</text>
+
+                    </g>
+
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

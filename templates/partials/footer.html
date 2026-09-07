@@ -96,9 +96,11 @@
                 <div class="col-lg-2 col-6 col-sm-4">
                     <h6 class="text-white vazir-bold mb-3 position-relative footer-heading-line">برای همه کاربران</h6>
                     <ul class="list-unstyled footer-links-list">
-                        <li><a href="{% url 'core:pending' %}"><i class="bi bi-chevron-left"></i>راهنما</a></li>
-                        <li><a href="{% url 'blog:list' %}"><i class="bi bi-chevron-left"></i>بلاگ</a></li>
+                        <li><a href="{% url 'core:help' %}"><i class="bi bi-chevron-left"></i>راهنما</a></li>
                         <li><a href="{% url 'core:about' %}"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
+                        <li><a href="{% url 'core:contact' %}"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
+                        <li><a href="{% url 'core:terms' %}"><i class="bi bi-chevron-left"></i>قوانین و مقررات</a></li>
+                        <li><a href="{% url 'core:faq' %}"><i class="bi bi-chevron-left"></i>سوالات متداول</a></li>
                     </ul>
                 </div>
 
@@ -269,14 +271,6 @@
                         <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span></div>
                     </div>
                     <div class="financial-options">
-                        <a href="{% url 'payment:wallet_deposit' %}" class="financial-option" data-option="increase">
-                            <div class="option-icon"><i class="bi bi-plus-circle"></i></div>
-                            <div class="option-info">
-                                <span class="option-title">افزایش موجودی</span>
-                                <span class="option-desc">شارژ کیف پول</span>
-                            </div>
-                            <i class="bi bi-chevron-right option-arrow"></i>
-                        </a>
                         <a href="{% url 'payment:wallet_dashboard' %}" class="financial-option" data-option="transactions">
                             <div class="option-icon"><i class="bi bi-arrow-left-right"></i></div>
                             <div class="option-info">
@@ -285,11 +279,19 @@
                             </div>
                             <i class="bi bi-chevron-right option-arrow"></i>
                         </a>
-                        <a href="{% url 'core:pending' %}" class="financial-option" data-option="withdraw">
+                        <a href="{% url 'payment:withdrawal_list' %}" class="financial-option" data-option="withdraw">
                             <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
                             <div class="option-info">
                                 <span class="option-title">درخواست تسویه</span>
                                 <span class="option-desc">برداشت از کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'payment:bank_account_list' %}" class="financial-option" data-option="withdraw">
+                            <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">حساب های بانکی</span>
+                                <span class="option-desc">واریز وجه از کیف پول به حساب بانکی</span>
                             </div>
                             <i class="bi bi-chevron-right option-arrow"></i>
                         </a>
@@ -358,14 +360,6 @@
                         <div class="balance-amount">{{ request.user.wallet.balance }} <span class="currency">تومان</span></div>
                     </div>
                     <div class="financial-options">
-                        <a href="{% url 'payment:wallet_deposit' %}" class="financial-option" data-option="increase">
-                            <div class="option-icon"><i class="bi bi-plus-circle"></i></div>
-                            <div class="option-info">
-                                <span class="option-title">افزایش موجودی</span>
-                                <span class="option-desc">شارژ کیف پول</span>
-                            </div>
-                            <i class="bi bi-chevron-right option-arrow"></i>
-                        </a>
                         <a href="{% url 'payment:wallet_dashboard' %}" class="financial-option" data-option="transactions">
                             <div class="option-icon"><i class="bi bi-arrow-left-right"></i></div>
                             <div class="option-info">
@@ -374,11 +368,19 @@
                             </div>
                             <i class="bi bi-chevron-right option-arrow"></i>
                         </a>
-                        <a href="{% url 'core:pending' %}" class="financial-option" data-option="withdraw">
+                        <a href="{% url 'payment:withdrawal_list' %}" class="financial-option" data-option="withdraw">
                             <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
                             <div class="option-info">
                                 <span class="option-title">درخواست تسویه</span>
                                 <span class="option-desc">برداشت از کیف پول</span>
+                            </div>
+                            <i class="bi bi-chevron-right option-arrow"></i>
+                        </a>
+                        <a href="{% url 'payment:bank_account_list' %}" class="financial-option" data-option="withdraw">
+                            <div class="option-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="option-info">
+                                <span class="option-title">حساب های بانکی</span>
+                                <span class="option-desc">واریز وجه از کیف پول به حساب بانکی</span>
                             </div>
                             <i class="bi bi-chevron-right option-arrow"></i>
                         </a>

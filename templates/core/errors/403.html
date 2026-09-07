@@ -1,0 +1,232 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}دسترسی غیرمجاز | WinJob{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'core/css/errors.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+<style>
+
+    .wj404-data {
+        stroke-dasharray: 5 13;
+        animation: wj403Data 4.5s linear infinite;
+    }
+
+    .wj403-lock {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wj403Lock 3.8s ease-in-out infinite;
+    }
+
+    @keyframes wj403Data {
+        to { stroke-dashoffset: -72; }
+    }
+
+    @keyframes wj403Lock {
+        0%,100% { opacity: .45; transform: translateY(0); }
+        50% { opacity: .85; transform: translateY(-2px); }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+        .wj404-data,.wj403-lock { animation: none !important; }
+        .wj404__button { transition: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj404" aria-labelledby="wj403-title">
+    <div class="wj404__grid" aria-hidden="true"></div>
+
+    <div class="wj404__container">
+        <div class="wj404__content">
+            <div class="wj404__eyebrow">
+                <span class="wj404__eyebrow-dot"></span>
+                ERROR 403 / FORBIDDEN
+            </div>
+
+            <h1 id="wj403-title" class="wj404__title">
+                این بخش برای شما
+                <span class="wj404__title-highlight">قابل دسترسی نیست.</span>
+            </h1>
+
+            <p class="wj404__description">
+                درخواست شما دریافت شد، اما سطح دسترسی لازم برای مشاهده
+                این بخش را ندارید. اگر فکر می‌کنید این محدودیت اشتباه است،
+                با حساب کاربری مناسب وارد شوید یا با پشتیبانی تماس بگیرید.
+            </p>
+
+            <div class="wj404__actions">
+                <a href="/accounts/login/" class="wj404__button wj404__button--primary">
+                    <i class="fi-log-in"></i>
+                    ورود به حساب
+                </a>
+
+                <a href="/" class="wj404__button wj404__button--secondary">
+                    <i class="fi-home"></i>
+                    صفحه اصلی
+                </a>
+            </div>
+
+            <div class="wj404__status">
+                <span class="wj404__status-line"></span>
+                WINJOB SECURITY
+                <span>•</span>
+                ACCESS_DENIED
+            </div>
+        </div>
+
+        <div class="wj404__visual">
+            <div class="wj404__art">
+                <svg class="wj404__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob 403 Forbidden">
+                    <defs>
+                        <linearGradient id="wj403Main" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj403Orange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wj403Core" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#5d3cf2" stop-opacity=".13"/>
+                            <stop offset=".7" stop-color="#5d3cf2" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="300" cy="300" r="250" fill="none" stroke="rgba(255,255,255,.025)"/>
+                    <circle cx="300" cy="300" r="232" fill="none" stroke="rgba(255,255,255,.035)" stroke-dasharray="1 13"/>
+                    <circle cx="300" cy="300" r="190" fill="url(#wj403Core)"/>
+
+                    <g fill="none" stroke="url(#wj403Main)" stroke-width="1" opacity=".55">
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+                    </g>
+
+                    <!-- Security Network -->
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M64 220 L115 168 L176 190 L220 150 L258 175"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M536 220 L485 168 L424 190 L380 150 L342 175"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M64 220 L95 300 L65 385 L125 438"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path d="M536 220 L505 300 L535 385 L475 438"
+                              stroke="rgba(255,255,255,.055)"/>
+
+                        <path class="wj404-data"
+                              d="M64 220 L115 168 L176 190 L220 150"
+                              stroke="url(#wj403Main)"
+                              stroke-width="2"
+                              opacity=".65"/>
+
+                        <path class="wj404-data"
+                              d="M536 220 L485 168 L424 190 L380 150"
+                              stroke="url(#wj403Orange)"
+                              stroke-width="2"
+                              opacity=".65"/>
+                    </g>
+
+                    <!-- Nodes -->
+                    <g>
+                        <circle cx="64" cy="220" r="4" fill="#5d3cf2"/>
+                        <circle cx="115" cy="168" r="3" fill="#a08cff"/>
+                        <circle cx="176" cy="190" r="3.5" fill="#fff"/>
+                        <circle cx="220" cy="150" r="4" fill="#5d3cf2"/>
+
+                        <circle cx="536" cy="220" r="4" fill="#fd5631"/>
+                        <circle cx="485" cy="168" r="3" fill="#ff8068"/>
+                        <circle cx="424" cy="190" r="3.5" fill="#fff"/>
+                        <circle cx="380" cy="150" r="4" fill="#fd5631"/>
+                    </g>
+
+                    <!-- Shield -->
+                    <g class="wj403-lock">
+                        <path d="M300 183
+                                 L383 217
+                                 V283
+                                 C383 344 347 390 300 414
+                                 C253 390 217 344 217 283
+                                 V217 Z"
+                              fill="#1f1b2d"
+                              stroke="url(#wj403Main)"
+                              stroke-width="2"/>
+
+                        <path d="M300 205
+                                 L360 231
+                                 V281
+                                 C360 325 336 360 300 380
+                                 C264 360 240 325 240 281
+                                 V231 Z"
+                              fill="none"
+                              stroke="rgba(255,255,255,.08)"
+                              stroke-width="1"/>
+
+                        <!-- Lock -->
+                        <rect x="273" y="273"
+                              width="54"
+                              height="43"
+                              rx="3"
+                              fill="none"
+                              stroke="url(#wj403Orange)"
+                              stroke-width="2"/>
+
+                        <path d="M283 273 V258
+                                 C283 235 317 235 317 258
+                                 V273"
+                              fill="none"
+                              stroke="url(#wj403Main)"
+                              stroke-width="2"/>
+
+                        <circle cx="300" cy="293"
+                                r="4"
+                                fill="#fd5631"/>
+
+                        <path d="M300 297 V306"
+                              stroke="#fd5631"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
+                    </g>
+
+                    <g text-anchor="middle" font-family="Arial,sans-serif" font-weight="900">
+                        <text x="300" y="455"
+                              font-size="76"
+                              letter-spacing="-5"
+                              fill="url(#wj403Main)">
+                            403
+                        </text>
+                    </g>
+
+                    <g font-family="monospace" font-size="8" letter-spacing="1" fill="rgba(255,255,255,.27)">
+                        <text x="53" y="208">ACCESS_01</text>
+                        <text x="451" y="208">SECURE_08</text>
+                        <text x="225" y="491">WINJOB://403</text>
+                        <text x="257" y="126">AUTH_REQUIRED</text>
+                    </g>
+
+                    <circle cx="300" cy="300"
+                            r="103"
+                            fill="none"
+                            stroke="url(#wj403Main)"
+                            stroke-width="1"
+                            stroke-dasharray="2 10"
+                            opacity=".5"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

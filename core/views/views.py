@@ -247,3 +247,185 @@ def platform_landing_page(request, slug):
 
 def pending(request):
     return render(request, "core/pages/pending.html")
+
+
+class TermsView(TemplateView):
+    """صفحه قوانین و مقررات"""
+    template_name = "core/pages/terms.html"
+
+
+from django.contrib import messages
+from django.views.generic import TemplateView
+from django.shortcuts import redirect
+from tickets.models import TicketCategory, ContactRequest
+from core.models import FAQ
+from accounts.models import CustomUser   # فرض بر این که مدل یوزر اینجاست
+
+
+class ContactView(TemplateView):
+    """صفحه تماس با ما"""
+    template_name = "core/pages/contact.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = TicketCategory.objects.filter(is_active=True).order_by('order', 'name')
+        # ۵ سوال متداول رندوم
+        context['faqs'] = FAQ.objects.filter(is_active=True).order_by('?')[:5]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        email = request.POST.get('email', '').strip() or None
+        category_id = request.POST.get('subject')
+        message = request.POST.get('message', '').strip()
+
+        # اعتبارسنجی ساده
+        errors = []
+        if not name:
+            errors.append('نام و نام خانوادگی الزامی است.')
+        if not phone:
+            errors.append('شماره موبایل الزامی است.')
+        if not category_id:
+            errors.append('موضوع را انتخاب کنید.')
+        if not message:
+            errors.append('پیام الزامی است.')
+
+        try:
+            category = TicketCategory.objects.get(pk=category_id, is_active=True)
+        except (TicketCategory.DoesNotExist, ValueError, TypeError):
+            errors.append('موضوع انتخاب‌شده معتبر نیست.')
+            category = None
+
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+            return self.get(request, *args, **kwargs)
+
+        # پیدا کردن یوزر بر اساس شماره موبایل (اگر وجود داشته باشد)
+        user = None
+        try:
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            user = CustomUser.objects.filter(phone_number__endswith=clean_phone[-10:]).first()
+            # user = CustomUser.objects.filter(phone_number=phone).first()
+        except Exception:
+            pass
+
+        ContactRequest.objects.create(
+            name=name,
+            phone=phone,
+            email=email,
+            category=category,
+            message=message,
+            user=user,
+            status=ContactRequest.Status.PENDING,
+        )
+
+        messages.success(request, 'پیام شما ثبت شد. به زودی با شما تماس می‌گیریم.')
+        return redirect('core:contact')
+
+class HelpGuideView(TemplateView):
+    """صفحه راهنمای پویا بر اساس نقش کاربر"""
+    template_name = "core/pages/help.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        if not user.is_authenticated:
+            role = 'guest'
+            role_label = 'مهمان'
+        elif getattr(user, 'is_advertiser', None):
+            role = 'advertiser'
+            role_label = 'تبلیغ‌دهنده'
+        elif getattr(user, 'is_influencer', None):
+            role = 'influencer'
+            role_label = 'اینفلوئنسر'
+        elif getattr(user, 'is_team_member', None):
+            role = 'team_member'
+            role_label = 'عضو تیم محتوا'
+        else:
+            role = 'user'
+            role_label = 'کاربر'
+
+        # پیش‌نمایش نقش با ?role=advertiser و ...
+        preview = self.request.GET.get('role')
+        if preview in ('guest', 'advertiser', 'influencer', 'team_member', 'user'):
+            role = preview
+            labels = {
+                'guest': 'مهمان',
+                'advertiser': 'تبلیغ‌دهنده',
+                'influencer': 'اینفلوئنسر',
+                'team_member': 'عضو تیم محتوا',
+                'user': 'کاربر',
+            }
+            role_label = labels[role]
+
+        context['current_role'] = role
+        context['role_label'] = role_label
+        context['is_authenticated'] = user.is_authenticated
+        return context
+
+
+from tickets.models import TicketCategory, TicketTitle
+from core.models import FAQ
+from django.db.models import Count, Q
+
+
+class FAQPageView(TemplateView):
+    template_name = "core/pages/faq.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        categories = (
+            TicketCategory.objects
+            .filter(is_active=True)
+            .annotate(
+                titles_count=Count('titles', filter=Q(titles__is_active=True)),
+                faq_count=Count(
+                    'titles__faqs',
+                    filter=Q(titles__is_active=True, titles__faqs__is_active=True)
+                )
+            )
+            .order_by('order', 'name')
+        )
+        context['categories'] = categories
+
+        cat_slug = self.request.GET.get('category', '').strip()
+        title_slug = self.request.GET.get('title', '').strip()
+
+        selected_category = None
+        selected_title = None
+        titles = []
+        faqs = []
+
+        if cat_slug:
+            selected_category = categories.filter(slug=cat_slug).first()
+            if selected_category:
+                titles = (
+                    TicketTitle.objects
+                    .filter(category=selected_category, is_active=True)
+                    .annotate(faq_count=Count('faqs', filter=Q(faqs__is_active=True)))
+                    .order_by('order', 'name')
+                )
+                if title_slug:
+                    selected_title = titles.filter(slug=title_slug).first()
+                    if selected_title:
+                        faqs = (
+                            FAQ.objects
+                            .filter(title=selected_title, is_active=True)
+                            .order_by('order', 'created_at')
+                        )
+
+        context['selected_category'] = selected_category
+        context['selected_title'] = selected_title
+        context['titles'] = titles
+        context['faqs'] = faqs
+        context['cat_slug'] = cat_slug
+        context['title_slug'] = title_slug
+        context['total_faqs'] = FAQ.objects.filter(is_active=True).count()
+        context['total_categories'] = categories.count()
+        return context
+
+

@@ -1,11 +1,11 @@
 from django import forms
 from django.contrib import admin
-from django.utils.html import mark_safe
+from django.utils.html import mark_safe, format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 
 from content_team.models import ContentServicePlan
-from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType, ContentType
+from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType, ContentType,  Bank
 
 
 @admin.register(Category)
@@ -195,3 +195,61 @@ class ContentTypeAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Bank)
+class BankAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        'logo_preview',
+        'name',
+        'code',
+        'slug',
+        'is_active',
+        'order',
+    )
+    list_filter = ('is_active',)
+    search_fields = ('name', 'code', 'slug')
+    ordering = ('order', 'name')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('logo_preview_large',)
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'name',
+                'slug',
+                'code',
+            )
+        }),
+        (_('لوگو'), {
+            'fields': (
+                'logo',
+                'logo_preview_large',
+            )
+        }),
+        (_('تنظیمات نمایش'), {
+            'fields': (
+                'is_active',
+                'order',
+            )
+        }),
+    )
+
+    def logo_preview(self, obj):
+        if obj.logo:
+            return format_html(
+                '<img src="{}" style="height: 32px; width: auto; border-radius: 4px;" />',
+                obj.logo.url
+            )
+        return "—"
+    logo_preview.short_description = _('لوگو')
+
+    def logo_preview_large(self, obj):
+        if obj.logo:
+            return format_html(
+                '<img src="{}" style="max-height: 120px; width: auto; border-radius: 8px;" />',
+                obj.logo.url
+            )
+        return _('لوگویی آپلود نشده')
+    logo_preview_large.short_description = _('پیش‌نمایش لوگو')

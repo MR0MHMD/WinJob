@@ -277,3 +277,45 @@ class ContentType(models.Model):
 
     def __str__(self):
         return f'{self.name}'
+
+
+class Bank(models.Model):
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('نام بانک')
+    )
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        allow_unicode=True,
+        verbose_name=_('اسلاگ')
+    )
+    code = models.CharField(
+        max_length=3,
+        unique=True,
+        verbose_name=_('کد بانک'),
+        help_text=_('کد ۳ رقمی بانک در شماره شبا')
+    )
+    logo = models.ImageField(
+        upload_to='banks/logos/',
+        blank=True,
+        null=True,
+        verbose_name=_('لوگو')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('فعال')
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('ترتیب نمایش')
+    )
+
+    class Meta:
+        verbose_name = _('بانک')
+        verbose_name_plural = _('بانک‌ها')
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"

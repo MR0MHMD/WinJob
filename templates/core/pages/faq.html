@@ -1,0 +1,644 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}سوالات متداول | سامانه وینجاب{% endblock %}
+
+{% block extra_style %}
+<style>
+    .faq-hero {
+        position: relative;
+        padding: 5.5rem 0 3rem;
+        background: linear-gradient(160deg, #1a1625 0%, #0f0c14 55%, #15101f 100%);
+        overflow: hidden;
+    }
+    .faq-hero::before {
+        content: '';
+        position: absolute;
+        top: -28%; right: -12%;
+        width: 480px; height: 480px;
+        background: radial-gradient(circle, rgba(253,86,49,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .faq-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -32%; left: -8%;
+        width: 420px; height: 420px;
+        background: radial-gradient(circle, rgba(93,60,242,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .faq-hero .container { position: relative; z-index: 1; }
+    .faq-hero .badge-pill {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: rgba(253,86,49,0.12);
+        border: 1px solid rgba(253,86,49,0.25);
+        color: #fd5631; font-size: 0.85rem; font-weight: 600;
+        padding: 0.45rem 1.1rem; border-radius: 999px; margin-bottom: 1rem;
+    }
+    .faq-hero h1 {
+        font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 800;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text; margin-bottom: 0.75rem;
+    }
+    .faq-hero .lead {
+        color: rgba(255,255,255,0.72); font-size: 1.05rem;
+        max-width: 540px; margin: 0 auto; line-height: 1.8;
+    }
+    .faq-stats {
+        display: flex; justify-content: center; gap: 2rem;
+        margin-top: 1.4rem; flex-wrap: wrap;
+    }
+    .faq-stats .stat { text-align: center; }
+    .faq-stats .stat strong {
+        display: block; font-size: 1.5rem; font-weight: 800; color: #fd5631;
+    }
+    .faq-stats .stat span { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+
+    .faq-section { padding: 2.5rem 0 4.5rem; }
+
+    /* Breadcrumb bar */
+    .faq-bar {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+        margin-bottom: 1.5rem; min-height: 42px;
+    }
+    .faq-bar .btn-level {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.5rem 1rem; border-radius: 999px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.7); text-decoration: none;
+        font-size: 0.88rem; font-weight: 600; cursor: pointer;
+        transition: all 0.2s; font-family: inherit;
+    }
+    .faq-bar .btn-level:hover {
+        border-color: rgba(253,86,49,0.4); color: #fd5631;
+        background: rgba(253,86,49,0.08);
+    }
+    .faq-bar .crumb {
+        color: rgba(255,255,255,0.45); font-size: 0.88rem;
+        display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .faq-bar .crumb strong { color: #fff; font-weight: 600; }
+    .faq-bar .crumb .sep { color: rgba(255,255,255,0.25); margin: 0 0.15rem; }
+
+    .section-head { margin-bottom: 1.5rem; }
+    .section-label {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        background: rgba(253,86,49,0.1); border: 1px solid rgba(253,86,49,0.2);
+        color: #fd5631; font-size: 0.8rem; font-weight: 600;
+        padding: 0.35rem 0.9rem; border-radius: 999px; margin-bottom: 0.65rem;
+    }
+    .section-heading {
+        font-size: clamp(1.25rem, 2.5vw, 1.7rem); font-weight: 800;
+        color: #fff; margin-bottom: 0.35rem;
+    }
+    .section-desc {
+        color: rgba(255,255,255,0.55); max-width: 520px; line-height: 1.7; margin: 0;
+    }
+
+    /* ===== Unified card style for all 3 levels ===== */
+    .faq-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 1.25rem;
+        padding: 1.45rem 1.35rem;
+        height: 100%;
+        transition: all 0.28s ease;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        color: inherit;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        text-align: right;
+        font-family: inherit;
+    }
+    .faq-card::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: linear-gradient(135deg, rgba(253,86,49,0.09), rgba(93,60,242,0.06));
+        opacity: 0; transition: opacity 0.28s;
+    }
+    .faq-card:hover {
+        border-color: rgba(253,86,49,0.38);
+        transform: translateY(-5px);
+        box-shadow: 0 14px 36px rgba(0,0,0,0.28);
+    }
+    .faq-card:hover::before { opacity: 1; }
+    .faq-card:focus { outline: none; border-color: rgba(253,86,49,0.5); }
+
+    .faq-card .card-icon {
+        width: 52px; height: 52px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.35rem; margin-bottom: 1rem;
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(93,60,242,0.12));
+        color: #fd5631; position: relative; z-index: 1; flex-shrink: 0;
+    }
+    .faq-card .card-title {
+        color: #fff; font-weight: 700; font-size: 1.05rem;
+        margin-bottom: 0.4rem; position: relative; z-index: 1;
+        line-height: 1.45;
+    }
+    .faq-card .card-desc {
+        color: rgba(255,255,255,0.55); font-size: 0.88rem;
+        line-height: 1.65; margin-bottom: 0.9rem; flex: 1;
+        position: relative; z-index: 1;
+    }
+    .faq-card .card-meta {
+        display: flex; gap: 0.6rem; flex-wrap: wrap;
+        position: relative; z-index: 1; margin-top: auto;
+    }
+    .faq-card .card-meta span {
+        font-size: 0.78rem; color: rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 0.25rem 0.65rem; border-radius: 999px; font-weight: 600;
+    }
+
+    /* FAQ answer card (expandable) */
+    .faq-q-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 1.25rem;
+        overflow: hidden;
+        transition: border-color 0.25s, box-shadow 0.25s;
+        margin-bottom: 0.85rem;
+    }
+    .faq-q-card:hover { border-color: rgba(253,86,49,0.28); }
+    .faq-q-card.is-open {
+        border-color: rgba(253,86,49,0.42);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .faq-q-card .q-head {
+        display: flex; align-items: flex-start; gap: 0.9rem;
+        padding: 1.2rem 1.3rem; cursor: pointer; user-select: none;
+        width: 100%; background: transparent; border: 0;
+        text-align: right; font-family: inherit; color: inherit;
+    }
+    .faq-q-card .q-num {
+        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(93,60,242,0.12));
+        color: #fd5631; font-weight: 800; font-size: 0.9rem;
+    }
+    .faq-q-card .q-text {
+        flex: 1; color: #fff; font-weight: 600; font-size: 0.97rem;
+        line-height: 1.55; padding-top: 0.25rem;
+    }
+    .faq-q-card .q-toggle {
+        color: #fd5631; font-size: 1.35rem; font-weight: 400;
+        flex-shrink: 0; line-height: 1; padding-top: 0.15rem;
+        transition: transform 0.2s;
+    }
+    .faq-q-card.is-open .q-toggle { transform: rotate(45deg); }
+    .faq-q-card .q-body {
+        display: none;
+        padding: 0 1.3rem 1.25rem 4rem;
+        color: rgba(255,255,255,0.68);
+        font-size: 0.93rem; line-height: 1.85;
+    }
+    .faq-q-card.is-open .q-body { display: block; }
+    .faq-q-card .q-body p { margin-bottom: 0.55rem; }
+    .faq-q-card .q-body p:last-child { margin-bottom: 0; }
+
+    /* Loading / empty */
+    .faq-loading {
+        text-align: center; padding: 3rem 1rem;
+        color: rgba(255,255,255,0.5);
+    }
+    .faq-loading .spinner {
+        width: 36px; height: 36px; border: 3px solid rgba(253,86,49,0.2);
+        border-top-color: #fd5631; border-radius: 50%;
+        animation: spin 0.7s linear infinite; margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .faq-empty {
+        text-align: center; padding: 3rem 1.5rem;
+        background: rgba(255,255,255,0.02);
+        border: 1px dashed rgba(255,255,255,0.1);
+        border-radius: 1.25rem;
+    }
+    .faq-empty i {
+        font-size: 2.4rem; color: rgba(255,255,255,0.2);
+        margin-bottom: 0.9rem; display: block;
+    }
+    .faq-empty h5 { color: rgba(255,255,255,0.7); font-weight: 700; margin-bottom: 0.35rem; }
+    .faq-empty p { color: rgba(255,255,255,0.45); font-size: 0.92rem; margin: 0; }
+
+    /* CTA */
+    .faq-cta {
+        background: linear-gradient(135deg, rgba(253,86,49,0.1), rgba(93,60,242,0.08));
+        border: 1px solid rgba(253,86,49,0.22);
+        border-radius: 1.25rem; padding: 1.75rem; text-align: center; margin-top: 2.5rem;
+    }
+    .faq-cta h5 { color: #fff; font-weight: 700; margin-bottom: 0.4rem; }
+    .faq-cta p { color: rgba(255,255,255,0.6); font-size: 0.92rem; margin-bottom: 1.1rem; }
+    .btn-faq-primary {
+        background: linear-gradient(135deg, #fd5631, #e04a28);
+        border: none; color: #fff; font-weight: 700;
+        padding: 0.7rem 1.5rem; border-radius: 999px; text-decoration: none;
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        box-shadow: 0 8px 22px rgba(253,86,49,0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-faq-primary:hover {
+        transform: translateY(-2px); box-shadow: 0 12px 28px rgba(253,86,49,0.4); color: #fff;
+    }
+    .btn-faq-outline {
+        background: transparent; border: 1px solid rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.85); font-weight: 600;
+        padding: 0.65rem 1.3rem; border-radius: 999px; text-decoration: none;
+        display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.2s;
+    }
+    .btn-faq-outline:hover {
+        border-color: #fd5631; color: #fd5631; background: rgba(253,86,49,0.08);
+    }
+
+    /* Fade transition for panels */
+    .faq-panel { display: none; }
+    .faq-panel.is-active { display: block; animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 575.98px) {
+        .faq-q-card .q-body { padding-right: 1.3rem; padding-left: 1.3rem; }
+        .faq-card { padding: 1.25rem 1.1rem; }
+    }
+    
+    .page-wrapper{
+        padding: 0 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="faq-hero">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="badge-pill">
+                    <i class="bi bi-question-circle"></i>
+                    مرکز پاسخگویی
+                </div>
+                <h1>سوالات متداول</h1>
+                <p class="lead">
+                    دسته را انتخاب کن، بعد موضوع، بعد جوابت را بخوان.
+                    همه چیز با کارت‌های یکدست و بدون رفرش صفحه.
+                </p>
+                <div class="faq-stats">
+                    <div class="stat">
+                        <strong>{{ total_categories }}</strong>
+                        <span>دسته‌بندی</span>
+                    </div>
+                    <div class="stat">
+                        <strong>{{ total_faqs }}</strong>
+                        <span>سوال پاسخ‌داده‌شده</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="faq-section">
+    <div class="container">
+
+        <!-- Navigation bar -->
+        <div class="faq-bar" id="faqBar">
+            <button type="button" class="btn-level" id="btnBack" style="display:none;">
+                <i class="bi bi-arrow-right"></i>
+                <span id="btnBackText">بازگشت</span>
+            </button>
+            <div class="crumb" id="faqCrumb" style="display:none;"></div>
+        </div>
+
+        <!-- ===== Panel 1: Categories ===== -->
+        <div class="faq-panel is-active" id="panelCategories" data-level="categories">
+            <div class="section-head">
+                <span class="section-label"><i class="bi bi-grid"></i> دسته‌بندی‌ها</span>
+                <h2 class="section-heading">موضوع کلی سوالت چیه؟</h2>
+                <p class="section-desc">یکی از دسته‌ها را انتخاب کن تا موضوعات مربوط به آن نمایش داده شود.</p>
+            </div>
+            <div class="row g-3 g-lg-4" id="categoriesGrid">
+                {% for cat in categories %}
+                <div class="col-6 col-md-4">
+                    <button type="button"
+                            class="faq-card js-category-card"
+                            data-id="{{ cat.pk }}"
+                            data-name="{{ cat.name }}"
+                            data-icon="{{ cat.icon|default:'bi-folder' }}">
+                        <div class="card-icon"><i class="{{ cat.icon|default:'bi-folder' }}"></i></div>
+                        <div class="card-title">{{ cat.name }}</div>
+                        <div class="card-desc">
+                            {% if cat.description %}{{ cat.description|truncatechars:95 }}{% else %}سوالات مربوط به {{ cat.name }}{% endif %}
+                        </div>
+                        <div class="card-meta">
+                            <span>{{ cat.titles_count }} موضوع</span>
+                            <span>{{ cat.faq_count }} سوال</span>
+                        </div>
+                    </button>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="faq-empty">
+                        <i class="bi bi-inbox"></i>
+                        <h5>هنوز دسته‌بندی‌ای تعریف نشده</h5>
+                        <p>پس از اجرای load_tickets دسته‌ها اینجا ظاهر می‌شوند.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ===== Panel 2: Titles ===== -->
+        <div class="faq-panel" id="panelTitles" data-level="titles">
+            <div class="section-head">
+                <span class="section-label" id="titlesLabel"><i class="bi bi-folder"></i> موضوعات</span>
+                <h2 class="section-heading" id="titlesHeading">کدام موضوع؟</h2>
+                <p class="section-desc" id="titlesDesc">یکی از موضوعات را انتخاب کن.</p>
+            </div>
+            <div class="row g-3 g-lg-4" id="titlesGrid">
+                <!-- filled by AJAX -->
+            </div>
+        </div>
+
+        <!-- ===== Panel 3: FAQs ===== -->
+        <div class="faq-panel" id="panelFaqs" data-level="faqs">
+            <div class="section-head">
+                <span class="section-label" id="faqsLabel"><i class="bi bi-chat-quote"></i> سوالات</span>
+                <h2 class="section-heading" id="faqsHeading">سوالات این موضوع</h2>
+                <p class="section-desc" id="faqsDesc">روی هر سوال کلیک کن تا پاسخ را ببینی.</p>
+            </div>
+            <div id="faqsList">
+                <!-- filled by AJAX -->
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="faq-cta">
+            <h5>جوابت را پیدا نکردی؟</h5>
+            <p>تیم پشتیبانی در ساعات کاری پاسخگوست. تیکت بزن یا از صفحه تماس پیام بفرست.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a href="{% url 'tickets:ticket_create' %}" class="btn-faq-primary">
+                    <i class="bi bi-ticket-detailed"></i> ثبت تیکت جدید
+                </a>
+                <a href="{% url 'core:contact' %}" class="btn-faq-outline">
+                    <i class="bi bi-chat-dots"></i> تماس با ما
+                </a>
+                <a href="{% url 'core:help' %}" class="btn-faq-outline">
+                    <i class="bi bi-book"></i> راهنمای استفاده
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+    const URLS = {
+        titles: function (categoryId) {
+            return '{% url "core:faq_titles_api" category_id=0 %}'.replace('/0/', '/' + categoryId + '/');
+        },
+        questions: function (titleId) {
+            return '{% url "core:faq_questions_api" title_id=0 %}'.replace('/0/', '/' + titleId + '/');
+        },
+    };
+
+    const panels = {
+        categories: document.getElementById('panelCategories'),
+        titles: document.getElementById('panelTitles'),
+        faqs: document.getElementById('panelFaqs'),
+    };
+    const btnBack = document.getElementById('btnBack');
+    const btnBackText = document.getElementById('btnBackText');
+    const faqCrumb = document.getElementById('faqCrumb');
+    const titlesGrid = document.getElementById('titlesGrid');
+    const faqsList = document.getElementById('faqsList');
+
+    let state = {
+        level: 'categories', // categories | titles | faqs
+        category: null,
+        title: null,
+    };
+
+    function showPanel(name) {
+        Object.keys(panels).forEach(function (k) {
+            panels[k].classList.toggle('is-active', k === name);
+        });
+        state.level = name;
+        updateBar();
+        window.scrollTo({ top: panels[name].offsetTop - 100, behavior: 'smooth' });
+    }
+
+    function updateBar() {
+        if (state.level === 'categories') {
+            btnBack.style.display = 'none';
+            faqCrumb.style.display = 'none';
+            return;
+        }
+        btnBack.style.display = 'inline-flex';
+        faqCrumb.style.display = 'inline-flex';
+
+        if (state.level === 'titles') {
+            btnBackText.textContent = 'بازگشت به دسته‌ها';
+            faqCrumb.innerHTML = '<strong>' + escapeHtml(state.category.name) + '</strong>';
+        } else if (state.level === 'faqs') {
+            btnBackText.textContent = 'بازگشت به موضوعات';
+            faqCrumb.innerHTML =
+                '<span>' + escapeHtml(state.category.name) + '</span>' +
+                '<span class="sep">/</span>' +
+                '<strong>' + escapeHtml(state.title.name) + '</strong>';
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function nl2br(str) {
+        return escapeHtml(str).replace(/\n/g, '<br>');
+    }
+
+    function showLoading(container) {
+        container.innerHTML =
+            '<div class="col-12"><div class="faq-loading"><div class="spinner"></div>در حال بارگذاری...</div></div>';
+    }
+
+    function showEmpty(container, title, desc) {
+        container.innerHTML =
+            '<div class="col-12"><div class="faq-empty">' +
+            '<i class="bi bi-inbox"></i>' +
+            '<h5>' + escapeHtml(title) + '</h5>' +
+            '<p>' + escapeHtml(desc) + '</p></div></div>';
+    }
+
+    // ----- Load titles -----
+    function loadTitles(categoryId, categoryMeta) {
+        state.category = categoryMeta || state.category;
+        showPanel('titles');
+        showLoading(titlesGrid);
+
+        document.getElementById('titlesLabel').innerHTML =
+            '<i class="' + escapeHtml(state.category.icon || 'bi-folder') + '"></i> ' +
+            escapeHtml(state.category.name);
+        document.getElementById('titlesHeading').textContent = 'کدام موضوع؟';
+        document.getElementById('titlesDesc').textContent =
+            state.category.description || 'یکی از موضوعات زیر را انتخاب کن تا سوالاتش نمایش داده شود.';
+
+        fetch(URLS.titles(categoryId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.ok) {
+                    showEmpty(titlesGrid, 'خطا', data.error || 'مشکلی پیش آمد');
+                    return;
+                }
+                if (data.category) {
+                    state.category = data.category;
+                    updateBar();
+                }
+                if (!data.titles || !data.titles.length) {
+                    showEmpty(titlesGrid, 'موضوعی نیست', 'برای این دسته هنوز موضوعی ثبت نشده است.');
+                    return;
+                }
+                titlesGrid.innerHTML = data.titles.map(function (t) {
+                    var desc = t.description
+                        ? escapeHtml(t.description).slice(0, 95)
+                        : 'سوالات مربوط به ' + escapeHtml(t.name);
+                    return (
+                        '<div class="col-6 col-md-4">' +
+                        '<button type="button" class="faq-card js-title-card" data-id="' + t.id + '" data-name="' + escapeHtml(t.name) + '">' +
+                        '<div class="card-icon"><i class="bi bi-bookmark-star"></i></div>' +
+                        '<div class="card-title">' + escapeHtml(t.name) + '</div>' +
+                        '<div class="card-desc">' + desc + '</div>' +
+                        '<div class="card-meta"><span>' + t.faq_count + ' سوال</span></div>' +
+                        '</button></div>'
+                    );
+                }).join('');
+            })
+            .catch(function () {
+                showEmpty(titlesGrid, 'خطای شبکه', 'لطفاً دوباره تلاش کنید.');
+            });
+    }
+
+    // ----- Load FAQs -----
+    function loadFaqs(titleId, titleMeta) {
+        state.title = titleMeta || state.title;
+        showPanel('faqs');
+        faqsList.innerHTML = '<div class="faq-loading"><div class="spinner"></div>در حال بارگذاری...</div>';
+
+        document.getElementById('faqsLabel').innerHTML =
+            '<i class="bi bi-chat-quote"></i> ' + escapeHtml(state.category.name);
+        document.getElementById('faqsHeading').textContent = state.title.name;
+        document.getElementById('faqsDesc').textContent =
+            state.title.description || 'روی هر سوال کلیک کن تا پاسخ را ببینی.';
+
+        fetch(URLS.questions(titleId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.ok) {
+                    faqsList.innerHTML =
+                        '<div class="faq-empty"><i class="bi bi-inbox"></i><h5>خطا</h5><p>' +
+                        escapeHtml(data.error || 'مشکلی پیش آمد') + '</p></div>';
+                    return;
+                }
+                if (data.title) state.title = data.title;
+                if (data.category) state.category = data.category;
+                updateBar();
+
+                if (!data.faqs || !data.faqs.length) {
+                    faqsList.innerHTML =
+                        '<div class="faq-empty"><i class="bi bi-question-lg"></i>' +
+                        '<h5>سوالی ثبت نشده</h5><p>می‌تونی از سیستم تیکت سوالت را بپرسی.</p></div>';
+                    return;
+                }
+
+                faqsList.innerHTML = data.faqs.map(function (f, i) {
+                    return (
+                        '<div class="faq-q-card' + (i === 0 ? ' is-open' : '') + '" data-id="' + f.id + '">' +
+                        '<button type="button" class="q-head js-faq-toggle">' +
+                        '<span class="q-num">' + (i + 1) + '</span>' +
+                        '<span class="q-text">' + escapeHtml(f.question) + '</span>' +
+                        '<span class="q-toggle">+</span>' +
+                        '</button>' +
+                        '<div class="q-body">' + nl2br(f.answer) + '</div>' +
+                        '</div>'
+                    );
+                }).join('');
+            })
+            .catch(function () {
+                faqsList.innerHTML =
+                    '<div class="faq-empty"><i class="bi bi-wifi-off"></i><h5>خطای شبکه</h5><p>لطفاً دوباره تلاش کنید.</p></div>';
+            });
+    }
+
+    // ----- Events -----
+    document.getElementById('categoriesGrid').addEventListener('click', function (e) {
+        var card = e.target.closest('.js-category-card');
+        if (!card) return;
+        loadTitles(card.dataset.id, {
+            id: card.dataset.id,
+            name: card.dataset.name,
+            icon: card.dataset.icon,
+            description: '',
+        });
+    });
+
+    titlesGrid.addEventListener('click', function (e) {
+        var card = e.target.closest('.js-title-card');
+        if (!card) return;
+        loadFaqs(card.dataset.id, {
+            id: card.dataset.id,
+            name: card.dataset.name,
+            description: '',
+        });
+    });
+
+    faqsList.addEventListener('click', function (e) {
+        var btn = e.target.closest('.js-faq-toggle');
+        if (!btn) return;
+        var card = btn.closest('.faq-q-card');
+        if (!card) return;
+        var wasOpen = card.classList.contains('is-open');
+        // optional: close others
+        faqsList.querySelectorAll('.faq-q-card.is-open').forEach(function (c) {
+            c.classList.remove('is-open');
+        });
+        if (!wasOpen) card.classList.add('is-open');
+    });
+
+    btnBack.addEventListener('click', function () {
+        if (state.level === 'faqs') {
+            showPanel('titles');
+        } else if (state.level === 'titles') {
+            showPanel('categories');
+            state.category = null;
+            state.title = null;
+        }
+    });
+})();
+</script>
+{% endblock %}

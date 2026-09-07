@@ -1,0 +1,211 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}خطای داخلی سرور | WinJob{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'core/css/errors.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    .wj404-data {
+        stroke-dasharray: 5 13;
+        animation: wj500Data 4.5s linear infinite;
+    }
+
+    .wj404-pulse {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wj500Pulse 3.8s ease-in-out infinite;
+    }
+
+    .wj500-error {
+        animation: wj500Error 2.6s ease-in-out infinite;
+    }
+
+    @keyframes wj500Data {
+        to { stroke-dashoffset: -72; }
+    }
+
+    @keyframes wj500Pulse {
+        0%,100% { opacity: .35; transform: scale(.97); }
+        50% { opacity: .7; transform: scale(1.025); }
+    }
+
+    @keyframes wj500Error {
+        0%,100% { opacity: .3; }
+        50% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+        .wj404-data,.wj404-pulse,.wj500-error { animation: none !important; }
+        .wj404__button { transition: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj404" aria-labelledby="wj500-title">
+    <div class="wj404__grid" aria-hidden="true"></div>
+
+    <div class="wj404__container">
+        <div class="wj404__content">
+            <div class="wj404__eyebrow">
+                <span class="wj404__eyebrow-dot"></span>
+                ERROR 500 / INTERNAL SERVER ERROR
+            </div>
+
+            <h1 id="wj500-title" class="wj404__title">
+                یک اتفاق غیرمنتظره
+                <span class="wj404__title-highlight">داخل سرور رخ داده.</span>
+            </h1>
+
+            <p class="wj404__description">
+                سرور WinJob هنگام پردازش درخواست با یک خطای داخلی مواجه شد.
+                مشکل از سمت ماست و تیم فنی می‌تواند آن را بررسی کند.
+                لطفاً چند لحظه بعد دوباره تلاش کنید.
+            </p>
+
+            <div class="wj404__actions">
+                <a href="javascript:location.reload()" class="wj404__button wj404__button--primary">
+                    <i class="fi-refresh"></i>
+                    تلاش دوباره
+                </a>
+
+                <a href="/" class="wj404__button wj404__button--secondary">
+                    <i class="fi-home"></i>
+                    صفحه اصلی
+                </a>
+            </div>
+
+            <div class="wj404__status">
+                <span class="wj404__status-line"></span>
+                WINJOB CORE
+                <span>•</span>
+                INTERNAL_FAILURE
+            </div>
+        </div>
+
+        <div class="wj404__visual">
+            <div class="wj404__art">
+                <svg class="wj404__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob 500 Internal Server Error">
+                    <defs>
+                        <linearGradient id="wj500Main" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj500Purple" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#a08cff"/>
+                            <stop offset="1" stop-color="#5d3cf2"/>
+                        </linearGradient>
+
+                        <linearGradient id="wj500Orange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wj500Core" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#fd5631" stop-opacity=".12"/>
+                            <stop offset=".7" stop-color="#5d3cf2" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="300" cy="300" r="250" fill="none" stroke="rgba(255,255,255,.025)"/>
+                    <circle cx="300" cy="300" r="232" fill="none" stroke="rgba(255,255,255,.035)" stroke-dasharray="1 13"/>
+                    <circle cx="300" cy="300" r="185" fill="url(#wj500Core)"/>
+
+                    <g fill="none" stroke="url(#wj500Main)" stroke-width="1" opacity=".55">
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+                    </g>
+
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M65 214 L120 165 L177 185 L220 142 L255 165" stroke="rgba(255,255,255,.06)"/>
+                        <path d="M65 214 L94 300 L64 386 L125 440" stroke="rgba(255,255,255,.055)"/>
+                        <path d="M535 214 L480 165 L423 185 L380 142 L345 165" stroke="rgba(255,255,255,.06)"/>
+                        <path d="M535 214 L506 300 L536 386 L475 440" stroke="rgba(255,255,255,.055)"/>
+
+                        <path class="wj404-data" d="M65 214 L120 165 L177 185 L220 142" stroke="url(#wj500Purple)" stroke-width="2" opacity=".7"/>
+                        <path class="wj404-data" d="M535 214 L480 165 L423 185 L380 142" stroke="url(#wj500Orange)" stroke-width="2" opacity=".7"/>
+                    </g>
+
+                    <g>
+                        <circle cx="65" cy="214" r="4" fill="#5d3cf2"/>
+                        <circle cx="120" cy="165" r="3" fill="#a08cff"/>
+                        <circle cx="177" cy="185" r="3.5" fill="#fff"/>
+                        <circle cx="220" cy="142" r="4" fill="#5d3cf2"/>
+
+                        <circle cx="535" cy="214" r="4" fill="#fd5631"/>
+                        <circle cx="480" cy="165" r="3" fill="#ff8068"/>
+                        <circle cx="423" cy="185" r="3.5" fill="#fff"/>
+                        <circle cx="380" cy="142" r="4" fill="#fd5631"/>
+                    </g>
+
+                    <!-- Broken Core -->
+                    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M194 238 L300 177 L406 238 V362 L300 423 L194 362 Z"
+                              stroke="url(#wj500Main)" stroke-width="1.5" opacity=".7"/>
+
+                        <path d="M215 250 L272 217"
+                              stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+
+                        <path d="M328 383 L385 350"
+                              stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+                    </g>
+
+                    <circle cx="300" cy="300" r="126"
+                            fill="#1f1b2d"
+                            stroke="rgba(255,255,255,.07)"
+                            stroke-width="1"/>
+
+                    <!-- Internal failure -->
+                    <g class="wj500-error">
+                        <path d="M300 218 V274"
+                              stroke="url(#wj500Main)"
+                              stroke-width="5"
+                              stroke-linecap="round"/>
+
+                        <path d="M300 292 V300"
+                              stroke="#fd5631"
+                              stroke-width="5"
+                              stroke-linecap="round"/>
+
+                        <circle cx="300" cy="345" r="4"
+                                fill="#fd5631"/>
+                    </g>
+
+                    <g text-anchor="middle" font-family="Arial,sans-serif" font-weight="900">
+                        <text x="300" y="395"
+                              font-size="74"
+                              letter-spacing="-5"
+                              fill="url(#wj500Main)">
+                            500
+                        </text>
+                    </g>
+
+                    <circle class="wj404-pulse"
+                            cx="300" cy="300"
+                            r="101"
+                            fill="none"
+                            stroke="url(#wj500Main)"
+                            stroke-width="1"
+                            opacity=".45"/>
+
+                    <g font-family="monospace" font-size="8" letter-spacing="1" fill="rgba(255,255,255,.27)">
+                        <text x="52" y="202">CORE_01</text>
+                        <text x="452" y="202">CORE_08</text>
+                        <text x="225" y="491">WINJOB://500</text>
+                        <text x="247" y="126">SYSTEM_FAILURE</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

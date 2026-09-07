@@ -1,0 +1,711 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}قوانین و مقررات | سامانه وینجاب{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ========== Hero — هماهنگ با about ========== */
+    .terms-hero {
+        position: relative;
+        padding: 5.5rem 0 3.5rem;
+        background: linear-gradient(135deg, #1a1625 0%, #0f0c14 100%);
+        overflow: hidden;
+    }
+    .terms-hero::before {
+        content: '';
+        position: absolute;
+        top: -25%;
+        right: -15%;
+        width: 520px;
+        height: 520px;
+        background: radial-gradient(circle, rgba(253,86,49,0.09) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .terms-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -35%;
+        left: -10%;
+        width: 480px;
+        height: 480px;
+        background: radial-gradient(circle, rgba(93,60,242,0.09) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .terms-hero .container { position: relative; z-index: 1; }
+    .terms-hero h1 {
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.75rem;
+    }
+    .terms-hero .lead {
+        color: rgba(255,255,255,0.78);
+        font-size: 1.05rem;
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .terms-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.65);
+        margin-top: 1.25rem;
+    }
+    .terms-meta i { color: #fd5631; }
+
+    /* ========== بخش محتوا ========== */
+    .terms-section {
+        padding: 3rem 0 4.5rem;
+    }
+
+    .terms-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+    @media (max-width: 991.98px) {
+        .terms-layout { grid-template-columns: 1fr; }
+        .terms-toc-desktop { display: none !important; }
+    }
+    @media (min-width: 992px) {
+        .terms-toc-mobile { display: none !important; }
+    }
+
+    /* ========== TOC دسکتاپ ========== */
+    .terms-toc-desktop {
+        position: relative;
+        width: 250px;
+    }
+    .terms-toc {
+        width: 250px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.15rem;
+        padding: 1.25rem 1rem;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(253,86,49,0.35) transparent;
+        transition: none;
+    }
+    .terms-toc.is-fixed {
+        position: fixed;
+        z-index: 30;
+    }
+    .terms-toc.is-bottom {
+        position: absolute;
+        bottom: 0;
+        top: auto !important;
+    }
+    .terms-toc::-webkit-scrollbar { width: 4px; }
+    .terms-toc::-webkit-scrollbar-thumb {
+        background: rgba(253,86,49,0.35);
+        border-radius: 4px;
+    }
+    .terms-toc h6 {
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        color: rgba(255,255,255,0.4);
+        margin-bottom: 0.85rem;
+        padding: 0 0.5rem;
+        text-transform: uppercase;
+    }
+    .terms-toc ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .terms-toc li { margin-bottom: 0.2rem; }
+    .terms-toc a {
+        display: block;
+        padding: 0.42rem 0.65rem;
+        border-radius: 0.55rem;
+        color: rgba(255,255,255,0.68);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        border-right: 2px solid transparent;
+        line-height: 1.4;
+    }
+    .terms-toc a:hover {
+        background: rgba(253,86,49,0.08);
+        color: #fd5631;
+    }
+    .terms-toc a.active {
+        background: rgba(253,86,49,0.12);
+        color: #fd5631;
+        border-right-color: #fd5631;
+        font-weight: 600;
+    }
+
+    /* ========== TOC موبایل ========== */
+    .terms-toc-mobile {
+        position: sticky;
+        top: 70px;
+        z-index: 40;
+        background: rgba(31, 27, 45, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        padding: 0.65rem 0;
+        margin: 0 -0.75rem 1.5rem;
+    }
+    .terms-toc-mobile-inner {
+        display: flex;
+        gap: 0.45rem;
+        overflow-x: auto;
+        padding: 0 1rem;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .terms-toc-mobile-inner::-webkit-scrollbar { display: none; }
+    .terms-toc-mobile a {
+        flex-shrink: 0;
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.7);
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    .terms-toc-mobile a:hover,
+    .terms-toc-mobile a.active {
+        background: rgba(253,86,49,0.15);
+        border-color: rgba(253,86,49,0.35);
+        color: #fd5631;
+    }
+
+    /* ========== کارت‌های محتوا ========== */
+    .terms-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 1.25rem;
+        padding: 1.75rem 1.9rem;
+        margin-bottom: 1.25rem;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .terms-card:hover {
+        border-color: rgba(253,86,49,0.22);
+        box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+    }
+    .terms-card .section-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(253,86,49,0.18), rgba(93,60,242,0.18));
+        color: #fd5631;
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-left: 0.7rem;
+        flex-shrink: 0;
+    }
+    .terms-card h2 {
+        font-size: 1.28rem;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    .terms-card .card-body {
+        margin-top: 1.1rem;
+        color: rgba(255,255,255,0.75);
+        font-size: 0.97rem;
+        line-height: 1.85;
+    }
+    .terms-card .card-body p { margin-bottom: 0.85rem; }
+    .terms-card .card-body ul,
+    .terms-card .card-body ol {
+        padding-right: 1.25rem;
+        margin-bottom: 0.9rem;
+    }
+    .terms-card .card-body li { margin-bottom: 0.4rem; }
+    .terms-card .card-body strong { color: rgba(255,255,255,0.95); }
+
+    .terms-card .highlight-box {
+        background: rgba(253,86,49,0.09);
+        border: 1px solid rgba(253,86,49,0.18);
+        border-radius: 0.85rem;
+        padding: 0.95rem 1.15rem;
+        margin: 1rem 0;
+        font-size: 0.92rem;
+        color: rgba(255,255,255,0.85);
+    }
+    .terms-card .highlight-box.info {
+        background: rgba(93,60,242,0.1);
+        border-color: rgba(93,60,242,0.22);
+    }
+    .terms-card .highlight-box.warning {
+        background: rgba(253,188,49,0.08);
+        border-color: rgba(253,188,49,0.2);
+    }
+
+    .terms-footer-note {
+        text-align: center;
+        padding: 2rem 1rem 0.5rem;
+        color: rgba(255,255,255,0.45);
+        font-size: 0.9rem;
+    }
+    .terms-footer-note a {
+        color: #fd5631;
+        text-decoration: none;
+    }
+    .terms-footer-note a:hover { text-decoration: underline; }
+
+    @media (max-width: 575.98px) {
+        .terms-hero h1 { font-size: 2rem; }
+        .terms-card { padding: 1.35rem 1.15rem; }
+        .terms-hero { padding: 4.5rem 0 2.75rem; }
+    }
+    
+    .page-wrapper{
+        padding: 0 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="terms-hero">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <div class="mb-3">
+                    <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill">
+                        <i class="bi bi-shield-check me-1"></i> قوانین و مقررات
+                    </span>
+                </div>
+                <h1>قوانین و مقررات</h1>
+                <p class="lead mb-0">
+                    با استفاده از سامانه وینجاب، شما این قوانین را می‌پذیرید.
+                    لطفاً قبل از ثبت‌نام و استفاده از خدمات، تمام بندها را با دقت مطالعه کنید.
+                </p>
+                <div class="terms-meta">
+                    <i class="bi bi-calendar3"></i>
+                    <span>آخرین به‌روزرسانی: شهریور ۱۴۰۵</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="terms-section">
+    <div class="container">
+
+        <nav class="terms-toc-mobile" aria-label="فهرست مطالب موبایل">
+            <div class="terms-toc-mobile-inner">
+                <a href="#sec-1">۱. تعاریف</a>
+                <a href="#sec-2">۲. پذیرش</a>
+                <a href="#sec-3">۳. حساب کاربری</a>
+                <a href="#sec-4">۴. نقش‌ها</a>
+                <a href="#sec-5">۵. کمپین</a>
+                <a href="#sec-6">۶. پرداخت</a>
+                <a href="#sec-7">۷. محتوا</a>
+                <a href="#sec-8">۸. ردیابی</a>
+                <a href="#sec-9">۹. امتیاز</a>
+                <a href="#sec-10">۱۰. ممنوعیت‌ها</a>
+                <a href="#sec-11">۱۱. مسئولیت</a>
+                <a href="#sec-12">۱۲. لغو و جریمه</a>
+                <a href="#sec-13">۱۳. حریم خصوصی</a>
+                <a href="#sec-14">۱۴. پشتیبانی</a>
+                <a href="#sec-15">۱۵. تغییرات</a>
+                <a href="#sec-16">۱۶. قانون حاکم</a>
+            </div>
+        </nav>
+
+        <div class="terms-layout" id="terms-layout">
+
+            <aside class="terms-toc-desktop" id="terms-toc-wrap">
+                <nav class="terms-toc" id="terms-toc" aria-label="فهرست مطالب">
+                    <h6>فهرست مطالب</h6>
+                    <ul>
+                        <li><a href="#sec-1">۱. تعاریف</a></li>
+                        <li><a href="#sec-2">۲. پذیرش قوانین</a></li>
+                        <li><a href="#sec-3">۳. ثبت‌نام و حساب کاربری</a></li>
+                        <li><a href="#sec-4">۴. نقش‌ها و مسئولیت‌ها</a></li>
+                        <li><a href="#sec-5">۵. کمپین‌ها و سفارش‌ها</a></li>
+                        <li><a href="#sec-6">۶. پرداخت، کیف پول و فاکتور</a></li>
+                        <li><a href="#sec-7">۷. محتوا و مالکیت فکری</a></li>
+                        <li><a href="#sec-8">۸. ردیابی و آمار</a></li>
+                        <li><a href="#sec-9">۹. گیمیفیکیشن و امتیاز</a></li>
+                        <li><a href="#sec-10">۱۰. ممنوعیت‌ها</a></li>
+                        <li><a href="#sec-11">۱۱. مسئولیت و محدودیت</a></li>
+                        <li><a href="#sec-12">۱۲. لغو، جریمه و بازگشت وجه</a></li>
+                        <li><a href="#sec-13">۱۳. حریم خصوصی</a></li>
+                        <li><a href="#sec-14">۱۴. پشتیبانی و حل اختلاف</a></li>
+                        <li><a href="#sec-15">۱۵. تغییرات قوانین</a></li>
+                        <li><a href="#sec-16">۱۶. قانون حاکم</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <div class="terms-content" id="terms-content">
+
+                <article class="terms-card" id="sec-1">
+                    <h2><span class="section-number">۱</span> تعاریف</h2>
+                    <div class="card-body">
+                        <p>در این سند، واژه‌های زیر معانی مشخص‌شده را دارند:</p>
+                        <ul>
+                            <li><strong>وینجاب / سامانه / پلتفرم:</strong> وب‌سایت و خدمات ارائه‌شده توسط وینجاب.</li>
+                            <li><strong>کاربر:</strong> هر شخص حقیقی یا حقوقی که در سامانه ثبت‌نام کرده یا از خدمات آن استفاده می‌کند.</li>
+                            <li><strong>تبلیغ‌دهنده:</strong> کاربری که کمپین تبلیغاتی ایجاد و هزینه آن را پرداخت می‌کند.</li>
+                            <li><strong>ناشر / اینفلوئنسر:</strong> کاربری که کانال یا صفحه خود را برای انتشار محتوا در اختیار قرار می‌دهد.</li>
+                            <li><strong>تیم تولید محتوا:</strong> گروهی که خدمات تولید محتوای تبلیغاتی ارائه می‌دهد.</li>
+                            <li><strong>کمپین:</strong> سفارش تبلیغاتی که شامل انتخاب ناشر، نوع محتوا، بازه زمانی و بودجه است.</li>
+                            <li><strong>کیف پول:</strong> حساب داخلی کاربر برای نگهداری موجودی قابل استفاده در سامانه.</li>
+                            <li><strong>فاکتور:</strong> سند مالی صادرشده برای پرداخت هزینه کمپین یا شارژ کیف پول.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-2">
+                    <h2><span class="section-number">۲</span> پذیرش قوانین</h2>
+                    <div class="card-body">
+                        <p>با ثبت‌نام، ورود یا استفاده از هر بخش سامانه، شما تأیید می‌کنید که:</p>
+                        <ul>
+                            <li>حداقل ۱۸ سال سن دارید یا نماینده قانونی شخص حقوقی هستید.</li>
+                            <li>این قوانین و مقررات را به‌طور کامل خوانده و پذیرفته‌اید.</li>
+                            <li>اطلاعات واردشده توسط شما صحیح، کامل و به‌روز است.</li>
+                        </ul>
+                        <div class="highlight-box">
+                            در صورت عدم موافقت با هر بخشی از این قوانین، مجاز به استفاده از سامانه نیستید.
+                        </div>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-3">
+                    <h2><span class="section-number">۳</span> ثبت‌نام و حساب کاربری</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>ثبت‌نام از طریق شماره موبایل و تأیید OTP انجام می‌شود.</li>
+                            <li>هر شماره موبایل فقط می‌تواند به یک حساب کاربری متصل باشد.</li>
+                            <li>کاربر مسئول حفظ محرمانگی حساب و تمام فعالیت‌های انجام‌شده از طریق آن است.</li>
+                            <li>وینجاب حق دارد در صورت تشخیص تخلف، حساب را موقتاً یا دائماً مسدود کند.</li>
+                            <li>اطلاعات پروفایل (نام کسب‌وکار، کانال‌ها، شبا و ...) باید واقعی و قابل راستی‌آزمایی باشد.</li>
+                            <li>تغییر شماره موبایل اصلی حساب تنها با تأیید پشتیبانی امکان‌پذیر است.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-4">
+                    <h2><span class="section-number">۴</span> نقش‌ها و مسئولیت‌ها</h2>
+                    <div class="card-body">
+                        <p><strong>تبلیغ‌دهنده:</strong></p>
+                        <ul>
+                            <li>مسئول صحت محتوای تبلیغاتی و رعایت قوانین تبلیغات کشور است.</li>
+                            <li>باید بودجه کافی برای پرداخت کمپین داشته باشد.</li>
+                            <li>حق درخواست بازبینی محتوا در بازه زمانی مشخص را دارد.</li>
+                        </ul>
+                        <p><strong>ناشر / اینفلوئنسر:</strong></p>
+                        <ul>
+                            <li>موظف است محتوا را طبق بریف و زمان‌بندی توافق‌شده منتشر کند.</li>
+                            <li>نباید آمار کانال یا عملکرد را جعل کند.</li>
+                            <li>مسئول حفظ اعتبار و استاندارد کانال خود است.</li>
+                        </ul>
+                        <p><strong>تیم تولید محتوا:</strong></p>
+                        <ul>
+                            <li>موظف به تحویل محتوا در زمان مقرر و با کیفیت توافق‌شده است.</li>
+                            <li>عدم پذیرش به‌موقع سفارش می‌تواند منجر به جریمه امتیاز شود.</li>
+                        </ul>
+                        <div class="highlight-box info">
+                            هر کاربر می‌تواند فقط یک نقش اصلی فعال داشته باشد. تغییر نقش پس از بررسی پشتیبانی امکان‌پذیر است.
+                        </div>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-5">
+                    <h2><span class="section-number">۵</span> کمپین‌ها و سفارش‌ها</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>ساخت کمپین در چند مرحله انجام می‌شود و تا زمان پرداخت نهایی، در وضعیت پیش‌نویس یا در انتظار بررسی باقی می‌ماند.</li>
+                            <li>پس از تأیید و پرداخت، کمپین وارد چرخه اجرا می‌شود.</li>
+                            <li>ناشر و تیم محتوا حق رد یا پذیرش سفارش را در بازه زمانی مشخص دارند.</li>
+                            <li>در صورت رد شدن، سیستم امکان انتخاب جایگزین را فراهم می‌کند.</li>
+                            <li>تبلیغ‌دهنده می‌تواند در وضعیت «نیاز به اصلاح» درخواست بازبینی بدهد.</li>
+                            <li>وینجاب حق بررسی و رد کمپین‌هایی که مغایر قوانین عمومی یا سیاست‌های داخلی باشند را دارد.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-6">
+                    <h2><span class="section-number">۶</span> پرداخت، کیف پول و فاکتور</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>تمام مبالغ به تومان محاسبه و نمایش داده می‌شوند.</li>
+                            <li>پرداخت از طریق درگاه معتبر (زرین‌پال) یا موجودی کیف پول انجام می‌شود.</li>
+                            <li>پس از پرداخت موفق، فاکتور الکترونیکی صادر می‌گردد.</li>
+                            <li>کدهای تخفیف طبق شرایط تعریف‌شده (محدودیت زمانی، تعداد استفاده، نقش) اعمال می‌شوند.</li>
+                            <li>موجودی کیف پول قابل برداشت به حساب بانکی ثبت‌شده کاربر است (پس از تأیید).</li>
+                            <li>وینجاب کمیسیون خود را طبق نرخ اعلام‌شده از مبلغ کمپین کسر می‌کند.</li>
+                            <li>کاربر موظف به پرداخت مالیات‌های قانونی مربوط به درآمد خود است.</li>
+                        </ul>
+                        <div class="highlight-box warning">
+                            هرگونه تلاش برای دور زدن سیستم پرداخت یا سوءاستفاده از کد تخفیف منجر به مسدودسازی حساب و پیگیری قانونی می‌شود.
+                        </div>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-7">
+                    <h2><span class="section-number">۷</span> محتوا و مالکیت فکری</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>مالکیت محتوای تولیدشده طبق توافق بین طرفین (تبلیغ‌دهنده و تیم/ناشر) تعیین می‌شود.</li>
+                            <li>کاربر حق آپلود محتوایی که حقوق شخص ثالث را نقض کند ندارد.</li>
+                            <li>وینجاب می‌تواند از محتوای منتشرشده برای اهداف بازاریابی خود (با ذکر منبع) استفاده کند مگر اینکه کاربر کتباً مخالفت کرده باشد.</li>
+                            <li>لوگو، نام تجاری و طراحی رابط کاربری وینجاب متعلق به پلتفرم است و استفاده غیرمجاز ممنوع است.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-8">
+                    <h2><span class="section-number">۸</span> ردیابی و آمار</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>لینک‌های ردیابی برای شمارش کلیک و عملکرد کمپین استفاده می‌شوند.</li>
+                            <li>آمار نمایش‌داده‌شده بر اساس داده‌های سیستم محاسبه می‌گردد و مبنای تسویه است.</li>
+                            <li>هرگونه تلاش برای ایجاد کلیک جعلی یا دستکاری آمار ممنوع و قابل پیگرد است.</li>
+                            <li>وینجاب حق اصلاح آمار در صورت تشخیص تقلب را برای خود محفوظ می‌دارد.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-9">
+                    <h2><span class="section-number">۹</span> گیمیفیکیشن و امتیاز</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>سیستم امتیازدهی برای تشویق عملکرد مثبت و جریمه رفتارهای نامطلوب طراحی شده است.</li>
+                            <li>عدم پذیرش به‌موقع سفارش، تأخیر در تحویل یا کیفیت پایین می‌تواند منجر به کسر امتیاز شود.</li>
+                            <li>امتیازها ممکن است بر روی اولویت نمایش، دسترسی به ویژگی‌ها یا سطح حساب تأثیر بگذارند.</li>
+                            <li>وینجاب حق تغییر قوانین امتیازدهی را با اطلاع‌رسانی قبلی دارد.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-10">
+                    <h2><span class="section-number">۱۰</span> ممنوعیت‌ها</h2>
+                    <div class="card-body">
+                        <p>کاربران مجاز به انجام موارد زیر نیستند:</p>
+                        <ul>
+                            <li>انتشار محتوای غیرقانونی، خلاف عرف، توهین‌آمیز، گمراه‌کننده یا مغایر با قوانین جمهوری اسلامی ایران</li>
+                            <li>جعل هویت، آمار یا اطلاعات پروفایل</li>
+                            <li>سوءاستفاده از باگ‌های سیستم یا تلاش برای نفوذ</li>
+                            <li>ایجاد حساب‌های متعدد با هدف دور زدن محدودیت‌ها</li>
+                            <li>ارسال اسپم، تبلیغات ناخواسته یا محتوای مخرب</li>
+                            <li>انتقال یا فروش حساب کاربری به شخص دیگر بدون تأیید پلتفرم</li>
+                            <li>استفاده از ربات یا اسکریپت برای دستکاری آمار یا فرآیندها</li>
+                        </ul>
+                        <div class="highlight-box">
+                            نقض هر یک از موارد بالا می‌تواند منجر به مسدودسازی فوری حساب، ضبط موجودی و پیگیری قضایی شود.
+                        </div>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-11">
+                    <h2><span class="section-number">۱۱</span> مسئولیت و محدودیت</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>وینجاب صرفاً یک بستر واسط است و مسئول محتوای تولید یا منتشرشده توسط کاربران نیست.</li>
+                            <li>پلتفرم هیچ تضمینی در مورد نتیجه کمپین (تعداد فروش، لید یا تعامل) نمی‌دهد.</li>
+                            <li>در صورت قطعی سرویس به دلایل خارج از کنترل (قطعی اینترنت، حملات سایبری، فورس‌ماژور)، مسئولیت محدود است.</li>
+                            <li>حداکثر مسئولیت مالی وینجاب در قبال هر ادعا، معادل مبلغ پرداخت‌شده توسط کاربر برای همان خدمت است.</li>
+                            <li>کاربر متعهد است وینجاب را در برابر هرگونه ادعا، خسارت یا هزینه ناشی از نقض این قوانین توسط خودش مصون نگه دارد.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-12">
+                    <h2><span class="section-number">۱۲</span> لغو، جریمه و بازگشت وجه</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>لغو کمپین قبل از شروع اجرا، مشمول قوانین بازگشت وجه اعلام‌شده در هر مرحله است.</li>
+                            <li>پس از شروع انتشار یا تحویل محتوا، بازگشت وجه کامل معمولاً امکان‌پذیر نیست مگر در موارد خاص (عدم تحویل، تخلف طرف مقابل).</li>
+                            <li>جریمه‌های امتیاز و مالی طبق سیاست‌های اعلام‌شده اعمال می‌شود.</li>
+                            <li>درخواست‌های بازگشت وجه باید از طریق تیکت پشتیبانی ثبت شوند و ظرف مهلت مشخص بررسی می‌گردند.</li>
+                            <li>وینجاب حق کسر هزینه‌های اداری و کارمزد درگاه را از مبلغ بازگشتی دارد.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-13">
+                    <h2><span class="section-number">۱۳</span> حریم خصوصی</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>اطلاعات شخصی کاربران مطابق با سیاست حفظ حریم خصوصی سامانه جمع‌آوری و پردازش می‌شود.</li>
+                            <li>شماره موبایل، اطلاعات بانکی و داده‌های تراکنش با استانداردهای امنیتی محافظت می‌شوند.</li>
+                            <li>وینجاب اطلاعات کاربران را بدون رضایت آن‌ها به اشخاص ثالث نمی‌فروشد، مگر در موارد الزام قانونی.</li>
+                            <li>کاربر می‌تواند درخواست مشاهده، اصلاح یا حذف داده‌های خود را از طریق پشتیبانی مطرح کند (با رعایت الزامات قانونی نگهداری).</li>
+                        </ul>
+                        <div class="highlight-box info">
+                            برای جزئیات بیشتر، سیاست حریم خصوصی جداگانه سامانه را مطالعه کنید.
+                        </div>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-14">
+                    <h2><span class="section-number">۱۴</span> پشتیبانی و حل اختلاف</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>پشتیبانی از طریق سیستم تیکت داخل سامانه و کانال‌های اعلام‌شده انجام می‌شود.</li>
+                            <li>در صورت بروز اختلاف بین کاربران، وینجاب می‌تواند به‌عنوان میانجی عمل کند اما الزامی به حل نهایی ندارد.</li>
+                            <li>اختلافات بین کاربر و پلتفرم ابتدا از طریق مذاکره و سپس مراجع صالح حل‌وفصل می‌شود.</li>
+                            <li>زمان پاسخگویی پشتیبانی طبق ساعات کاری اعلام‌شده است.</li>
+                        </ul>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-15">
+                    <h2><span class="section-number">۱۵</span> تغییرات قوانین</h2>
+                    <div class="card-body">
+                        <p>
+                            وینجاب حق دارد این قوانین را در هر زمان به‌روزرسانی کند. تغییرات مهم از طریق اعلان داخل سامانه یا ایمیل/پیامک به کاربران اطلاع داده می‌شود.
+                            ادامه استفاده از سامانه پس از اعمال تغییرات، به منزله پذیرش نسخه جدید قوانین است.
+                        </p>
+                        <p>
+                            تاریخ آخرین به‌روزرسانی در بالای این صفحه درج می‌شود. توصیه می‌شود به‌طور دوره‌ای این صفحه را بازبینی کنید.
+                        </p>
+                    </div>
+                </article>
+
+                <article class="terms-card" id="sec-16">
+                    <h2><span class="section-number">۱۶</span> قانون حاکم و سایر موارد</h2>
+                    <div class="card-body">
+                        <ul>
+                            <li>این قوانین تحت قوانین جمهوری اسلامی ایران تفسیر و اجرا می‌شود.</li>
+                            <li>در صورت باطل شناخته شدن هر بند، سایر بندها به قوت خود باقی می‌مانند.</li>
+                            <li>عدم اجرای هر حق توسط وینجاب به معنای چشم‌پوشی از آن حق نیست.</li>
+                            <li>نسخه فارسی این سند مرجع اصلی است. در صورت وجود ترجمه، متن فارسی ملاک خواهد بود.</li>
+                        </ul>
+                        <div class="highlight-box">
+                            با استفاده از وینجاب، شما تأیید می‌کنید که تمام بندهای فوق را خوانده، فهمیده و پذیرفته‌اید.
+                        </div>
+                    </div>
+                </article>
+
+                <div class="terms-footer-note">
+                    <p class="mb-2">سوالی دارید؟ از طریق <a href="{% url 'tickets:ticket_list' %}">سیستم تیکت</a> یا پشتیبانی با ما در ارتباط باشید.</p>
+                    <p class="mb-0">© {% now "Y" %} وینجاب — تمامی حقوق محفوظ است.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const desktopLinks = document.querySelectorAll('.terms-toc a');
+    const mobileLinks  = document.querySelectorAll('.terms-toc-mobile a');
+    const allLinks     = [...desktopLinks, ...mobileLinks];
+    const sections     = document.querySelectorAll('.terms-card[id]');
+
+    allLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (!target) return;
+            const offset = window.innerWidth < 992 ? 130 : 100;
+            const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+            window.scrollTo({ top, behavior: 'smooth' });
+        });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const id = entry.target.getAttribute('id');
+            allLinks.forEach(a => {
+                a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+            });
+            const activeMobile = document.querySelector('.terms-toc-mobile a.active');
+            if (activeMobile) {
+                activeMobile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        });
+    }, { rootMargin: '-18% 0px -65% 0px', threshold: 0 });
+    sections.forEach(sec => observer.observe(sec));
+
+    // Sticky sidebar با JS
+    const toc     = document.getElementById('terms-toc');
+    const tocWrap = document.getElementById('terms-toc-wrap');
+    const content = document.getElementById('terms-content');
+
+    if (!toc || !tocWrap || !content) return;
+
+    const HEADER_OFFSET = 100;
+
+    function updateTocPosition() {
+        if (window.innerWidth < 992) {
+            toc.classList.remove('is-fixed', 'is-bottom');
+            toc.style.top = '';
+            toc.style.left = '';
+            toc.style.width = '';
+            return;
+        }
+
+        const wrapRect  = tocWrap.getBoundingClientRect();
+        const tocHeight = toc.offsetHeight;
+        const scrollY   = window.pageYOffset || document.documentElement.scrollTop;
+
+        const startFix = tocWrap.offsetTop - HEADER_OFFSET;
+        const endFix   = tocWrap.offsetTop + content.offsetHeight - tocHeight - HEADER_OFFSET;
+
+        if (scrollY < startFix) {
+            toc.classList.remove('is-fixed', 'is-bottom');
+            toc.style.top = '';
+            toc.style.left = '';
+            toc.style.width = '';
+        } else if (scrollY >= startFix && scrollY < endFix) {
+            toc.classList.add('is-fixed');
+            toc.classList.remove('is-bottom');
+            toc.style.top = HEADER_OFFSET + 'px';
+            toc.style.left = wrapRect.left + 'px';
+            toc.style.width = wrapRect.width + 'px';
+        } else {
+            toc.classList.remove('is-fixed');
+            toc.classList.add('is-bottom');
+            toc.style.top = '';
+            toc.style.left = '';
+            toc.style.width = '';
+        }
+    }
+
+    let ticking = false;
+    window.addEventListener('scroll', function () {
+        if (!ticking) {
+            window.requestAnimationFrame(function () {
+                updateTocPosition();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+
+    window.addEventListener('resize', updateTocPosition);
+    updateTocPosition();
+});
+</script>
+{% endblock %}

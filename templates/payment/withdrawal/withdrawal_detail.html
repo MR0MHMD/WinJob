@@ -1,0 +1,161 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}جزئیات درخواست تسویه{% endblock %}
+
+{% block extra_style %}
+<style>
+    .detail-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 1rem;
+        padding: 2rem;
+    }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.9rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.875rem;
+    }
+    .info-value {
+        color: #fff;
+        font-weight: 500;
+        text-align: left;
+    }
+    .status-badge {
+        padding: 0.4rem 1rem;
+        border-radius: 50rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    .status-badge.pending { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+    .status-badge.processing { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+    .status-badge.completed { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+    .status-badge.rejected { background: rgba(242, 60, 73, 0.15); color: #f23c49; }
+    .status-badge.cancelled { background: rgba(150, 145, 164, 0.15); color: #9691a4; }
+    .tracking-big {
+        font-family: monospace;
+        font-size: 1.35rem;
+        color: #fd5631;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+    .amount-big {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="{% url 'payment:withdrawal_list' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+            <i class="fi-arrow-right me-1"></i>
+            بازگشت
+        </a>
+        <h4 class="text-light mb-0">جزئیات درخواست تسویه</h4>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="detail-card">
+
+                <!-- هدر وضعیت -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                    <div>
+                        <div class="text-muted fs-sm mb-1">کد پیگیری</div>
+                        <div class="tracking-big">{{ withdrawal.tracking_code }}</div>
+                    </div>
+                    <span class="status-badge {{ withdrawal.status }}">
+                        {{ withdrawal.get_status_display }}
+                    </span>
+                </div>
+
+                <!-- مبلغ -->
+                <div class="text-center py-4 mb-4" style="background: rgba(255,255,255,0.03); border-radius: 0.75rem;">
+                    <div class="text-muted fs-sm mb-1">مبلغ درخواستی</div>
+                    <div class="amount-big">{{ withdrawal.amount|intcomma }} <span class="fs-6 text-muted">تومان</span></div>
+                </div>
+
+                <!-- اطلاعات -->
+                <div class="mb-4">
+                    <div class="info-row">
+                        <span class="info-label">نوع تسویه</span>
+                        <span class="info-value">{{ withdrawal.get_withdrawal_type_display }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">تاریخ درخواست</span>
+                        <span class="info-value">{{ withdrawal.requested_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    {% if withdrawal.processed_at %}
+                    <div class="info-row">
+                        <span class="info-label">تاریخ پردازش</span>
+                        <span class="info-value">{{ withdrawal.processed_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if withdrawal.completed_at %}
+                    <div class="info-row">
+                        <span class="info-label">تاریخ تسویه</span>
+                        <span class="info-value">{{ withdrawal.completed_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="info-row">
+                        <span class="info-label">حساب بانکی مقصد</span>
+                        <span class="info-value">
+                            {{ withdrawal.bank_account.bank_name }}
+                            <br>
+                            <small class="text-muted" style="direction:ltr; display:inline-block;">{{ withdrawal.bank_account.sheba_display }}</small>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">صاحب حساب</span>
+                        <span class="info-value">{{ withdrawal.bank_account.account_holder_name }}</span>
+                    </div>
+                    {% if withdrawal.description %}
+                    <div class="info-row">
+                        <span class="info-label">توضیحات شما</span>
+                        <span class="info-value">{{ withdrawal.description }}</span>
+                    </div>
+                    {% endif %}
+                    {% if withdrawal.admin_note %}
+                    <div class="info-row">
+                        <span class="info-label">یادداشت ادمین</span>
+                        <span class="info-value text-warning">{{ withdrawal.admin_note }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- دکمه‌ها -->
+                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                    {% if withdrawal.can_cancel %}
+                    <form method="post" action="{% url 'payment:withdrawal_cancel' withdrawal.id %}" onsubmit="return confirm('آیا از لغو این درخواست مطمئن هستید؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger rounded-pill px-4">
+                            <i class="fi-x-circle me-1"></i>
+                            لغو درخواست
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'payment:withdrawal_list' %}" class="btn btn-outline-light rounded-pill px-4">
+                        بازگشت به لیست
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,3 @@
-<!-- pages/templates/pages/about.html -->
 {% extends 'parent/base.html' %}
 {% load static %}
 
@@ -6,344 +5,719 @@
 
 {% block extra_style %}
 <style>
-    /* ========== استایل‌های اختصاصی ========== */
+    /* ========== Hero ========== */
     .about-hero {
         position: relative;
-        padding: 6rem 0 4rem;
-        background: linear-gradient(135deg, #1a1625 0%, #0f0c14 100%);
+        padding: 7rem 0 5rem;
+        background: linear-gradient(160deg, #1a1625 0%, #0f0c14 55%, #15101f 100%);
         overflow: hidden;
     }
     .about-hero::before {
         content: '';
         position: absolute;
-        top: -30%;
-        right: -20%;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, rgba(253,86,49,0.08) 0%, transparent 70%);
+        top: -35%;
+        right: -18%;
+        width: 640px;
+        height: 640px;
+        background: radial-gradient(circle, rgba(253,86,49,0.12) 0%, transparent 68%);
         border-radius: 50%;
         pointer-events: none;
+        animation: floatOrb 12s ease-in-out infinite;
     }
     .about-hero::after {
         content: '';
         position: absolute;
         bottom: -40%;
-        left: -10%;
-        width: 500px;
-        height: 500px;
-        background: radial-gradient(circle, rgba(93,60,242,0.08) 0%, transparent 70%);
+        left: -12%;
+        width: 560px;
+        height: 560px;
+        background: radial-gradient(circle, rgba(93,60,242,0.12) 0%, transparent 68%);
         border-radius: 50%;
         pointer-events: none;
+        animation: floatOrb 14s ease-in-out infinite reverse;
     }
-    .about-hero .container {
-        position: relative;
-        z-index: 1;
+    @keyframes floatOrb {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(-20px, 15px) scale(1.05); }
+    }
+    .about-hero .container { position: relative; z-index: 1; }
+    .about-hero .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(253,86,49,0.12);
+        border: 1px solid rgba(253,86,49,0.25);
+        color: #fd5631;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.45rem 1.1rem;
+        border-radius: 999px;
+        margin-bottom: 1.25rem;
     }
     .about-hero h1 {
-        font-size: 3.5rem;
+        font-size: clamp(2.2rem, 5vw, 3.6rem);
         font-weight: 800;
+        line-height: 1.25;
+        margin-bottom: 1.25rem;
+        color: #d24e4e;
+    }
+    .about-hero h1 .grad {
         background: linear-gradient(135deg, #fd5631, #5d3cf2);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
     .about-hero .lead {
-        color: rgba(255,255,255,0.8);
-        font-size: 1.2rem;
-        max-width: 700px;
-        margin: 0 auto;
+        color: rgba(255,255,255,0.75);
+        font-size: 1.15rem;
+        max-width: 620px;
+        margin: 0 auto 1.75rem;
+        line-height: 1.8;
     }
-
-    .stat-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 1.25rem;
-        padding: 2rem 1.5rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(4px);
-        height: 100%;
+    .about-hero .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
     }
-    .stat-card:hover {
-        transform: translateY(-6px);
-        border-color: rgba(253,86,49,0.25);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    .about-hero .btn-glow {
+        background: linear-gradient(135deg, #fd5631, #e04a28);
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        padding: 0.7rem 1.6rem;
+        border-radius: 999px;
+        box-shadow: 0 8px 24px rgba(253,86,49,0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .about-hero .btn-glow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(253,86,49,0.45);
+        color: #fff;
+    }
+    .about-hero .btn-ghost {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.85);
+        font-weight: 600;
+        padding: 0.7rem 1.6rem;
+        border-radius: 999px;
+        transition: all 0.2s;
+    }
+    .about-hero .btn-ghost:hover {
         background: rgba(255,255,255,0.06);
+        border-color: rgba(255,255,255,0.35);
+        color: #fff;
     }
-    .stat-card .stat-number {
-        font-size: 2.8rem;
-        font-weight: 700;
+    .hero-float-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        justify-content: center;
+        margin-top: 2.5rem;
+    }
+    .hero-chip {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        padding: 0.4rem 0.95rem;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.65);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        backdrop-filter: blur(6px);
+    }
+    .hero-chip i { color: #fd5631; font-size: 0.85rem; }
+
+    /* ========== Stats ========== */
+    .stats-section {
+        position: relative;
+        margin-top: -2.5rem;
+        z-index: 2;
+        padding-bottom: 1rem;
+    }
+    .stats-panel {
+        background: rgba(31, 27, 45, 0.85);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 1.5rem;
+        padding: 1.75rem 1rem;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .stat-item {
+        text-align: center;
+        padding: 0.75rem 0.5rem;
+        position: relative;
+    }
+    .stat-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 20%;
+        height: 60%;
+        width: 1px;
+        background: rgba(255,255,255,0.08);
+    }
+    @media (max-width: 767.98px) {
+        .stat-item:nth-child(2)::after { display: none; }
+    }
+    .stat-item .stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.15));
+        color: #fd5631;
+        font-size: 1.15rem;
+        margin-bottom: 0.65rem;
+    }
+    .stat-item .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
         background: linear-gradient(135deg, #fd5631, #5d3cf2);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        display: inline-block;
         font-variant-numeric: tabular-nums;
+        line-height: 1.2;
     }
-    .stat-card .stat-label {
-        color: rgba(255,255,255,0.65);
-        font-size: 1rem;
-        margin-top: 0.3rem;
+    .stat-item .stat-label {
+        color: rgba(255,255,255,0.55);
+        font-size: 0.88rem;
+        margin-top: 0.25rem;
     }
 
-    .mission-card {
+    /* ========== Shared ========== */
+    .section-pad { padding: 4.5rem 0; }
+    .section-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(253,86,49,0.1);
+        border: 1px solid rgba(253,86,49,0.2);
+        color: #fd5631;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        margin-bottom: 0.85rem;
+    }
+    .section-heading {
+        font-size: clamp(1.6rem, 3vw, 2.1rem);
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 0.75rem;
+    }
+    .section-desc {
+        color: rgba(255,255,255,0.6);
+        max-width: 560px;
+        line-height: 1.7;
+        margin-bottom: 0;
+    }
+
+    /* ========== Mission / Vision ========== */
+    .mv-card {
+        position: relative;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.4rem;
+        padding: 2.25rem 2rem;
+        height: 100%;
+        overflow: hidden;
+        transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    }
+    .mv-card:hover {
+        border-color: rgba(253,86,49,0.28);
+        transform: translateY(-5px);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+    }
+    .mv-card .mv-glow {
+        position: absolute;
+        top: -40%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0.5;
+    }
+    .mv-card.mission .mv-glow {
+        background: radial-gradient(circle, rgba(253,86,49,0.2), transparent 70%);
+    }
+    .mv-card.vision .mv-glow {
+        background: radial-gradient(circle, rgba(93,60,242,0.25), transparent 70%);
+    }
+    .mv-card .mv-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .mv-card.mission .mv-icon {
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(253,86,49,0.05));
+        color: #fd5631;
+    }
+    .mv-card.vision .mv-icon {
+        background: linear-gradient(135deg, rgba(93,60,242,0.25), rgba(93,60,242,0.05));
+        color: #8b6cf5;
+    }
+    .mv-card h3 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.25rem;
+        margin-bottom: 0.85rem;
+    }
+    .mv-card p {
+        color: rgba(255,255,255,0.68);
+        line-height: 1.85;
+        font-size: 0.97rem;
+        margin: 0;
+    }
+
+    /* ========== Timeline ========== */
+    .timeline {
+        position: relative;
+        padding: 1rem 0;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 24px;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(253,86,49,0.5), rgba(93,60,242,0.5));
+        border-radius: 2px;
+    }
+    @media (min-width: 768px) {
+        .timeline::before {
+            right: 50%;
+            transform: translateX(50%);
+        }
+    }
+    .timeline-item {
+        position: relative;
+        padding-right: 60px;
+        padding-bottom: 2.5rem;
+    }
+    @media (min-width: 768px) {
+        .timeline-item {
+            width: 50%;
+            padding-right: 0;
+        }
+        .timeline-item:nth-child(odd) {
+            margin-left: auto;
+            padding-right: 3rem;
+            text-align: right;
+        }
+        .timeline-item:nth-child(even) {
+            margin-right: auto;
+            padding-left: 3rem;
+            text-align: left;
+        }
+        .timeline-item:nth-child(odd) .timeline-dot {
+            right: -8px;
+            left: auto;
+        }
+        .timeline-item:nth-child(even) .timeline-dot {
+            left: -8px;
+            right: auto;
+        }
+    }
+    .timeline-dot {
+        position: absolute;
+        top: 6px;
+        right: 16px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        border: 3px solid #0f0c14;
+        box-shadow: 0 0 0 4px rgba(253,86,49,0.2);
+        z-index: 1;
+    }
+    .timeline-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.15rem;
+        padding: 1.4rem 1.5rem;
+        transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .timeline-card:hover {
+        border-color: rgba(253,86,49,0.25);
+        box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+    }
+    .timeline-card .year {
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #fd5631;
+        background: rgba(253,86,49,0.12);
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        margin-bottom: 0.65rem;
+    }
+    .timeline-card h4 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 0.4rem;
+    }
+    .timeline-card p {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.92rem;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    /* ========== Values ========== */
+    .value-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.15rem;
+    }
+    @media (max-width: 575.98px) {
+        .value-grid { grid-template-columns: 1fr; }
+    }
+    .value-card {
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 1.25rem;
-        padding: 2rem 1.8rem;
+        border-radius: 1.2rem;
+        padding: 1.5rem 1.35rem;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .value-card:hover {
+        border-color: rgba(253,86,49,0.25);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        background: rgba(255,255,255,0.05);
+    }
+    .value-card .v-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.12));
+        color: #fd5631;
+        margin-bottom: 1rem;
+    }
+    .value-card h5 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 0.45rem;
+    }
+    .value-card p {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.9rem;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    /* ========== Ecosystem ========== */
+    .eco-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.35rem;
+        padding: 2rem 1.6rem;
+        text-align: center;
+        height: 100%;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .eco-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(160deg, rgba(253,86,49,0.06), transparent 50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .eco-card:hover::before { opacity: 1; }
+    .eco-card:hover {
+        border-color: rgba(253,86,49,0.3);
+        transform: translateY(-6px);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.28);
+    }
+    .eco-card .eco-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.7rem;
+        margin-bottom: 1.15rem;
+        position: relative;
+        z-index: 1;
+    }
+    .eco-card.adv .eco-icon {
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(253,86,49,0.05));
+        color: #fd5631;
+    }
+    .eco-card.inf .eco-icon {
+        background: linear-gradient(135deg, rgba(93,60,242,0.25), rgba(93,60,242,0.05));
+        color: #8b6cf5;
+    }
+    .eco-card.team .eco-icon {
+        background: linear-gradient(135deg, rgba(7,201,139,0.2), rgba(7,201,139,0.05));
+        color: #07c98b;
+    }
+    .eco-card h4 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.15rem;
+        margin-bottom: 0.6rem;
+        position: relative;
+        z-index: 1;
+    }
+    .eco-card p {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.92rem;
+        line-height: 1.75;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ========== Team ========== */
+    .team-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.35rem;
+        padding: 2rem 1.5rem 1.75rem;
+        text-align: center;
         height: 100%;
         transition: all 0.3s ease;
     }
-    .mission-card:hover {
-        border-color: rgba(93,60,242,0.3);
-        transform: translateY(-4px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-    .mission-card .icon-wrapper {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.8rem;
-        background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.15));
-        color: #fd5631;
-        margin-bottom: 1.2rem;
-    }
-    .mission-card h5 {
-        color: #fff;
-        font-weight: 600;
-    }
-    .mission-card p {
-        color: rgba(255,255,255,0.7);
-        line-height: 1.7;
-        font-size: 0.95rem;
-    }
-
-    .team-member-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 1.25rem;
-        padding: 1.8rem 1.5rem;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    .team-member-card:hover {
+    .team-card:hover {
         transform: translateY(-6px);
-        border-color: rgba(253,86,49,0.2);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        border-color: rgba(253,86,49,0.28);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.28);
     }
-    .team-member-card .avatar {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid rgba(253,86,49,0.3);
-        margin-bottom: 1rem;
-    }
-    .team-member-card .name {
-        color: #fff;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    .team-member-card .role {
-        color: rgba(255,255,255,0.5);
-        font-size: 0.85rem;
-    }
-    .team-member-card .bio {
-        color: rgba(255,255,255,0.65);
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
-        line-height: 1.6;
-    }
-    .team-member-card .prompt-hint {
-        font-size: 0.7rem;
-        color: rgba(255,255,255,0.2);
-        margin-top: 0.5rem;
-        border-top: 1px dashed rgba(255,255,255,0.05);
-        padding-top: 0.5rem;
-    }
-
-    .section-title {
+    .team-card .avatar-wrap {
         position: relative;
-        display: inline-block;
-        font-weight: 700;
-        color: #fff;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 1.15rem;
     }
-    .section-title::after {
+    .team-card .avatar-wrap::before {
         content: '';
         position: absolute;
-        bottom: -8px;
-        right: 0;
-        width: 50px;
-        height: 3px;
-        background: linear-gradient(90deg, #fd5631, #5d3cf2);
-        border-radius: 10px;
-    }
-    .section-title-center::after {
-        right: 50%;
-        transform: translateX(50%);
-    }
-
-    .values-grid .value-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        padding: 1rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-    .values-grid .value-item:last-child {
-        border-bottom: none;
-    }
-    .values-grid .value-icon {
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
+        inset: -4px;
         border-radius: 50%;
-        background: rgba(253,86,49,0.12);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fd5631;
-        font-size: 1.2rem;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        opacity: 0.5;
+        transition: opacity 0.3s;
     }
-    .values-grid .value-text h6 {
+    .team-card:hover .avatar-wrap::before { opacity: 1; }
+    .team-card .avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        position: relative;
+        border: 3px solid #0f0c14;
+    }
+    .team-card .name {
         color: #fff;
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 1.1rem;
         margin-bottom: 0.2rem;
     }
-    .values-grid .value-text p {
-        color: rgba(255,255,255,0.6);
-        font-size: 0.9rem;
-        margin-bottom: 0;
-        line-height: 1.5;
+    .team-card .role {
+        color: #fd5631;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.65rem;
+    }
+    .team-card .bio {
+        color: rgba(255,255,255,0.58);
+        font-size: 0.88rem;
+        line-height: 1.65;
+        margin: 0;
     }
 
-    .cta-box {
-        background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.08));
-        border: 1px solid rgba(255,255,255,0.06);
+    /* ========== CTA ========== */
+    .about-cta {
+        background: linear-gradient(135deg, rgba(253,86,49,0.12), rgba(93,60,242,0.12));
+        border: 1px solid rgba(255,255,255,0.08);
         border-radius: 1.5rem;
         padding: 3rem 2rem;
         text-align: center;
-    }
-    .cta-box h3 {
-        color: #fff;
-        font-weight: 700;
-    }
-    .cta-box p {
-        color: rgba(255,255,255,0.7);
-        max-width: 600px;
-        margin: 0.5rem auto 1.5rem;
-    }
-
-    .illustration-wrapper {
-        border-radius: 1.25rem;
+        position: relative;
         overflow: hidden;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.05);
     }
-    .illustration-wrapper img {
-        width: 100%;
-        height: auto;
-        display: block;
+    .about-cta::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(253,86,49,0.15), transparent 70%);
+        pointer-events: none;
+    }
+    .about-cta h3 {
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.75rem;
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
+    .about-cta p {
+        color: rgba(255,255,255,0.65);
+        max-width: 520px;
+        margin: 0 auto 1.5rem;
+        line-height: 1.7;
+        position: relative;
+    }
+    .about-cta .cta-btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        position: relative;
     }
 
-    @media (max-width: 768px) {
-        .about-hero h1 {
-            font-size: 2.2rem;
-        }
-        .stat-card .stat-number {
-            font-size: 2.2rem;
-        }
-        .mission-card {
-            padding: 1.5rem 1.2rem;
-        }
+    /* ========== Reveal ========== */
+    .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    
+    .page-wrapper{
+        padding: 0 !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ==================== هیرو ==================== -->
 <section class="about-hero">
     <div class="container text-center">
         <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="mb-3">
-                    <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill">
-                        <i class="bi bi-info-circle me-1"></i> درباره وینجاب
-                    </span>
+            <div class="col-lg-9">
+                <div class="hero-badge">
+                    <i class="bi bi-stars"></i>
+                    درباره وینجاب
                 </div>
-                <h1 class="mb-3">سامانه هوشمند<br>تبلیغات اینفلوئنسری</h1>
-                <p class="lead mb-4">
-                    وینجاب پلی است که برندها، اینفلوئنسرها و تیم‌های تولید محتوا را در یک اکوسیستم حرفه‌ای گرد هم آورده است.
-                    ما با ترکیب تکنولوژی و خلاقیت، مسیر تبلیغات هدفمند را هموار می‌کنیم.
+                <h1>
+                    جایی که برندها، ناشران<br>
+                    و <span class="grad">خلاقیت</span> به هم می‌رسند
+                </h1>
+                <p class="lead">
+                    وینجاب پلتفرم هوشمند تبلیغات اینفلوئنسری است؛ پلی امن و داده‌محور بین صاحبان کسب‌وکار،
+                    اینفلوئنسرها و تیم‌های تولید محتوا تا هر کمپین به نتیجه‌ای واقعی و قابل اندازه‌گیری برسد.
                 </p>
-                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    <a href="{% url 'accounts:dashboard_router' %}" class="btn btn-primary rounded-pill px-4">
-                        <i class="bi bi-send me-1"></i> شروع همکاری
+                <div class="hero-actions">
+                    <a href="{% url 'accounts:register' %}?role=advertiser" class="btn btn-glow">
+                        <i class="bi bi-megaphone me-1"></i> شروع به‌عنوان تبلیغ‌دهنده
+                    </a>
+                    <a href="{% url 'core:terms' %}" class="btn btn-ghost">
+                        <i class="bi bi-shield-check me-1"></i> قوانین و مقررات
                     </a>
                 </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== آمارهای واقعی با انیمیشن ==================== -->
-<section class="py-5">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-number" data-count="{{ successful_campaigns }}">۰</div>
-                    <div class="stat-label">کمپین موفق</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-number" data-count="{{ active_approved_channels }}">۰</div>
-                    <div class="stat-label">کانال/پیج</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-number" data-count="{{ active_content_teams }}">۰</div>
-                    <div class="stat-label">تیم تولید محتوا</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-number" data-count="{{ total_clicks }}">۰</div>
-                    <div class="stat-label">تعامل با کاربر</div>
+                <div class="hero-float-chips">
+                    <span class="hero-chip"><i class="bi bi-lightning-charge-fill"></i> کمپین چندمرحله‌ای</span>
+                    <span class="hero-chip"><i class="bi bi-wallet2"></i> کیف پول و تسویه شفاف</span>
+                    <span class="hero-chip"><i class="bi bi-graph-up"></i> ردیابی لحظه‌ای</span>
+                    <span class="hero-chip"><i class="bi bi-people-fill"></i> تیم محتوا + ناشر</span>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ==================== ماموریت و چشم‌انداز ==================== -->
-<section class="py-4">
+<section class="stats-section">
     <div class="container">
+        <div class="stats-panel">
+            <div class="row g-0">
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="bi bi-megaphone-fill"></i></div>
+                        <div class="stat-number" data-count="{{ successful_campaigns|default:0 }}">۰</div>
+                        <div class="stat-label">کمپین موفق</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="bi bi-broadcast"></i></div>
+                        <div class="stat-number" data-count="{{ active_approved_channels|default:0 }}">۰</div>
+                        <div class="stat-label">کانال و پیج</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="stat-number" data-count="{{ active_content_teams|default:0 }}">۰</div>
+                        <div class="stat-label">تیم تولید محتوا</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="bi bi-cursor-fill"></i></div>
+                        <div class="stat-number" data-count="{{ total_clicks|default:0 }}">۰</div>
+                        <div class="stat-label">تعامل ثبت‌شده</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-pad">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <span class="section-label"><i class="bi bi-compass"></i> مسیر ما</span>
+            <h2 class="section-heading">ماموریت و چشم‌انداز</h2>
+            <p class="section-desc mx-auto">
+                با شفافیت، داده و عدالت، اکوسیستم تبلیغات اینفلوئنسری را برای همه طرف‌ها بهتر می‌کنیم.
+            </p>
+        </div>
         <div class="row g-4">
-            <div class="col-md-6">
-                <div class="mission-card">
-                    <div class="icon-wrapper"><i class="bi bi-rocket-takeoff"></i></div>
-                    <h5>ماموریت ما</h5>
+            <div class="col-md-6 reveal reveal-delay-1">
+                <div class="mv-card mission">
+                    <div class="mv-glow"></div>
+                    <div class="mv-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
+                    <h3>ماموریت ما</h3>
                     <p>
-                        توانمندسازی برندها در استفاده از پتانسیل بازاریابی اینفلوئنسری با شفافیت، داده‌محوری و عدالت.
-                        ما به دنبال ایجاد پلی امن و کارآمد بین صاحبان کسب‌وکار و تولیدکنندگان محتوا هستیم تا هر دو طرف
-                        به بهترین نتیجه برسند.
+                        توانمندسازی برندها برای استفاده واقعی از پتانسیل بازاریابی اینفلوئنسری؛
+                        با شفافیت کامل، داده‌محوری و عدالت. ما پلی امن و کارآمد بین صاحبان کسب‌وکار
+                        و تولیدکنندگان محتوا می‌سازیم تا هر دو طرف به بهترین نتیجه برسند.
                     </p>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="mission-card">
-                    <div class="icon-wrapper"><i class="bi bi-eye"></i></div>
-                    <h5>چشم‌انداز ما</h5>
+            <div class="col-md-6 reveal reveal-delay-2">
+                <div class="mv-card vision">
+                    <div class="mv-glow"></div>
+                    <div class="mv-icon"><i class="bi bi-eye-fill"></i></div>
+                    <h3>چشم‌انداز ما</h3>
                     <p>
-                        تبدیل شدن به بزرگترین و معتبرترین پلتفرم مدیریت کمپین‌های تبلیغاتی در خاورمیانه، با تکیه بر
-                        نوآوری مستمر، شفافیت کامل و ایجاد ارزش واقعی برای همه بازیگران اکوسیستم بازاریابی محتوایی.
+                        تبدیل شدن به معتبرترین و مقیاس‌پذیرترین پلتفرم مدیریت کمپین تبلیغاتی در منطقه؛
+                        با نوآوری مستمر، شفافیت کامل و خلق ارزش واقعی برای همه بازیگران
+                        اکوسیستم بازاریابی محتوایی.
                     </p>
                 </div>
             </div>
@@ -351,94 +725,166 @@
     </div>
 </section>
 
-<!-- ==================== چرا وینجاب (ارزش‌ها) با پرامپت تصویر ==================== -->
-<section class="py-5">
+<section class="section-pad" style="padding-top: 0;">
     <div class="container">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-6">
-                <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill mb-3">
-                    <i class="bi bi-star me-1"></i> ارزش‌های ما
-                </span>
-                <h3 class="section-title mb-4">چرا وینجاب؟</h3>
-                <p class="text-muted mb-4" style="color: rgba(255,255,255,0.6) !important;">
-                    ما باور داریم که تبلیغات مؤثر زمانی شکل می‌گیرد که اعتماد، داده و خلاقیت در کنار هم قرار گیرند.
-                    به همین دلیل وینجاب را بر پایه اصول زیر بنا کرده‌ایم:
+        <div class="text-center mb-5 reveal">
+            <span class="section-label"><i class="bi bi-diagram-3"></i> اکوسیستم</span>
+            <h2 class="section-heading">سه ضلع یک همکاری موفق</h2>
+            <p class="section-desc mx-auto">
+                وینجاب هر سه نقش را در یک جریان یکپارچه کنار هم قرار می‌دهد.
+            </p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4 reveal reveal-delay-1">
+                <div class="eco-card adv">
+                    <div class="eco-icon"><i class="bi bi-briefcase-fill"></i></div>
+                    <h4>تبلیغ‌دهنده</h4>
+                    <p>
+                        کمپین بساز، ناشر و تیم محتوا انتخاب کن، پرداخت امن انجام بده
+                        و نتیجه را با آمار واقعی ببین.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 reveal reveal-delay-2">
+                <div class="eco-card inf">
+                    <div class="eco-icon"><i class="bi bi-broadcast-pin"></i></div>
+                    <h4>ناشر / اینفلوئنسر</h4>
+                    <p>
+                        کانال‌ات را ثبت کن، سفارش‌های مناسب بگیر، محتوا را منتشر کن
+                        و درآمد شفاف به کیف پولت واریز شود.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 reveal reveal-delay-3">
+                <div class="eco-card team">
+                    <div class="eco-icon"><i class="bi bi-palette-fill"></i></div>
+                    <h4>تیم تولید محتوا</h4>
+                    <p>
+                        پلن سرویس تعریف کن، سفارش بپذیر، محتوا تحویل بده
+                        و با امتیاز و اعتبار در اکوسیستم رشد کن.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-pad" style="padding-top: 1rem;">
+    <div class="container">
+        <div class="row align-items-end mb-4">
+            <div class="col-lg-7 reveal">
+                <span class="section-label"><i class="bi bi-heart"></i> ارزش‌ها</span>
+                <h2 class="section-heading">چرا وینجاب؟</h2>
+                <p class="section-desc">
+                    اصولی که هر تصمیم محصول و هر همکاری روی آن‌ها بنا شده است.
                 </p>
-                <div class="values-grid">
-                    <div class="value-item">
-                        <div class="value-icon"><i class="bi bi-shield-check"></i></div>
-                        <div class="value-text">
-                            <h6>شفافیت کامل</h6>
-                            <p>همه فرآیندها از ثبت سفارش تا گزارش‌دهی نهایی، شفاف و قابل پیگیری هستند.</p>
-                        </div>
-                    </div>
-                    <div class="value-item">
-                        <div class="value-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                        <div class="value-text">
-                            <h6>داده‌محوری</h6>
-                            <p>تصمیم‌گیری‌ها بر اساس تحلیل داده‌های واقعی و بازخوردهای دقیق انجام می‌شود.</p>
-                        </div>
-                    </div>
-                    <div class="value-item">
-                        <div class="value-icon"><i class="bi bi-people"></i></div>
-                        <div class="value-text">
-                            <h6>ارزش‌آفرینی برای همه</h6>
-                            <p>طراحی شده تا برندها، اینفلوئنسرها و تیم‌های محتوا به طور عادلانه از همکاری بهره‌مند شوند.</p>
-                        </div>
-                    </div>
-                    <div class="value-item">
-                        <div class="value-icon"><i class="bi bi-lightbulb"></i></div>
-                        <div class="value-text">
-                            <h6>نوآوری مستمر</h6>
-                            <p>با به‌روزترین ابزارها و متدهای روز دنیا، تجربه‌ای بی‌نظیر خلق می‌کنیم.</p>
-                        </div>
-                    </div>
+            </div>
+        </div>
+        <div class="value-grid">
+            <div class="value-card reveal reveal-delay-1">
+                <div class="v-icon"><i class="bi bi-shield-check"></i></div>
+                <h5>شفافیت کامل</h5>
+                <p>از ثبت سفارش تا گزارش نهایی، همه چیز قابل پیگیری و روشن است. هیچ هزینه پنهانی وجود ندارد.</p>
+            </div>
+            <div class="value-card reveal reveal-delay-2">
+                <div class="v-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                <h5>داده‌محوری</h5>
+                <p>تصمیم‌ها بر اساس آمار واقعی کمپین، کلیک و عملکرد گرفته می‌شود؛ نه حدس و گمان.</p>
+            </div>
+            <div class="value-card reveal">
+                <div class="v-icon"><i class="bi bi-people"></i></div>
+                <h5>ارزش برای همه</h5>
+                <p>طراحی‌شده تا برند، ناشر و تیم محتوا به‌صورت عادلانه از همکاری سود ببرند.</p>
+            </div>
+            <div class="value-card reveal reveal-delay-1">
+                <div class="v-icon"><i class="bi bi-lightbulb"></i></div>
+                <h5>نوآوری مستمر</h5>
+                <p>با ابزارهای روز، ردیابی هوشمند و جریان کاری چندمرحله‌ای، تجربه‌ای مدرن می‌سازیم.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-pad" style="padding-top: 1rem;">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <span class="section-label"><i class="bi bi-clock-history"></i> مسیر رشد</span>
+            <h2 class="section-heading">داستان وینجاب</h2>
+            <p class="section-desc mx-auto">
+                از ایده تا پلتفرمی که امروز هزاران تعامل را مدیریت می‌کند.
+            </p>
+        </div>
+        <div class="timeline">
+            <div class="timeline-item reveal">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="year">شروع</span>
+                    <h4>ایده و نیاز بازار</h4>
+                    <p>شناخت شکاف بین برندها و اینفلوئنسرها؛ نبود شفافیت، تسویه دشوار و گزارش‌های غیرقابل اعتماد.</p>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="illustration-wrapper">
-                    <img src="{% static 'core/images/about/why-winjob.webp' %}" 
-                         alt="تصویر شاخص وینجاب" 
-                         class="img-fluid">
+            <div class="timeline-item reveal reveal-delay-1">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="year">ساخت</span>
+                    <h4>تولد پلتفرم</h4>
+                    <p>طراحی جریان کمپین چندمرحله‌ای، کیف پول، OTP و اتصال به درگاه‌های پرداخت ایرانی.</p>
+                </div>
+            </div>
+            <div class="timeline-item reveal reveal-delay-2">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="year">رشد</span>
+                    <h4>اکوسیستم سه‌نقشه</h4>
+                    <p>اضافه شدن تیم‌های تولید محتوا، گیمیفیکیشن، ردیابی لینک و پنل پشتیبانی یکپارچه.</p>
+                </div>
+            </div>
+            <div class="timeline-item reveal">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="year">امروز</span>
+                    <h4>مقیاس و اعتماد</h4>
+                    <p>تمرکز روی کیفیت همکاری‌ها، آمار دقیق‌تر و تجربه بهتر برای همه کاربران در سراسر ایران.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ==================== تیم ما با پرامپت هر نفر ==================== -->
-<section class="py-5">
+<section class="section-pad" style="padding-top: 1rem;">
     <div class="container">
-        <div class="text-center mb-5">
-            <span class="badge bg-faded-primary text-primary px-3 py-2 rounded-pill">
-                <i class="bi bi-people me-1"></i> تیم وینجاب
-            </span>
-            <h3 class="section-title section-title-center mt-3">افراد پشت صحنه</h3>
-            <p class="text-muted" style="color: rgba(255,255,255,0.6) !important; max-width: 600px; margin: 0.5rem auto 0;">
-                تیم ما متشکل از متخصصان بازاریابی، توسعه‌دهندگان و خلاقانی است که با عشق به کار خود،
-                وینجاب را به بهترین نسخه ممکن تبدیل می‌کنند.
+        <div class="text-center mb-5 reveal">
+            <span class="section-label"><i class="bi bi-people-fill"></i> تیم وینجاب</span>
+            <h2 class="section-heading">افراد پشت صحنه</h2>
+            <p class="section-desc mx-auto">
+                متخصصانی که با عشق به محصول و کاربر، وینجاب را هر روز بهتر می‌کنند.
             </p>
         </div>
         <div class="row g-4 justify-content-center">
-            <div class="col-md-3 col-sm-6">
-                <div class="team-member-card">
-                    {# در صورت وجود عکس واقعی از static استفاده کن، فعلاً placeholder #}
-                    <img src="{% static 'core/images/about/members/takbitgoo.webp' %}" 
-                         alt="محمدرضا تکبیرگو" 
-                         class="avatar">
-                    <div class="name">محمدرضا تکبیرگو</div>
+            <div class="col-sm-6 col-md-4 col-lg-3 reveal reveal-delay-1">
+                <div class="team-card">
+                    <div class="avatar-wrap">
+                        <img src="{% static 'core/images/about/members/takbitgoo.webp' %}"
+                             alt="مدیرعامل"
+                             class="avatar"
+                             onerror="this.src='{% static 'finder/img/logo/logo.webp' %}'">
+                    </div>
+                    <div class="name">تیم مدیریت</div>
                     <div class="role">مدیرعامل و بنیان‌گذار</div>
-                    <p class="bio">با بیش از ۱۰ سال تجربه در حوزه دیجیتال مارکتینگ و رهبری تیم‌های خلاق.</p>
+                    <p class="bio">رهبری محصول و استراتژی با تمرکز بر رشد پایدار اکوسیستم تبلیغات اینفلوئنسری.</p>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="team-member-card">
-                    <img src="{% static 'core/images/about/members/sheikhali.webp' %}" 
-                         alt="محمد شیخعلی" 
-                         class="avatar">
+            <div class="col-sm-6 col-md-4 col-lg-3 reveal reveal-delay-2">
+                <div class="team-card">
+                    <div class="avatar-wrap">
+                        <img src="{% static 'core/images/about/members/sheikhali.webp' %}"
+                             alt="محمد شیخعلی"
+                             class="avatar"
+                             onerror="this.src='{% static 'finder/img/logo/logo.webp' %}'">
+                    </div>
                     <div class="name">محمد شیخعلی</div>
                     <div class="role">توسعه‌دهنده ارشد</div>
-                    <p class="bio">عاشق کدنویسی پاک و معماری سیستم‌های مقیاس‌پذیر با جنگو و فناوری‌های مدرن.</p>
+                    <p class="bio">عاشق معماری تمیز، جنگو و ساخت سیستم‌های مقیاس‌پذیر برای تجربه کاربری روان.</p>
                 </div>
             </div>
         </div>
@@ -449,46 +895,41 @@
 
 {% block script %}
 <script>
-    // ========== انیمیشن شمارش آمار ==========
-    document.addEventListener('DOMContentLoaded', function() {
-        const counters = document.querySelectorAll('.stat-number');
-
-        const animateCounter = (el) => {
-            const target = parseInt(el.getAttribute('data-count')) || 0;
-            const duration = 1500; // میلی‌ثانیه
-            const startTime = performance.now();
-
-            const update = (currentTime) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                // تابع easeOutCubic برای نرم‌تر شدن
-                const eased = 1 - Math.pow(1 - progress, 3);
-                const current = Math.floor(eased * target);
-
-                // نمایش عدد با جداکننده هزارگان (فارسی)
-                el.textContent = current.toLocaleString('fa-IR');
-
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                } else {
-                    el.textContent = target.toLocaleString('fa-IR');
-                }
-            };
-
-            requestAnimationFrame(update);
+document.addEventListener('DOMContentLoaded', function () {
+    const counters = document.querySelectorAll('.stat-number');
+    const animateCounter = (el) => {
+        const target = parseInt(el.getAttribute('data-count'), 10) || 0;
+        const duration = 1600;
+        const start = performance.now();
+        const tick = (now) => {
+            const p = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.floor(eased * target).toLocaleString('fa-IR');
+            if (p < 1) requestAnimationFrame(tick);
+            else el.textContent = target.toLocaleString('fa-IR');
         };
+        requestAnimationFrame(tick);
+    };
+    const counterObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                animateCounter(e.target);
+                counterObs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.35 });
+    counters.forEach(c => counterObs.observe(c));
 
-        // شروع انیمیشن وقتی المان در viewport قرار گرفت
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCounter(entry.target);
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.3 });
-
-        counters.forEach(counter => observer.observe(counter));
-    });
+    const reveals = document.querySelectorAll('.reveal');
+    const revealObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.classList.add('visible');
+                revealObs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => revealObs.observe(el));
+});
 </script>
 {% endblock %}

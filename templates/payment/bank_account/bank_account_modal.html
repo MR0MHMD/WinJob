@@ -1,0 +1,237 @@
+{% load static %}
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #1f1b2d; border: 1px solid rgba(255,255,255,0.08);">
+
+            <div class="modal-header border-light" style="border-color: rgba(255,255,255,0.06);">
+                <h5 class="modal-title text-light">
+                    <i class="fi-plus-circle me-2 text-primary"></i>
+                    ثبت حساب بانکی جدید
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="bankAccountForm" method="post" action="{% url 'payment:bank_account_create_modal' %}">
+                {% csrf_token %}
+
+                <div class="modal-body">
+
+                    <!-- پیام‌های خطا -->
+                    <div id="bankFormErrors" class="alert alert-danger d-none"
+                         style="background: rgba(242,60,73,0.1); border-color: rgba(242,60,73,0.2); color: #f23c49;">
+                        <i class="fi-alert-circle me-1"></i>
+                        <span id="bankFormErrorText"></span>
+                    </div>
+
+                    <!-- شماره شبا -->
+                    <div class="mb-3">
+                        <label class="form-label text-light" for="id_sheba_code">
+                            شماره شبا
+                        </label>
+                        <div class="input-group">
+                            <input type="text"
+                                   name="sheba_code"
+                                   id="id_sheba_code"
+                                   class="form-control form-control-light"
+                                   placeholder="xx xxxx xxxx xxxx xxxx xxxx xx"
+                                   dir="ltr"
+                                   autocomplete="off"
+                                   maxlength="30"
+                                   inputmode="numeric"
+                                   required>
+                            <span class="input-group-text"
+                                  style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); font-weight: 600;">
+                                IR
+                            </span>
+                            
+                        </div>
+                        <div class="form-text">شماره شبا را بدون IR وارد کنید (۲۴ رقم)</div>
+                    </div>
+
+                    <!-- تشخیص خودکار بانک با لوگو -->
+                    <div id="bankDetectResult" class="d-none mb-3"
+                         style="background: rgba(7,201,139,0.08); border: 1px solid rgba(7,201,139,0.15); border-radius: 0.5rem; padding: 0.75rem 1rem;">
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- لوگو -->
+                            <div id="bankLogoContainer" class="d-none">
+                                <img id="detectedBankLogo" 
+                                     src="" 
+                                     alt="لوگو بانک"
+                                     style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; background: rgba(255,255,255,0.05); padding: 4px;">
+                            </div>
+                            <!-- نام بانک -->
+                            <div>
+                                <strong id="detectedBankName" class="text-light d-block"></strong>
+                                <span class="text-muted fs-xs" id="detectedBankCode"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- نام صاحب حساب -->
+                    <div class="mb-3">
+                        <label class="form-label text-light" for="id_account_holder_name">
+                            نام صاحب حساب
+                        </label>
+                        <input type="text"
+                               name="account_holder_name"
+                               id="id_account_holder_name"
+                               class="form-control form-control-light"
+                               placeholder="نام و نام خانوادگی صاحب حساب"
+                               autocomplete="off"
+                               required>
+                        <div class="form-text">نام باید دقیقاً مطابق کارت بانکی باشد</div>
+                    </div>
+
+                    <!-- پیش‌فرض -->
+                    <div class="mb-2">
+                        <div class="form-check form-switch">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   id="id_is_default"
+                                   name="is_default"
+                                   {% if form.is_default.value %}checked{% endif %}>
+                            <label class="form-check-label text-light" for="id_is_default">
+                                تنظیم به عنوان حساب پیش‌فرض
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-light" style="border-color: rgba(255,255,255,0.06);">
+                    <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">
+                        <i class="fi-x me-1"></i>
+                        انصراف
+                    </button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="bankSubmitBtn">
+                        <i class="fi-save me-2"></i>
+                        ثبت حساب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const shebaInput = document.getElementById('id_sheba_code');
+        const bankDetectResult = document.getElementById('bankDetectResult');
+        const detectedBankName = document.getElementById('detectedBankName');
+        const detectedBankCode = document.getElementById('detectedBankCode');
+        const detectedBankLogo = document.getElementById('detectedBankLogo');
+        const bankLogoContainer = document.getElementById('bankLogoContainer');
+        const form = document.getElementById('bankAccountForm');
+        const submitBtn = document.getElementById('bankSubmitBtn');
+        const errorsDiv = document.getElementById('bankFormErrors');
+        const errorText = document.getElementById('bankFormErrorText');
+
+        // فرمت‌دهی شماره شبا + تشخیص بانک
+        shebaInput.addEventListener('input', function (e) {
+            let raw = this.value.replace(/[^0-9]/g, '');
+
+            if (raw.length > 24) {
+                raw = raw.slice(0, 24);
+            }
+
+            // فرمت: xx xxxx xxxx xxxx xxxx xxxx xx
+            let formatted = '';
+            for (let i = 0; i < raw.length; i++) {
+                if (i === 2 || i === 6 || i === 10 || i === 14 || i === 18 || i === 22) {
+                    formatted += ' ';
+                }
+                formatted += raw[i];
+            }
+
+            this.value = formatted;
+
+            if (raw.length >= 5) {
+                detectBank(raw);
+            } else {
+                bankDetectResult.classList.add('d-none');
+                bankLogoContainer.classList.add('d-none');
+            }
+        });
+
+        // تشخیص بانک از API
+        function detectBank(numbers) {
+            fetch(`/payment/detect-bank/?sheba=${numbers}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.found) {
+                        detectedBankName.textContent = data.bank_name;
+                        
+                        // نمایش لوگو
+                        if (data.logo_url) {
+                            detectedBankLogo.src = data.logo_url;
+                            bankLogoContainer.classList.remove('d-none');
+                        } else {
+                            bankLogoContainer.classList.add('d-none');
+                        }
+                        
+                        bankDetectResult.classList.remove('d-none');
+                    } else {
+                        bankDetectResult.classList.add('d-none');
+                        bankLogoContainer.classList.add('d-none');
+                    }
+                })
+                .catch(() => {
+                    bankDetectResult.classList.add('d-none');
+                    bankLogoContainer.classList.add('d-none');
+                });
+        }
+
+        // ارسال فرم با AJAX
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> در حال ثبت...';
+            errorsDiv.classList.add('d-none');
+
+            // پاک کردن فاصله‌ها از شبا قبل از ارسال
+            let sheba = document.getElementById('id_sheba_code').value.replace(/\s/g, '');
+
+            const formData = new FormData();
+            formData.append('sheba_code', sheba);
+            formData.append('account_holder_name', document.getElementById('id_account_holder_name').value.trim());
+            formData.append('is_default', document.getElementById('id_is_default').checked ? 'on' : '');
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('bankAccountModal'));
+                        modal.hide();
+
+                        if (typeof toastManager !== 'undefined') {
+                            toastManager.show('حساب بانکی با موفقیت ثبت شد.', 'success');
+                        }
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 600);
+                    } else {
+                        errorText.textContent = data.message;
+                        errorsDiv.classList.remove('d-none');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fi-save me-2"></i> ثبت حساب';
+                    }
+                })
+                .catch(() => {
+                    errorText.textContent = 'خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.';
+                    errorsDiv.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fi-save me-2"></i> ثبت حساب';
+                });
+        });
+    });
+</script>

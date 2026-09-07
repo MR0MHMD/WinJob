@@ -1,0 +1,1070 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}راهنمای استفاده | سامانه وینجاب{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ========== Hero ========== */
+    .help-hero {
+        position: relative;
+        padding: 5.5rem 0 3.5rem;
+        background: linear-gradient(160deg, #1a1625 0%, #0f0c14 55%, #15101f 100%);
+        overflow: hidden;
+    }
+    .help-hero::before {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -15%;
+        width: 520px;
+        height: 520px;
+        background: radial-gradient(circle, rgba(253,86,49,0.11) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .help-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -35%;
+        left: -10%;
+        width: 460px;
+        height: 460px;
+        background: radial-gradient(circle, rgba(93,60,242,0.11) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .help-hero .container { position: relative; z-index: 1; }
+    .help-hero .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(253,86,49,0.12);
+        border: 1px solid rgba(253,86,49,0.25);
+        color: #fd5631;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.45rem 1.1rem;
+        border-radius: 999px;
+        margin-bottom: 1.1rem;
+    }
+    .help-hero h1 {
+        font-size: clamp(2rem, 4.5vw, 3rem);
+        font-weight: 800;
+        background: linear-gradient(135deg, #fd5631, #5d3cf2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.75rem;
+    }
+    .help-hero .lead {
+        color: rgba(255,255,255,0.75);
+        font-size: 1.05rem;
+        max-width: 580px;
+        margin: 0 auto 1.5rem;
+        line-height: 1.8;
+    }
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: #fff;
+        font-weight: 600;
+        padding: 0.5rem 1.2rem;
+        border-radius: 999px;
+        font-size: 0.95rem;
+    }
+    .role-badge i { color: #fd5631; }
+
+    /* ========== Role switcher ========== */
+    .role-switcher {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.6rem;
+        margin-top: 1.75rem;
+    }
+    .role-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.55rem 1.15rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.75);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+        transition: all 0.25s ease;
+        cursor: pointer;
+    }
+    .role-chip:hover {
+        border-color: rgba(253,86,49,0.4);
+        background: rgba(253,86,49,0.1);
+        color: #fd5631;
+    }
+    .role-chip.active {
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(93,60,242,0.15));
+        border-color: rgba(253,86,49,0.45);
+        color: #fd5631;
+        box-shadow: 0 4px 16px rgba(253,86,49,0.2);
+    }
+
+    /* ========== Layout ========== */
+    .help-section { padding: 3rem 0 4rem; }
+    .section-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(253,86,49,0.1);
+        border: 1px solid rgba(253,86,49,0.2);
+        color: #fd5631;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        margin-bottom: 0.75rem;
+    }
+    .section-heading {
+        font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 0.4rem;
+    }
+    .section-desc {
+        color: rgba(255,255,255,0.55);
+        max-width: 560px;
+        line-height: 1.7;
+        margin-bottom: 1.75rem;
+    }
+
+    /* ========== Quick cards ========== */
+    .quick-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1.15rem;
+        padding: 1.35rem 1.25rem;
+        height: 100%;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+    }
+    .quick-card:hover {
+        border-color: rgba(253,86,49,0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+        background: rgba(255,255,255,0.05);
+    }
+    .quick-card .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        margin-bottom: 0.9rem;
+        background: linear-gradient(135deg, rgba(253,86,49,0.18), rgba(93,60,242,0.12));
+        color: #fd5631;
+    }
+    .quick-card h5 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 0.35rem;
+    }
+    .quick-card p {
+        color: rgba(255,255,255,0.55);
+        font-size: 0.88rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* ========== Guide accordion ========== */
+    .guide-item {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 1rem;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+        transition: border-color 0.25s;
+    }
+    .guide-item:hover { border-color: rgba(253,86,49,0.22); }
+    .guide-item[open] { border-color: rgba(253,86,49,0.35); }
+    .guide-item summary {
+        padding: 1.15rem 1.3rem;
+        cursor: pointer;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.98rem;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+    .guide-item summary::-webkit-details-marker { display: none; }
+    .guide-item summary .step-num {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(253,86,49,0.2), rgba(93,60,242,0.15));
+        color: #fd5631;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+    .guide-item summary .step-title { flex: 1; }
+    .guide-item summary::after {
+        content: '+';
+        color: #fd5631;
+        font-size: 1.3rem;
+        font-weight: 400;
+        flex-shrink: 0;
+    }
+    .guide-item[open] summary::after { content: '−'; }
+    .guide-item .guide-body {
+        padding: 0 1.3rem 1.3rem 1.3rem;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.93rem;
+        line-height: 1.85;
+    }
+    .guide-item .guide-body ul {
+        padding-right: 1.25rem;
+        margin: 0.6rem 0;
+    }
+    .guide-item .guide-body li { margin-bottom: 0.4rem; }
+    .guide-item .guide-body .tip {
+        background: rgba(7,201,139,0.1);
+        border: 1px solid rgba(7,201,139,0.25);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        margin-top: 0.85rem;
+        color: #07c98b;
+        font-size: 0.88rem;
+    }
+    .guide-item .guide-body .warn {
+        background: rgba(253,188,49,0.1);
+        border: 1px solid rgba(253,188,49,0.25);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        margin-top: 0.85rem;
+        color: #fdbc31;
+        font-size: 0.88rem;
+    }
+    .guide-item .guide-body a {
+        color: #fd5631;
+        text-decoration: none;
+        border-bottom: 1px dashed rgba(253,86,49,0.4);
+    }
+    .guide-item .guide-body a:hover { color: #ff7a5c; }
+
+    /* ========== Sidebar nav ========== */
+    .help-nav {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 1.25rem;
+        padding: 1.35rem;
+        position: sticky;
+        top: 90px;
+    }
+    .help-nav h6 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+    .help-nav a {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 0.65rem;
+        color: rgba(255,255,255,0.65);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        margin-bottom: 0.25rem;
+    }
+    .help-nav a:hover, .help-nav a.active {
+        background: rgba(253,86,49,0.12);
+        color: #fd5631;
+    }
+    .help-nav a i { font-size: 1.05rem; }
+
+    /* ========== CTA box ========== */
+    .help-cta {
+        background: linear-gradient(135deg, rgba(253,86,49,0.12), rgba(93,60,242,0.1));
+        border: 1px solid rgba(253,86,49,0.25);
+        border-radius: 1.25rem;
+        padding: 1.75rem;
+        text-align: center;
+    }
+    .help-cta h5 { color: #fff; font-weight: 700; margin-bottom: 0.5rem; }
+    .help-cta p { color: rgba(255,255,255,0.65); font-size: 0.92rem; margin-bottom: 1.15rem; }
+    .btn-help-primary {
+        background: linear-gradient(135deg, #fd5631, #e04a28);
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        padding: 0.7rem 1.5rem;
+        border-radius: 999px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        box-shadow: 0 8px 24px rgba(253,86,49,0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-help-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(253,86,49,0.4);
+        color: #fff;
+    }
+    .btn-help-outline {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.85);
+        font-weight: 600;
+        padding: 0.65rem 1.35rem;
+        border-radius: 999px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s;
+    }
+    .btn-help-outline:hover {
+        border-color: #fd5631;
+        color: #fd5631;
+        background: rgba(253,86,49,0.08);
+    }
+
+    .reveal {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 991.98px) {
+        .help-nav { position: static; margin-bottom: 2rem; }
+    }
+    
+    .page-wrapper{
+        padding: 0!important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="help-hero">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <div class="badge-pill">
+                    <i class="bi bi-book"></i>
+                    مرکز راهنمای وینجاب
+                </div>
+                <h1>راهنمای استفاده از سامانه</h1>
+                <p class="lead">
+                    همه چیزهایی که برای کار با وینجاب نیاز داری، اینجا به صورت گام‌به‌گام و بر اساس نقش تو توضیح داده شده.
+                </p>
+                <div class="role-badge">
+                    <i class="bi bi-person-badge"></i>
+                    نقش فعلی شما: <strong>{{ role_label }}</strong>
+                </div>
+
+                <!-- Role switcher -->
+                <div class="role-switcher">
+                    <a href="?role=guest" class="role-chip {% if current_role == 'guest' %}active{% endif %}">
+                        <i class="bi bi-person"></i> مهمان
+                    </a>
+                    <a href="?role=advertiser" class="role-chip {% if current_role == 'advertiser' %}active{% endif %}">
+                        <i class="bi bi-megaphone"></i> تبلیغ‌دهنده
+                    </a>
+                    <a href="?role=influencer" class="role-chip {% if current_role == 'influencer' %}active{% endif %}">
+                        <i class="bi bi-broadcast"></i> اینفلوئنسر
+                    </a>
+                    <a href="?role=team_member" class="role-chip {% if current_role == 'team_member' %}active{% endif %}">
+                        <i class="bi bi-film"></i> تیم محتوا
+                    </a>
+                    <a href="?role=user" class="role-chip {% if current_role == 'user' %}active{% endif %}">
+                        <i class="bi bi-person-gear"></i> کاربر عمومی
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="help-section">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="help-nav reveal">
+                    <h6><i class="bi bi-list-ul me-1" style="color:#fd5631;"></i> فهرست راهنما</h6>
+                    <a href="#quick-start"><i class="bi bi-rocket-takeoff"></i> شروع سریع</a>
+                    {% if current_role == 'advertiser' %}
+                        <a href="#adv-campaign"><i class="bi bi-megaphone"></i> ساخت کمپین</a>
+                        <a href="#adv-channels"><i class="bi bi-people"></i> انتخاب کانال</a>
+                        <a href="#adv-reports"><i class="bi bi-bar-chart"></i> گزارش‌ها</a>
+                    {% elif current_role == 'influencer' %}
+                        <a href="#inf-channels"><i class="bi bi-collection"></i> مدیریت کانال‌ها</a>
+                        <a href="#inf-orders"><i class="bi bi-bag-check"></i> سفارش‌ها و رزرو</a>
+                        <a href="#inf-rates"><i class="bi bi-tag"></i> تعرفه‌ها</a>
+                    {% elif current_role == 'team_member' %}
+                        <a href="#team-orders"><i class="bi bi-clipboard-check"></i> سفارش‌های محتوا</a>
+                        <a href="#team-plans"><i class="bi bi-layers"></i> پلن‌ها و خدمات</a>
+                        <a href="#team-members"><i class="bi bi-people"></i> مدیریت اعضا</a>
+                    {% endif %}
+                    <a href="#wallet"><i class="bi bi-wallet2"></i> کیف پول</a>
+                    <a href="#tickets"><i class="bi bi-ticket-detailed"></i> تیکت پشتیبانی</a>
+                    <a href="#account"><i class="bi bi-person-gear"></i> حساب کاربری</a>
+                    <a href="#faq-link"><i class="bi bi-question-circle"></i> سوالات متداول</a>
+                    <a href="#contact-link"><i class="bi bi-chat-dots"></i> تماس با ما</a>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="col-lg-9">
+
+                <!-- ========== QUICK START ========== -->
+                <div id="quick-start" class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-rocket-takeoff"></i> شروع سریع</span>
+                    <h2 class="section-heading">از کجا شروع کنم؟</h2>
+                    <p class="section-desc">بسته به نقشت، مسیرهای اصلی رو اینجا ببین.</p>
+
+                    <div class="row g-3">
+                        {% if current_role == 'guest' %}
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'accounts:login' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-box-arrow-in-left"></i></div>
+                                    <h5>ورود / ثبت‌نام</h5>
+                                    <p>با شماره موبایل و کد یک‌بارمصرف وارد شو.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'core:home' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-house"></i></div>
+                                    <h5>صفحه اصلی</h5>
+                                    <p>آمار، کانال‌های برتر و تیم‌های محتوا را ببین.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'influencers:channel_list' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-search"></i></div>
+                                    <h5>جستجوی کانال‌ها</h5>
+                                    <p>بدون ثبت‌نام هم می‌تونی کانال‌ها را مرور کنی.</p>
+                                </a>
+                            </div>
+                        {% elif current_role == 'advertiser' %}
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'campaigns:campaign_create_step1' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-plus-circle"></i></div>
+                                    <h5>ساخت کمپین جدید</h5>
+                                    <p>کمپین را در ۴ مرحله بساز و پرداخت کن.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'advertisers:dashboard' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-speedometer2"></i></div>
+                                    <h5>داشبورد تبلیغ‌دهنده</h5>
+                                    <p>خلاصه کمپین‌ها، هزینه و عملکرد.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'payment:wallet_dashboard' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-wallet2"></i></div>
+                                    <h5>کیف پول</h5>
+                                    <p>شارژ کن تا بتونی کمپین بسازی.</p>
+                                </a>
+                            </div>
+                        {% elif current_role == 'influencer' %}
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'influencers:influencer_channels' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-collection"></i></div>
+                                    <h5>کانال‌های من</h5>
+                                    <p>کانال اضافه کن، تأیید بگیر و تعرفه بگذار.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'influencers:order_list' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-bag-check"></i></div>
+                                    <h5>سفارش‌ها</h5>
+                                    <p>رزروهای دریافتی را ببین و پاسخ بده.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'influencers:dashboard' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-speedometer2"></i></div>
+                                    <h5>داشبورد اینفلوئنسر</h5>
+                                    <p>آمار درآمد، امتیاز و وضعیت کانال‌ها.</p>
+                                </a>
+                            </div>
+                        {% elif current_role == 'team_member' %}
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'content_team:team_manage' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-people"></i></div>
+                                    <h5>مدیریت تیم</h5>
+                                    <p>اعضا، درخواست‌ها و تنظیمات تیم.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'content_team:team_orders_list' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-clipboard-check"></i></div>
+                                    <h5>سفارش‌های محتوا</h5>
+                                    <p>قبول، تحویل و مدیریت بازبینی‌ها.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'payment:wallet_dashboard' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-wallet2"></i></div>
+                                    <h5>کیف پول</h5>
+                                    <p>درآمدها را ببین و برداشت کن.</p>
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'accounts:edit_profile' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-person-gear"></i></div>
+                                    <h5>تکمیل پروفایل</h5>
+                                    <p>اطلاعات و نقش خود را کامل کن.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'payment:wallet_dashboard' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-wallet2"></i></div>
+                                    <h5>کیف پول</h5>
+                                    <p>موجودی و تراکنش‌ها.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <a href="{% url 'tickets:ticket_list' %}" class="quick-card">
+                                    <div class="icon-box"><i class="bi bi-ticket-detailed"></i></div>
+                                    <h5>تیکت‌ها</h5>
+                                    <p>سوالات و درخواست‌های پشتیبانی.</p>
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ========== ROLE-SPECIFIC GUIDES ========== -->
+
+                {% if current_role == 'guest' %}
+                <!-- GUEST -->
+                <div class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-person"></i> راهنمای مهمان</span>
+                    <h2 class="section-heading">قبل از ورود چه کارهایی می‌تونی بکنی؟</h2>
+                    <p class="section-desc">بدون حساب هم می‌تونی با پلتفرم آشنا شی.</p>
+
+                    <details class="guide-item" open>
+                        <summary>
+                            <span class="step-num">۱</span>
+                            <span class="step-title">مرور صفحه اصلی و لندینگ پلتفرم‌ها</span>
+                        </summary>
+                        <div class="guide-body">
+                            در صفحه اصلی آمار کلی، کانال‌های برتر، تیم‌های محتوا و نظرات را می‌بینی.
+                            برای هر پلتفرم (اینستاگرام، تلگرام، ایتا، روبیکا، بله، سروش) صفحه لندینگ اختصاصی وجود دارد.
+                            <div class="tip"><i class="bi bi-lightbulb me-1"></i> از منوی اصلی یا کارت‌های پلتفرم وارد لندینگ شو.</div>
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۲</span>
+                            <span class="step-title">جستجو و مشاهده کانال‌ها</span>
+                        </summary>
+                        <div class="guide-body">
+                            می‌تونی لیست کانال‌های تأییدشده را فیلتر کنی (پلتفرم، موضوع، قیمت، امتیاز) و جزئیات هر کانال را ببینی.
+                            برای رزرو باید وارد حساب شی.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۳</span>
+                            <span class="step-title">ثبت‌نام و انتخاب نقش</span>
+                        </summary>
+                        <div class="guide-body">
+                            <ul>
+                                <li>روی «ورود / ثبت‌نام» کلیک کن.</li>
+                                <li>شماره موبایل را وارد کن و کد OTP را تأیید کن.</li>
+                                <li>بعد از ورود می‌تونی پروفایل اینفلوئنسر بسازی، تیم محتوا بسازی یا مستقیماً کمپین تبلیغاتی شروع کنی.</li>
+                            </ul>
+                            <div class="tip"><i class="bi bi-lightbulb me-1"></i> یک حساب می‌تواند هم‌زمان تبلیغ‌دهنده و اینفلوئنسر باشد.</div>
+                        </div>
+                    </details>
+                </div>
+
+                {% elif current_role == 'advertiser' %}
+                <!-- ADVERTISER -->
+                <div id="adv-campaign" class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-megaphone"></i> راهنمای تبلیغ‌دهنده</span>
+                    <h2 class="section-heading">ساخت و مدیریت کمپین</h2>
+                    <p class="section-desc">کمپین در ۴ مرحله ساخته می‌شود.</p>
+
+                    <details class="guide-item" open>
+                        <summary>
+                            <span class="step-num">۱</span>
+                            <span class="step-title">مرحله ۱ — اطلاعات پایه و پلتفرم</span>
+                        </summary>
+                        <div class="guide-body">
+                            نام کمپین، پلتفرم هدف (اینستاگرام، تلگرام، ایتا و ...)، نوع تبلیغ و بازه زمانی را مشخص کن.
+                            می‌تونی کمپین را به صورت پیش‌نویس ذخیره کنی و بعداً ادامه دهی.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۲</span>
+                            <span class="step-title">مرحله ۲ — محتوا و بودجه</span>
+                        </summary>
+                        <div class="guide-body">
+                            محتوا یا لینک مقصد را مشخص کن، بودجه تقریبی را وارد کن. سیستم هزینه تقریبی را محاسبه می‌کند.
+                            <div class="tip"><i class="bi bi-lightbulb me-1"></i> لینک رهگیری خودکار برای هر اینفلوئنسر ساخته می‌شود تا کلیک‌ها ثبت شوند.</div>
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۳</span>
+                            <span class="step-title">مرحله ۳ — انتخاب کانال یا تیم محتوا</span>
+                        </summary>
+                        <div class="guide-body">
+                            دو مسیر داری:
+                            <ul>
+                                <li><strong>آماده (Ready):</strong> کانال‌های اینفلوئنسر را انتخاب و رزرو کن.</li>
+                                <li><strong>تیم محتوا:</strong> اگر نیاز به تولید محتوا داری، تیم و پلن مناسب را انتخاب کن.</li>
+                            </ul>
+                            می‌تونی بعداً کانال یا تیم را جایگزین کنی (با محاسبه کمیسیون).
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۴</span>
+                            <span class="step-title">مرحله ۴ — بازبینی و پرداخت</span>
+                        </summary>
+                        <div class="guide-body">
+                            خلاصه هزینه، مالیات احتمالی و کد تخفیف را ببین. پس از پرداخت از کیف پول یا درگاه، کمپین برای اجرا ارسال می‌شود.
+                            <div class="warn"><i class="bi bi-exclamation-triangle me-1"></i> موجودی کیف پول باید کافی باشد. در غیر این صورت ابتدا شارژ کن.</div>
+                        </div>
+                    </details>
+                </div>
+
+                <div id="adv-channels" class="mb-5 reveal">
+                    <h2 class="section-heading">انتخاب اینفلوئنسر و کانال</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-funnel"></i></span>
+                            <span class="step-title">چطور کانال مناسب پیدا کنم؟</span>
+                        </summary>
+                        <div class="guide-body">
+                            از فیلترهای پلتفرم، دسته‌بندی موضوعی، تعداد دنبال‌کننده، استان، بازه قیمت و امتیاز استفاده کن.
+                            فقط کانال‌های با وضعیت «تأییدشده» قابل رزرو هستند.
+                            نظرات و امتیاز قبلی را حتماً بخوان.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-arrow-repeat"></i></span>
+                            <span class="step-title">جایگزینی کانال یا تیم</span>
+                        </summary>
+                        <div class="guide-body">
+                            اگر کانالی رزرو را نپذیرد یا بخواهی تغییر دهی، از بخش جایگزینی در جزئیات کمپین استفاده کن.
+                            سیستم کمیسیون و مابه‌التفاوت را محاسبه می‌کند.
+                        </div>
+                    </details>
+                </div>
+
+                <div id="adv-reports" class="mb-5 reveal">
+                    <h2 class="section-heading">گزارش و پیگیری عملکرد</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-bar-chart-line"></i></span>
+                            <span class="step-title">آمار کلیک و گزارش کمپین</span>
+                        </summary>
+                        <div class="guide-body">
+                            در صفحه جزئیات هر کمپین می‌توانی تعداد کلیک‌ها، هزینه به ازای کلیک، وضعیت هر رزرو و گزارش‌های ثبت‌شده توسط اینفلوئنسر را ببینی.
+                            امکان دانلود گزارش وجود دارد.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-pencil-square"></i></span>
+                            <span class="step-title">بازبینی محتوای تیم</span>
+                        </summary>
+                        <div class="guide-body">
+                            اگر از تیم محتوا سفارش داده‌ای، پس از تحویل می‌توانی درخواست بازبینی ثبت کنی یا تحویل نهایی را تأیید کنی.
+                        </div>
+                    </details>
+                </div>
+
+                {% elif current_role == 'influencer' %}
+                <!-- INFLUENCER -->
+                <div id="inf-channels" class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-broadcast"></i> راهنمای اینفلوئنسر</span>
+                    <h2 class="section-heading">مدیریت کانال‌ها</h2>
+                    <p class="section-desc">کانال‌هایت را اضافه، تأیید و قیمت‌گذاری کن.</p>
+
+                    <details class="guide-item" open>
+                        <summary>
+                            <span class="step-num">۱</span>
+                            <span class="step-title">افزودن کانال جدید</span>
+                        </summary>
+                        <div class="guide-body">
+                            از «کانال‌های من» کانال جدید بساز. پلتفرم، آیدی/لینک، دسته‌بندی و توضیحات را وارد کن.
+                            سپس فرآیند تأیید (verification) را طی کن تا کانال در لیست قابل رزرو قرار گیرد.
+                            <div class="tip"><i class="bi bi-lightbulb me-1"></i> کانال‌های تأییدنشده برای تبلیغ‌دهندگان نمایش داده نمی‌شوند.</div>
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۲</span>
+                            <span class="step-title">تأیید مالکیت کانال</span>
+                        </summary>
+                        <div class="guide-body">
+                            سیستم معمولاً کدی برای قرار دادن در بیو یا پست موقت می‌دهد. پس از بررسی، وضعیت به «تأییدشده» تغییر می‌کند.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۳</span>
+                            <span class="step-title">تنظیم تعرفه (Service Rates)</span>
+                        </summary>
+                        <div class="guide-body">
+                            برای هر نوع تبلیغ (پست، استوری، بنر و ...) قیمت تعریف کن. تعرفه‌ها در صفحه کانال به تبلیغ‌دهنده نمایش داده می‌شود.
+                        </div>
+                    </details>
+                </div>
+
+                <div id="inf-orders" class="mb-5 reveal">
+                    <h2 class="section-heading">سفارش‌ها و رزروها</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-inbox"></i></span>
+                            <span class="step-title">پاسخ به رزرو جدید</span>
+                        </summary>
+                        <div class="guide-body">
+                            در لیست سفارش‌ها، رزروهای جدید را می‌بینی. می‌توانی قبول یا رد کنی.
+                            پس از قبول، محتوا را طبق توافق منتشر کن و گزارش ثبت کن.
+                            <div class="warn"><i class="bi bi-exclamation-triangle me-1"></i> تأخیر یا عدم انتشار می‌تواند روی امتیاز تو تأثیر منفی بگذارد.</div>
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                            <span class="step-title">ثبت گزارش انتشار</span>
+                        </summary>
+                        <div class="guide-body">
+                            پس از انتشار، از صفحه جزئیات سفارش گزارش (لینک پست، اسکرین‌شات و ...) ارسال کن تا کمپین به مرحله بعد برود و پرداخت آزاد شود.
+                        </div>
+                    </details>
+                </div>
+
+                <div id="inf-rates" class="mb-5 reveal">
+                    <h2 class="section-heading">کد تخفیف و امتیاز</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-ticket-perforated"></i></span>
+                            <span class="step-title">ساخت کد تخفیف اختصاصی</span>
+                        </summary>
+                        <div class="guide-body">
+                            می‌توانی برای کانال خود کد تخفیف بسازی تا تبلیغ‌دهندگان با آن رزرو کنند. این کار می‌تواند سفارش‌های بیشتری جذب کند.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-trophy"></i></span>
+                            <span class="step-title">سیستم امتیاز و نشان‌ها</span>
+                        </summary>
+                        <div class="guide-body">
+                            با تکمیل موفق رزروها، دریافت نظرات مثبت و رعایت زمان‌بندی امتیاز می‌گیری.
+                            امتیاز بالاتر = نمایش بهتر در نتایج جستجو و اعتماد بیشتر تبلیغ‌دهندگان.
+                            راهنمای کامل امتیازات در بخش گیمیفیکیشن موجود است.
+                        </div>
+                    </details>
+                </div>
+
+                {% elif current_role == 'team_member' %}
+                <!-- TEAM MEMBER -->
+                <div id="team-orders" class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-film"></i> راهنمای تیم تولید محتوا</span>
+                    <h2 class="section-heading">مدیریت سفارش‌های محتوا</h2>
+                    <p class="section-desc">قبول، تولید، تحویل و بازبینی.</p>
+
+                    <details class="guide-item" open>
+                        <summary>
+                            <span class="step-num">۱</span>
+                            <span class="step-title">پذیرش یا رد سفارش</span>
+                        </summary>
+                        <div class="guide-body">
+                            سفارش‌های جدید در لیست سفارش‌ها ظاهر می‌شوند. پس از بررسی توضیحات و فایل‌های مرجع، قبول یا رد کن.
+                            زمان تحویل اعلام‌شده در پلن را رعایت کن.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۲</span>
+                            <span class="step-title">تحویل فایل‌های نهایی</span>
+                        </summary>
+                        <div class="guide-body">
+                            پس از آماده‌سازی، از صفحه سفارش فایل‌ها را آپلود و تحویل را ثبت کن.
+                            سفارش‌دهنده می‌تواند تأیید کند یا درخواست بازبینی بدهد.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۳</span>
+                            <span class="step-title">رسیدگی به درخواست بازبینی</span>
+                        </summary>
+                        <div class="guide-body">
+                            تعداد نوبت‌های ویرایش رایگان در پلن مشخص است. درخواست‌ها را بررسی و نسخه اصلاح‌شده را دوباره تحویل بده.
+                            <div class="tip"><i class="bi bi-lightbulb me-1"></i> ارتباط شفاف با سفارش‌دهنده از طریق سیستم، امتیاز و رضایت را بالا می‌برد.</div>
+                        </div>
+                    </details>
+                </div>
+
+                <div id="team-plans" class="mb-5 reveal">
+                    <h2 class="section-heading">پلن‌ها و خدمات</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-layers"></i></span>
+                            <span class="step-title">تعریف و مدیریت پلن‌های سرویس</span>
+                        </summary>
+                        <div class="guide-body">
+                            برای هر نوع خدمت (ویدیو، گرافیک و ...) پلن با قیمت، زمان تحویل و تعداد ویرایش تعریف کن.
+                            پلن‌های فعال به تبلیغ‌دهندگان نمایش داده می‌شوند.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-images"></i></span>
+                            <span class="step-title">پورتفولیو</span>
+                        </summary>
+                        <div class="guide-body">
+                            نمونه‌کارهای قوی را در پورتفولیو تیم قرار بده تا شانس انتخاب شدن بیشتر شود.
+                        </div>
+                    </details>
+                </div>
+
+                <div id="team-members" class="mb-5 reveal">
+                    <h2 class="section-heading">اعضای تیم</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-person-plus"></i></span>
+                            <span class="step-title">دعوت و مدیریت اعضا</span>
+                        </summary>
+                        <div class="guide-body">
+                            از بخش مدیریت اعضا می‌توانی درخواست عضویت را بررسی کنی، نقش اعضا را تنظیم کنی و دسترسی‌ها را مدیریت کنی.
+                        </div>
+                    </details>
+                </div>
+
+                {% else %}
+                <!-- GENERIC USER -->
+                <div class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-person-gear"></i> راهنمای کاربر</span>
+                    <h2 class="section-heading">تکمیل حساب و شروع کار</h2>
+                    <details class="guide-item" open>
+                        <summary>
+                            <span class="step-num">۱</span>
+                            <span class="step-title">تکمیل پروفایل</span>
+                        </summary>
+                        <div class="guide-body">
+                            نام مستعار، تصویر، استان و در صورت نیاز شماره شبا را وارد کن.
+                            برای فعالیت به عنوان اینفلوئنسر، پروفایل اینفلوئنسر و حداقل یک کانال بساز.
+                            برای تبلیغ، مستقیماً می‌توانی کمپین بسازی.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num">۲</span>
+                            <span class="step-title">انتخاب مسیر</span>
+                        </summary>
+                        <div class="guide-body">
+                            <ul>
+                                <li>می‌خوای تبلیغ کنی؟ → از منوی کمپین، ساخت کمپین را شروع کن.</li>
+                                <li>کانال داری؟ → بخش اینفلوئنسر و کانال‌های من.</li>
+                                <li>تولید محتوا می‌کنی؟ → تیم محتوا بساز یا به تیم موجود بپیوند.</li>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
+
+                <!-- ========== COMMON: WALLET ========== -->
+                <div id="wallet" class="mb-5 reveal">
+                    <span class="section-label"><i class="bi bi-wallet2"></i> مشترک برای همه</span>
+                    <h2 class="section-heading">کیف پول، شارژ و برداشت</h2>
+                    <p class="section-desc">همه پرداخت‌ها و درآمدها از طریق کیف پول انجام می‌شود.</p>
+
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-plus-circle"></i></span>
+                            <span class="step-title">شارژ کیف پول</span>
+                        </summary>
+                        <div class="guide-body">
+                            از منوی کیف پول → شارژ، مبلغ را وارد کن و از درگاه بانکی پرداخت کن.
+                            موجودی بلافاصله پس از پرداخت موفق افزایش می‌یابد. کارمزد شارژ صفر است.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-bank"></i></span>
+                            <span class="step-title">برداشت وجه</span>
+                        </summary>
+                        <div class="guide-body">
+                            <ul>
+                                <li>ابتدا شماره شبا / حساب بانکی را در بخش حساب‌های بانکی ثبت و در صورت نیاز تأیید کن.</li>
+                                <li>حداقل مبلغ برداشت معمولاً ۱۰۰٬۰۰۰ تومان است.</li>
+                                <li>کارمزد برداشت ۰٫۵٪ است.</li>
+                                <li>پس از تأیید پشتیبانی، حداکثر ۲۴ ساعت کاری واریز انجام می‌شود.</li>
+                            </ul>
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-receipt"></i></span>
+                            <span class="step-title">تراکنش‌ها و فاکتورها</span>
+                        </summary>
+                        <div class="guide-body">
+                            تاریخچه کامل شارژ، برداشت، پرداخت کمپین و درآمدها در بخش تراکنش‌ها قابل مشاهده و فیلتر است.
+                            برای هر تراکنش موفق می‌توانی فاکتور PDF دانلود کنی.
+                        </div>
+                    </details>
+                </div>
+
+                <!-- ========== TICKETS ========== -->
+                <div id="tickets" class="mb-5 reveal">
+                    <h2 class="section-heading">سیستم تیکت پشتیبانی</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-plus-lg"></i></span>
+                            <span class="step-title">ساخت تیکت جدید</span>
+                        </summary>
+                        <div class="guide-body">
+                            از منوی تیکت‌ها → تیکت جدید:
+                            <ul>
+                                <li>دسته‌بندی موضوع را انتخاب کن (مالی، کمپین، حساب کاربری و ...).</li>
+                                <li>عنوان مناسب را انتخاب کن یا عنوان سفارشی بنویس.</li>
+                                <li>توضیحات و در صورت نیاز فایل پیوست کن.</li>
+                            </ul>
+                            تیکت‌های داخل پنل اولویت بالاتری نسبت به ایمیل دارند.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-chat-left-text"></i></span>
+                            <span class="step-title">پیگیری و پاسخ</span>
+                        </summary>
+                        <div class="guide-body">
+                            وضعیت تیکت (منتظر پاسخ پشتیبانی / منتظر پاسخ شما / در حال بررسی / بسته‌شده) را در لیست می‌بینی.
+                            وقتی پشتیبانی پاسخ دهد اعلان دریافت می‌کنی. می‌توانی دوباره پیام بفرستی تا تیکت باز بماند.
+                        </div>
+                    </details>
+                </div>
+
+                <!-- ========== ACCOUNT ========== -->
+                <div id="account" class="mb-5 reveal">
+                    <h2 class="section-heading">حساب کاربری و امنیت</h2>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-shield-check"></i></span>
+                            <span class="step-title">ورود با OTP</span>
+                        </summary>
+                        <div class="guide-body">
+                            وینجاب رمز عبور ثابت ندارد. هر بار با شماره موبایل و کد یک‌بارمصرف وارد می‌شوی.
+                            این روش امنیت بالاتری دارد. اگر گوشی یا سیم‌کارت از دست رفت، فوراً با پشتیبانی تماس بگیر.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-person-lines-fill"></i></span>
+                            <span class="step-title">ویرایش پروفایل</span>
+                        </summary>
+                        <div class="guide-body">
+                            نام مستعار، آواتار، ایمیل، استان و شماره شبا را از بخش ویرایش پروفایل به‌روز کن.
+                            تغییر شماره موبایل نیاز به تأیید پشتیبانی دارد.
+                        </div>
+                    </details>
+                    <details class="guide-item">
+                        <summary>
+                            <span class="step-num"><i class="bi bi-bell"></i></span>
+                            <span class="step-title">تنظیمات اعلان</span>
+                        </summary>
+                        <div class="guide-body">
+                            می‌توانی اعلان‌های پیامکی، ایمیلی و داخل پنل را برای رویدادهای مختلف (تیکت، کمپین، کیف پول) مدیریت کنی.
+                            اعلان‌های امنیتی حیاتی معمولاً قابل خاموش کردن کامل نیستند.
+                        </div>
+                    </details>
+                </div>
+
+                <!-- ========== CTA ========== -->
+                <div id="faq-link" class="mb-4 reveal">
+                    <div class="help-cta">
+                        <h5>هنوز سوال داری؟</h5>
+                        <p>سوالات پرتکرار را در صفحه تماس ببین یا مستقیم تیکت بساز. تیم پشتیبانی در ساعات کاری پاسخگوست.</p>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="{% url 'core:contact' %}" class="btn-help-primary">
+                                <i class="bi bi-chat-dots"></i> تماس با ما و FAQ
+                            </a>
+                            <a href="{% url 'tickets:ticket_list' %}" class="btn-help-outline">
+                                <i class="bi bi-ticket-detailed"></i> سیستم تیکت
+                            </a>
+                            <a href="{% url 'core:about' %}" class="btn-help-outline">
+                                <i class="bi bi-info-circle"></i> درباره وینجاب
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contact-link" class="text-center reveal" style="color:rgba(255,255,255,0.45);font-size:0.88rem;">
+                    ساعات پاسخگویی: شنبه تا چهارشنبه ۹–۱۸ · پنجشنبه ۹–۱۴ · جمعه تعطیل
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const reveals = document.querySelectorAll('.reveal');
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.classList.add('visible');
+                obs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => obs.observe(el));
+
+    // Smooth scroll for sidebar links
+    document.querySelectorAll('.help-nav a[href^="#"]').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            const id = this.getAttribute('href');
+            const target = document.querySelector(id);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

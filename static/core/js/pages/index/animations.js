@@ -1,16 +1,42 @@
-// ========== تایپ‌نویسی پلتفرم‌ها با رنگ و کرسر ==========
+// ========== تایپ‌نویسی پلتفرم‌ها با رنگ و کرسر + عکس ساده ==========
 document.addEventListener('DOMContentLoaded', function() {
     const textElement = document.getElementById('changing-text');
+    const imageElement = document.getElementById('platformHeroImage');
+
     if (!textElement) return;
 
-    // لیست پلتفرم‌ها با کلاس رنگ مخصوص
+    // لیست پلتفرم‌ها با مسیر عکس
     const platforms = [
-        { name: "بله", class: "platform-bale" },
-        { name: "ایتا", class: "platform-eitaa" },
-        { name: "روبیکا", class: "platform-rubika" },
-        { name: "سروش پلاس", class: "platform-soroush" },
-        { name: "تلگرام", class: "platform-telegram" },
-        { name: "اینستاگرام", class: "platform-instagram" }
+        {
+            name: "بله",
+            class: "platform-bale",
+            image: "/static/landing/bale/bale-hero.webp",
+        },
+        {
+            name: "ایتا",
+            class: "platform-eitaa",
+            image: "/static/landing/eitaa/eitaa-hero.webp",
+        },
+        {
+            name: "روبیکا",
+            class: "platform-rubika",
+            image: "/static/landing/rubika/rub-hero.webp",
+        },
+        {
+            name: "سروش پلاس",
+            class: "platform-soroush",
+            image: "/static/landing/sorush/sor-hero.webp",
+        },
+        {
+            name: "تلگرام",
+            class: "platform-telegram",
+            image: "/static/landing/telegram/tel-hero.webp",
+        },
+        {
+            name: "اینستاگرام",
+            class: "platform-instagram",
+            image: "/static/landing/instagram/insta-hero.webp",
+        }
     ];
 
     let currentIndex = 0;
@@ -20,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let deletingSpeed = 150;
     let pauseBetweenWords = 3500;
     let timeoutId = null;
+    let isImageTransitioning = false;
 
     // تابع برای به‌روزرسانی کلاس رنگ
     function updateColorClass() {
@@ -27,42 +54,58 @@ document.addEventListener('DOMContentLoaded', function() {
         textElement.className = currentPlatform.class;
     }
 
+    // تابع برای تغییر عکس با افکت محو ساده
+    function updateImage(index) {
+        if (isImageTransitioning) return;
+        isImageTransitioning = true;
+
+        const platform = platforms[index];
+        if (!platform || !imageElement) return;
+
+        // محو شدن
+        imageElement.classList.add('fade-transition');
+
+        setTimeout(() => {
+            // تغییر عکس
+            imageElement.src = platform.image;
+            // نمایش دوباره
+            imageElement.classList.remove('fade-transition');
+            isImageTransitioning = false;
+        }, 350);
+    }
+
     // تابع اصلی تایپ‌نویسی
     function typeEffect() {
         const currentPlatform = platforms[currentIndex];
         const fullText = currentPlatform.name;
-        const currentText = textElement.textContent || '';
 
-        // اطمینان از اینکه کلاس رنگ درست باشه
         updateColorClass();
 
         if (isDeleting) {
-            // حالت پاک کردن: کاراکتر آخر رو حذف کن
             textElement.textContent = fullText.substring(0, currentCharIndex - 1);
             currentCharIndex--;
 
-            // وقتی کاملاً پاک شد، برو به کلمه بعدی
             if (currentCharIndex === 0) {
                 isDeleting = false;
                 currentIndex = (currentIndex + 1) % platforms.length;
                 clearTimeout(timeoutId);
-                // قبل از تایپ کلمه جدید، کمی مکث کن
+
+                // قبل از تایپ کلمه جدید، عکس رو عوض کن
+                updateImage(currentIndex);
+
                 setTimeout(typeEffect, 300);
                 return;
             }
 
-            // ادامه پاک کردن با سرعت کندتر
             timeoutId = setTimeout(typeEffect, deletingSpeed);
             return;
         }
 
-        // حالت تایپ: کاراکتر جدید اضافه کن
         if (currentCharIndex < fullText.length) {
             textElement.textContent = fullText.substring(0, currentCharIndex + 1);
             currentCharIndex++;
             timeoutId = setTimeout(typeEffect, typingSpeed);
         } else {
-            // کلمه کامل تایپ شد، مکث کن و بعد شروع به پاک کردن کن
             isDeleting = true;
             clearTimeout(timeoutId);
             timeoutId = setTimeout(typeEffect, pauseBetweenWords);
@@ -73,12 +116,18 @@ document.addEventListener('DOMContentLoaded', function() {
     textElement.textContent = '';
     textElement.className = platforms[0].class;
 
+    // ست کردن عکس اولیه
+    if (imageElement) {
+        imageElement.src = platforms[0].image;
+    }
+
     // شروع تایپ بعد از یک مکث کوتاه
     setTimeout(() => {
         typeEffect();
     }, 500);
 });
 
+// ========== بقیه کدهای قبلی (اسکرول، شمارنده، ذرات، ...) ==========
 // اسکرول انیمیشن
 const revealElements = document.querySelectorAll('.scroll-reveal');
 const revealOnScroll = () => revealElements.forEach(el => {
