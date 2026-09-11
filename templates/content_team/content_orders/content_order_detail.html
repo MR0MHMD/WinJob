@@ -1,0 +1,2416 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block extra_style %}
+<style>
+/* =========================================================
+   WINJOB — CONTENT ORDER WORKSPACE (Unified)
+   Supports: standalone + campaign
+   ========================================================= */
+
+.content-order-detail {
+    --sd-bg: #1f1b2d;
+    --sd-surface: #252036;
+    --sd-surface-2: #211c31;
+    --sd-surface-3: #2b2540;
+    --sd-line: rgba(255,255,255,.075);
+    --sd-line-soft: rgba(255,255,255,.045);
+    --sd-text: #f5f4f8;
+    --sd-muted: #9691a4;
+    --sd-primary: #fd5631;
+    --sd-accent: #5d3cf2;
+    --sd-success: #07c98b;
+    --sd-info: #3c76f2;
+    --sd-warning: #fdbc31;
+    --sd-danger: #f23c49;
+
+    color: var(--sd-text);
+    position: relative;
+    isolation: isolate;
+    max-width: 1440px;
+}
+
+.content-order-detail::before,
+.content-order-detail::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .12;
+}
+
+.content-order-detail::before {
+    width: 380px;
+    height: 380px;
+    top: 80px;
+    right: -180px;
+    background: var(--sd-primary);
+}
+
+.content-order-detail::after {
+    width: 420px;
+    height: 420px;
+    bottom: -180px;
+    left: -180px;
+    background: var(--sd-accent);
+}
+
+.sd-page {
+    padding: 1rem 0 3rem;
+}
+
+/* ---------- Hero ---------- */
+
+.sd-hero {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1.15rem 1.3rem;
+    background:
+        radial-gradient(circle at 90% 10%, rgba(253,86,49,.10), transparent 30%),
+        radial-gradient(circle at 10% 100%, rgba(93,60,242,.10), transparent 30%),
+        linear-gradient(145deg, rgba(37,32,54,.96), rgba(29,25,43,.98));
+    border: 1px solid var(--sd-line);
+    border-radius: 20px;
+    box-shadow: 0 18px 55px rgba(0,0,0,.18);
+}
+
+.sd-hero-main { min-width: 0; }
+
+.sd-kicker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-bottom: .35rem;
+    color: var(--sd-muted);
+    font-size: .68rem;
+}
+
+.sd-kicker .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.25);
+}
+
+.sd-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .65rem;
+}
+
+.sd-title-row h1 {
+    margin: 0;
+    color: #fff;
+    font-family: var(--fi-font-vazir-bold, sans-serif);
+    font-size: clamp(1.15rem, 2vw, 1.55rem);
+    line-height: 1.35;
+}
+
+.sd-order-number {
+    color: rgba(255,255,255,.45);
+    font-size: .78rem;
+    direction: ltr;
+}
+
+.sd-hero-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .45rem .9rem;
+    margin-top: .45rem;
+    color: var(--sd-muted);
+    font-size: .72rem;
+}
+
+.sd-hero-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: .28rem;
+}
+
+.sd-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: .45rem;
+}
+
+/* ---------- Badges ---------- */
+
+.sd-badge-type {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    font-size: .66rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sd-badge-type.standalone {
+    color: #6e9cff;
+    background: rgba(60,118,242,.13);
+    border: 1px solid rgba(60,118,242,.24);
+}
+
+.sd-badge-type.campaign {
+    color: #ffb44a;
+    background: rgba(253,86,49,.13);
+    border: 1px solid rgba(253,86,49,.24);
+}
+
+.sd-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .38rem;
+    padding: .34rem .72rem;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sd-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 10px currentColor;
+}
+
+.sd-status.draft { color:#adb5bd; background:rgba(108,117,125,.13); }
+.sd-status.pending { color:#fdbc31; background:rgba(253,188,49,.13); }
+.sd-status.review_pending { color:#6e9cff; background:rgba(60,118,242,.13); }
+.sd-status.in_progress { color:#ff7557; background:rgba(253,86,49,.13); }
+.sd-status.done { color:#6e9cff; background:rgba(60,118,242,.13); }
+.sd-status.completed { color:#07c98b; background:rgba(7,201,139,.13); }
+.sd-status.cancelled { color:#f23c49; background:rgba(242,60,73,.13); }
+
+.sd-payment {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .65rem;
+    border: 1px solid var(--sd-line-soft);
+    border-radius: 999px;
+    font-size: .65rem;
+}
+
+.sd-payment.paid {
+    color: var(--sd-success);
+    background: rgba(7,201,139,.08);
+}
+
+.sd-payment.unpaid {
+    color: var(--sd-danger);
+    background: rgba(242,60,73,.08);
+}
+
+/* ---------- Buttons ---------- */
+
+.sd-btn {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .45rem .85rem;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    font-size: .72rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: .2s ease;
+    white-space: nowrap;
+}
+
+.sd-btn:hover { transform: translateY(-1px); }
+
+.sd-btn-primary {
+    color:#fff !important;
+    background: linear-gradient(135deg, #fd5631, #df401f);
+    box-shadow: 0 8px 22px rgba(253,86,49,.18);
+}
+
+.sd-btn-info {
+    color:#fff !important;
+    background: rgba(60,118,242,.13);
+    border-color: rgba(60,118,242,.24);
+}
+
+.sd-btn-success {
+    color:var(--sd-success) !important;
+    background:rgba(7,201,139,.10);
+    border-color:rgba(7,201,139,.23);
+}
+
+.sd-btn-warning {
+    color:var(--sd-warning) !important;
+    background:rgba(253,188,49,.10);
+    border-color:rgba(253,188,49,.23);
+}
+
+.sd-btn-danger {
+    color:var(--sd-danger) !important;
+    background:rgba(242,60,73,.10);
+    border-color:rgba(242,60,73,.23);
+}
+
+.sd-btn-ghost {
+    color:rgba(255,255,255,.62) !important;
+    background:rgba(255,255,255,.035);
+    border-color:var(--sd-line);
+}
+
+.sd-btn-danger:hover { background:rgba(242,60,73,.18); }
+.sd-btn-success:hover { background:rgba(7,201,139,.18); }
+.sd-btn-warning:hover { background:rgba(253,188,49,.18); }
+.sd-btn-info:hover { background:rgba(60,118,242,.18); }
+.sd-btn-ghost:hover { color:#fff !important; background:rgba(255,255,255,.07); }
+
+/* ---------- Layout ---------- */
+
+.sd-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.72fr) minmax(310px, .82fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.sd-column {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+}
+
+.sd-column > * {
+    width: 100%;
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+.sd-side-column .sd-card {
+    height: auto !important;
+}
+
+/* ---------- Card ---------- */
+
+.sd-card {
+    min-width: 0;
+    background:
+        linear-gradient(145deg, rgba(37,32,54,.96), rgba(31,27,45,.98));
+    border: 1px solid var(--sd-line);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 34px rgba(0,0,0,.10);
+}
+
+.sd-card-head {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .78rem 1rem;
+    border-bottom: 1px solid var(--sd-line-soft);
+    background: rgba(255,255,255,.018);
+}
+
+.sd-card-head i {
+    color: var(--sd-primary);
+    font-size: .95rem;
+}
+
+.sd-card-head h2,
+.sd-card-head h3 {
+    margin: 0;
+    color: #fff;
+    font-family: var(--fi-font-vazir-bold, sans-serif);
+    font-size: .83rem;
+    font-weight: 700;
+}
+
+.sd-card-head .head-meta {
+    margin-right: auto;
+    color: var(--sd-muted);
+    font-size: .64rem;
+}
+
+.sd-count {
+    margin-right: auto;
+    min-width: 25px;
+    padding: .18rem .45rem;
+    border: 1px solid var(--sd-line);
+    border-radius: 7px;
+    background: rgba(255,255,255,.035);
+    color: var(--sd-muted);
+    text-align: center;
+    font-size: .62rem;
+}
+
+.sd-card-body {
+    padding: .9rem 1rem;
+}
+
+/* ---------- Overview ---------- */
+
+.sd-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: .55rem;
+}
+
+.sd-stat {
+    min-width: 0;
+    padding: .72rem .8rem;
+    border: 1px solid var(--sd-line-soft);
+    border-radius: 12px;
+    background: rgba(255,255,255,.025);
+}
+
+.sd-stat-label {
+    color: rgba(255,255,255,.38);
+    font-size: .61rem;
+    margin-bottom: .25rem;
+}
+
+.sd-stat-value {
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sd-stat-value.primary { color: var(--sd-primary); }
+.sd-stat-value.success { color: var(--sd-success); }
+.sd-stat-value.danger { color: var(--sd-danger); }
+
+.sd-stat-sub {
+    margin-top: .18rem;
+    color: var(--sd-muted);
+    font-size: .58rem;
+}
+
+/* ---------- Team ---------- */
+
+.sd-team {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem;
+    border: 1px solid var(--sd-line-soft);
+    border-radius: 13px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(93,60,242,.08), transparent 35%),
+        rgba(255,255,255,.025);
+}
+
+.sd-team-logo,
+.sd-team-placeholder {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 13px;
+    object-fit: cover;
+}
+
+.sd-team-logo {
+    border: 1px solid rgba(253,86,49,.28);
+}
+
+.sd-team-placeholder {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--sd-line);
+    font-size:1.2rem;
+}
+
+.sd-team-main {
+    min-width:0;
+    flex:1;
+}
+
+.sd-team-name {
+    color:#fff;
+    font-size:.82rem;
+    font-weight:700;
+}
+
+.sd-team-plan {
+    margin-top:.16rem;
+    color:var(--sd-muted);
+    font-size:.64rem;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.sd-rating {
+    display:flex;
+    align-items:center;
+    gap:.3rem;
+    color:var(--sd-warning);
+    font-size:.65rem;
+}
+
+.sd-rating-score {
+    color:var(--sd-muted);
+    font-size:.6rem;
+}
+
+/* ---------- Features ---------- */
+
+.sd-features {
+    display:flex;
+    flex-wrap:wrap;
+    gap:.35rem;
+    margin-top:.55rem;
+}
+
+.sd-feature {
+    display:inline-flex;
+    align-items:center;
+    gap:.28rem;
+    padding:.26rem .48rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:8px;
+    background:rgba(255,255,255,.025);
+    color:rgba(255,255,255,.62);
+    font-size:.6rem;
+}
+
+.sd-feature i {
+    color:var(--sd-success);
+    font-size:.55rem;
+}
+
+/* ---------- Brief ---------- */
+
+.sd-brief-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.65rem 1rem;
+}
+
+.sd-brief-item {
+    min-width:0;
+    padding-bottom:.55rem;
+    border-bottom:1px solid var(--sd-line-soft);
+}
+
+.sd-brief-item.full {
+    grid-column:1/-1;
+}
+
+.sd-brief-label {
+    margin-bottom:.22rem;
+    color:rgba(255,255,255,.34);
+    font-size:.6rem;
+}
+
+.sd-brief-value {
+    color:#e9e7ef;
+    font-size:.74rem;
+    line-height:1.8;
+    word-break:break-word;
+}
+
+.sd-brief-value.strong {
+    color:#fff;
+    font-weight:700;
+}
+
+.sd-brief-description {
+    padding:.65rem .75rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:10px;
+    background:rgba(255,255,255,.025);
+    white-space:pre-line;
+}
+
+/* ---------- Deliveries ---------- */
+
+.sd-delivery-stack {
+    display:flex;
+    flex-direction:column;
+    gap:.7rem;
+}
+
+.sd-delivery {
+    border:1px solid var(--sd-line);
+    border-radius:13px;
+    overflow:hidden;
+    background:rgba(255,255,255,.018);
+}
+
+.sd-delivery-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.7rem;
+    flex-wrap:wrap;
+    padding:.62rem .75rem;
+    border-bottom:1px solid var(--sd-line-soft);
+    background:rgba(255,255,255,.022);
+}
+
+.sd-delivery-info {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:.42rem;
+    min-width:0;
+}
+
+.sd-version {
+    padding:.25rem .52rem;
+    border-radius:7px;
+    color:#fff;
+    background:linear-gradient(135deg,rgba(253,86,49,.22),rgba(93,60,242,.16));
+    font-size:.61rem;
+    font-weight:700;
+}
+
+.sd-delivery-status {
+    padding:.23rem .5rem;
+    border-radius:7px;
+    font-size:.59rem;
+    font-weight:600;
+}
+
+.sd-delivery-status.pending { color:#adb5bd;background:rgba(108,117,125,.12); }
+.sd-delivery-status.delivered { color:#6e9cff;background:rgba(60,118,242,.12); }
+.sd-delivery-status.revision_requested { color:#fdbc31;background:rgba(253,188,49,.12); }
+.sd-delivery-status.final_accepted { color:#07c98b;background:rgba(7,201,139,.12); }
+
+.sd-delivery-meta {
+    color:rgba(255,255,255,.35);
+    font-size:.59rem;
+}
+
+.sd-delivery-note {
+    padding:.55rem .75rem;
+    color:rgba(255,255,255,.52);
+    font-size:.67rem;
+    line-height:1.75;
+    border-bottom:1px solid var(--sd-line-soft);
+}
+
+.sd-files {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.5rem;
+    padding:.65rem;
+}
+
+.sd-file {
+    min-width:0;
+    display:grid;
+    grid-template-columns:44px minmax(0,1fr);
+    gap:.6rem;
+    align-items:center;
+    padding:.5rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:11px;
+    background:rgba(255,255,255,.025);
+    transition:.2s ease;
+}
+
+.sd-file:hover {
+    border-color:rgba(253,86,49,.20);
+    background:rgba(255,255,255,.045);
+}
+
+.sd-file.selected {
+    border-color:rgba(7,201,139,.30);
+    background:rgba(7,201,139,.06);
+}
+
+.sd-file-preview {
+    width:44px;
+    height:44px;
+    border-radius:9px;
+    object-fit:cover;
+    border:1px solid var(--sd-line);
+    cursor:pointer;
+    background:rgba(255,255,255,.04);
+}
+
+.sd-file-preview.selected {
+    border-color:rgba(7,201,139,.55);
+}
+
+.sd-file-placeholder {
+    width:44px;
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:9px;
+    border:1px solid var(--sd-line);
+    background:rgba(255,255,255,.035);
+    color:rgba(255,255,255,.22);
+    cursor:pointer;
+}
+
+.sd-file-main {
+    min-width:0;
+}
+
+.sd-file-name {
+    display:block;
+    color:#e8e6ee;
+    font-size:.68rem;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.sd-file-name.deleted {
+    color:var(--sd-danger);
+    text-decoration:line-through;
+}
+
+.sd-file-meta {
+    display:flex;
+    align-items:center;
+    gap:.35rem;
+    margin-top:.2rem;
+    color:rgba(255,255,255,.34);
+    font-size:.57rem;
+}
+
+.sd-selected-badge {
+    color:var(--sd-success);
+    font-size:.55rem;
+}
+
+.sd-file-actions {
+    display:flex;
+    align-items:center;
+    gap:.28rem;
+    flex-wrap:wrap;
+    margin-top:.35rem;
+}
+
+.sd-file-btn {
+    min-height:25px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.25rem;
+    padding:.2rem .42rem;
+    border-radius:7px;
+    border:1px solid var(--sd-line);
+    background:rgba(255,255,255,.035);
+    color:rgba(255,255,255,.58);
+    font-size:.57rem;
+    text-decoration:none !important;
+    cursor: pointer;
+    transition:.2s ease;
+}
+
+.sd-file-btn:hover {
+    color:#fff;
+    background:rgba(255,255,255,.08);
+}
+
+.sd-file-btn.success {
+    color:var(--sd-success);
+    border-color:rgba(7,201,139,.22);
+    background:rgba(7,201,139,.07);
+}
+
+.sd-file-btn.success:hover {
+    background:rgba(7,201,139,.18);
+}
+
+.sd-delivery-footer {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+    flex-wrap:wrap;
+    padding:.55rem .75rem;
+    border-top:1px solid var(--sd-line-soft);
+    color:rgba(255,255,255,.38);
+    font-size:.61rem;
+}
+
+/* ---------- Cost / Invoice ---------- */
+
+.sd-cost-highlight {
+    position:relative;
+    margin-bottom:.65rem;
+    padding:.8rem;
+    border:1px solid rgba(253,86,49,.20);
+    border-radius:13px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(253,86,49,.14), transparent 45%),
+        rgba(253,86,49,.045);
+}
+
+.sd-cost-highlight-label {
+    color:rgba(255,255,255,.43);
+    font-size:.62rem;
+}
+
+.sd-cost-highlight-value {
+    margin-top:.2rem;
+    color:#fff;
+    font-family:var(--fi-font-vazir-bold,sans-serif);
+    font-size:1.15rem;
+    font-weight:700;
+}
+
+.sd-cost-highlight-value span {
+    color:var(--sd-primary);
+    font-size:.68rem;
+    font-weight:400;
+}
+
+.sd-cost-list {
+    display:flex;
+    flex-direction:column;
+}
+
+.sd-cost-row {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    padding:.5rem 0;
+    border-bottom:1px solid var(--sd-line-soft);
+    font-size:.68rem;
+}
+
+.sd-cost-row:last-child {
+    border-bottom:0;
+}
+
+.sd-cost-row .label {
+    color:rgba(255,255,255,.55);
+    display:flex;
+    align-items:center;
+    gap:.35rem;
+}
+
+.sd-cost-row .label i {
+    font-size:.7rem;
+}
+
+.sd-cost-row .value {
+    color:#e9e7ef;
+    font-weight:600;
+    text-align:left;
+    white-space:nowrap;
+}
+
+.sd-cost-row.success .label,
+.sd-cost-row.success .value { color:var(--sd-success); }
+
+.sd-cost-row.info .label,
+.sd-cost-row.info .value { color:#6e9cff; }
+
+.sd-cost-row.warning .label,
+.sd-cost-row.warning .value { color:var(--sd-warning); }
+
+.sd-cost-row.primary .label,
+.sd-cost-row.primary .value { color:var(--sd-primary); }
+
+.sd-cost-row.discount .value {
+    color: var(--sd-success);
+}
+
+.sd-cost-sub {
+    display: block;
+    color: var(--sd-muted);
+    font-size: .58rem;
+    margin-top: .1rem;
+    font-weight: 400;
+}
+
+.sd-cost-divider {
+    height:1px;
+    margin:.35rem 0;
+    background:var(--sd-line);
+}
+
+.sd-cost-total {
+    margin-top:.5rem;
+    padding-top:.75rem;
+    border-top:1px solid rgba(253,86,49,.24);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sd-cost-total .label {
+    color:#fff;
+    font-size:.76rem;
+    font-weight:700;
+}
+
+.sd-cost-total .value {
+    color:var(--sd-primary);
+    font-size:.95rem;
+    font-weight:800;
+}
+
+/* ---------- Operations ---------- */
+
+.sd-actions {
+    display:flex;
+    flex-direction:column;
+    gap:.45rem;
+}
+
+.sd-action-note {
+    margin-top:.55rem;
+    padding:.6rem .65rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:10px;
+    background:rgba(255,255,255,.022);
+    color:rgba(255,255,255,.42);
+    font-size:.61rem;
+    line-height:1.75;
+}
+
+.sd-action-note i {
+    color:var(--sd-info);
+}
+
+/* ---------- Campaign link card ---------- */
+
+.sd-campaign-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .85rem;
+    border: 1px solid rgba(253,86,49,.22);
+    border-radius: 13px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(253,86,49,.12), transparent 40%),
+        rgba(253,86,49,.05);
+    text-decoration: none !important;
+    transition: .2s ease;
+}
+
+.sd-campaign-link:hover {
+    background: rgba(253,86,49,.12);
+    border-color: rgba(253,86,49,.4);
+}
+
+.sd-campaign-link-main {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.sd-campaign-link-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: rgba(253,86,49,.18);
+    color: var(--sd-primary);
+    font-size: 1rem;
+}
+
+.sd-campaign-link-info {
+    min-width: 0;
+}
+
+.sd-campaign-link-label {
+    color: rgba(255,255,255,.42);
+    font-size: .58rem;
+    margin-bottom: .15rem;
+}
+
+.sd-campaign-link-title {
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sd-campaign-link-arrow {
+    color: rgba(253,86,49,.7);
+    font-size: .95rem;
+    flex-shrink: 0;
+}
+
+/* ---------- Attachments ---------- */
+
+.sd-attachment-list {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.45rem;
+}
+
+.sd-attachment {
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.48rem .55rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:10px;
+    background:rgba(255,255,255,.022);
+}
+
+.sd-attachment > i {
+    color:var(--sd-primary);
+    font-size:.85rem;
+}
+
+.sd-attachment-main {
+    min-width:0;
+    flex:1;
+}
+
+.sd-attachment-name {
+    display:block;
+    color:#ddd9e5;
+    font-size:.62rem;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.sd-attachment-size {
+    display:block;
+    margin-top:.1rem;
+    color:rgba(255,255,255,.3);
+    font-size:.53rem;
+}
+
+.sd-download {
+    width:26px;
+    height:26px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 26px;
+    border-radius:7px;
+    color:rgba(255,255,255,.45);
+    background:rgba(255,255,255,.035);
+}
+
+.sd-download:hover {
+    color:var(--sd-primary);
+    background:rgba(253,86,49,.08);
+}
+
+/* ---------- Revisions ---------- */
+
+.sd-revisions {
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:.55rem;
+    max-height:420px;
+    overflow:auto;
+    padding-left:.05rem;
+}
+
+.sd-revision {
+    position:relative;
+    padding-right:.8rem;
+}
+
+.sd-revision::before {
+    content:"";
+    position:absolute;
+    top:.65rem;
+    right:-1px;
+    width:7px;
+    height:7px;
+    border:2px solid var(--sd-bg);
+    border-radius:50%;
+    background:var(--sd-primary);
+    box-shadow:0 0 0 1px rgba(253,86,49,.28);
+}
+
+.sd-revision::after {
+    content:"";
+    position:absolute;
+    top:.9rem;
+    right:2px;
+    bottom:-.55rem;
+    width:1px;
+    background:linear-gradient(180deg,rgba(253,86,49,.28),rgba(93,60,242,.10));
+    z-index:-1;
+}
+
+.sd-revision:last-child::after {
+    display:none;
+}
+
+.sd-revision-box {
+    padding:.58rem .65rem;
+    border:1px solid var(--sd-line-soft);
+    border-radius:10px;
+    background:rgba(255,255,255,.022);
+}
+
+.sd-revision-meta {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.35rem;
+    margin-bottom:.28rem;
+}
+
+.sd-revision-date {
+    color:rgba(255,255,255,.3);
+    font-size:.54rem;
+}
+
+.sd-revision-status {
+    padding:.14rem .38rem;
+    border-radius:6px;
+    font-size:.52rem;
+}
+
+.sd-revision-feedback {
+    color:#ddd9e5;
+    font-size:.61rem;
+    line-height:1.7;
+}
+
+.sd-revision-file {
+    display:block;
+    margin-top:.35rem;
+    padding-top:.35rem;
+    border-top:1px solid var(--sd-line-soft);
+    color:#6e9cff !important;
+    font-size:.57rem;
+    text-decoration:none !important;
+}
+
+/* ---------- Empty states ---------- */
+
+.sd-empty-inline {
+    padding:.8rem;
+    text-align:center;
+    color:rgba(255,255,255,.35);
+    font-size:.65rem;
+}
+
+/* ---------- Modal ---------- */
+
+.content-order-detail .modal-dark {
+    background:#211c31 !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    border-radius:18px !important;
+    box-shadow:0 30px 90px rgba(0,0,0,.45);
+}
+
+.content-order-detail .modal-dark .modal-header,
+.content-order-detail .modal-dark .modal-footer {
+    border-color:var(--sd-line) !important;
+}
+
+.content-order-detail .modal-dark .form-control {
+    background:rgba(255,255,255,.035) !important;
+    border-color:var(--sd-line) !important;
+    color:#fff !important;
+    border-radius:10px;
+}
+
+.content-order-detail .modal-dark .form-control:focus {
+    border-color:rgba(253,86,49,.45) !important;
+    box-shadow:0 0 0 .18rem rgba(253,86,49,.08) !important;
+}
+
+.content-order-detail #revisionDropzone {
+    border-color:rgba(255,255,255,.13) !important;
+    background:rgba(255,255,255,.025) !important;
+    border-radius:11px !important;
+}
+
+.content-order-detail .selected-file {
+    padding:.55rem .65rem;
+    border:1px solid var(--sd-line);
+    border-radius:9px;
+    background:rgba(255,255,255,.035);
+}
+
+/* ---------- Scrollbars ---------- */
+
+.sd-revisions::-webkit-scrollbar {
+    width:4px;
+}
+
+.sd-revisions::-webkit-scrollbar-track {
+    background:rgba(255,255,255,.035);
+}
+
+.sd-revisions::-webkit-scrollbar-thumb {
+    background:rgba(253,86,49,.45);
+    border-radius:999px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1180px) {
+    .sd-workspace {
+        grid-template-columns: minmax(0, 1.55fr) minmax(290px, .85fr);
+    }
+    .sd-overview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .sd-workspace {
+        grid-template-columns: 1fr;
+    }
+    .sd-side-column {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+    .sd-side-column > * {
+        min-width: 0;
+    }
+    .sd-side-column > .sd-sidebar-revisions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 680px) {
+    .sd-page { padding-top:.5rem; }
+    .sd-hero {
+        grid-template-columns:1fr;
+        padding:1rem;
+    }
+    .sd-hero-actions {
+        justify-content:flex-start;
+    }
+    .sd-workspace {
+        gap:.75rem;
+    }
+    .sd-column {
+        gap:.75rem;
+    }
+    .sd-side-column {
+        display: flex;
+    }
+    .sd-overview-grid,
+    .sd-brief-grid,
+    .sd-files,
+    .sd-attachment-list {
+        grid-template-columns:1fr;
+    }
+    .sd-brief-item.full {
+        grid-column:auto;
+    }
+    .sd-card-head,
+    .sd-card-body {
+        padding-left:.8rem;
+        padding-right:.8rem;
+    }
+    .sd-file {
+        grid-template-columns:40px minmax(0,1fr);
+    }
+    .sd-file-preview,
+    .sd-file-placeholder {
+        width:40px;
+        height:40px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sd-btn,
+    .sd-file {
+        transition:none;
+    }
+    .sd-btn:hover {
+        transform:none;
+    }
+}
+
+/* Fix padding for parent wrapper */
+.page.wrapper {
+    padding: 0 !important;
+}
+
+/* =========================================================
+   STATUS NOTE (متن راهنمای وضعیت)
+   ========================================================= */
+.sd-status-note {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    margin-top: .75rem;
+    padding: .75rem .85rem;
+    border: 1px solid var(--sd-line-soft);
+    border-radius: 11px;
+    background: rgba(255,255,255,.022);
+    font-size: .68rem;
+    line-height: 1.75;
+    color: rgba(255,255,255,.55);
+}
+
+.sd-status-note i {
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    margin-top: .1rem;
+}
+
+.sd-status-note-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.sd-status-note strong {
+    display: block;
+    margin-bottom: .15rem;
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+/* ====== رنگ‌ها بر اساس وضعیت ====== */
+
+.sd-status-note.is-draft {
+    background: rgba(150, 145, 164, .08);
+    border-color: rgba(150, 145, 164, .2);
+}
+.sd-status-note.is-draft i,
+.sd-status-note.is-draft strong {
+    color: #adb5bd;
+}
+
+.sd-status-note.is-pending {
+    background: rgba(253, 188, 49, .07);
+    border-color: rgba(253, 188, 49, .22);
+}
+.sd-status-note.is-pending i,
+.sd-status-note.is-pending strong {
+    color: var(--sd-warning);
+}
+
+.sd-status-note.is-in_progress {
+    background: rgba(253, 86, 49, .07);
+    border-color: rgba(253, 86, 49, .22);
+}
+.sd-status-note.is-in_progress i,
+.sd-status-note.is-in_progress strong {
+    color: #ff7557;
+}
+
+.sd-status-note.is-review_pending {
+    background: rgba(60, 118, 242, .07);
+    border-color: rgba(60, 118, 242, .22);
+}
+.sd-status-note.is-review_pending i,
+.sd-status-note.is-review_pending strong {
+    color: #6e9cff;
+}
+
+.sd-status-note.is-done {
+    background: rgba(60, 118, 242, .07);
+    border-color: rgba(60, 118, 242, .22);
+}
+.sd-status-note.is-done i,
+.sd-status-note.is-done strong {
+    color: #6e9cff;
+}
+
+.sd-status-note.is-completed {
+    background: rgba(7, 201, 139, .07);
+    border-color: rgba(7, 201, 139, .22);
+}
+.sd-status-note.is-completed i,
+.sd-status-note.is-completed strong {
+    color: var(--sd-success);
+}
+
+.sd-status-note.is-cancelled {
+    background: rgba(242, 60, 73, .07);
+    border-color: rgba(242, 60, 73, .22);
+}
+.sd-status-note.is-cancelled i,
+.sd-status-note.is-cancelled strong {
+    color: var(--sd-danger);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-2 content-order-detail mt-5" dir="rtl">
+    <div class="sd-page">
+
+        <!-- =====================================================
+           HERO
+           ===================================================== -->
+        <header class="sd-hero">
+            <div class="sd-hero-main">
+                <div class="sd-kicker">
+                    {% if is_standalone %}
+                        <span>سفارش مستقل تولید محتوا</span>
+                    {% else %}
+                        <span>سفارش تولید محتوا در کمپین</span>
+                    {% endif %}
+                    <span class="dot"></span>
+                    <span>{{ order.plan.name }}</span>
+                </div>
+
+                <div class="sd-title-row">
+                    <h1>
+                        {{ order.name }}
+                    </h1>
+                    <span class="sd-order-number">#{{ order.id }}</span>
+
+                    {% if is_standalone %}
+                        <span class="sd-badge-type standalone">
+                            <i class="fi-user"></i>
+                            مستقل
+                        </span>
+                    {% else %}
+                        <span class="sd-badge-type campaign">
+                            <i class="fi-megaphone"></i>
+                            کمپینی
+                        </span>
+                    {% endif %}
+
+                    <span class="sd-status {{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+
+                    {% if invoice %}
+                        <span class="sd-payment {% if invoice.is_paid %}paid{% else %}unpaid{% endif %}">
+                            <i class="{% if invoice.is_paid %}fi-check-circle{% else %}fi-alert-circle{% endif %}"></i>
+                            {% if invoice.is_paid %}پرداخت شده{% else %}پرداخت نشده{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="sd-hero-meta">
+                    <span>
+                        <i class="fi-calendar"></i>
+                        {{ order.created_at|date:"Y/m/d H:i" }}
+                    </span>
+
+                    {% if order.deadline %}
+                        <span>
+                            <i class="fi-clock"></i>
+                            ددلاین: {{ order.deadline|date:"Y/m/d H:i" }}
+                        </span>
+                    {% endif %}
+
+                    <span>
+                        <i class="fi-layers"></i>
+                        تحویل
+                        {% if deliveries %}{{ deliveries|length }} نسخه{% else %}در انتظار تحویل{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="sd-hero-actions">
+                <a href="{% url 'content_team:content_orders_list' %}" class="sd-btn sd-btn-ghost">
+                    <i class="fi-arrow-right"></i>
+                    بازگشت
+                </a>
+
+                {% if is_standalone and can_edit and not brief %}
+                    <a href="{% url 'content_team:standalone_order_step2' %}" class="sd-btn sd-btn-info">
+                        <i class="fi-edit"></i>
+                        تکمیل بریف
+                    </a>
+                {% endif %}
+
+                {% if can_pay %}
+                    <a href="{% url 'content_team:standalone_order_step3' %}" class="sd-btn sd-btn-primary">
+                        <i class="fi-credit-card"></i>
+                        پرداخت نهایی
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+
+
+        <!-- =====================================================
+           MAIN LAYOUT
+           ===================================================== -->
+        <main class="sd-workspace">
+
+            <!-- ========== MAIN COLUMN ========== -->
+            <div class="sd-column sd-main-column">
+
+                {# ---------- Overview ---------- #}
+                <section class="sd-card sd-overview">
+                    <div class="sd-card-head">
+                        <i class="fi-info-circle"></i>
+                        <h2>نمای کلی سفارش</h2>
+                        <span class="head-meta">اطلاعات کلیدی</span>
+                    </div>
+
+                    <div class="sd-card-body">
+                        <div class="sd-overview-grid">
+
+                            <div class="sd-stat">
+                                <div class="sd-stat-label">شماره سفارش</div>
+                                <div class="sd-stat-value">#{{ order.id }}</div>
+                                <div class="sd-stat-sub">شناسه یکتا</div>
+                            </div>
+
+                            <div class="sd-stat">
+                                <div class="sd-stat-label">نوع سفارش</div>
+                                <div class="sd-stat-value">
+                                    {% if is_standalone %}مستقل{% else %}کمپینی{% endif %}
+                                </div>
+                                <div class="sd-stat-sub">
+                                    {% if is_standalone %}بدون کمپین{% else %}در کمپین{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="sd-stat">
+                                <div class="sd-stat-label">قیمت پلن</div>
+                                <div class="sd-stat-value primary">
+                                    {{ order.price|floatformat:0 }} تومان
+                                </div>
+                                <div class="sd-stat-sub">{{ order.plan.name }}</div>
+                            </div>
+
+                            <div class="sd-stat">
+                                <div class="sd-stat-label">مدت تحویل</div>
+                                <div class="sd-stat-value">
+                                    {{ order.plan.estimated_delivery_days }} روز
+                                </div>
+                                <div class="sd-stat-sub">روز کاری</div>
+                            </div>
+
+                            {% if order.deadline %}
+                                <div class="sd-stat">
+                                    <div class="sd-stat-label">ددلاین</div>
+                                    <div class="sd-stat-value">
+                                        {{ order.deadline|date:"Y/m/d" }}
+                                    </div>
+                                    <div class="sd-stat-sub">زمان تعیین‌شده</div>
+                                </div>
+                            {% endif %}
+
+                            <div class="sd-stat">
+                                <div class="sd-stat-label">پرداخت</div>
+                                <div class="sd-stat-value {% if invoice and invoice.is_paid %}success{% elif invoice %}danger{% endif %}">
+                                    {% if invoice and invoice.is_paid %}
+                                        پرداخت شده
+                                    {% elif invoice %}
+                                        پرداخت نشده
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                                <div class="sd-stat-sub">وضعیت فاکتور</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+
+                {# ---------- Campaign Link (فقط کمپینی) ---------- #}
+                {% if is_campaign and order.campaign %}
+                    <section class="sd-card">
+                        <div class="sd-card-head">
+                            <i class="fi-megaphone"></i>
+                            <h2>کمپین مربوطه</h2>
+                        </div>
+                        <div class="sd-card-body">
+                            <a href="{% url 'advertisers:campaign_detail' order.campaign.id %}" class="sd-campaign-link">
+                                <div class="sd-campaign-link-main">
+                                    <div class="sd-campaign-link-icon">
+                                        <i class="fi-megaphone"></i>
+                                    </div>
+                                    <div class="sd-campaign-link-info">
+                                        <div class="sd-campaign-link-label">نام کمپین</div>
+                                        <div class="sd-campaign-link-title">{{ order.campaign.name }}</div>
+                                    </div>
+                                </div>
+                                <i class="fi-arrow-left sd-campaign-link-arrow"></i>
+                            </a>
+                        </div>
+                    </section>
+                {% endif %}
+
+
+                {# ---------- Brief ---------- #}
+                {% if brief %}
+                    <section class="sd-card sd-brief">
+                        <div class="sd-card-head">
+                            <i class="fi-file-text"></i>
+                            <h2>بریف سفارش</h2>
+                            <span class="head-meta">اطلاعات موردنیاز تیم محتوا</span>
+                        </div>
+
+                        <div class="sd-card-body">
+                            <div class="sd-brief-grid">
+
+                                <div class="sd-brief-item">
+                                    <div class="sd-brief-label">هدف محتوا</div>
+                                    <div class="sd-brief-value">{{ brief.get_goal_display }}</div>
+                                </div>
+
+                                <div class="sd-brief-item">
+                                    <div class="sd-brief-label">لحن محتوا</div>
+                                    <div class="sd-brief-value">{{ brief.get_tone_display }}</div>
+                                </div>
+
+                                <div class="sd-brief-item full">
+                                    <div class="sd-brief-label">نام برند</div>
+                                    <div class="sd-brief-value strong">{{ brief.brand_name }}</div>
+                                </div>
+
+                                {% if brief.hashtags %}
+                                    <div class="sd-brief-item full">
+                                        <div class="sd-brief-label">هشتگ‌ها</div>
+                                        <div class="sd-brief-value">{{ brief.hashtags }}</div>
+                                    </div>
+                                {% endif %}
+
+                                {% if brief.target_audience %}
+                                    <div class="sd-brief-item full">
+                                        <div class="sd-brief-label">مخاطب هدف</div>
+                                        <div class="sd-brief-value">{{ brief.target_audience }}</div>
+                                    </div>
+                                {% endif %}
+
+                                <div class="sd-brief-item full">
+                                    <div class="sd-brief-label">توضیحات کامل</div>
+                                    <div class="sd-brief-value sd-brief-description">{{ brief.description }}</div>
+                                </div>
+
+                                {% if brief.do_not_include %}
+                                    <div class="sd-brief-item full">
+                                        <div class="sd-brief-label">چه چیزهایی نباشد</div>
+                                        <div class="sd-brief-value">{{ brief.do_not_include }}</div>
+                                    </div>
+                                {% endif %}
+
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+
+                {# ---------- Deliveries ---------- #}
+                {% if deliveries %}
+                    <section class="sd-card sd-deliveries">
+                        <div class="sd-card-head">
+                            <i class="fi-file"></i>
+                            <h2>فایل‌های تحویلی</h2>
+                            <span class="sd-count">{{ deliveries|length }}</span>
+
+                            {% if can_request_revision %}
+                                <button class="sd-btn sd-btn-warning request-revision-btn"
+                                        style="min-height:30px;padding:.3rem .65rem;font-size:.61rem;"
+                                        data-order-id="{{ order.id }}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#revisionModal">
+                                    <i class="fi-edit"></i>
+                                    درخواست ویرایش
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <div class="sd-card-body">
+                            <div class="sd-delivery-stack">
+
+                                {% for delivery in deliveries %}
+                                    {% with files=delivery.files.all %}
+                                        <article class="sd-delivery">
+
+                                            <div class="sd-delivery-head">
+                                                <div class="sd-delivery-info">
+                                                    <span class="sd-version">نسخه {{ delivery.version }}</span>
+
+                                                    <span class="sd-delivery-status {{ delivery.status }}">
+                                                        <i class="
+                                                            {% if delivery.status == 'pending' %}fi-clock
+                                                            {% elif delivery.status == 'delivered' %}fi-download
+                                                            {% elif delivery.status == 'final_accepted' %}fi-check-circle
+                                                            {% elif delivery.status == 'revision_requested' %}fi-edit
+                                                            {% else %}fi-alert{% endif %}
+                                                        "></i>
+                                                        {{ delivery.get_status_display }}
+                                                    </span>
+
+                                                    {% if delivery.delivered_by %}
+                                                        <span class="sd-delivery-meta">
+                                                            <i class="fi-user"></i>
+                                                            {{ delivery.delivered_by.user.nickname }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <span class="sd-delivery-meta">
+                                                    <i class="fi-calendar"></i>
+                                                    {{ delivery.delivered_at|date:'Y/m/d H:i'|default:'-' }}
+                                                </span>
+                                            </div>
+
+                                            {% if delivery.notes %}
+                                                <div class="sd-delivery-note">
+                                                    {{ delivery.notes|linebreaks }}
+                                                </div>
+                                            {% endif %}
+
+                                            {% if files %}
+                                                <div class="sd-files">
+                                                    {% for file_obj in files %}
+                                                        <div class="sd-file {% if file_obj.is_selected %}selected{% endif %}">
+
+                                                            {% if file_obj.file %}
+                                                                {% with ext=file_obj.file.name|lower|slice:"-3:" %}
+                                                                    {% if ext in "jpg,jpeg,webp,gif,png" %}
+                                                                        <img src="{{ file_obj.file.url }}"
+                                                                             class="sd-file-preview {% if file_obj.is_selected %}selected{% endif %}"
+                                                                             onclick="window.open('{{ file_obj.file.url }}', '_blank')"
+                                                                             alt="">
+                                                                    {% elif ext in "mp4,avi,mov,webm,mkv" %}
+                                                                        <video class="sd-file-preview {% if file_obj.is_selected %}selected{% endif %}"
+                                                                               onclick="window.open('{{ file_obj.file.url }}', '_blank')">
+                                                                            <source src="{{ file_obj.file.url }}">
+                                                                        </video>
+                                                                    {% else %}
+                                                                        <div class="sd-file-placeholder"
+                                                                             onclick="window.open('{{ file_obj.file.url }}', '_blank')">
+                                                                            <i class="fi-file"></i>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endwith %}
+                                                            {% else %}
+                                                                <div class="sd-file-placeholder">
+                                                                    <i class="fi-trash text-danger"></i>
+                                                                </div>
+                                                            {% endif %}
+
+                                                            <div class="sd-file-main">
+                                                                <span class="sd-file-name {% if not file_obj.file %}deleted{% endif %}"
+                                                                      title="{{ file_obj.file_name|default:'بدون نام' }}">
+                                                                    {{ file_obj.file_name|default:'بدون نام'|truncatechars:35 }}
+                                                                </span>
+
+                                                                <div class="sd-file-meta">
+                                                                    {% if file_obj.file %}
+                                                                        <span>{{ file_obj.file_size_display }}</span>
+                                                                    {% else %}
+                                                                        <span>فایل حذف شده</span>
+                                                                    {% endif %}
+
+                                                                    {% if file_obj.is_selected %}
+                                                                        <span class="sd-selected-badge">
+                                                                            <i class="fi-check"></i> انتخاب شده
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+
+                                                                <div class="sd-file-actions">
+                                                                    {% if file_obj.file %}
+                                                                        <a href="{{ file_obj.file.url }}"
+                                                                           class="sd-file-btn"
+                                                                           download
+                                                                           title="دانلود">
+                                                                            <i class="fi-download"></i>
+                                                                            دانلود
+                                                                        </a>
+                                                                    {% endif %}
+
+                                                                    {# دکمه انتخاب گزینه (فقط کمپینی multi_choice) #}
+                                                                    {% if can_select_option and file_obj.is_option and file_obj.file %}
+                                                                        <button type="button"
+                                                                                class="sd-file-btn success select-option-btn"
+                                                                                data-delivery-file-id="{{ file_obj.id }}"
+                                                                                data-option-number="{{ file_obj.option_number }}"
+                                                                                title="انتخاب این گزینه">
+                                                                            <i class="fi-check"></i>
+                                                                            انتخاب گزینه {{ file_obj.option_number }}
+                                                                        </button>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <div class="sd-empty-inline">
+                                                    <i class="fi-alert-circle text-warning"></i>
+                                                    هیچ فایلی برای این نسخه وجود ندارد.
+                                                </div>
+                                            {% endif %}
+
+                                        </article>
+                                    {% endwith %}
+                                {% endfor %}
+
+                            </div>
+
+                            <div class="sd-delivery-footer mt-2">
+                                <span>
+                                    <i class="fi-layers"></i>
+                                    {{ deliveries|length }} نسخه تحویل ثبت شده
+                                </span>
+
+                                {% with latest=deliveries|dictsortreversed:"version"|first %}
+                                    {% if latest and latest.status == 'final_accepted' %}
+                                        <span class="text-success">
+                                            <i class="fi-check-circle"></i>
+                                            تأیید نهایی شده
+                                        </span>
+                                    {% elif latest %}
+                                        <span class="text-warning">
+                                            <i class="fi-clock"></i>
+                                            {{ latest.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+            </div>
+
+
+            <!-- ========== SIDE COLUMN ========== -->
+            <aside class="sd-column sd-side-column">
+
+                {# ---------- Team ---------- #}
+                <section class="sd-card">
+                    <div class="sd-card-head">
+                        <i class="fi-users"></i>
+                        <h2>تیم تولید محتوا</h2>
+                    </div>
+
+                    <div class="sd-card-body">
+                        <div class="sd-team">
+                            {% if order.team.logo %}
+                                <img src="{{ order.team.logo.url }}"
+                                     class="sd-team-logo"
+                                     alt="{{ order.team.name }}">
+                            {% else %}
+                                <div class="sd-team-placeholder">🎬</div>
+                            {% endif %}
+
+                            <div class="sd-team-main">
+                                <div class="sd-team-name">{{ order.team.name }}</div>
+                                <div class="sd-team-plan">
+                                    {{ order.plan.name }} • {{ order.plan.service_type.name }}
+                                </div>
+                            </div>
+
+                            {% if order.team.avg_rating %}
+                                <div class="sd-rating">
+                                    <span>
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= order.team.avg_rating %}
+                                                <i class="fi-star-filled"></i>
+                                            {% else %}
+                                                <i class="fi-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    <span class="sd-rating-score">{{ order.team.avg_rating }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% with features=order.plan.get_features_list %}
+                            {% if features %}
+                                <div class="sd-features">
+                                    {% for feature in features|slice:":4" %}
+                                        <span class="sd-feature">
+                                            <i class="fi-check-circle"></i>
+                                            {{ feature }}
+                                        </span>
+                                    {% endfor %}
+
+                                    {% if features|length > 4 %}
+                                        <span class="sd-feature">
+                                            +{{ features|length|add:"-4" }} مورد
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </section>
+
+
+                {# ---------- Invoice / Cost Summary ---------- #}
+                {% if invoice %}
+                    <section class="sd-card">
+                        <div class="sd-card-head">
+                            <i class="fi-calculator"></i>
+                            <h2>
+                                {% if is_standalone %}
+                                    خلاصه مالی سفارش
+                                {% else %}
+                                    هزینه‌های تیم محتوا
+                                {% endif %}
+                            </h2>
+                        </div>
+
+                        <div class="sd-card-body">
+
+                            {# Highlight مبلغ اصلی #}
+                            <div class="sd-cost-highlight">
+                                <div class="sd-cost-highlight-label">
+                                    {% if is_standalone %}
+                                        مبلغ قابل پرداخت
+                                    {% else %}
+                                        هزینه نهایی تولید محتوا
+                                    {% endif %}
+                                </div>
+                                <div class="sd-cost-highlight-value">
+                                    {% if is_standalone %}
+                                        {{ invoice.payable_amount|floatformat:0 }}
+                                    {% else %}
+                                        {{ invoice.content_cost|floatformat:0 }}
+                                    {% endif %}
+                                    <span>تومان</span>
+                                </div>
+                            </div>
+
+                            <div class="sd-cost-list">
+
+                                {# ---- هزینه تولید محتوا ---- #}
+                                <div class="sd-cost-row">
+                                    <span class="label">
+                                        <i class="fi-video text-info"></i>
+                                        هزینه تولید محتوا
+                                    </span>
+                                    <span class="value">
+                                        {{ invoice.content_cost|floatformat:0 }}
+                                        {% if invoice.content_discount_amount > 0 %}
+                                            <span class="sd-cost-sub">
+                                                تخفیف: {{ invoice.content_discount_amount|floatformat:0 }}
+                                            </span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                {# ---- کمیسیون تیم محتوا (فقط کمپینی) ---- #}
+                                {% if is_campaign and content_commission > 0 %}
+                                    <div class="sd-cost-row warning">
+                                        <span class="label">
+                                            <i class="fi-percent text-warning"></i>
+                                            کمیسیون تیم (15%)
+                                        </span>
+                                        <span class="value">
+                                            {{ content_commission|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# ---- کمیسیون کل (فقط مستقل — چون همه‌چیز محتواست) ---- #}
+                                {% if is_standalone and invoice.commission > 0 %}
+                                    <div class="sd-cost-row warning">
+                                        <span class="label">
+                                            <i class="fi-percent text-warning"></i>
+                                            کمیسیون پلتفرم (15%)
+                                        </span>
+                                        <span class="value">
+                                            {{ invoice.commission|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# ---- مالیات محتوا ---- #}
+                                {% if invoice.content_vat > 0 %}
+                                    <div class="sd-cost-row info">
+                                        <span class="label">
+                                            <i class="fi-percent text-info"></i>
+                                            مالیات بر ارزش افزوده (10%)
+                                        </span>
+                                        <span class="value">
+                                            {{ invoice.content_vat|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# ---- مالیات کمیسیون (فقط مستقل) ---- #}
+                                {% if is_standalone and invoice.commission_vat > 0 %}
+                                    <div class="sd-cost-row info">
+                                        <span class="label">
+                                            <i class="fi-percent text-info"></i>
+                                            مالیات کمیسیون (10%)
+                                        </span>
+                                        <span class="value">
+                                            {{ invoice.commission_vat|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# ---- تخفیف محتوا ---- #}
+                                {% if invoice.content_discount_amount > 0 %}
+                                    <div class="sd-cost-row discount">
+                                        <span class="label">
+                                            <i class="fi-ticket text-success"></i>
+                                            تخفیف اعمال شده
+                                        </span>
+                                        <span class="value">
+                                            - {{ invoice.content_discount_amount|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# ---- جمع کل (فقط مستقل) ---- #}
+                                {% if is_standalone %}
+                                    <div class="sd-cost-divider"></div>
+                                    <div class="sd-cost-total">
+                                        <span class="label">
+                                            <i class="bi bi-cash me-1"></i>
+                                            مبلغ قابل پرداخت
+                                        </span>
+                                        <span class="value">
+                                            {{ invoice.payable_amount|floatformat:0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+
+                {# ---------- Operations ---------- #}
+                <section class="sd-card">
+                    <div class="sd-card-head">
+                        <i class="fi-settings"></i>
+                        <h2>عملیات سفارش</h2>
+                    </div>
+                
+                    <div class="sd-card-body">
+                        <div class="sd-actions">
+                
+                            {# ====== حالت ۱: پیش‌نویس → حذف سفارش ====== #}
+                            {% if order.status == 'draft' %}
+                                <button type="button"
+                                        class="sd-btn sd-btn-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteOrderModal">
+                                    <i class="fi-trash"></i>
+                                    حذف سفارش
+                                </button>
+                            {% endif %}
+                
+                            {# ====== حالت ۲: انجام شده → تأیید نهایی + درخواست ویرایش ====== #}
+                            {% if order.status == 'done' and not has_selected_file %}
+                
+                                {% if can_final_accept %}
+                                    <button type="button"
+                                            class="sd-btn sd-btn-success final-accept-btn"
+                                            data-order-id="{{ order.id }}">
+                                        <i class="fi-check-circle"></i>
+                                        تأیید نهایی سفارش
+                                    </button>
+                                {% endif %}
+                
+                                {% if can_request_revision %}
+                                    <button type="button"
+                                            class="sd-btn sd-btn-warning"
+                                            data-order-id="{{ order.id }}"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#revisionModal">
+                                        <i class="fi-edit"></i>
+                                        درخواست ویرایش
+                                    </button>
+                                {% endif %}
+                
+                                {# برای multi_choice کمپینی: هشدار انتخاب گزینه #}
+                                {% if can_select_option %}
+                                    <div class="sd-action-note"
+                                         style="background: rgba(7,201,139,.06); border-color: rgba(7,201,139,.2); color: rgba(7,201,139,.85); margin-top: 0;">
+                                        <i class="fi-info-circle" style="color: var(--sd-success);"></i>
+                                        این سفارش چند گزینه دارد. لطفاً از دکمه
+                                        <strong>«انتخاب گزینه»</strong> کنار فایل مورد نظر استفاده کنید.
+                                    </div>
+                                {% endif %}
+                
+                            {% endif %}
+                
+                        </div>
+                
+                        {# ====== متن راهنمای وضعیت فعلی ====== #}
+                        <div class="sd-status-note
+                            {% if order.status == 'draft' %}is-draft
+                            {% elif order.status == 'pending' %}is-pending
+                            {% elif order.status == 'in_progress' %}is-in_progress
+                            {% elif order.status == 'review_pending' %}is-review_pending
+                            {% elif order.status == 'done' %}is-done
+                            {% elif order.status == 'completed' %}is-completed
+                            {% elif order.status == 'cancelled' %}is-cancelled{% endif %}">
+                
+                            <i class="
+                                {% if order.status == 'draft' %}fi-edit
+                                {% elif order.status == 'pending' %}fi-clock
+                                {% elif order.status == 'in_progress' %}fi-settings
+                                {% elif order.status == 'review_pending' %}fi-refresh-cw
+                                {% elif order.status == 'done' %}fi-download
+                                {% elif order.status == 'completed' %}fi-check-circle
+                                {% elif order.status == 'cancelled' %}fi-x-circle
+                                {% else %}fi-info-circle{% endif %}">
+                            </i>
+                
+                            <div class="sd-status-note-text">
+                                {% if order.status == 'draft' %}
+                                    <strong>پیش‌نویس سفارش</strong>
+                                    برای ادامه، باید بریف را تکمیل کرده و پرداخت نهایی را انجام دهید.
+                                {% elif order.status == 'pending' %}
+                                    <strong>در انتظار بررسی تیم محتوا</strong>
+                                    سفارش شما ثبت شد و در انتظار تأیید تیم تولید محتواست.
+                                {% elif order.status == 'in_progress' %}
+                                    <strong>در حال تولید محتوا</strong>
+                                    تیم محتوا مشغول تولید محتوای سفارش شماست. به‌زودی فایل تحویل داده می‌شود.
+                                {% elif order.status == 'review_pending' %}
+                                    <strong>در انتظار بررسی درخواست ویرایش</strong>
+                                    درخواست ویرایش شما ثبت شده و در انتظار بررسی تیم محتواست.
+                                {% elif order.status == 'done' %}
+                                    <strong>فایل تحویل داده شد</strong>
+                                    فایل تحویلی را بررسی کنید. می‌توانید درخواست ویرایش دهید یا سفارش را تأیید نهایی کنید.
+                                {% elif order.status == 'completed' %}
+                                    <strong>سفارش تکمیل شده</strong>
+                                    سفارش شما با موفقیت تکمیل و مبلغ به تیم پرداخت شد.
+                                {% elif order.status == 'cancelled' %}
+                                    <strong>سفارش لغو شده</strong>
+                                    این سفارش لغو شده است. در صورت نیاز، سفارش جدیدی ثبت کنید.
+                                {% endif %}
+                            </div>
+                        </div>
+                
+                    </div>
+                </section>
+
+
+                {# ---------- Attachments ---------- #}
+                {% if attachments %}
+                    <section class="sd-card sd-attachments">
+                        <div class="sd-card-head">
+                            <i class="fi-attachment"></i>
+                            <h2>فایل‌های پیوست</h2>
+                            <span class="sd-count">{{ attachments|length }}</span>
+                        </div>
+
+                        <div class="sd-card-body">
+                            <div class="sd-attachment-list">
+                                {% for file in attachments %}
+                                    <div class="sd-attachment">
+                                        <i class="fi-file"></i>
+
+                                        <div class="sd-attachment-main">
+                                            <span class="sd-attachment-name" title="{{ file.original_name }}">
+                                                {{ file.original_name|truncatechars:35 }}
+                                            </span>
+                                            <span class="sd-attachment-size">
+                                                {{ file.file_size_display }}
+                                            </span>
+                                        </div>
+
+                                        <a href="{{ file.file.url }}"
+                                           class="sd-download"
+                                           target="_blank"
+                                           title="دانلود">
+                                            <i class="fi-download"></i>
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+
+                {# ---------- Revisions ---------- #}
+                {% if revisions %}
+                    <section class="sd-card sd-sidebar-revisions">
+                        <div class="sd-card-head">
+                            <i class="fi-edit"></i>
+                            <h2>تاریخچه ویرایش</h2>
+                            <span class="sd-count">{{ revisions|length }}</span>
+                        </div>
+
+                        <div class="sd-card-body">
+                            <div class="sd-revisions">
+                                {% for revision in revisions %}
+                                    <article class="sd-revision">
+                                        <div class="sd-revision-box">
+                                            <div class="sd-revision-meta">
+                                                <span class="sd-revision-date">
+                                                    <i class="fi-calendar"></i>
+                                                    {{ revision.created_at|date:"Y/m/d H:i" }}
+                                                </span>
+
+                                                <span class="sd-revision-status
+                                                    {% if revision.status == 'pending' %}bg-faded-warning text-warning
+                                                    {% elif revision.status == 'accepted' %}bg-faded-info text-info
+                                                    {% elif revision.status == 'done' %}bg-faded-success text-success
+                                                    {% else %}bg-faded-danger text-danger{% endif %}">
+                                                    {{ revision.get_status_display }}
+                                                </span>
+                                            </div>
+
+                                            <div class="sd-revision-feedback">
+                                                {{ revision.feedback|truncatechars:110 }}
+                                            </div>
+
+                                            {% if revision.file %}
+                                                <a href="{{ revision.file.url }}"
+                                                   class="sd-revision-file"
+                                                   download>
+                                                    <i class="fi-attachment"></i>
+                                                    {{ revision.file_name|truncatechars:25 }}
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </article>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+            </aside>
+        </main>
+    </div>
+</div>
+    
+    <!-- =====================================================
+           REVISION MODAL
+           ===================================================== -->
+        <div class="modal fade" id="revisionModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content modal-dark bg-dark border-light">
+
+                    <div class="modal-header border-light p-3">
+                        <h5 class="modal-title text-light">
+                            <i class="fi-edit me-2 text-warning"></i>
+                            درخواست ویرایش
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <form id="revisionForm">
+                        {% csrf_token %}
+
+                        <div class="modal-body p-3">
+                            <div class="mb-3">
+                                <label for="feedback" class="form-label text-light small fw-semibold mb-1">
+                                    📝 توضیحات ویرایش
+                                    <span class="text-danger">*</span>
+                                </label>
+
+                                <textarea id="feedback"
+                                          name="feedback"
+                                          class="form-control bg-faded-dark border-light text-light"
+                                          rows="4"
+                                          placeholder="لطفاً توضیح دهید چه تغییراتی می‌خواهید..."></textarea>
+
+                                <small class="text-muted" style="font-size:.7rem;">
+                                    توضیحات دقیق به تیم کمک می‌کند تا ویرایش بهتری انجام دهد.
+                                </small>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label text-light small fw-semibold mb-1">
+                                    📎 فایل مرجع (اختیاری)
+                                </label>
+
+                                <div class="dropzone-revision bg-faded-dark border border-light rounded-3 p-3 text-center"
+                                     id="revisionDropzone"
+                                     style="border-style:dashed !important;cursor:pointer;">
+
+                                    <i class="fi-cloud-upload fs-2 text-primary mb-1 d-block"></i>
+
+                                    <p class="text-muted small mb-0" id="dropzoneText">
+                                        برای آپلود کلیک کنید یا فایل را بکشید
+                                    </p>
+
+                                    <input type="file"
+                                           name="revision_file"
+                                           id="revisionFileInput"
+                                           class="d-none">
+                                </div>
+
+                                <small class="text-muted" style="font-size:.7rem;">
+                                    می‌توانید یک فایل مرجع آپلود کنید (تصویر، ویدیو، سند).
+                                </small>
+                            </div>
+
+                            <div id="selectedFileContainer" class="mt-2" style="display:none;">
+                                <div class="small text-muted mb-1">
+                                    📋 فایل انتخاب شده:
+                                </div>
+                                <div id="selectedFile" class="selected-file"></div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer border-light p-3">
+                            <button type="button"
+                                    class="btn btn-secondary rounded-pill px-3"
+                                    data-bs-dismiss="modal"
+                                    style="font-size:.8rem;">
+                                انصراف
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-warning rounded-pill px-3"
+                                    style="font-size:.8rem;">
+                                <i class="fi-edit me-1"></i>
+                                ثبت درخواست
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    
+        <!-- =====================================================
+           DELETE ORDER MODAL
+           ===================================================== -->
+        <div class="modal fade" id="deleteOrderModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content modal-dark bg-dark border-light">
+        
+                    <div class="modal-header border-light p-3">
+                        <h5 class="modal-title text-light">
+                            <i class="fi-trash me-2 text-danger"></i>
+                            حذف سفارش
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+        
+                    <div class="modal-body p-4 text-center">
+                        <i class="fi-alert-triange text-danger" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                        <p class="text-light mb-2">آیا از حذف این سفارش مطمئن هستید؟</p>
+                        <p class="text-muted small mb-0">
+                            این سفارش در حالت پیش‌نویس است و هنوز پرداخت نشده.
+                            <br>
+                            این عمل <strong class="text-danger">غیرقابل بازگشت</strong> است.
+                        </p>
+                    </div>
+        
+                    <div class="modal-footer border-light p-3">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                            انصراف
+                        </button>
+        
+                        <form method="post" action="{% url 'content_team:delete_content_order' order.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger rounded-pill px-4">
+                                <i class="fi-trash me-1"></i>
+                                بله، حذف کن
+                            </button>
+                        </form>
+                    </div>
+        
+                </div>
+            </div>
+        </div>
+{% endblock %}
+
+
+{% block script %}
+    {{ block.super }}
+
+    {# JS های مشترک #}
+    <script src="{% static 'advertisers/js/pages/campaign_detail/helpers.js' %}"></script>
+    <script src="{% static 'advertisers/js/pages/campaign_detail/modals.js' %}"></script>
+    <script src="{% static 'advertisers/js/pages/campaign_detail/revision.js' %}"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('✅ صفحه جزئیات سفارش تولید محتوا آماده است');
+
+        // ============================================================
+        // انتخاب گزینه (MULTI_CHOICE) — فقط برای کمپینی
+        // ============================================================
+        document.addEventListener('click', async function(e) {
+            const btn = e.target.closest('.select-option-btn');
+            if (!btn) return;
+
+            const deliveryFileId = btn.dataset.deliveryFileId;
+            const optionNumber = btn.dataset.optionNumber;
+
+            if (btn.disabled) return;
+
+            showConfirmModal(
+                'انتخاب گزینه',
+                `آیا از انتخاب گزینه ${optionNumber} به عنوان فایل اصلی کمپین مطمئن هستید؟`,
+                async () => {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fi-loading"></i>';
+                    btn.disabled = true;
+
+                    try {
+                        const response = await fetch(`/advertisers/campaign/select-option/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `delivery_file_id=${deliveryFileId}`
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            showMessage('موفقیت', data.message, 'success', () => {
+                                location.reload();
+                            });
+                        } else {
+                            showMessage('خطا', data.error, 'error');
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showMessage('خطا', 'خطا در ارتباط با سرور', 'error');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            );
+        });
+    });
+    </script>
+{% endblock %}

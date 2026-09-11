@@ -1,6 +1,6 @@
 from campaigns.tasks import penalize_unaccepted_content_orders, auto_approve_campaign_after_rejection
 from campaigns.models import CampaignReport, CampaignContent, Campaign, CampaignTrackingLink
-from content_team.models import ContentOrderRevision, ContentDelivery, ContentOrder
+from content_team.models import ContentOrderRevision, ContentDelivery, ContentOrder, ContentServicePlan
 from payment.services.create_invoice import create_campaign_invoice
 from payment.services.payment_service import pay_influencer
 from payment.models import Wallet, Transaction
@@ -34,6 +34,31 @@ from notifications.utils import (
     notify_advertiser_campaign_needs_revision,
     notify_advertiser_influencer_report_rejected,
 )
+
+
+# ========== توابع کمکی برای پشتیبانی از سفارش‌های مستقل ==========
+
+def get_order_related_user(order):
+    """دریافت کاربر مرتبط با سفارش (تبلیغ‌دهنده یا کاربر مستقل)"""
+    if order.campaign:
+        return order.campaign.advertiser.user
+    elif order.standalone_user:
+        return order.standalone_user
+    return None
+
+def get_order_display_name(order):
+    """دریافت نام نمایشی سفارش (نام کمپین یا نام کاربر)"""
+    if order.campaign:
+        return order.campaign.name
+    elif order.standalone_user:
+        return f"سفارش مستقل {order.standalone_user.nickname or order.standalone_user.phone_number}"
+    return f"سفارش #{order.id}"
+
+def get_order_invoice(order):
+    """دریافت فاکتور مرتبط با سفارش"""
+    if order.campaign and hasattr(order.campaign, 'invoice'):
+        return order.campaign.invoice
+    return None
 
 
 def submit_campaign_for_review(campaign):
@@ -119,70 +144,118 @@ def accept_content_order_service(order):
         order.save(update_fields=['status'])
 
         # --- سیستم گیمیفیکیشن ---
-        update_score(order.team, 20, 'قبول کردن سفارش تبلیغ', f'قبول سفارش تولید محتوای کمپین{order.campaign.name}')
+        display_name = get_order_display_name(order)
+        update_score(
+            order.team, 20,
+            'قبول کردن سفارش تبلیغ',
+            f'قبول سفارش {display_name}'
+        )
 
         notify_advertiser_content_order_accepted(order)
 
 
 def reject_content_order_service(order):
     """سرویس رد سفارش توسط تیم محتوا (۵۰- امتیاز منفی برای تیم)"""
-
     with transaction.atomic():
-        campaign = order.campaign
-
-        order.status = 'cancelled'
+        # ========== ۱. تغییر وضعیت سفارش ==========
+        order.status = ContentOrder.Status.CANCELLED
         order.save(update_fields=['status'])
 
-        update_score(order.team, -50, 'رد کردن سفارش تبلیغ',
-                     f'رد سفارش تولید محتوای کمپین {campaign.name}')
+        # ========== ۲. امتیاز منفی برای تیم ==========
+        display_name = get_order_display_name(order)
+        update_score(
+            order.team, -50,
+            'رد کردن سفارش تبلیغ',
+            f'رد سفارش {display_name}'
+        )
 
-        if campaign.invoice and campaign.invoice.content_cost > 0:
-            advertiser_user = campaign.advertiser.user
-            wallet = advertiser_user.wallet
+        # ========== ۳. محاسبه مبلغ برگشتی ==========
+        user = get_order_related_user(order)
+        invoice = get_order_invoice(order)
 
-            wallet.balance += campaign.invoice.content_cost
+        # برای سفارش مستقل، فاکتور از خود سفارش میاد
+        if not invoice and order.is_standalone and hasattr(order, 'invoice'):
+            invoice = order.invoice
+
+        refund_amount = 0
+        description = ''
+
+        if invoice:
+            if order.is_standalone:
+                # ⚡ سفارش مستقل → کل مبلغ پرداختی
+                refund_amount = invoice.payable_amount
+                description = (
+                    f'برگشت کامل مبلغ پرداختی سفارش #{order.id} '
+                    f'({refund_amount:,} تومان) به دلیل رد سفارش توسط تیم {order.team.name}'
+                )
+            else:
+                # ⚡ سفارش کمپینی → فقط هزینه تیم محتوا
+                refund_amount = invoice.content_cost
+                description = (
+                    f'برگشت هزینه تیم محتوا سفارش #{order.id} '
+                    f'({refund_amount:,} تومان) به دلیل رد سفارش توسط {order.team.name}'
+                )
+
+        # ========== ۴. واریز به کیف پول ==========
+        if user and refund_amount > 0:
+            wallet = user.wallet
+            wallet.balance += refund_amount
             wallet.save(update_fields=['balance'])
 
             Transaction.objects.create(
-                user=advertiser_user,
-                amount=campaign.invoice.content_cost,
+                user=user,
+                amount=refund_amount,
                 type=Transaction.Type.CAMPAIGN_REFUND,
                 status=Transaction.Status.SUCCESS,
-                campaign=campaign,
-                description=f'برگشت کامل هزینه تیم محتوا ({campaign.invoice.content_cost:,} تومان) به دلیل رد سفارش توسط {order.team.name}',
-                reference_id=f'TEAM_REJECT_REFUND_{campaign.id}_{timezone.now().timestamp()}'
+                campaign=order.campaign,  # برای مستقل None
+                invoice=invoice,
+                description=description,
+                reference_id=f'TEAM_REJECT_REFUND_{order.id}_{timezone.now().timestamp()}'
             )
 
-        notify_advertiser_content_order_rejected(campaign, order.team)
+        # ========== ۵. ارسال نوتیف ==========
+        notify_advertiser_content_order_rejected(order)
 
-        campaign.status = Campaign.Status.REVISION_NEEDED
-        campaign.content_team_rejected = True
-        campaign.replacement_mode = True
-        campaign.save(update_fields=['status', 'content_team_rejected', 'replacement_mode'])
+        # ========== ۶. برای کمپین: حالت جایگزینی ==========
+        if order.campaign:
+            campaign = order.campaign
+            campaign.status = Campaign.Status.REVISION_NEEDED
+            campaign.content_team_rejected = True
+            campaign.replacement_mode = True
+            campaign.save(update_fields=['status', 'content_team_rejected', 'replacement_mode'])
+        # برای مستقل: هیچ کار اضافه‌ای لازم نیست
 
 
 def deliver_content_order_service(order, primary_delivery):
-    """
-    سرویس تحویل فایل سفارش (فقط برای نوتیف و امتیاز)
-    دلیوری قبلاً در ویو ایجاد شده
-    """
+    """سرویس تحویل فایل سفارش (فقط برای نوتیف و امتیاز)"""
     if not primary_delivery:
         return None
 
     with transaction.atomic():
+        display_name = get_order_display_name(order)
+
         # ========== امتیازدهی بر اساس ددلاین ==========
         if order.deadline:
             if timezone.now() <= order.deadline:
-                update_score(order.team, 30, 'تحویل به موقع',
-                             f'تحویل به موقع فایل سفارش کمپین{order.campaign.name} قبل از ددلاین')
+                update_score(
+                    order.team, 30,
+                    'تحویل به موقع',
+                    f'تحویل به موقع فایل سفارش {display_name} قبل از ددلاین'
+                )
             else:
-                update_score(order.team, -20, 'تحویل دیرکرد',
-                             f'تحویل تاخیری فایل سفارش کمپین{order.campaign.name} بعد از ددلاین')
+                update_score(
+                    order.team, -20,
+                    'تحویل دیرکرد',
+                    f'تحویل تاخیری فایل سفارش {display_name} بعد از ددلاین'
+                )
         else:
-            update_score(order.team, 20, 'تحویل فایل سفارش',
-                         f'تحویل فایل سفارش کمپین {order.campaign.name}')
+            update_score(
+                order.team, 20,
+                'تحویل فایل سفارش',
+                f'تحویل فایل سفارش {display_name}'
+            )
 
-        # ========== ارسال نوتیف (با دلیوری که قبلاً ساخته شده) ==========
+        # ========== ارسال نوتیف ==========
         notify_advertiser_content_delivered(primary_delivery)
 
         return primary_delivery
@@ -201,41 +274,37 @@ def accept_revision_service(order, revision):
             order.delivery.status = 'revision_requested'
             order.delivery.save(update_fields=['status'])
 
-        update_score(order.team, 10, 'قبول درخواست ویرایش',
-                     f'پذیرش و انجام اصلاحیه کمپین{revision.order.campaign.name}')
+        display_name = get_order_display_name(order)
+        update_score(
+            order.team, 10,
+            'قبول درخواست ویرایش',
+            f'پذیرش و انجام اصلاحیه {display_name}'
+        )
 
         notify_advertiser_revision_accepted(revision)
 
 
 def reject_revision_service(order, revision):
-    """
-    سرویس رد درخواست ویرایش توسط تیم محتوا
-    ۳۰- امتیاز منفی برای تیم
-    وضعیت سفارش به DONE تغییر میکند
-    وضعیت آخرین تحویل به DELIVERED برمیگردد
-    """
+    """سرویس رد درخواست ویرایش توسط تیم محتوا (۳۰- امتیاز منفی)"""
     with transaction.atomic():
-        # ========== ۱. آپدیت وضعیت ریویژن ==========
         revision.status = 'rejected'
         revision.save(update_fields=['status'])
 
-        # ========== ۲. تغییر وضعیت سفارش به DONE ==========
         order.status = ContentOrder.Status.DONE
         order.save(update_fields=['status'])
 
-        # ========== ۳. پیدا کردن آخرین تحویل ==========
         last_delivery = order.deliveries.first()
-
         if last_delivery:
-            # ========== ۴. برگردوندن وضعیت تحویل به DELIVERED ==========
             last_delivery.status = ContentDelivery.DeliveryStatus.DELIVERED
             last_delivery.save(update_fields=['status'])
 
-        # ========== ۵. امتیاز منفی برای تیم ==========
-        update_score(order.team, -30, 'رد درخواست ویرایش',
-                     f'رد درخواست اصلاحیه کمپین {revision.order.campaign.name}')
+        display_name = get_order_display_name(order)
+        update_score(
+            order.team, -30,
+            'رد درخواست ویرایش',
+            f'رد درخواست اصلاحیه {display_name}'
+        )
 
-        # ========== ۶. نوتیف به تبلیغ دهنده ==========
         notify_advertiser_revision_rejected(revision)
 
     return True
@@ -524,33 +593,212 @@ def create_revision_request_service(order, requested_by, feedback, file=None):
     return revision
 
 
-def accept_content_order_delivery(order, content_cost, team_members, primary_delivery=None):
-    """سرویس تأیید نهایی سفارش، تقسیم وجه و بررسی بونوس تایید بدون اصلاحیه (+۳۰ امتیاز برای تیم)"""
+def finalize_content_order(order, selected_file=None):
+    """
+    نهایی‌سازی سفارش تولید محتوا — هم برای کمپین، هم مستقل
+
+    این تابع «مغز واحد» نهایی‌سازی هست. همه‌جا باید این صدا زده بشه.
+
+    Args:
+        order: ContentOrder
+            سفارش تولید محتوا (کمپینی یا مستقل)
+
+        selected_file: ContentDeliveryFile یا None
+            - برای کمپین multi_choice: الزامی — فایلی که کاربر انتخاب کرده
+            - برای کمپین single: اختیاری — اگه None باشه، اولین فایل آخرین تحویل
+            - برای مستقل: همیشه None — اولین فایل آخرین تحویل خودکار انتخاب میشه
+
+    Returns:
+        dict: {
+            'success': bool,
+            'message': str,
+            'paid_amount': int,
+            'members_count': int,
+            'final_file': ContentDeliveryFile یا None
+        }
+    """
+
+    from content_team.models import ContentTeamMember
+    from payment.models import Wallet
+
+    # ============================================================
+    # ۰. قفل کردن سفارش از ابتدا (جلوگیری از race condition)
+    # ============================================================
+    # ⚡ مهم: order رو دوباره از DB با قفل می‌خونیم
+    # این کار باعث میشه اگه دو تا درخواست همزمان برسن،
+    # دومی صبر کنه تا اولی تموم بشه، بعد چک کنه
     with transaction.atomic():
+        locked_order = ContentOrder.objects.select_for_update().get(pk=order.pk)
 
-        if not primary_delivery:
-            primary_delivery = order.deliveries.first()
+        # از این به بعد از locked_order استفاده می‌کنیم (نه order)
+        # چون locked_order نسخه‌ی قفل‌شده و به‌روزه
+        order = locked_order
 
-        if not primary_delivery:
-            return False
+        # ============================================================
+        # ۱. اعتبارسنجی اولیه (داخل قفل)
+        # ============================================================
+        if order.status != ContentOrder.Status.DONE:
+            return {
+                'success': False,
+                'message': f'این سفارش در وضعیت "{order.get_status_display()}" است و قابل تأیید نیست.',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
 
-        # ✅ پیدا کردن فایل انتخاب شده
-        primary_file = primary_delivery.files.filter(is_selected=True).first()
+        if order.has_selected_file():
+            return {
+                'success': False,
+                'message': 'این سفارش قبلاً تأیید نهایی شده است.',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
 
-        # ❌ اگه فایل انتخاب شده پیدا نشد، از اولین فایل استفاده کن
-        if not primary_file:
-            primary_file = primary_delivery.files.first()
+        # ============================================================
+        # ۲. تشخیص فایل نهایی بر اساس نوع سفارش
+        # ============================================================
+        last_delivery = order.deliveries.order_by('-version').first()
 
-        if not primary_file:
-            return False
+        if not last_delivery:
+            return {
+                'success': False,
+                'message': 'هیچ تحویلی برای این سفارش ثبت نشده است.',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
+
+        is_campaign_order = order.campaign is not None
+        is_multi_choice = (
+                order.plan and
+                order.plan.delivery_type == ContentServicePlan.DeliveryType.MULTI_CHOICE
+        )
+
+        final_file = None
+
+        # ---------- حالت ۱: سفارش کمپینی + multi_choice ----------
+        if is_campaign_order and is_multi_choice:
+            if not selected_file:
+                return {
+                    'success': False,
+                    'message': 'برای این سفارش باید یکی از گزینه‌ها انتخاب شود.',
+                    'paid_amount': 0,
+                    'members_count': 0,
+                    'final_file': None,
+                }
+
+            if selected_file.delivery.order_id != order.id:
+                return {
+                    'success': False,
+                    'message': 'فایل انتخاب شده متعلق به این سفارش نیست.',
+                    'paid_amount': 0,
+                    'members_count': 0,
+                    'final_file': None,
+                }
+
+            if not selected_file.is_option:
+                return {
+                    'success': False,
+                    'message': 'فایل انتخاب شده از نوع گزینه (option) نیست.',
+                    'paid_amount': 0,
+                    'members_count': 0,
+                    'final_file': None,
+                }
+
+            final_file = selected_file
+
+        # ---------- حالت ۲: سفارش کمپینی + single ----------
+        elif is_campaign_order and not is_multi_choice:
+            final_file = last_delivery.files.first()
+
+            if not final_file or not final_file.file:
+                return {
+                    'success': False,
+                    'message': 'فایلی برای تأیید نهایی وجود ندارد.',
+                    'paid_amount': 0,
+                    'members_count': 0,
+                    'final_file': None,
+                }
+
+        # ---------- حالت ۳: سفارش مستقل ----------
+        else:
+            final_file = last_delivery.files.first()
+
+            if not final_file or not final_file.file:
+                return {
+                    'success': False,
+                    'message': 'فایلی برای تأیید نهایی وجود ندارد.',
+                    'paid_amount': 0,
+                    'members_count': 0,
+                    'final_file': None,
+                }
+
+        # ============================================================
+        # ۳. محاسبه مبلغ قابل پرداخت به تیم
+        # ============================================================
+        invoice = get_order_invoice(order)
+
+        if not invoice and order.is_standalone and hasattr(order, 'invoice'):
+            invoice = order.invoice
+
+        content_cost = invoice.content_cost if invoice and invoice.content_cost else order.price
+
+        if content_cost <= 0:
+            return {
+                'success': False,
+                'message': 'مبلغ تولید محتوا معتبر نیست.',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
+
+        # ============================================================
+        # ۴. اعتبارسنجی اعضای تیم
+        # ============================================================
+        team_members = ContentTeamMember.objects.filter(
+            team=order.team,
+            is_active=True
+        ).select_related('user')
+
+        if not team_members.exists():
+            return {
+                'success': False,
+                'message': 'هیچ عضو فعالی در تیم وجود ندارد.',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
+
+        total_percent = sum(member.revenue_share_percent for member in team_members)
+
+        if total_percent != 100:
+            return {
+                'success': False,
+                'message': f'مجموع درصد سهام اعضای تیم باید ۱۰۰ باشد (در حال حاضر: {total_percent}%).',
+                'paid_amount': 0,
+                'members_count': 0,
+                'final_file': None,
+            }
+
+        # ============================================================
+        # ۵. اجرای عملیات (همه داخل همون تراکنش)
+        # ============================================================
+
+        # ---------- ۵.۱. علامت‌گذاری فایل نهایی ----------
+        final_file.is_selected = True
+        final_file.save(update_fields=['is_selected'])
+
+        # ---------- ۵.۲. تقسیم پول بین اعضای تیم ----------
+        members_paid = 0
+        total_paid = 0
 
         for member in team_members:
             share_amount = int((content_cost * member.revenue_share_percent) / 100)
-
             if share_amount <= 0:
                 continue
 
-            wallet, created = Wallet.objects.get_or_create(user=member.user)
+            wallet, _ = Wallet.objects.get_or_create(user=member.user)
             wallet.balance += share_amount
             wallet.save(update_fields=['balance'])
 
@@ -560,48 +808,88 @@ def accept_content_order_delivery(order, content_cost, team_members, primary_del
                 type=Transaction.Type.TEAM_PAYMENT,
                 status=Transaction.Status.SUCCESS,
                 campaign=order.campaign,
-                invoice=order.campaign.invoice if hasattr(order.campaign, 'invoice') else None,
+                invoice=invoice,
                 team_member=member,
-                description=f'پرداخت سهم از سفارش #{order.id} - تیم {order.team.name} - {member.revenue_share_percent}% - مبلغ: {share_amount:,} تومان'
+                description=(
+                    f'پرداخت سهم از سفارش #{order.id} - '
+                    f'تیم {order.team.name} - '
+                    f'{member.revenue_share_percent}% - '
+                    f'مبلغ: {share_amount:,} تومان'
+                )
             )
 
-            notify_content_team_order_accepted(member.user, order, share_amount)
+            try:
+                notify_content_team_order_accepted(member.user, order, share_amount)
+            except Exception:
+                pass
 
+            members_paid += 1
+            total_paid += share_amount
+
+        # ---------- ۵.۳. بونوس بدون ویرایش ----------
         has_revisions = ContentOrderRevision.objects.filter(order=order).exists()
         if not has_revisions:
-            update_score(order.team, 30, 'تایید نهایی بدون درخواست ویرایش',
-                         f'تایید نهایی سفارش {order.campaign.name} بدون هیچ درخواست اصلاحیه‌ای از سمت کارفرما #{order.id}')
+            display_name = get_order_display_name(order)
+            update_score(
+                order.team, 30,
+                'تایید نهایی بدون درخواست ویرایش',
+                f'تایید نهایی سفارش {display_name} بدون هیچ درخواست اصلاحیه‌ای'
+            )
 
-        # ✅ استفاده از primary_file (فایل انتخاب شده)
-        campaign_content, created = CampaignContent.objects.get_or_create(
-            campaign=order.campaign,
-            defaults={
-                'media': primary_file.file,
-                'notes': f'محتوای تولید شده توسط تیم {order.team.name}',
-            }
-        )
+        # ---------- ۵.۴. آپدیت دلیوری ----------
+        last_delivery.status = ContentDelivery.DeliveryStatus.FINAL_ACCEPTED
+        last_delivery.accepted_at = timezone.now()
+        last_delivery.save(update_fields=['status', 'accepted_at'])
 
-        if not created:
-            campaign_content.media = primary_file.file
-            campaign_content.notes = f'محتوای تولید شده توسط تیم {order.team.name} در تاریخ {timezone.now()}'
-            campaign_content.save(update_fields=['media', 'notes'])
+        # ---------- ۵.۵. آپدیت وضعیت سفارش ----------
+        order.status = ContentOrder.Status.COMPLETED
+        order.save(update_fields=['status'])
 
-        primary_delivery.status = 'final_accepted'
-        primary_delivery.accepted_at = timezone.now()
-        primary_delivery.save(update_fields=['status', 'accepted_at'])
-        order.status = "completed"
-        order.save(update_fields=['status', ])
+        # ---------- ۵.۶. مخصوص کمپین ----------
+        if is_campaign_order:
+            campaign = order.campaign
 
-        campaign = order.campaign
-        if campaign.content_type.slug == 'content-production-team':
-            influencer_counts = defaultdict(int)
-            bookings = campaign.influencer_bookings.select_related('channel__influencer__user')
+            campaign_content, created = CampaignContent.objects.get_or_create(
+                campaign=campaign,
+                defaults={
+                    'media': final_file.file,
+                    'notes': f'محتوای تولید شده توسط تیم {order.team.name}',
+                }
+            )
 
-            for booking in bookings:
-                user = booking.channel.influencer.user
-                influencer_counts[user] += 1
+            if not created:
+                campaign_content.media = final_file.file
+                campaign_content.notes = (
+                    f'محتوای تولید شده توسط تیم {order.team.name} '
+                    f'در تاریخ {timezone.now()}'
+                )
+                campaign_content.save(update_fields=['media', 'notes'])
 
-            for user, count in influencer_counts.items():
-                notify_influencer_new_campaign_orders(user, campaign, count)
+            if campaign.content_type.slug == 'content-production-team':
+                influencer_counts = defaultdict(int)
+                bookings = campaign.influencer_bookings.select_related(
+                    'channel__influencer__user'
+                )
+                for booking in bookings:
+                    user = booking.channel.influencer.user
+                    influencer_counts[user] += 1
 
-    return True
+                for user, count in influencer_counts.items():
+                    try:
+                        notify_influencer_new_campaign_orders(user, campaign, count)
+                    except Exception:
+                        pass
+
+    # ============================================================
+    # ۶. بازگشت نتیجه (بیرون از تراکنش)
+    # ============================================================
+    return {
+        'success': True,
+        'message': (
+            f'سفارش #{order.id} با موفقیت تأیید شد. '
+            f'مبلغ {total_paid:,} تومان بین {members_paid} عضو تیم تقسیم شد.'
+        ),
+        'paid_amount': total_paid,
+        'members_count': members_paid,
+        'final_file': final_file,
+    }

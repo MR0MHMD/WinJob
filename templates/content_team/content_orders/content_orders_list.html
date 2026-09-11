@@ -1,0 +1,840 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ============================================================
+       CONTENT ORDERS LIST — Dark glass design
+       ============================================================ */
+    .co-page {
+        --co-bg: #1f1b2d;
+        --co-surface: #252036;
+        --co-surface-2: #211c31;
+        --co-line: rgba(255,255,255,.075);
+        --co-line-soft: rgba(255,255,255,.045);
+        --co-text: #f5f4f8;
+        --co-muted: #9691a4;
+        --co-primary: #fd5631;
+        --co-accent: #5d3cf2;
+        --co-success: #07c98b;
+        --co-info: #3c76f2;
+        --co-warning: #fdbc31;
+        --co-danger: #f23c49;
+        color: var(--co-text);
+    }
+
+    /* ---------- Header ---------- */
+    .co-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .co-header h1 {
+        margin: 0;
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .co-header p {
+        margin: .35rem 0 0;
+        color: var(--co-muted);
+        font-size: .82rem;
+    }
+
+    /* ---------- Stats ---------- */
+    .co-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .co-stat {
+        padding: .9rem 1rem;
+        background: linear-gradient(145deg, rgba(37,32,54,.96), rgba(31,27,45,.98));
+        border: 1px solid var(--co-line);
+        border-radius: 14px;
+        transition: .25s ease;
+    }
+
+    .co-stat:hover {
+        transform: translateY(-2px);
+        border-color: rgba(253,86,49,.25);
+    }
+
+    .co-stat-label {
+        color: var(--co-muted);
+        font-size: .68rem;
+        margin-bottom: .35rem;
+    }
+
+    .co-stat-value {
+        color: #fff;
+        font-size: 1.35rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .co-stat-value.primary { color: var(--co-primary); }
+    .co-stat-value.accent { color: var(--co-accent); }
+    .co-stat-value.success { color: var(--co-success); }
+
+    /* ---------- Filter bar ---------- */
+    .co-filter-bar {
+        background: linear-gradient(145deg, rgba(37,32,54,.96), rgba(31,27,45,.98));
+        border: 1px solid var(--co-line);
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    /* ---------- Tabs ---------- */
+    .co-tabs {
+        display: flex;
+        gap: .35rem;
+        margin-bottom: .9rem;
+        flex-wrap: wrap;
+    }
+
+    .co-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .42rem .9rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid var(--co-line);
+        color: var(--co-muted);
+        font-size: .72rem;
+        font-weight: 600;
+        text-decoration: none !important;
+        transition: .2s ease;
+        white-space: nowrap;
+    }
+
+    .co-tab:hover {
+        color: #fff;
+        background: rgba(255,255,255,.07);
+    }
+
+    .co-tab.active {
+        color: #fff;
+        background: linear-gradient(135deg, rgba(253,86,49,.25), rgba(93,60,242,.18));
+        border-color: rgba(253,86,49,.45);
+        box-shadow: 0 0 16px rgba(253,86,49,.18);
+    }
+
+    .co-tab .count {
+        padding: .05rem .4rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,.08);
+        font-size: .62rem;
+        color: inherit;
+    }
+
+    .co-tab.active .count {
+        background: rgba(255,255,255,.18);
+    }
+
+    /* ---------- Search row ---------- */
+    .co-search-row {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) 200px 160px auto;
+        gap: .5rem;
+        align-items: center;
+    }
+
+    @media (max-width: 900px) {
+        .co-search-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .co-input,
+    .co-select {
+        width: 100%;
+        padding: .5rem .8rem;
+        border-radius: 10px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid var(--co-line);
+        color: #fff;
+        font-size: .78rem;
+        transition: .2s ease;
+    }
+
+    .co-input::placeholder {
+        color: rgba(255,255,255,.35);
+    }
+
+    .co-input:focus,
+    .co-select:focus {
+        outline: none;
+        background: rgba(255,255,255,.06);
+        border-color: rgba(253,86,49,.4);
+        box-shadow: 0 0 0 3px rgba(253,86,49,.1);
+    }
+
+    .co-select option {
+        background: #1f1b2d;
+        color: #fff;
+    }
+
+    .co-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: .78rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none !important;
+        transition: .2s ease;
+        white-space: nowrap;
+    }
+
+    .co-btn-primary {
+        background: linear-gradient(135deg, #fd5631, #df401f);
+        color: #fff !important;
+        box-shadow: 0 8px 18px rgba(253,86,49,.18);
+    }
+
+    .co-btn-primary:hover {
+        transform: translateY(-1px);
+    }
+
+    .co-btn-ghost {
+        background: rgba(255,255,255,.035);
+        border-color: var(--co-line);
+        color: rgba(255,255,255,.7) !important;
+    }
+
+    .co-btn-ghost:hover {
+        color: #fff !important;
+        background: rgba(255,255,255,.07);
+    }
+
+    /* ---------- Order Card ---------- */
+    .co-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1rem;
+    }
+
+    .co-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(145deg, rgba(37,32,54,.96), rgba(31,27,45,.98));
+        border: 1px solid var(--co-line);
+        border-radius: 18px;
+        overflow: hidden;
+        transition: .25s ease;
+        text-decoration: none !important;
+        color: inherit;
+    }
+
+    .co-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(253,86,49,.3);
+        box-shadow: 0 20px 40px -18px rgba(0,0,0,.5);
+    }
+
+    /* top accent line */
+    .co-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--co-primary), var(--co-accent));
+        opacity: .55;
+    }
+
+    .co-card.standalone::before {
+        background: linear-gradient(90deg, #3c76f2, #5d3cf2);
+    }
+
+    .co-card.campaign::before {
+        background: linear-gradient(90deg, #fd5631, #fdbc31);
+    }
+
+    .co-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .6rem;
+        padding: 1rem 1rem .7rem;
+        border-bottom: 1px solid var(--co-line-soft);
+    }
+
+    .co-card-id {
+        color: var(--co-muted);
+        font-size: .65rem;
+        margin-bottom: .15rem;
+    }
+
+    .co-card-title {
+        color: #fff;
+        font-size: .92rem;
+        font-weight: 700;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    .co-badge-type {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .2rem .55rem;
+        border-radius: 999px;
+        font-size: .58rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .co-badge-type.standalone {
+        color: #6e9cff;
+        background: rgba(60,118,242,.12);
+        border: 1px solid rgba(60,118,242,.22);
+    }
+
+    .co-badge-type.campaign {
+        color: #ffb44a;
+        background: rgba(253,86,49,.12);
+        border: 1px solid rgba(253,86,49,.22);
+    }
+
+    .co-card-body {
+        padding: .85rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        flex: 1;
+    }
+
+    /* Team row */
+    .co-team {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+    }
+
+    .co-team-logo,
+    .co-team-placeholder {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .co-team-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,.05);
+        border: 1px solid var(--co-line);
+        font-size: 1rem;
+    }
+
+    .co-team-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .co-team-name {
+        color: #fff;
+        font-size: .78rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .co-team-plan {
+        color: var(--co-muted);
+        font-size: .65rem;
+        margin-top: .1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Meta row */
+    .co-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem .8rem;
+        color: var(--co-muted);
+        font-size: .65rem;
+    }
+
+    .co-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+    }
+
+    .co-meta-item i {
+        font-size: .7rem;
+    }
+
+    .co-meta-item .ok { color: var(--co-success); }
+    .co-meta-item .warn { color: var(--co-warning); }
+
+    /* Status badge */
+    .co-status {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .22rem .6rem;
+        border-radius: 999px;
+        font-size: .62rem;
+        font-weight: 600;
+        align-self: flex-start;
+    }
+
+    .co-status.draft { color:#adb5bd; background:rgba(108,117,125,.13); }
+    .co-status.pending { color:#fdbc31; background:rgba(253,188,49,.13); }
+    .co-status.review_pending { color:#6e9cff; background:rgba(60,118,242,.13); }
+    .co-status.in_progress { color:#ff7557; background:rgba(253,86,49,.13); }
+    .co-status.done { color:#6e9cff; background:rgba(60,118,242,.13); }
+    .co-status.completed { color:#07c98b; background:rgba(7,201,139,.13); }
+    .co-status.cancelled { color:#f23c49; background:rgba(242,60,73,.13); }
+
+    /* Price block */
+    .co-price-box {
+        margin-top: auto;
+        padding-top: .75rem;
+        border-top: 1px solid var(--co-line-soft);
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: .5rem;
+    }
+
+    .co-price-label {
+        color: var(--co-muted);
+        font-size: .6rem;
+    }
+
+    .co-price-value {
+        color: #fff;
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .co-price-value small {
+        color: var(--co-muted);
+        font-size: .6rem;
+        font-weight: 400;
+        margin-right: .2rem;
+    }
+
+    .co-price-sub {
+        color: var(--co-muted);
+        font-size: .58rem;
+        margin-top: .2rem;
+    }
+
+    /* Card footer (actions) */
+    .co-card-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        padding: .7rem 1rem;
+        border-top: 1px solid var(--co-line-soft);
+        background: rgba(255,255,255,.015);
+    }
+
+    .co-card-foot .co-btn {
+        padding: .42rem .8rem;
+        font-size: .7rem;
+    }
+
+    .co-mini-link {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .32rem .65rem;
+        border-radius: 999px;
+        color: var(--co-muted) !important;
+        background: rgba(255,255,255,.035);
+        border: 1px solid var(--co-line);
+        font-size: .62rem;
+        text-decoration: none !important;
+        transition: .2s ease;
+    }
+
+    .co-mini-link:hover {
+        color: #fff !important;
+        background: rgba(255,255,255,.07);
+    }
+
+    /* ---------- Empty state ---------- */
+    .co-empty {
+        text-align: center;
+        padding: 3.5rem 1rem;
+        color: var(--co-muted);
+        background: linear-gradient(145deg, rgba(37,32,54,.96), rgba(31,27,45,.98));
+        border: 1px dashed var(--co-line);
+        border-radius: 18px;
+    }
+
+    .co-empty i {
+        font-size: 2.6rem;
+        opacity: .4;
+        display: block;
+        margin-bottom: .75rem;
+    }
+
+    .co-empty h5 {
+        color: #fff;
+        font-size: 1rem;
+        margin-bottom: .35rem;
+    }
+
+    .co-empty p {
+        font-size: .78rem;
+        margin-bottom: 1rem;
+    }
+
+    /* ---------- Pagination ---------- */
+    .co-pagination {
+        display: flex;
+        justify-content: center;
+        gap: .3rem;
+        margin-top: 1.75rem;
+    }
+
+    .co-pagination a,
+    .co-pagination span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 .55rem;
+        border-radius: 9px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid var(--co-line);
+        color: rgba(255,255,255,.7) !important;
+        font-size: .72rem;
+        text-decoration: none !important;
+        transition: .2s ease;
+    }
+
+    .co-pagination a:hover {
+        background: rgba(255,255,255,.08);
+        color: #fff !important;
+    }
+
+    .co-pagination .active {
+        background: linear-gradient(135deg, #fd5631, #df401f);
+        border-color: transparent;
+        color: #fff !important;
+        box-shadow: 0 6px 16px rgba(253,86,49,.25);
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 900px) {
+        .co-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 500px) {
+        .co-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .co-card-foot {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .co-card-foot .co-btn,
+        .co-mini-link {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 co-page" dir="rtl" style="margin-top: 1.5rem;">
+
+    <!-- ==================== Header ==================== -->
+    <header class="co-header">
+        <div>
+            <h1>
+                <i class="fi-file-text text-primary me-2"></i>
+                {{ title }}
+            </h1>
+            <p>مدیریت تمام سفارش‌های تولید محتوای شما (مستقل و کمپینی)</p>
+        </div>
+        <a href="{% url 'content_team:standalone_order_step1' %}" class="co-btn co-btn-primary">
+            <i class="fi-plus-circle"></i>
+            سفارش جدید
+        </a>
+    </header>
+
+    <!-- ==================== Stats ==================== -->
+    <div class="co-stats">
+        <div class="co-stat">
+            <div class="co-stat-label">کل سفارش‌ها</div>
+            <div class="co-stat-value">{{ stats.total }}</div>
+        </div>
+        <div class="co-stat">
+            <div class="co-stat-label">مستقل</div>
+            <div class="co-stat-value accent">{{ stats.standalone_count }}</div>
+        </div>
+        <div class="co-stat">
+            <div class="co-stat-label">کمپینی</div>
+            <div class="co-stat-value primary">{{ stats.campaign_count }}</div>
+        </div>
+        <div class="co-stat">
+            <div class="co-stat-label">تکمیل شده</div>
+            <div class="co-stat-value success">{{ stats.completed }}</div>
+        </div>
+    </div>
+
+    <!-- ==================== Filter bar ==================== -->
+    <div class="co-filter-bar">
+        <!-- Tabs -->
+        <div class="co-tabs">
+            <a href="?type=all{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+               class="co-tab {% if order_type == 'all' %}active{% endif %}">
+                <i class="fi-layers"></i>
+                همه
+                <span class="count">{{ stats.total }}</span>
+            </a>
+            <a href="?type=standalone{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+               class="co-tab {% if order_type == 'standalone' %}active{% endif %}">
+                <i class="fi-user"></i>
+                مستقل
+                <span class="count">{{ stats.standalone_count }}</span>
+            </a>
+            <a href="?type=campaign{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+               class="co-tab {% if order_type == 'campaign' %}active{% endif %}">
+                <i class="fi-megaphone"></i>
+                کمپینی
+                <span class="count">{{ stats.campaign_count }}</span>
+            </a>
+        </div>
+
+        <!-- Search row -->
+        <form method="GET" class="co-search-row">
+            <input type="hidden" name="type" value="{{ order_type }}">
+
+            <input type="text"
+                   name="search"
+                   class="co-input"
+                   placeholder="جستجوی شماره سفارش، نام کمپین، تیم، پلن یا برند..."
+                   value="{{ search_query }}">
+
+            <select name="status" class="co-select">
+                <option value="">همه وضعیت‌ها</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="sort" class="co-select">
+                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>جدیدترین</option>
+                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>قدیمی‌ترین</option>
+                <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>گران‌ترین</option>
+                <option value="price" {% if sort_by == 'price' %}selected{% endif %}>ارزان‌ترین</option>
+            </select>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="co-btn co-btn-primary">
+                    <i class="fi-search"></i>
+                    فیلتر
+                </button>
+                {% if search_query or status_filter or order_type != 'all' %}
+                    <a href="{% url 'content_team:content_orders_list' %}" class="co-btn co-btn-ghost">
+                        <i class="fi-x"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ==================== List ==================== -->
+    {% if orders %}
+        <div class="co-grid">
+            {% for order in orders %}
+                <div class="co-card {% if order.is_standalone %}standalone{% else %}campaign{% endif %}">
+
+                    <!-- Head -->
+                    <div class="co-card-head">
+                        <div style="min-width:0;">
+                            <div class="co-card-id">
+                                #{{ order.id }}
+                            </div>
+                            <div class="co-card-title">
+                                {{ order.name }}
+                            </div>
+                        </div>
+
+                        {% if order.is_standalone %}
+                            <span class="co-badge-type standalone">
+                                <i class="fi-user"></i>
+                                مستقل
+                            </span>
+                        {% else %}
+                            <span class="co-badge-type campaign">
+                                <i class="fi-megaphone"></i>
+                                کمپینی
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Body -->
+                    <div class="co-card-body">
+
+                        <!-- Team -->
+                        <div class="co-team">
+                            {% if order.team.logo %}
+                                <img src="{{ order.team.logo.url }}" class="co-team-logo" alt="{{ order.team.name }}">
+                            {% else %}
+                                <div class="co-team-placeholder">🎬</div>
+                            {% endif %}
+                            <div class="co-team-info">
+                                <div class="co-team-name">{{ order.team.name }}</div>
+                                <div class="co-team-plan">
+                                    {{ order.plan.name }} • {{ order.plan.service_type.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div>
+                            <span class="co-status {{ order.status }}">
+                                <i class="
+                                    {% if order.status == 'draft' %}fi-edit
+                                    {% elif order.status == 'pending' %}fi-clock
+                                    {% elif order.status == 'review_pending' %}fi-refresh-cw
+                                    {% elif order.status == 'in_progress' %}fi-settings
+                                    {% elif order.status == 'done' %}fi-download
+                                    {% elif order.status == 'completed' %}fi-check-circle
+                                    {% elif order.status == 'cancelled' %}fi-x-circle
+                                    {% endif %}"></i>
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+
+                        <!-- Meta -->
+                        <div class="co-meta">
+                            <span class="co-meta-item">
+                                <i class="fi-calendar"></i>
+                                {{ order.created_at|date:"Y/m/d" }}
+                            </span>
+                            <span class="co-meta-item">
+                                <i class="fi-clock"></i>
+                                {{ order.plan.estimated_delivery_days }} روز
+                            </span>
+                            {% if order.brief %}
+                                <span class="co-meta-item">
+                                    <i class="fi-check-circle ok"></i>
+                                    <span class="ok">بریف کامل</span>
+                                </span>
+                            {% else %}
+                                <span class="co-meta-item">
+                                    <i class="fi-alert-circle warn"></i>
+                                    <span class="warn">بریف ناقص</span>
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Price -->
+                        <div class="co-price-box">
+                            <div>
+                                <div class="co-price-label">
+                                    {% if order.campaign %}
+                                        هزینه تولید محتوا
+                                    {% else %}
+                                        مبلغ سفارش
+                                    {% endif %}
+                                </div>
+                                <div class="co-price-value">
+                                    {{ order.price|floatformat:0 }}
+                                    <small>تومان</small>
+                                </div>
+                            </div>
+
+                            {% if order.campaign and order.content_commission %}
+                                <div class="text-end">
+                                    <div class="co-price-label">کمیسیون تیم</div>
+                                    <div class="co-price-sub" style="color: var(--co-warning); font-weight:700; font-size:.78rem;">
+                                        {{ order.content_commission|floatformat:0 }}
+                                        <span style="font-weight:400;">تومان</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    <!-- Foot -->
+                    <div class="co-card-foot">
+                        <a href="{% url 'content_team:content_order_detail' order.id %}" class="co-btn co-btn-primary">
+                            <i class="fi-eye"></i>
+                            مشاهده جزئیات
+                        </a>
+
+                        {% if order.campaign %}
+                            <a href="{% url 'advertisers:campaign_detail' order.campaign.id %}"
+                               class="co-mini-link"
+                               onclick="event.stopPropagation();">
+                                <i class="fi-external-link"></i>
+                                کمپین
+                            </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+
+        {% include 'partials/pagination.html' %}
+
+    {% else %}
+        <!-- ==================== Empty ==================== -->
+        <div class="co-empty">
+            <i class="fi-inbox"></i>
+            <h5>هیچ سفارشی یافت نشد</h5>
+            <p>
+                {% if search_query or status_filter or order_type != 'all' %}
+                    هیچ سفارشی با فیلترهای اعمال شده وجود ندارد.
+                {% else %}
+                    شما هنوز هیچ سفارش تولید محتوایی ثبت نکرده‌اید.
+                {% endif %}
+            </p>
+            <a href="{% url 'content_team:content_orders_list' %}" class="co-btn co-btn-primary">
+                <i class="fi-refresh-cw"></i>
+                نمایش همه سفارش‌ها
+            </a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -17,15 +17,41 @@ def get_team_province(team):
 def content_order_file_path(instance, filename):
     """
     مسیر ذخیره فایل‌های سفارش
-    پشتیبانی از ContentOrderFile و ContentDeliveryFile
+    پشتیبانی از:
+    - ContentOrderFile (فایل‌های پیوست سفارش)
+    - ContentDeliveryFile (فایل‌های تحویل سفارش)
+    - سفارش‌های مستقل (بدون کمپین)
+    - سفارش‌های متصل به کمپین
     """
+
+    # ====== حالت اول: فایل پیوست سفارش (ContentOrderFile) ======
     if hasattr(instance, 'order') and instance.order:
-        return f'content_orders/{instance.order.campaign.id}/{instance.order.id}/{filename}'
+        order = instance.order
 
+        # بررسی اینکه سفارش مستقل هست یا به کمپین متصل
+        if order.is_standalone:
+            # سفارش مستقل تولید محتوا
+            return f'content_orders/standalone/{order.id}/{filename}'
+        elif order.campaign_id:
+            # سفارش متصل به کمپین
+            return f'content_orders/campaign/{order.campaign_id}/{order.id}/{filename}'
+        else:
+            # fallback (اگه هیچکدوم)
+            return f'content_orders/unknown/{order.id}/{filename}'
+
+    # ====== حالت دوم: فایل تحویل سفارش (ContentDeliveryFile) ======
     elif hasattr(instance, 'delivery') and instance.delivery:
-        return f'content_orders/{instance.delivery.order.campaign.id}/{instance.delivery.order.id}/delivery/{filename}'
+        delivery = instance.delivery
+        order = delivery.order
 
-    # fallback
+        if order.is_standalone:
+            return f'content_orders/standalone/{order.id}/delivery/{filename}'
+        elif order.campaign_id:
+            return f'content_orders/campaign/{order.campaign_id}/{order.id}/delivery/{filename}'
+        else:
+            return f'content_orders/unknown/{order.id}/delivery/{filename}'
+
+    # ====== fallback نهایی ======
     return f'content_orders/unknown/{filename}'
 
 

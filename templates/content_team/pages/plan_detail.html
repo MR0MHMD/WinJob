@@ -1,3 +1,5 @@
+<!-- content_team/templates/content_team/pages/plan_detail.html -->
+
 {% extends 'parent/base.html' %}
 {% load static %}
 
@@ -12,24 +14,30 @@
 {% block content %}
 <div class="container py-5">
 
-    <!-- بردکرامب -->
-    
-        <ol class="breadcrumb breadcrumb-light">
+    <!-- ====== بردکرامب (با پشتیبانی از حالت‌ها) ====== -->
+    <ol class="breadcrumb breadcrumb-light">
+        <li class="breadcrumb-item">
+            <a href="{% url 'core:home' %}">خانه</a>
+        </li>
+        
+        {% if from_standalone %}
             <li class="breadcrumb-item">
-                <a href="{% url 'core:home' %}">خانه</a>
+                <a href="{% url 'content_team:standalone_order_step1' %}">سفارش محتوای مستقل</a>
             </li>
-            
+            <li class="breadcrumb-item">
+                <a href="{{ back_url }}">انتخاب تیم</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">پلن {{ plan.name }}</li>
+        {% else %}
             <li class="breadcrumb-item">
                 <a href="{% url 'content_team:team_list' %}">تیم های تولید محتوا</a>
             </li>
-
             <li class="breadcrumb-item">
                 <a href="{{ team.get_absolute_url }}">تیم {{ team.name }}</a>
             </li>
-
             <li class="breadcrumb-item active" aria-current="page">پلن {{ plan.name }}</li>
-        </ol>
-        
+        {% endif %}
+    </ol>
 
     <!-- بخش هیرو با لوگو و تیم -->
     <div class="hero-wave rounded-4 p-4 p-lg-5 mb-5 position-relative">
@@ -90,7 +98,6 @@
                         <small class="fs-5 text-white-50">تومان</small>
                     </div>
                     
-                    <!-- ========== ✅ نمایش واحد و مقدار ========== -->
                     <div class="small text-muted mb-3">
                         {% if plan.pricing_unit == 'second' %}
                             به ازای هر {{ plan.base_quantity|default:1 }} ثانیه
@@ -103,16 +110,27 @@
                         {% endif %}
                     </div>
                     
+                    <!-- ====== ✅ دکمه‌های اکشن با پشتیبانی از حالت‌ها ====== -->
                     <div class="d-grid gap-2 mt-3">
-                        {% if from_campaign %}
-                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ plan.id }}&selected_team={{ team.id }}&page={{ page }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                        {% if from_standalone and select_plan_url %}
+                            <!-- ====== حالت سفارش مستقل ====== -->
+                            <a href="{{ select_plan_url }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                                <i class="fi-check-circle me-2"></i> انتخاب این پلن
+                            </a>
+                            <a href="{{ back_url }}" class="btn btn-outline-light rounded-pill py-2">
+                                <i class="fi-arrow-right me-2"></i> بازگشت به سفارش
+                            </a>
+                        {% elif from_campaign and select_plan_url %}
+                            <!-- ====== حالت کمپین ====== -->
+                            <a href="{{ select_plan_url }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
                                 <i class="fi-arrow-right me-2"></i> انتخاب این پلن
                             </a>
                             <a href="javascript:history.back()" class="btn btn-outline-light rounded-pill py-2">
                                 <i class="fi-arrow-left me-2"></i> بازگشت
                             </a>
                         {% else %}
-                            <a href="{% url 'core:pending' %}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                            <!-- ====== حالت عادی ====== -->
+                            <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-primary rounded-pill py-3 btn-ripple">
                                 <i class="fi-cart me-2"></i> ثبت سفارش
                             </a>
                             <a href="#reviews" class="btn btn-outline-light rounded-pill py-2">
@@ -122,7 +140,7 @@
                     </div>
                     <hr class="opacity-25 my-3">
                     
-                    <!-- ========== ✅ آمار پلن (جایگزین اعضای تیم) ========== -->
+                    <!-- ====== آمار پلن ====== -->
                     <div class="row text-center">
                         <div class="col-6">
                             <i class="fi-check-circle text-success fs-4"></i>
@@ -146,6 +164,7 @@
         </div>
     </div>
 
+    <!-- ====== بقیه محتوای صفحه (بدون تغییر) ====== -->
     <div class="row g-5">
         <!-- ستون اصلی محتوا -->
         <div class="col-lg-7">
@@ -157,7 +176,7 @@
                 </div>
             </div>
 
-            <!-- ========== ✅ اطلاعات تکمیلی پلن ========== -->
+            <!-- اطلاعات تکمیلی پلن -->
             <div class="glass-premium p-4 mb-5 slide-left delay-2">
                 <h3 class="h3 text-white mb-4"><i class="fi-settings text-primary me-2"></i> مشخصات فنی پلن</h3>
                 <div class="row g-3">
@@ -239,7 +258,7 @@
                 </div>
             </div>
 
-            <!-- نمونه کارها (اسکرول افقی) -->
+            <!-- نمونه کارها -->
             {% if portfolio_items %}
             <div class="glass-premium p-4 mb-5 slide-left delay-4">
                 <h3 class="h3 text-white mb-4"><i class="fi-image text-primary me-2"></i> نمونه کارهای تیم</h3>
@@ -263,76 +282,76 @@
             </div>
             {% endif %}
 
-            <!-- نظرات (فقط نظرات این پلن) -->
-<div id="reviews" class="glass-premium p-4 slide-left delay-4">
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <h3 class="h3 text-white mb-0">
-            <i class="fi-star-filled text-warning me-2"></i> نظرات کاربران درباره این پلن
-            {% if reviews_count %}
-                <span class="badge bg-faded-primary rounded-pill ms-2">{{ reviews_count }}</span>
-            {% endif %}
-        </h3>
-    </div>
+            <!-- نظرات -->
+            <div id="reviews" class="glass-premium p-4 slide-left delay-4">
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <h3 class="h3 text-white mb-0">
+                        <i class="fi-star-filled text-warning me-2"></i> نظرات کاربران درباره این پلن
+                        {% if reviews_count %}
+                            <span class="badge bg-faded-primary rounded-pill ms-2">{{ reviews_count }}</span>
+                        {% endif %}
+                    </h3>
+                </div>
 
-    {% if reviews %}
-        <div class="reviews-container-scroll">
-            {% for review in reviews %}
-                <div class="review-card-modern">
-                    <div class="review-header">
-                        <div class="reviewer-info">
-                            <div class="reviewer-avatar">
-                                {% if review.advertiser.user.avatar %}
-                                    <img src="{{ review.advertiser.user.avatar.url }}" alt="{{ review.advertiser.user.nickname }}">
-                                {% else %}
-                                    <i class="fi-user"></i>
+                {% if reviews %}
+                    <div class="reviews-container-scroll">
+                        {% for review in reviews %}
+                            <div class="review-card-modern">
+                                <div class="review-header">
+                                    <div class="reviewer-info">
+                                        <div class="reviewer-avatar">
+                                            {% if review.advertiser.user.avatar %}
+                                                <img src="{{ review.advertiser.user.avatar.url }}" alt="{{ review.advertiser.user.nickname }}">
+                                            {% else %}
+                                                <i class="fi-user"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
+                                            <div class="reviewer-date">
+                                                <i class="fi-calendar"></i> {{ review.created_at|date:"H:i | Y/m/d" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="review-rating-stars">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= review.rating %}
+                                                <i class="fi-star-filled"></i>
+                                            {% else %}
+                                                <i class="fi-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                {% if review.comment %}
+                                    <p class="review-body">{{ review.comment|linebreaksbr }}</p>
                                 {% endif %}
-                            </div>
-                            <div>
-                                <div class="reviewer-name">{{ review.advertiser.user.nickname|default:"کاربر ناشناس" }}</div>
-                                <div class="reviewer-date">
-                                    <i class="fi-calendar"></i> {{ review.created_at|date:"H:i | Y/m/d" }}
+
+                                <div class="review-footer">
+                                    {% if review.order and review.order.status == 'completed' %}
+                                        <i class="fi-check-circle"></i>
+                                        <span>همکاری موفق</span>
+                                    {% endif %}
                                 </div>
                             </div>
-                        </div>
-                        <div class="review-rating-stars">
-                            {% for i in "12345"|make_list %}
-                                {% if forloop.counter <= review.rating %}
-                                    <i class="fi-star-filled"></i>
-                                {% else %}
-                                    <i class="fi-star"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
+                        {% endfor %}
                     </div>
-
-                    {% if review.comment %}
-                        <p class="review-body">{{ review.comment|linebreaksbr }}</p>
-                    {% endif %}
-
-                    <div class="review-footer">
-                        {% if review.order and review.order.status == 'completed' %}
-                            <i class="fi-check-circle"></i>
-                            <span>همکاری موفق</span>
-                        {% endif %}
+                {% else %}
+                    <div class="empty-reviews">
+                        <div class="empty-reviews-icon">
+                            <i class="fi-chat-circle text-accent"></i>
+                        </div>
+                        <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
+                        <p class="text-muted small">
+                            اولین نفری باشید که تجربه استفاده از این پلن را به اشتراک می‌گذارید!
+                        </p>
                     </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="empty-reviews">
-            <div class="empty-reviews-icon">
-                <i class="fi-chat-circle text-accent"></i>
+                {% endif %}
             </div>
-            <h5 class="text-light mb-2">هنوز نظری ثبت نشده</h5>
-            <p class="text-muted small">
-                اولین نفری باشید که تجربه استفاده از این پلن را به اشتراک می‌گذارید!
-            </p>
-        </div>
-    {% endif %}
-</div>
         </div>
 
-        <!-- ستون کناری: خلاصه سریع -->
+        <!-- ستون کناری -->
         <div class="col-lg-5 slide-bar">
             <div class="glass-premium p-4 sticky-lg-top" style="top: 120px;">
                 <div class="text-center mb-4">
@@ -358,8 +377,12 @@
                     <li class="mb-2 text-secondary"><i class="fi-check-circle text-success me-2"></i> ویرایش‌های رایگان</li>
                 </ul>
                 <div class="d-grid">
-                    {% if from_campaign %}
-                        <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ plan.id }}&selected_team={{ team.id }}&page={{ page }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                    {% if from_standalone and select_plan_url %}
+                        <a href="{{ select_plan_url }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
+                            <i class="fi-check-circle me-2"></i> انتخاب این پلن
+                        </a>
+                    {% elif from_campaign and select_plan_url %}
+                        <a href="{{ select_plan_url }}" class="btn btn-primary rounded-pill py-3 btn-ripple">
                             <i class="fi-arrow-right me-2"></i> انتخاب این پلن
                         </a>
                     {% else %}

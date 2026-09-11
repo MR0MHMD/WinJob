@@ -324,7 +324,7 @@
                                 </div>
                                 
                                 <!-- عنوان کمپین -->
-                                <h5 class="text-light mb-2">{{ order.campaign.name }}</h5>
+                                <h5 class="text-light mb-2">{{ order.name }}</h5>
                                 
                                 <!-- برند -->
                                 {% if order.brief.brand_name %}
@@ -334,22 +334,40 @@
                                     </div>
                                 {% endif %}
                                 
-                                <!-- تبلیغ دهنده -->
-                                <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3" style="background: rgba(255,255,255,0.02);">
-                                    <div class="rounded-circle overflow-hidden" style="width: 40px; height: 40px; background: linear-gradient(135deg, #fd5631, #5d3cf2);">
-                                        {% if order.campaign.advertiser.user.avatar %}
-                                            <img src="{{ order.campaign.advertiser.user.avatar.url }}" alt="" class="w-100 h-100 object-fit-cover">
-                                        {% else %}
-                                            <div class="w-100 h-100 d-flex align-items-center justify-content-center text-white fw-bold">
-                                                {{ order.campaign.advertiser.user.nickname|first|upper }}
-                                            </div>
-                                        {% endif %}
+                                <!-- تبلیغ دهنده یا سفارش‌دهنده -->
+                                {% if order.campaign %}
+                                    <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3" style="background: rgba(255,255,255,0.02);">
+                                        <div class="rounded-circle overflow-hidden" style="width: 40px; height: 40px; background: linear-gradient(135deg, #fd5631, #5d3cf2);">
+                                            {% if order.campaign.advertiser.user.avatar %}
+                                                <img src="{{ order.campaign.advertiser.user.avatar.url }}" alt="" class="w-100 h-100 object-fit-cover">
+                                            {% else %}
+                                                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-white fw-bold">
+                                                    {{ order.campaign.advertiser.user.nickname|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="text-light fw-medium">{{ order.campaign.advertiser.user.nickname }}</div>
+                                            <div class="text-muted small">{{ order.campaign.advertiser.business_name|default:'تبلیغ دهنده' }}</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-light fw-medium">{{ order.campaign.advertiser.user.nickname }}</div>
-                                        <div class="text-muted small">{{ order.campaign.advertiser.business_name|default:'تبلیغ دهنده' }}</div>
+                                {% elif order.standalone_user %}
+                                    <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3" style="background: rgba(255,255,255,0.02);">
+                                        <div class="rounded-circle overflow-hidden" style="width: 40px; height: 40px; background: linear-gradient(135deg, #fd5631, #5d3cf2);">
+                                            {% if order.standalone_user.avatar %}
+                                                <img src="{{ order.standalone_user.avatar.url }}" alt="" class="w-100 h-100 object-fit-cover">
+                                            {% else %}
+                                                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-white fw-bold">
+                                                    {{ order.standalone_user.nickname|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="text-light fw-medium">{{ order.standalone_user.nickname|default:order.standalone_user.phone_number }}</div>
+                                            <div class="text-muted small">سفارش‌دهنده مستقل</div>
+                                        </div>
                                     </div>
-                                </div>
+                                {% endif %}
                                 
                                 <!-- ====== بخش سرویس ====== -->
                                 <div class="d-flex align-items-center justify-content-between py-2">

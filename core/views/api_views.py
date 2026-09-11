@@ -106,3 +106,35 @@ def faq_questions_api(request, title_id):
         },
         'faqs': data,
     })
+
+
+# core/views.py
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from ..models import ContentServiceType
+
+
+@require_http_methods(["GET"])
+def api_content_service_types(request):
+    """
+    API برای دریافت لیست سرویس‌های تولید محتوا (استفاده در AJAX)
+    """
+    services = ContentServiceType.objects.filter(is_active=True).values(
+        'id', 'name', 'slug', 'description', 'icon', 'allowed_units'
+    )
+
+    # اضافه کردن نمایش واحدهای مجاز
+    services_list = list(services)
+    for service in services_list:
+        unit_labels = {
+            'second': 'ثانیه',
+            'minute': 'دقیقه',
+            'quantity': 'تعدادی'
+        }
+        allowed = service.get('allowed_units', [])
+        service['allowed_units_display'] = ', '.join([
+            unit_labels.get(u, u) for u in allowed
+        ])
+
+    return JsonResponse(services_list, safe=False)

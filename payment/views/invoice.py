@@ -4,6 +4,7 @@ from django.utils import timezone
 from django_iranian_payment.contrib.django import services
 
 from campaigns.services.campaigns_notifications import submit_campaign_for_review
+from content_team.models import ContentOrder
 from payment.models import Transaction, Invoice, Payment
 from payment.services.create_invoice import create_campaign_invoice
 from payment.utils import number_to_words
@@ -90,10 +91,21 @@ def invoice_detail(request, invoice_id):
     return render(request, 'payment/invoices/invoice_detail.html', context)
 
 
+# payment/views/invoice.py
+
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from payment.models import Invoice
+
+
 @login_required
 def invoice_print(request, invoice_id):
     """
-    نمایش نسخه پرینت فاکتور (هم کمپین و هم کیف پول)
+    نمایش نسخه پرینت فاکتور
+    پشتیبانی از:
+    - فاکتور کمپین (CAMPAIGN)
+    - فاکتور کیف پول (WALLET)
+    - فاکتور سفارش مستقل تولید محتوا (CONTENT_ORDER)
     """
 
     invoice = get_object_or_404(
@@ -107,12 +119,17 @@ def invoice_print(request, invoice_id):
             'campaign__influencer_coupon',
             'campaign__content_team_coupon',
             'campaign__platform_coupon',
+            'content_order',  # ✅ اضافه شده برای سفارش مستقل
+            'content_order__team',  # ✅ اضافه شده برای تیم سفارش مستقل
+            'content_order__plan',  # ✅ اضافه شده برای پلن سفارش مستقل
         ),
         id=invoice_id,
         user=request.user
     )
 
-    # ========== فاکتور کیف پول ==========
+    # ============================================================
+    # ۱. فاکتور کیف پول
+    # ============================================================
     if invoice.type == Invoice.Type.WALLET:
         payable_amount_rial = invoice.wallet_deposit_amount * 10  # تبدیل به ریال
         payable_amount_words = number_to_words(payable_amount_rial, 'ریال')
@@ -126,8 +143,76 @@ def invoice_print(request, invoice_id):
         }
         return render(request, 'payment/invoices/invoice_print.html', context)
 
-    # ========== فاکتور کمپین ==========
-    influencer_count = invoice.campaign.influencer_bookings.count()
+    # ============================================================
+    # ۲. فاکتور سفارش مستقل تولید محتوا (CONTENT_ORDER)
+    # ============================================================
+    if invoice.type == Invoice.Type.CONTENT_ORDER:
+        content_order = invoice.content_order
+
+        # ========== محاسبه مبالغ به ریال ==========
+        def convert_to_rial(value):
+            return value * 10
+
+        # مبالغ پایه (ریالی)
+        base_content_cost_rial = convert_to_rial(invoice.base_content_cost)
+        base_commission_rial = convert_to_rial(invoice.base_commission)
+
+        # مبالغ تخفیف (ریالی)
+        content_discount_rial = convert_to_rial(invoice.content_discount_amount)
+        platform_discount_rial = convert_to_rial(invoice.platform_discount_amount)
+        total_discount_rial = convert_to_rial(invoice.discount_amount)
+
+        content_after_discount_rial = base_content_cost_rial - content_discount_rial
+        platform_after_discount_rial = base_commission_rial - platform_discount_rial
+
+        content_vat_rial = convert_to_rial(invoice.content_vat)
+        platform_vat_rial = convert_to_rial(invoice.commission_vat)
+
+        # مبالغ نهایی (ریالی)
+        content_cost_rial = convert_to_rial(invoice.content_cost + invoice.content_vat)
+        commission_rial = convert_to_rial(invoice.commission + invoice.commission_vat)
+        total_amount_rial = convert_to_rial(invoice.total_amount)
+        payable_amount_rial = convert_to_rial(invoice.payable_amount)
+
+        # تبدیل مبلغ نهایی به حروف (واحد ریال)
+        payable_amount_words = number_to_words(payable_amount_rial, 'ریال')
+
+        context = {
+            'invoice': invoice,
+            'content_order': content_order,
+            'is_content_order_invoice': True,  # ✅ برای تشخیص در تمپلیت
+
+            # اطلاعات سفارش
+            'team_name': content_order.team.name if content_order.team else '-',
+            'plan_name': content_order.plan.name if content_order.plan else '-',
+            'plan_price': content_order.price if content_order.price else 0,
+
+            # مبالغ ریالی
+            'base_content_cost_rial': base_content_cost_rial,
+            'base_commission_rial': base_commission_rial,
+            'content_after_discount_rial': content_after_discount_rial,
+            'platform_after_discount_rial': platform_after_discount_rial,
+            'content_vat_rial': content_vat_rial,
+            'platform_vat_rial': platform_vat_rial,
+            'content_discount_rial': content_discount_rial,
+            'platform_discount_rial': platform_discount_rial,
+            'total_discount_rial': total_discount_rial,
+            'content_cost_rial': content_cost_rial,
+            'commission_rial': commission_rial,
+            'total_amount_rial': total_amount_rial,
+            'payable_amount_rial': payable_amount_rial,
+            'payable_amount_words': payable_amount_words,
+        }
+
+        return render(request, 'payment/invoices/invoice_print.html', context)
+
+    # ============================================================
+    # ۳. فاکتور کمپین (CAMPAIGN)
+    # ============================================================
+    # فقط برای کمپین‌ها influencer_count رو محاسبه کن
+    influencer_count = 0
+    if invoice.campaign:
+        influencer_count = invoice.campaign.influencer_bookings.count()
 
     # ============================================================
     # محاسبه مبالغ به ریال (ضرب در ۱۰)
@@ -358,7 +443,7 @@ def campaign_payment_callback(request):
                     f"پرداخت کمپین {campaign.name} با موفقیت انجام شد. "
                     f"کد پیگیری: {result.reference_id}"
                 )
-                return redirect("advertisers:campaigns_list")
+                return redirect("advertisers:campaign_detail", campaign.id)
 
             else:
                 messages.error(request, f"پرداخت ناموفق بود. وضعیت: {result.status}")
@@ -371,3 +456,165 @@ def campaign_payment_callback(request):
     else:
         messages.warning(request, "پرداخت توسط کاربر لغو شد یا ناموفق بود.")
         return redirect('campaigns:campaign_create_step4')
+
+
+@login_required
+def standalone_order_payment_callback(request):
+    """
+    کالبک بازگشت از درگاه زرین‌پال برای پرداخت سفارش مستقل تولید محتوا
+    کاملاً مشابه کالبک کمپین
+    """
+    authority = request.GET.get('Authority')
+    status = request.GET.get('Status')
+
+    if not authority:
+        messages.error(request, "اطلاعات پرداخت یافت نشد.")
+        return redirect('content_team:standalone_order_step3')
+
+    # ========== دریافت اطلاعات از سشن ==========
+    order_id = request.session.get('standalone_payment_order_id')
+    amount = request.session.get('standalone_payment_amount', 0)
+    invoice_id = request.session.get('standalone_payment_invoice_id')
+
+    if not order_id:
+        messages.error(request, "اطلاعات سفارش یافت نشد.")
+        return redirect('content_team:standalone_order_step1')
+
+    # ========== دریافت سفارش ==========
+    order = get_object_or_404(
+        ContentOrder,
+        id=order_id,
+        standalone_user=request.user,
+        is_standalone=True
+    )
+
+    # ========== دریافت فاکتور ==========
+    invoice = get_object_or_404(
+        Invoice,
+        id=invoice_id,
+        content_order=order
+    )
+
+    # ========== اگر قبلاً پرداخت شده ==========
+    if invoice.is_paid:
+        messages.warning(request, 'این سفارش قبلاً پرداخت شده است.')
+        # پاک کردن سشن
+        for key in ['standalone_payment_authority', 'standalone_payment_order_id',
+                    'standalone_payment_amount', 'standalone_payment_invoice_id']:
+            if key in request.session:
+                del request.session[key]
+        return redirect('home')
+
+    # ========== بررسی وضعیت پرداخت ==========
+    if status == 'OK':
+        try:
+            # ========== تأیید پرداخت در زرین‌پال ==========
+            result = services.verify_payment(
+                slug="zarinpal",
+                authority=authority
+            )
+
+            if result.status.lower() == 'complete':
+                with transaction.atomic():
+                    # ========== ثبت پرداخت موفق ==========
+                    payment = Payment.objects.create(
+                        user=request.user,
+                        invoice=invoice,
+                        amount=amount,
+                        status=Payment.Status.SUCCESS,
+                        payment_method=Payment.Method.GATEWAY,
+                        authority=authority,
+                        ref_id=result.reference_id,
+                    )
+
+                    Transaction.objects.create(
+                        user=request.user,
+                        amount=amount,
+                        type=Transaction.Type.CONTENT_ORDER_PAYMENT,
+                        status=Transaction.Status.SUCCESS,
+                        invoice=invoice,
+                        payment=payment,
+                        reference_id=result.reference_id,
+                        description=f"پرداخت سفارش مستقل تولید محتوا #{order.id} از طریق زرین‌پال - کد پیگیری: {result.reference_id}"
+                    )
+
+                    invoice.is_paid = True
+                    invoice.paid_at = timezone.now()
+                    invoice.save(update_fields=["is_paid", "paid_at"])
+
+                    # ========== تغییر وضعیت سفارش ==========
+                    order.status = ContentOrder.Status.PENDING
+                    order.save(update_fields=['status'])
+
+                    # ========== افزایش استفاده از کوپن‌ها ==========
+                    # اگر کوپن‌هایی روی سفارش ذخیره شده باشه
+                    if hasattr(order, 'content_team_coupon') and order.content_team_coupon:
+                        order.content_team_coupon.used_count += 1
+                        order.content_team_coupon.save(update_fields=["used_count"])
+
+                    if hasattr(order, 'platform_coupon') and order.platform_coupon:
+                        order.platform_coupon.used_count += 1
+                        order.platform_coupon.save(update_fields=["used_count"])
+
+                # ========== پاک کردن سشن ==========
+                for key in ['standalone_payment_authority', 'standalone_payment_order_id',
+                            'standalone_payment_amount', 'standalone_payment_invoice_id',
+                            'standalone_order_step1', 'standalone_order_step2']:
+                    if key in request.session:
+                        del request.session[key]
+
+                # ====== ارسال نوتیف به کاربر ======
+                from notifications.utils import create_notification
+                create_notification(
+                    user=request.user,
+                    notification_type='new_content_order',
+                    title='✅ سفارش شما با موفقیت ثبت شد',
+                    message=f'سفارش تولید محتوا شما با شناسه #{order.id} با موفقیت ثبت شد.\n'
+                            f'تیم «{order.team.name}» به زودی سفارش شما را بررسی میکند.',
+                    link=f'/content_team/team/orders/{order.id}',
+                    related_object_id=order.id,
+                    related_content_type='ContentOrder'
+                )
+
+                # ====== ارسال نوتیف به تیم محتوا ======
+                from notifications.utils import notify_content_team_new_order
+                active_members = order.team.members.filter(is_active=True).select_related('user')
+                for member in active_members:
+                    notify_content_team_new_order(member.user, order)
+
+                messages.success(
+                    request,
+                    f"✅ پرداخت سفارش تولید محتوا #{order.id} با موفقیت انجام شد. "
+                    f"کد پیگیری: {result.reference_id}"
+                )
+                return redirect('content_team:content_order_detail', order.id)
+
+            else:
+                messages.error(request, f"پرداخت ناموفق بود. وضعیت: {result.status}")
+                return redirect('content_team:standalone_order_step3')
+
+        except Exception as e:
+            messages.error(request, f"خطا در تأیید پرداخت: {str(e)}")
+            return redirect('content_team:standalone_order_step3')
+
+    else:
+        # ========== پرداخت توسط کاربر لغو شد ==========
+        messages.warning(request, "پرداخت توسط کاربر لغو شد یا ناموفق بود.")
+
+        # ========== ثبت پرداخت ناموفق ==========
+        Payment.objects.create(
+            user=request.user,
+            invoice=invoice,
+            amount=amount,
+            status=Payment.Status.FAILED,
+            payment_method=Payment.Method.GATEWAY,
+            authority=authority,
+        )
+
+        # پاک کردن سشن
+        for key in ['standalone_payment_authority', 'standalone_payment_order_id',
+                    'standalone_payment_amount', 'standalone_payment_invoice_id']:
+            if key in request.session:
+                del request.session[key]
+
+        return redirect('content_team:standalone_order_step3')

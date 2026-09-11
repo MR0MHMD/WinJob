@@ -1,3 +1,5 @@
+from django.urls import reverse
+
 from .models import Notification, NotificationPreference
 from influencers.models import ChannelBooking
 from django.conf import settings
@@ -44,7 +46,7 @@ def create_notification(user, notification_type, title, message, link='', relate
     # ناشر (اینفلوئنسر)
     elif notification_type == 'new_order':
         if not prefs.inf_new_orders: return None
-    elif notification_type in ['report_approved', 'penalty']:  # از penalty برای رد گزارش استفاده شده
+    elif notification_type in ['report_approved', 'penalty']:
         if not prefs.inf_report_status: return None
 
     # تیم تولید محتوا
@@ -52,7 +54,7 @@ def create_notification(user, notification_type, title, message, link='', relate
         if not prefs.team_new_orders: return None
     elif notification_type == 'revision_requested':
         if not prefs.team_revisions: return None
-    elif notification_type == 'order_accepted':
+    elif notification_type == 'order_accepted' or notification_type == 'final_accept':
         if not prefs.team_financial: return None
 
     # عمومی
@@ -82,6 +84,41 @@ def create_notification(user, notification_type, title, message, link='', relate
 
     return notification
 
+
+# ==================== 🎯 توابع کمکی برای پشتیبانی از سفارش‌های مستقل ====================
+
+def get_order_related_user(order):
+    """دریافت کاربر مرتبط با سفارش (تبلیغ‌دهنده یا کاربر مستقل)"""
+    if order.campaign:
+        return order.campaign.advertiser.user
+    elif order.standalone_user:
+        return order.standalone_user
+    return None
+
+def get_order_display_name(order):
+    """دریافت نام نمایشی سفارش (نام کمپین یا نام کاربر)"""
+    if order.campaign:
+        return order.campaign.name
+    elif order.standalone_user:
+        return f"سفارش مستقل {order.standalone_user.nickname or order.standalone_user.phone_number}"
+    return f"سفارش #{order.id}"
+
+
+def get_order_link(order):
+    if order.campaign:
+        return reverse('advertisers:campaign_detail', kwargs={'campaign_id': order.campaign.id})
+    elif order.standalone_user:
+        return reverse('content_team:content_order_detail', kwargs={'order_id': order.id})
+    return '#'
+
+def get_order_invoice(order):
+    """دریافت فاکتور مرتبط با سفارش"""
+    if order.campaign and hasattr(order.campaign, 'invoice'):
+        return order.campaign.invoice
+    # برای سفارش مستقل، فاکتور مستقیماً به ContentOrder متصل هست
+    elif hasattr(order, 'invoice'):
+        return order.invoice
+    return None
 
 # ==================== 🎯 تبلیغ دهنده ====================
 
@@ -180,7 +217,7 @@ def notify_advertiser_influencer_accepted(campaign_influencer):
         user=user,
         notification_type='influencer_accepted',
         title='🤝 پیوستن یک ناشر جدید',
-        message=f'ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) درخواست شما را برای کمپین «تست تکمیلی نوتیف» پذیرفت.» پذیرفت.',
+        message=f'ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) درخواست شما را برای کمپین «{campaign.name}» پذیرفت.',
         link=f'/advertisers/campaign_detail/{campaign.id}',
         related_object_id=campaign.id,
         related_content_type='Campaign'
@@ -188,9 +225,6 @@ def notify_advertiser_influencer_accepted(campaign_influencer):
 
 
 def notify_advertiser_influencer_rejected(campaign_influencer):
-    """
-    نوتیف به تبلیغ دهنده وقتی ناشر سفارش رو رد میکنه
-    """
     campaign = campaign_influencer.campaign
     user = campaign.advertiser.user
     channel = campaign_influencer.channel
@@ -201,7 +235,7 @@ def notify_advertiser_influencer_rejected(campaign_influencer):
 
     return create_notification(
         user=user,
-        notification_type='influencer_rejected',  # این تایپ رو باید به Notification.Type اضافه کنی
+        notification_type='influencer_rejected',
         title='❌ رد سفارش توسط ناشر',
         message=f'ناشر «{channel.channel_name}» (شناسه کانال: {channel.channel_id}@) سفارش شما برای کمپین «{campaign.name}» را رد کرد.\n'
                 f'💰 مبلغ {price:,} تومان به کیف پول شما برگشت داده شد.\n'
@@ -212,11 +246,7 @@ def notify_advertiser_influencer_rejected(campaign_influencer):
     )
 
 
-
 def notify_advertiser_influencer_report_rejected(campaign_influencer, reason=''):
-    """
-    نوتیف به تبلیغ دهنده وقتی گزارش ناشر توسط ادمین رد میشه
-    """
     campaign = campaign_influencer.campaign
     user = campaign.advertiser.user
     channel = campaign_influencer.channel
@@ -242,7 +272,6 @@ def notify_advertiser_influencer_report_rejected(campaign_influencer, reason='')
 
 
 def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
-    """نوتیف به تبلیغ دهنده وقتی کمپین نیاز به اصلاح دارد"""
     user = campaign.advertiser.user
 
     channel_name = rejected_channel.channel_name if rejected_channel else "یک ناشر"
@@ -265,7 +294,6 @@ def notify_advertiser_campaign_needs_revision(campaign, rejected_channel=None):
 
 
 def notify_advertiser_campaign_auto_approved(campaign):
-    """نوتیف به تبلیغ دهنده وقتی کمپین به صورت خودکار تایید شد"""
     user = campaign.advertiser.user
 
     rejected_count = campaign.influencer_bookings.filter(
@@ -286,55 +314,99 @@ def notify_advertiser_campaign_auto_approved(campaign):
     )
 
 
+# ==================== 📝 توابع مربوط به ContentOrder (پشتیبانی از مستقل) ====================
+
 def notify_advertiser_content_order_accepted(order):
-    campaign = order.campaign
-    user = campaign.advertiser.user
+    user = get_order_related_user(order)
+    if not user:
+        return None
+    display_name = get_order_display_name(order)
+    team_name = order.team.name
     return create_notification(
         user=user,
         notification_type='content_accepted',
         title='✅ تیم تولید محتوا سفارشت رو قبول کرد',
-        message=f'تیم محتوای «{order.team.name}» سفارش شما برای کمپین «{campaign.name}» را تحویل گرفت و کار را شروع کرد. به زودی خروجی نهایی ارسال خواهد شد.',
-        link=f'/advertisers/campaign_detail/{campaign.id}',
+        message=f'تیم محتوای «{team_name}» سفارش شما برای «{display_name}» را تحویل گرفت و کار را شروع کرد. به زودی خروجی نهایی ارسال خواهد شد.',
+        link=get_order_link(order),
         related_object_id=order.id,
         related_content_type='ContentOrder'
     )
 
 
-def notify_advertiser_content_order_rejected(campaign, team=None):
-    """نوتیف به تبلیغ دهنده وقتی تیم محتوا سفارش رو رد میکنه"""
-    user = campaign.advertiser.user
+def notify_advertiser_content_order_rejected(order):
+    """
+    نوتیف رد سفارش توسط تیم محتوا
+    پشتیبانی از کمپین و سفارش مستقل
+    """
+    user = get_order_related_user(order)
+    if not user:
+        return None
 
-    team_name = team.name if team else "تیم تولید محتوا"
-    content_cost = campaign.invoice.content_cost if campaign.invoice and campaign.invoice.content_cost else 0
+    display_name = get_order_display_name(order)
+    team_name = order.team.name
+    invoice = get_order_invoice(order)
 
-    message = f'تیم تولید محتوا «{team_name}» سفارش شما برای کمپین «{campaign.name}» را رد کرد.\n'
-    message += f'💰 مبلغ {content_cost:,} تومان به کیف پول شما برگشت داده شد.\n\n'
-    message += '🔄 دو گزینه پیش روی شماست:\n'
-    message += '1️⃣ انتخاب تیم تولید محتوای جایگزین\n'
-    message += '2️⃣ آپلود محتوای آماده (بدون نیاز به تیم تولید محتوا)'
+    if order.campaign:
+        # ========== حالت کمپین ==========
+        # فقط هزینه تیم محتوا برمیگرده
+        refund_amount = invoice.content_cost if invoice and invoice.content_cost else order.price
+        campaign = order.campaign
 
-    return create_notification(
-        user=user,
-        notification_type='content_rejected',
-        title='🔄 تیم محتوا سفارش را رد کرد - نیاز به اصلاح',
-        message=message,
-        link=f'/advertisers/campaign_detail/{campaign.id}',
-        related_object_id=campaign.id,
-        related_content_type='Campaign'
-    )
+        message = (
+            f'تیم تولید محتوا «{team_name}» سفارش شما برای کمپین «{display_name}» را رد کرد.\n'
+            f'💰 مبلغ {refund_amount:,} تومان به کیف پول شما برگشت داده شد.\n\n'
+            f'🔄 دو گزینه پیش روی شماست:\n'
+            f'1️⃣ انتخاب تیم تولید محتوای جایگزین\n'
+            f'2️⃣ آپلود محتوای آماده (بدون نیاز به تیم تولید محتوا)'
+        )
+
+        return create_notification(
+            user=user,
+            notification_type='content_rejected',
+            title='🔄 تیم محتوا سفارش را رد کرد - نیاز به اصلاح',
+            message=message,
+            link=f'/advertisers/campaign_detail/{campaign.id}',
+            related_object_id=order.id,
+            related_content_type='ContentOrder'
+        )
+
+    else:
+        # ========== حالت سفارش مستقل ==========
+        # کل مبلغ پرداختی برمیگرده
+        refund_amount = invoice.payable_amount if invoice else order.price
+
+        message = (
+            f'تیم تولید محتوا «{team_name}» سفارش مستقل شما «{display_name}» را رد کرد.\n'
+            f'💰 مبلغ {refund_amount:,} تومان به کیف پول شما برگشت داده شد.\n\n'
+            f'می‌توانید سفارش جدیدی ثبت کنید.'
+        )
+
+        return create_notification(
+            user=user,
+            notification_type='content_rejected',
+            title='🔄 سفارش شما توسط تیم محتوا رد شد',
+            message=message,
+            link='/content_team/standalone-order/step1/',
+            related_object_id=order.id,
+            related_content_type='ContentOrder'
+        )
 
 
 def notify_advertiser_content_delivered(delivery):
     order = delivery.order
-    campaign = order.campaign
-    user = campaign.advertiser.user
+    user = get_order_related_user(order)
+    if not user:
+        return None
+    display_name = get_order_display_name(order)
+    team_name = order.team.name
+    version = delivery.version
     return create_notification(
         user=user,
         notification_type='content_delivered',
         title='🎁 محتوای شما آماده است',
-        message=f'تیم «{order.team.name}» فایل نهایی (نسخه {delivery.version}) کمپین «{campaign.name}» را بارگذاری کرد.\n'
+        message=f'تیم «{team_name}» فایل نهایی (نسخه {version}) سفارش «{display_name}» را بارگذاری کرد.\n'
                 f'لطفاً فایل را بررسی کنید تا در صورت نیاز به ویرایش، به تیم اطلاع دهید.',
-        link=f'/advertisers/campaign_detail/{campaign.id}',
+        link=get_order_link(order),
         related_object_id=delivery.id,
         related_content_type='ContentDelivery'
     )
@@ -342,14 +414,17 @@ def notify_advertiser_content_delivered(delivery):
 
 def notify_advertiser_revision_accepted(revision):
     order = revision.order
-    campaign = order.campaign
-    user = campaign.advertiser.user
+    user = get_order_related_user(order)
+    if not user:
+        return None
+    display_name = get_order_display_name(order)
+    team_name = order.team.name
     return create_notification(
         user=user,
         notification_type='revision_accepted',
         title='✍️ در حال انجام ویرایش',
-        message=f'تیم «{order.team.name}» درخواست ویرایش شما برای کمپین «{campaign.name}» را پذیرفت. فایل به‌روزرسانی‌شده به زودی ارسال می‌شود.',
-        link=f'/advertisers/campaign_detail/{campaign.id}',
+        message=f'تیم «{team_name}» درخواست ویرایش شما برای سفارش «{display_name}» را پذیرفت. فایل به‌روزرسانی‌شده به زودی ارسال می‌شود.',
+        link=get_order_link(order),
         related_object_id=revision.id,
         related_content_type='ContentOrderRevision'
     )
@@ -357,14 +432,17 @@ def notify_advertiser_revision_accepted(revision):
 
 def notify_advertiser_revision_rejected(revision):
     order = revision.order
-    campaign = order.campaign
-    user = campaign.advertiser.user
+    user = get_order_related_user(order)
+    if not user:
+        return None
+    display_name = get_order_display_name(order)
+    team_name = order.team.name
     return create_notification(
         user=user,
         notification_type='revision_rejected',
         title='🛑 رد درخواست ویرایش',
-        message=f'تیم «{order.team.name}» درخواست ویرایش شما برای کمپین «{campaign.name}» را رد کرد. سفارش به حالت پایان‌یافته بازگشت.',
-        link=f'/advertisers/campaign_detail/{campaign.id}',
+        message=f'تیم «{team_name}» درخواست ویرایش شما برای سفارش «{display_name}» را رد کرد. سفارش به حالت پایان‌یافته بازگشت.',
+        link=get_order_link(order),
         related_object_id=revision.id,
         related_content_type='ContentOrderRevision'
     )
@@ -435,14 +513,14 @@ def notify_influencer_report_rejected(campaign_influencer, reason=''):
 # ==================== 🎨 تیم تولید محتوا ====================
 
 def notify_content_team_new_order(user, order):
-    campaign = order.campaign
+    display_name = get_order_display_name(order)
     plan = order.plan
     service_type = plan.service_type
     return create_notification(
         user=user,
         notification_type='new_content_order',
         title='💼 پروژه جدید برای شما',
-        message=f'یک سفارش جدید برای کمپین «{campaign.name}» ثبت شده است.\n'
+        message=f'یک سفارش جدید برای «{display_name}» ثبت شده است.\n'
                 f'🛠 نوع خدمت: {service_type.name}\n'
                 f'📄 پلن انتخابی: {plan.name}\n'
                 f'لطفاً وارد پنل شده و آن را بررسی کنید.',
@@ -454,13 +532,13 @@ def notify_content_team_new_order(user, order):
 
 def notify_content_team_revision_requested(user, revision):
     order = revision.order
-    campaign = order.campaign
+    display_name = get_order_display_name(order)
     feedback_excerpt = revision.feedback[:80] + "..." if len(revision.feedback) > 80 else revision.feedback
     return create_notification(
         user=user,
         notification_type='revision_requested',
         title='🛠️ درخواست ویرایش از سوی کارفرما',
-        message=f'کارفرمای شما فایل کمپین «{campaign.name}» را بررسی کرده و درخواست ویرایش دارد.\n'
+        message=f'کارفرمای شما فایل سفارش «{display_name}» را بررسی کرده و درخواست ویرایش دارد.\n'
                 f'📌 توضیحات: {feedback_excerpt}',
         link=f'/content_team/team/orders/{order.id}',
         related_object_id=revision.id,
@@ -469,12 +547,12 @@ def notify_content_team_revision_requested(user, revision):
 
 
 def notify_content_team_order_accepted(user, order, share_amount):
-    campaign = order.campaign
+    display_name = get_order_display_name(order)
     return create_notification(
         user=user,
         notification_type='final_accept',
         title='💳 تسویه حساب، خسته نباشید',
-        message=f'فایل تحویلی کمپین «{campaign.name}» توسط تبلیغ دهنده تأیید نهایی شد.\n'
+        message=f'فایل تحویلی سفارش «{display_name}» توسط کارفرما تأیید نهایی شد.\n'
                 f'مبلغ {share_amount:,} تومان بابت سهم شما از این پروژه به کیف پول واریز شد.',
         link=f'/content_team/team/orders/{order.id}',
         related_object_id=order.id,

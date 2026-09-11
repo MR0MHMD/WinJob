@@ -1,0 +1,690 @@
+<!-- content_team/templates/content_team/forms/order/standalone_order_step3.html -->
+
+{% extends 'parent/base.html' %}
+{% load i18n static jformat %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_4.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4 pb-5" dir="rtl">
+
+        <!-- ====== Inline Steps ====== -->
+        <div class="steps steps-light mt-4" style="margin: 0 0 2rem;">
+            <div class="step active">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">1</span>
+                </div>
+                <div class="step-label">انتخاب تیم و پلن</div>
+            </div>
+            <div class="step active">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">2</span>
+                </div>
+                <div class="step-label">جزئیات سفارش</div>
+            </div>
+            <div class="step active">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">3</span>
+                </div>
+                <div class="step-label">تایید و پرداخت</div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- ====== ستون راست: جزئیات سفارش ====== -->
+            <div class="col-lg-6">
+                <!-- کارت اطلاعات سفارش -->
+                <div class="premium-card mb-4">
+                    <div class="premium-card-header">
+                        <i class="fi-info-circle text-primary fs-5"></i>
+                        <span class="fw-bold">اطلاعات سفارش تولید محتوا</span>
+                        <span class="badge bg-faded-light ms-auto">#{{ order.id }}</span>
+                    </div>
+                    <div class="premium-card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">تیم تولید محتوا</span>
+                                <div class="info-value d-flex align-items-center gap-2">
+                                    {% if order.team.logo %}
+                                        <img width="30" src="{{ order.team.logo.url }}" class="rounded-circle" alt="">
+                                    {% endif %}
+                                    {{ order.team.name }}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">پلن انتخابی</span>
+                                <span class="info-value">{{ order.plan.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">نوع خدمت</span>
+                                <span class="info-value">{{ order.plan.service_type.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">مدت تحویل</span>
+                                <span class="info-value">{{ order.plan.estimated_delivery_days }} روز کاری</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======== سفارش تولید محتوا (مشابه کمپین) ======== -->
+                <div class="premium-card mb-4">
+                    <div class="premium-card-header">
+                        <i class="fi-video text-primary fs-5"></i>
+                        <span>جزئیات سفارش تولید محتوا</span>
+                    </div>
+                    <div class="premium-card-body">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-2 border-bottom border-white-10">
+                            {% if order.team.logo %}
+                                <img src="{{ order.team.logo.url }}" class="rounded-circle avatar-md" alt="">
+                            {% else %}
+                                <div class="avatar-placeholder-md">🎬</div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold text-light fs-5">{{ order.team.name }}</div>
+                                <div class="small text-secondary">تیم تولید محتوا</div>
+                            </div>
+                        </div>
+
+                        <!-- ========== اطلاعات پلن ========== -->
+                        <div class="plan-detail-box bg-black-20 rounded-3 p-3 mb-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                {% if order.plan.service_type.icon %}
+                                    <i class="{{ order.plan.service_type.icon }} text-primary fs-5"></i>
+                                {% else %}
+                                    <i class="fi-package text-primary fs-5"></i>
+                                {% endif %}
+                                <span class="fw-semibold text-light">پلن انتخابی:</span>
+                                <span class="badge bg-primary-light text-white px-3 py-1 rounded-pill">{{ order.plan.name }}</span>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <div class="text-secondary small">نوع خدمت</div>
+                                    <div class="text-light">{{ order.plan.service_type.name }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-secondary small">واحد قیمت‌گذاری</div>
+                                    <div class="text-light">{{ order.plan.get_pricing_unit_display }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <div class="text-secondary small">مقدار پایه</div>
+                                    <div class="text-light">
+                                        {{ order.plan.base_quantity }}
+                                        {% if order.plan.pricing_unit == "second" %}
+                                            ثانیه
+                                        {% elif order.plan.pricing_unit == "minute" %}
+                                            دقیقه
+                                        {% elif order.plan.pricing_unit == "quantity" %}
+                                            عدد
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-secondary small">محدوده مقدار</div>
+                                    <div class="text-light">{{ order.plan.quantity_display }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="text-secondary small">نوع تحویل</div>
+                                    <div class="text-light">{{ order.plan.delivery_type_display }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-secondary small">مدت تحویل</div>
+                                    <div class="text-light">{{ order.plan.estimated_delivery_days }} روز کاری</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ویژگی‌های پلن -->
+                        {% with features=order.plan.get_features_list %}
+                            {% if features %}
+                                <div class="mb-3">
+                                    <div class="text-secondary small mb-2"><i class="fi-star-filled text-warning"></i>
+                                        ویژگی‌های پلن:
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for feature in features|slice:":4" %}
+                                            <span class="badge bg-faded-light rounded-pill px-3 py-1"><i
+                                                    class="fi-check-circle text-success me-1"></i> {{ feature }}</span>
+                                        {% endfor %}
+                                        {% if features|length > 4 %}
+                                            <span class="badge bg-faded-light rounded-pill px-3 py-1">+{{ features|length|add:"-4" }} مورد دیگر</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+
+                        <!-- بریف خلاصه -->
+                        {% if order.brief %}
+                            <div class="mt-2 pt-2 border-top border-white-10">
+                                <div class="text-secondary small mb-2"><i class="fi-file-text text-primary"></i> خلاصه
+                                    بریف:
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-faded-light rounded-pill px-3 py-1">هدف: {{ order.brief.get_goal_display }}</span>
+                                    <span class="badge bg-faded-light rounded-pill px-3 py-1">لحن: {{ order.brief.get_tone_display }}</span>
+                                    <span class="badge bg-faded-light rounded-pill px-3 py-1">برند: {{ order.brief.brand_name }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- فایل‌های پیوست -->
+                        {% if attachments %}
+                            <div class="mt-2 pt-2 border-top border-white-10">
+                                <div class="text-secondary small mb-2"><i class="fi-file text-primary"></i> فایل‌های
+                                    پیوست ({{ attachments|length }} فایل):
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for file in attachments|slice:":5" %}
+                                        <span class="badge bg-faded-light rounded-pill px-3 py-1">
+                                            <i class="fi-file me-1"></i> {{ file.original_name }}
+                                            <span class="text-secondary ms-1">({{ file.file_size_display }})</span>
+                                        </span>
+                                    {% endfor %}
+                                    {% if attachments|length > 5 %}
+                                        <span class="badge bg-faded-light rounded-pill px-3 py-1">+{{ attachments|length|add:"-5" }} فایل دیگر</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- جمع هزینه نهایی -->
+                        <div class="list-item-row subtotal-row mt-3">
+                            <span class="text-secondary">هزینه پایه پلن</span>
+                            <span class="fw-bold text-info fs-5">
+                                {{ order.price|floatformat:0 }} 
+                                <img src="{% static 'core/svg/toman/toman-info.svg' %}" alt="">
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== ستون چپ: هزینه‌ها و پرداخت ====== -->
+            <div class="col-lg-6">
+                <!-- ====== کارت تفکیک هزینه‌ها ====== -->
+                <div class="premium-card mb-4">
+                    <div class="premium-card-header">
+                        <i class="fi-calculator text-primary fs-5"></i>
+                        <span>جزئیات هزینه‌ها</span>
+                    </div>
+                    <div class="premium-card-body">
+                        <div class="cost-breakdown">
+
+                            <!-- ========== ردیف اول: هزینه ناشران ========== -->
+                            {% if invoice.influencer_cost > 0 %}
+                                <div class="cost-row">
+                                    <div class="d-flex flex-column">
+                                        <span class="text-light">ناشران</span>
+                                        {% if invoice.influencer_discount_amount > 0 %}
+                                            <span class="text-success ms-1">
+                                                تخفیف: {{ invoice.influencer_discount_amount }}
+                                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end d-flex gap-1">
+                                        <div>
+                                            <!-- مبلغ نهایی -->
+                                            <div class="fw-bold text-light"
+                                                 id="influencer-final-display">
+                                                {{ invoice.influencer_cost|floatformat:0 }}
+                                            </div>
+                                            <div class="small text-secondary" id="influencer-base-display">
+                                                {% if invoice.influencer_discount_amount > 0 %}
+                                                    <span class="text-decoration-line-through text-danger">{{ invoice.base_influencer_cost|floatformat:0 }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- ========== ردیف دوم: هزینه تولید محتوا ========== -->
+                            {% if invoice.content_cost > 0 %}
+                                <div class="cost-row">
+                                    <div class="d-flex flex-column">
+                                        <span class="text-light"> تیم تولید محتوا</span>
+                                        {% if invoice.content_discount_amount > 0 %}
+                                            <span class="text-success ms-1">تخفیف: 
+                                                {{ invoice.content_discount_amount }} 
+                                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end d-flex gap-1">
+                                        <div>
+                                            <div class="fw-bold text-light"
+                                                 id="content-final-display">{{ invoice.content_cost|floatformat:0 }}
+                                            </div>
+                                            <div class="small text-secondary" id="content-base-display">
+                                                {% if invoice.content_discount_amount > 0 %}
+                                                    <span class="text-decoration-line-through text-danger">{{ invoice.base_content_cost|floatformat:0 }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- ========== ردیف سوم: کمیسیون پلتفرم ========== -->
+                            <div class="cost-row text-warning">
+                                <div class="d-flex flex-column">
+                                    <span><i class="fi-alert-triangle"></i> حق‌العمل پلتفرم (15%)</span>
+                                    {% if invoice.platform_discount_amount > 0 %}
+                                        <span class="text-success ms-1">تخفیف: 
+                                        {{ invoice.platform_discount_amount }}
+                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end d-flex gap-1">
+                                    <div>
+                                        <div class="fw-bold text-warning" id="commission-final-display">
+                                            + {{ invoice.commission|floatformat:0 }}
+                                        </div>
+                                        <div class="small text-secondary" id="commission-base-display">
+                                            {% if invoice.platform_discount_amount > 0 %}
+                                                <span class="text-decoration-line-through text-danger">
+                                                    {{ invoice.base_commission|floatformat:0 }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <img src="{% static 'core/svg/toman/toman-warning.svg' %}" alt="">
+                                </div>
+                            </div>
+
+                            <div class="cost-divider"></div>
+
+                            <div class="cost-row fw-bold fs-6 text-info">
+                                <span>جمع کل</span>
+                                <span id="final-total-display">
+                                    {{ invoice.total_amount|floatformat:0 }}
+                                    <img src="{% static 'core/svg/toman/toman-info.svg' %}" alt="">
+                                </span>
+                            </div>
+
+                            <!-- ========== ردیف چهارم: مالیات بر ارزش افزوده ========== -->
+                            <div class="cost-row text-primary">
+                                <div class="d-flex flex-column">
+                                    <span><i class="fi-alert-triange"></i> مالیات بر ارزش افزوده (10%)</span>
+                                </div>
+                                <div class="text-end d-flex gap-1">
+                                    <div>
+                                        <div class="fw-bold text-primary" id="commission-final-display">
+                                            + {{ invoice.total_vat|floatformat:0 }}
+                                        </div>
+                                    </div>
+                                    <img src="{% static 'core/svg/toman/toman-primary.svg' %}" alt="">
+                                </div>
+                            </div>
+
+                            <!-- ردیف جدید: نمایش مجموع تخفیف‌ها -->
+                            {% if invoice.discount_amount > 0 %}
+                                <div class="cost-divider"></div>
+
+                                <div class="cost-row text-success fw-bold"
+                                     id="total-discount-row">
+                                    <span><i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده</span>
+                                    <span id="total-discount-value">
+                                        - {{ invoice.discount_amount|floatformat:0 }} 
+                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                    </span>
+                                </div>
+                            {% endif %}
+
+                            <div class="cost-divider"></div>
+
+                            <div class="cost-row text-accent fw-bold fs-5"
+                                 id="payable-row">
+                                <span>مبلغ قابل پرداخت</span>
+                                <span id="payable-amount-display">
+                                    {{ invoice.payable_amount|floatformat:0 }}
+                                    <img src="{% static 'core/svg/toman/toman-accent.svg' %}" alt="">
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== بخش تخفیف یکپارچه (مشابه کمپین) ====== -->
+                <div class="premium-card mb-4">
+                    <div class="premium-card-header">
+                        <i class="fi-ticket text-primary fs-5"></i>
+                        <span>اعمال کد تخفیف</span>
+                        <small class="text-secondary me-auto">(حداکثر ۲ کد)</small>
+                    </div>
+                    <div class="premium-card-body">
+                        <div class="uni-discount-wrapper">
+                            <div class="uni-input-group">
+                                <input type="text" id="uni-discount-input" class="uni-discount-input"
+                                       placeholder="کد تخفیف خود را وارد کنید" autocomplete="off">
+                                <button id="uni-discount-apply" class="uni-discount-btn">اعمال تخفیف</button>
+                            </div>
+                            <div id="discount-feedback" class="discount-message d-none mt-2"></div>
+                            <div id="applied-discounts-list" class="applied-discounts mt-3">
+                                <!-- بج‌های تخفیف اعمال شده اینجا اضافه می‌شوند -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== انتخاب روش پرداخت ====== -->
+                <div class="premium-card mb-4">
+                    <div class="premium-card-header">
+                        <i class="bi bi-credit-card-2-front-fill text-primary fs-5"></i>
+                        <span>روش پرداخت</span>
+                    </div>
+                    <div class="premium-card-body">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="payment-option active" data-method="gateway">
+                                    <div class="payment-option-icon">
+                                        <i class="bi bi-credit-card-2-front fs-1"></i>
+                                    </div>
+                                    <div class="payment-option-title">درگاه بانکی</div>
+                                    <div class="payment-option-desc">پرداخت امن و سریع</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="payment-option {% if wallet.balance < invoice.payable_amount %}disabled{% endif %}"
+                                     data-method="wallet">
+                                    <div class="payment-option-icon">
+                                        <i class="bi bi-wallet2 fs-1"></i>
+                                    </div>
+                                    <div class="payment-option-title">کیف پول</div>
+                                    <div class="payment-option-desc">
+                                        موجودی:
+                                        <span class="fw-bold text-info">
+                                            {{ wallet.balance|floatformat:0 }}
+                                            <img src="{% static 'core/svg/toman/toman-info.svg' %}" alt="">
+                                        </span>
+                                        {% if wallet.balance < invoice.payable_amount %}
+                                            <div class="text-danger small mt-1">موجودی کافی نیست</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== نوار نهایی و دکمه پرداخت ====== -->
+                <div class="final-action-card">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <div class="text-secondary small">مبلغ قابل پرداخت</div>
+                            <div class="final-price" id="final-price-value">
+                                {{ invoice.payable_amount|floatformat:0 }}
+                                <span class="final-price-unit">
+                                    <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                                </span>
+                            </div>
+                            <div class="small text-warning mt-1">شامل {{ invoice.commission|floatformat:0 }} تومان
+                                حق‌العمل
+                            </div>
+                            <div class="small text-primary mt-1">شامل {{ invoice.total_vat|floatformat:0 }} تومان مالیات
+                                بر ارزش افزوده
+                            </div>
+                            <div id="total-discount-info"
+                                 class="small text-success {% if not invoice.discount_amount %}d-none{% endif %} mt-1">
+                                ✅ تخفیف: <span
+                                    id="total-discount-value-bottom">{{ invoice.discount_amount|floatformat:0 }}</span>
+                                تومان
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'content_team:standalone_order_step2' %}"
+                               class="btn btn-outline-light rounded-pill px-4">
+                                <i class="fi-arrow-right me-2"></i> مرحله قبل
+                            </a>
+                            <button type="submit" form="step3-form" class="btn btn-primary rounded-pill px-5 ms-2"
+                                    id="pay-submit-btn">پرداخت نهایی
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ====== فرم مخفی ====== -->
+        <form method="POST" id="step3-form" action="" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="payment_method" id="payment-method-input" value="gateway">
+        </form>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script>
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+        window.APPLY_DISCOUNT_URL = "{% url 'content_team:standalone_apply_discount' %}";
+        window.EXISTING_SCOPES = {
+            content_team: {% if order.content_team_coupon %}true{% else %}false{% endif %},
+            platform: {% if order.platform_coupon %}true{% else %}false{% endif %}
+        };
+        window.ORDER_ID = {{ order.id }};
+    </script>
+    <script src="{% static 'campaigns/js/create_step_4/helpers.js' %}"></script>
+    <script src="{% static 'campaigns/js/create_step_4/payment.js' %}"></script>
+    <script>
+        // content_team/static/content_team/js/standalone_discount.js
+
+        (function () {
+            'use strict';
+
+            function initStandaloneDiscount(csrfToken, applyUrl, existingScopes) {
+                const uniInput = document.getElementById('uni-discount-input');
+                const uniBtn = document.getElementById('uni-discount-apply');
+
+                if (!uniInput || !uniBtn) return;
+
+                const scopeMeta = {
+                    content_team: {label: 'تیم محتوا', icon: '🎬'},
+                    platform: {label: 'پلتفرم', icon: '🏷️'}
+                };
+
+                let appliedScopes = existingScopes || {
+                    content_team: false,
+                    platform: false
+                };
+
+                // ========== تابع افزودن بج تخفیف ==========
+                function addAppliedBadge(scope, code) {
+                    const container = document.getElementById('applied-discounts-list');
+                    if (!container) return;
+
+                    const badge = document.createElement('div');
+                    badge.className = 'applied-discount-badge';
+                    badge.setAttribute('data-scope', scope);
+                    badge.innerHTML = `
+                <span class="badge-icon">${scopeMeta[scope].icon}</span>
+                <span class="badge-text">${scopeMeta[scope].label}: <strong>${code}</strong></span>
+                <span class="badge-remove" data-scope="${scope}" style="cursor:pointer;margin-right:8px;color:#ff6b6b;">✕</span>
+            `;
+                    container.appendChild(badge);
+
+                    // دکمه حذف
+                    badge.querySelector('.badge-remove').addEventListener('click', function () {
+                        // اینجا میتونی منطق حذف تخفیف رو پیاده کنی
+                        // فعلاً فقط پیام بده
+                        showDiscountMessage('حذف تخفیف فعلاً پشتیبانی نمیشود.', 'error');
+                    });
+                }
+
+                // ========== تابع نمایش پیام ==========
+                function showDiscountMessage(msg, type) {
+                    const feedback = document.getElementById('discount-feedback');
+                    if (!feedback) return;
+
+                    feedback.className = `discount-message mt-2 ${type}`;
+                    feedback.textContent = msg;
+                    feedback.classList.remove('d-none');
+
+                    setTimeout(() => {
+                        feedback.classList.add('d-none');
+                    }, 5000);
+                }
+
+                // ========== تابع غیرفعال کردن ==========
+                function checkAndDisable() {
+                    const allApplied = Object.values(appliedScopes).every(v => v === true);
+                    if (allApplied) {
+                        uniInput.disabled = true;
+                        uniBtn.disabled = true;
+                        uniBtn.textContent = 'همه تخفیف‌ها اعمال شد';
+                    } else {
+                        uniInput.disabled = false;
+                        uniBtn.disabled = false;
+                        uniBtn.textContent = 'اعمال تخفیف';
+                    }
+                }
+
+                // ========== تابع اصلی اعمال کد ==========
+                async function tryApplyCode(code) {
+                    // فقط اسکوپ‌های موجود رو چک کن
+                    const scopes = ['content_team', 'platform'];
+
+                    for (let scope of scopes) {
+                        if (appliedScopes[scope]) continue;
+
+                        try {
+                            const response = await fetch(applyUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken,
+                                },
+                                body: JSON.stringify({code: code, scope: scope})
+                            });
+
+                            const data = await response.json();
+
+                            if (data.success) {
+                                appliedScopes[scope] = true;
+                                addAppliedBadge(scope, data.coupon_code);
+
+                                // آپدیت UI
+                                if (typeof updateTotals === 'function') {
+                                    updateTotals(data);
+                                }
+
+                                showDiscountMessage(`✅ کد تخفیف ${scopeMeta[scope].label} با موفقیت اعمال شد.`, 'success');
+                                uniInput.value = '';
+                                uniInput.focus();
+                                checkAndDisable();
+
+                                uniBtn.disabled = true;
+                                uniBtn.textContent = 'تخفیف اعمال شد';
+
+                                return true;
+                            } else {
+                                const errorMsg = data.message || data.error || 'خطای ناشناخته';
+                                showDiscountMessage(`❌ ${errorMsg}`, 'error');
+
+                                if (data.message && (
+                                    data.message.includes('قبلاً از یک کد تخفیف') ||
+                                    data.message.includes('قبلاً در یک کمپین دیگر')
+                                )) {
+                                    return false;
+                                }
+                                continue;
+                            }
+                        } catch (e) {
+                            console.error('❌ خطای شبکه:', e);
+                            showDiscountMessage('❌ خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+                            return false;
+                        }
+                    }
+
+                    showDiscountMessage('❌ کد تخفیف معتبر نیست یا قبلاً استفاده شده است.', 'error');
+                    return false;
+                }
+
+                // ========== رویدادها ==========
+                uniBtn.addEventListener('click', async function () {
+                    const code = uniInput.value.trim();
+
+                    if (!code) {
+                        showDiscountMessage('لطفاً کد تخفیف را وارد کنید.', 'error');
+                        return;
+                    }
+
+                    if (Object.values(appliedScopes).every(v => v === true)) {
+                        showDiscountMessage('شما قبلاً از هر دو نوع تخفیف استفاده کرده‌اید.', 'error');
+                        return;
+                    }
+
+                    uniBtn.disabled = true;
+                    uniBtn.textContent = 'در حال بررسی...';
+
+                    await tryApplyCode(code);
+
+                    uniBtn.disabled = false;
+                    if (!Object.values(appliedScopes).every(v => v === true)) {
+                        uniBtn.textContent = 'اعمال تخفیف';
+                    } else {
+                        uniBtn.textContent = 'همه تخفیف‌ها اعمال شد';
+                        uniBtn.disabled = true;
+                    }
+                });
+
+                uniInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        uniBtn.click();
+                    }
+                });
+
+                checkAndDisable();
+            }
+
+            // ========== صادر کردن ==========
+            window.initStandaloneDiscount = initStandaloneDiscount;
+
+        })();
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // ========== مقداردهی سیستم تخفیف ==========
+            if (typeof initStandaloneDiscount === 'function') {
+                initStandaloneDiscount(
+                    window.CSRF_TOKEN,
+                    window.APPLY_DISCOUNT_URL,
+                    window.EXISTING_SCOPES
+                );
+            }
+
+            // ========== مقداردهی سیستم پرداخت ==========
+            if (typeof initPaymentSystem === 'function') {
+                initPaymentSystem();
+            }
+
+            console.log('✅ مرحله ۳ سفارش مستقل آماده است');
+        });
+    </script>
+{% endblock %}

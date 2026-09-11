@@ -1,0 +1,835 @@
+<!-- content_team/templates/content_team/forms/order/standalone_order_step2.html -->
+
+{% extends 'parent/base.html' %}
+{% load i18n static %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/forms/create_step_3/team/forms-upload.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* ====== Brief Section ====== */
+        .brief-section {
+            display: block;  /* دیگر مخفی نیست چون محتوای تبلیغ نداریم */
+        }
+
+        .description-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(253, 86, 49, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .description-header {
+            padding: 1rem 1.25rem;
+            background: rgba(253, 86, 49, 0.08);
+            border-bottom: 1px solid rgba(253, 86, 49, 0.15);
+        }
+
+        .description-header h6 {
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .description-body {
+            padding: 1.25rem;
+        }
+
+        .description-body .form-label {
+            font-size: 13px;
+            margin-bottom: 6px;
+            opacity: 0.85;
+            color: #f9fdff;
+        }
+
+        .description-body textarea {
+            min-height: 100px;
+        }
+
+        .description-body textarea#id_description {
+            min-height: 160px;
+        }
+
+        #goal-description-wrapper {
+            transition: all 0.25s ease;
+        }
+
+        /* ====== File Upload ====== */
+        .file-upload-box {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .file-upload-box:hover,
+        .file-upload-box.dragover {
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.04);
+            transform: scale(1.02);
+        }
+
+        .file-preview {
+            width: 55px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .upload-icon {
+            font-size: 36px;
+            color: #fd5631;
+            margin-bottom: 10px;
+        }
+
+        .upload-text strong {
+            display: block;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .upload-text p {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .upload-text span {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .file-item-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 220px;
+        }
+
+        .file-remove {
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* ====== Attachments Table ====== */
+        #attachments-table td,
+        #attachments-table th {
+            vertical-align: middle;
+        }
+
+        #attachments-table tbody tr {
+            transition: background 0.2s;
+        }
+
+        #attachments-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ====== Character Counter ====== */
+        #char-count {
+            font-weight: 600;
+            color: #fd5631;
+        }
+
+        .min-char-warning {
+            font-size: 0.75rem;
+            color: #fd5631;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* ====== Buttons ====== */
+        #submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #fd5631, #d93b1a);
+            border: none;
+            color: #fff;
+            padding: 0.75rem 2rem;
+            border-radius: 50rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(253, 86, 49, 0.25);
+        }
+
+        .btn-next:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(253, 86, 49, 0.35);
+            color: #fff;
+        }
+
+        .btn-next:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        /* ====== Modal ====== */
+        .modal-content.bg-dark {
+            background: #1f1b2d !important;
+        }
+
+        .modal-header.border-secondary {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .modal-footer.border-secondary {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .modal-file-description-label {
+            margin: 2rem auto 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+        }
+
+        /* ====== Order Info Box ====== */
+        .order-info-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .order-info-box .label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+        }
+
+        .order-info-box .value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .order-info-box .value .highlight {
+            color: #fd5631;
+        }
+
+        /* ====== Page Card ====== */
+        .page-card {
+            background: #1f1b2d;
+            border-radius: 20px;
+        }
+
+        /* ====== Mobile ====== */
+        @media (max-width: 768px) {
+            .order-info-box {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4 pb-5" dir="rtl">
+
+        <!-- ====== Inline Steps ====== -->
+        <div class="steps steps-light mt-4" style="margin: 0 0 2rem;">
+            <div class="step active">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">1</span>
+                </div>
+                <div class="step-label">انتخاب تیم و پلن</div>
+            </div>
+            <div class="step active">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">2</span>
+                </div>
+                <div class="step-label">جزئیات سفارش</div>
+            </div>
+            <div class="step">
+                <div class="step-progress">
+                    <span class="step-progress-start"></span>
+                    <span class="step-progress-end"></span>
+                    <span class="step-number">3</span>
+                </div>
+                <div class="step-label">تایید و پرداخت</div>
+            </div>
+        </div>
+
+        <!-- ====== Card ====== -->
+        <div class="card border-0 shadow-sm page-card bg-dark">
+            <div class="card-body p-4">
+
+                <!-- ====== هدر ====== -->
+                <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-light fw-bold mb-1">{{ title }}</h5>
+                        <p class="text-secondary small mb-0">
+                            لطفاً اطلاعات مورد نیاز برای سفارش تولید محتوا را تکمیل کنید.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ====== اطلاعات سفارش ====== -->
+                <div class="order-info-box mb-4">
+                    <div>
+                        <span class="label">تیم تولید محتوا</span>
+                        <div class="value">{{ team_name }}</div>
+                    </div>
+                    <div>
+                        <span class="label">پلن انتخابی</span>
+                        <div class="value">{{ plan_name }}</div>
+                    </div>
+                    <div>
+                        <span class="label">قیمت پلن</span>
+                        <div class="value"><span class="highlight">{{ plan_price|floatformat:0|default:"۰" }}</span> تومان</div>
+                    </div>
+                </div>
+
+                <!-- ====== فرم ====== -->
+                <form method="POST" id="step2-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <!-- ====== بریف سفارش ====== -->
+                    <div id="brief-section" class="brief-section">
+                        <div class="description-card">
+                            <div class="description-header mb-3 d-flex align-items-center gap-2">
+                                <i class="fi-file-text-fill text-primary"></i>
+                                <h6 class="mb-0 fw-bold text-light">بریف سفارش برای تیم تولید محتوا</h6>
+                                <span class="badge bg-secondary rounded-pill">اطلاعات داخلی</span>
+                            </div>
+                            <p class="text-secondary small mb-3">
+                                اطلاعات زیر فقط برای تیم تولید محتوا نمایش داده می‌شود.
+                            </p>
+                            <div class="description-body">
+                                <div class="row g-3">
+
+                                    <!-- هدف محتوا -->
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">هدف محتوا</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.goal }}
+                                    </div>
+
+                                    <!-- توضیح هدف (برای OTHER) -->
+                                    <div class="col-12 col-md-6 col-xl-4" id="goal-description-wrapper">
+                                        <label class="form-label text-light">توضیح هدف</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.goal_description }}
+                                    </div>
+
+                                    <!-- لحن محتوا -->
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">لحن محتوا</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.tone }}
+                                    </div>
+
+                                    <!-- نام برند -->
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">نام برند</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.brand_name }}
+                                    </div>
+
+                                    <!-- هشتگ‌ها -->
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">هشتگ‌ها</label>
+                                        {{ brief_form.hashtags }}
+                                    </div>
+
+                                    <!-- مخاطب هدف -->
+                                    <div class="col-12 col-md-6 col-xl-4">
+                                        <label class="form-label text-light">مخاطب هدف</label>
+                                        {{ brief_form.target_audience }}
+                                    </div>
+
+                                    <!-- لینک‌های مرجع -->
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label text-light">لینک‌های مرجع</label>
+                                        {{ brief_form.reference_links }}
+                                    </div>
+
+                                    <!-- چه چیزهایی نباشد -->
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label text-light">چه چیزهایی نباشد</label>
+                                        {{ brief_form.do_not_include }}
+                                    </div>
+
+                                    <!-- توضیحات کامل -->
+                                    <div class="col-12">
+                                        <label class="form-label text-light">{{ brief_form.description.label_tag }}</label>
+                                        <span class="text-danger">*</span>
+                                        {{ brief_form.description }}
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <small class="min-char-warning" id="min-char-warning">حداقل ۲۰ کاراکتر لازم است</small>
+                                            <small><span id="char-count">۰</span> / ۲۰</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- ====== فایل‌های پیوست ====== -->
+                                    <div class="col-12 mt-3">
+                                        <button type="button" class="btn btn-outline-light" data-bs-toggle="modal"
+                                                data-bs-target="#attachmentsModal">
+                                            <i class="fi-plus-circle me-1"></i> افزودن فایل پیوست
+                                        </button>
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-dark table-striped align-middle"
+                                                   id="attachments-table">
+                                                <thead>
+                                                <tr>
+                                                    <th>پیش نمایش</th>
+                                                    <th>نام فایل</th>
+                                                    <th>نوع فایل</th>
+                                                    <th>حجم فایل</th>
+                                                    <th>حذف</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody id="attachments-list">
+                                                {% for file in attachments %}
+                                                    <tr data-existing="true">
+                                                        <td>
+                                                            {% if file.file_type == "image" %}
+                                                                <img class="file-preview" src="{{ file.file.url }}"
+                                                                     alt="پیش نمایش">
+                                                            {% else %}
+                                                                <span class="text-secondary">—</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-light">
+                                                            <a href="{{ file.file.url }}"
+                                                               class="text-decoration-none text-light" target="_blank">
+                                                                {{ file.original_name }}
+                                                            </a>
+                                                        </td>
+                                                        <td class="text-secondary">{{ file.mime_type }}</td>
+                                                        <td class="text-info">{{ file.file_size_display }}</td>
+                                                        <td>
+                                                            <span class="text-danger fs-4 remove-existing-file"
+                                                                  data-id="{{ file.id }}" style="cursor:pointer;">
+                                                                &times;
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- فیلدهای مخفی -->
+                                    <div class="col-12">
+                                        <input type="file" name="attachments" id="attachments-input" multiple hidden>
+                                        <input type="hidden" name="attachment_descriptions"
+                                               id="attachment-descriptions">
+                                        <input type="hidden" name="deleted_attachments" id="deleted-attachments"
+                                               value="[]">
+                                        <small class="text-secondary">حداکثر ۵ فایل، هرکدام تا ۲۰ مگابایت</small>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ====== دکمه‌ها ====== -->
+                    <div class="d-flex justify-content-between mt-5">
+                        <a href="{% url 'content_team:standalone_order_step1' %}" class="btn btn-accent px-4">
+                            <i class="fi-arrow-right me-2"></i> مرحله قبل
+                        </a>
+                        <button type="submit" id="submit-btn" class="btn btn-primary px-5" disabled>
+                            مرحله بعد <i class="fi-arrow-left ms-2"></i>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== مودال آپلود فایل ====== -->
+    <div class="modal fade" id="attachmentsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-light">
+                        <i class="fi-cloud-upload me-2"></i> افزودن فایل پیوست
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="file-upload-box" id="fileUploadBox">
+                        <input type="file" id="modal-file-input" multiple hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon"><i class="fi-cloud-upload"></i></div>
+                            <div class="upload-text">
+                                <strong>آپلود فایل</strong>
+                                <p>فایل را بکشید اینجا یا کلیک کنید</p>
+                                <span>حداکثر 20MB برای هر فایل</span>
+                            </div>
+                        </div>
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+                    <label class="modal-file-description-label" for="modal-file-description">توضیحات فایل</label>
+                    <textarea id="modal-file-description" class="form-control form-control-light" rows="3"
+                              placeholder="مثلا: لوگوی شرکت"></textarea>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-primary" id="save-file-btn">ذخیره فایل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // =============================================
+            // ۱. مقداردهی اولیه متغیرها
+            // =============================================
+            const MIN_CHARS = 20;
+
+            // عناصر DOM
+            const descriptionTextarea = document.getElementById('id_description');
+            const charCountEl = document.getElementById('char-count');
+            const minCharWarning = document.getElementById('min-char-warning');
+            const submitBtn = document.getElementById('submit-btn');
+
+            const goalSelect = document.getElementById('id_goal');
+            const goalDescriptionWrapper = document.getElementById('goal-description-wrapper');
+            const goalDescriptionInput = document.getElementById('id_goal_description');
+            const brandInput = document.getElementById('id_brand_name');
+
+            // =============================================
+            // ۲. توابع اعتبارسنجی
+            // =============================================
+
+            function toPersianNum(num) {
+                return String(num).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+            }
+
+            function validateForm() {
+                if (!submitBtn) return;
+
+                // بریف
+                const goalValid = goalSelect && goalSelect.value !== '';
+                const brandValid = brandInput && brandInput.value.trim().length > 0;
+                const descValid = descriptionTextarea && descriptionTextarea.value.length >= MIN_CHARS;
+
+                let goalDescValid = true;
+                if (goalSelect && goalSelect.value === 'other') {
+                    goalDescValid = goalDescriptionInput && goalDescriptionInput.value.trim().length > 0;
+                }
+
+                const isValid = goalValid && brandValid && descValid && goalDescValid;
+                submitBtn.disabled = !isValid;
+                return isValid;
+            }
+
+            // =============================================
+            // ۳. بریف کنترل
+            // =============================================
+
+            function updateCharCount() {
+                if (!descriptionTextarea) return;
+                const length = descriptionTextarea.value.length;
+                charCountEl.textContent = toPersianNum(length);
+                if (length < MIN_CHARS) {
+                    charCountEl.style.color = '#f97316';
+                    if (minCharWarning) minCharWarning.style.display = 'block';
+                } else {
+                    charCountEl.style.color = '#22c55e';
+                    if (minCharWarning) minCharWarning.style.display = 'none';
+                }
+                validateForm();
+            }
+
+            function toggleGoalDescription() {
+                if (!goalSelect || !goalDescriptionWrapper) return;
+                goalDescriptionWrapper.style.display = goalSelect.value === 'other' ? 'block' : 'none';
+                validateForm();
+            }
+
+            // =============================================
+            // ۴. آپلود فایل
+            // =============================================
+
+            let attachments = [];
+            const MAX_FILES = 5;
+            const modalFileInput = document.getElementById('modal-file-input');
+            const modalDescription = document.getElementById('modal-file-description');
+            const saveFileBtn = document.getElementById('save-file-btn');
+            const attachmentsList = document.getElementById('attachments-list');
+            const hiddenInput = document.getElementById('attachments-input');
+            const hiddenDescriptions = document.getElementById('attachment-descriptions');
+            const deletedInput = document.getElementById('deleted-attachments');
+            const attachmentsTable = document.getElementById('attachments-table');
+            const tableHead = attachmentsTable ? attachmentsTable.querySelector('thead') : null;
+            const deletedIds = [];
+
+            function formatFileSize(bytes) {
+                const toFa = n => n.toLocaleString('fa-IR');
+                if (bytes < 1024) return toFa(bytes) + ' بایت';
+                if (bytes < 1024 * 1024) return toFa((bytes / 1024).toFixed(1)) + ' کیلوبایت';
+                return toFa((bytes / (1024 * 1024)).toFixed(1)) + ' مگابایت';
+            }
+
+            function updateTableHead() {
+                if (!tableHead) return;
+                const existingRows = attachmentsList ? attachmentsList.querySelectorAll('tr[data-existing]') : [];
+                if (existingRows.length === 0 && attachments.length === 0)
+                    tableHead.style.display = 'none';
+                else
+                    tableHead.style.display = 'table-header-group';
+            }
+
+            function renderAttachments() {
+                if (!attachmentsList) return;
+                attachmentsList.querySelectorAll('tr[data-new]').forEach(el => el.remove());
+                const dataTransfer = new DataTransfer();
+                const descList = [];
+
+                attachments.forEach((item, index) => {
+                    const file = item.file;
+                    const isImage = file.type.startsWith('image/');
+                    const fileSize = formatFileSize(file.size);
+                    const fileType = file.type || 'Unknown';
+                    const preview = isImage
+                        ? `<img src="${URL.createObjectURL(file)}" style="width:55px;height:55px;object-fit:cover;border-radius:6px;" alt="">`
+                        : `<span class="text-secondary">—</span>`;
+                    const url = URL.createObjectURL(file);
+
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-new', 'true');
+                    tr.innerHTML = `
+                        <td>${preview}</td>
+                        <td class="text-light"><a href="${url}" target="_blank" class="text-decoration-none text-light">${file.name}</a></td>
+                        <td class="text-secondary">${fileType}</td>
+                        <td class="text-info">${fileSize}</td>
+                        <td><span class="text-danger fs-4" style="cursor:pointer" data-index="${index}">&times;</span></td>
+                    `;
+                    attachmentsList.appendChild(tr);
+                    dataTransfer.items.add(file);
+                    descList.push(item.description);
+                });
+
+                if (hiddenInput) hiddenInput.files = dataTransfer.files;
+                if (hiddenDescriptions) hiddenDescriptions.value = JSON.stringify(descList);
+                updateTableHead();
+            }
+
+            if (attachmentsList) {
+                attachmentsList.addEventListener('click', function(e) {
+                    if (e.target.dataset.index !== undefined) {
+                        const index = parseInt(e.target.dataset.index);
+                        attachments.splice(index, 1);
+                        renderAttachments();
+                    }
+                    if (e.target.classList.contains('remove-existing-file')) {
+                        const id = e.target.dataset.id;
+                        deletedIds.push(id);
+                        if (deletedInput) deletedInput.value = JSON.stringify(deletedIds);
+                        e.target.closest('tr').remove();
+                        updateTableHead();
+                    }
+                });
+            }
+
+            if (saveFileBtn) {
+                saveFileBtn.addEventListener('click', function() {
+                    const file = modalFileInput ? modalFileInput.files[0] : null;
+                    const description = modalDescription ? modalDescription.value.trim() : '';
+                    if (!file) {
+                        alert('لطفاً یک فایل انتخاب کنید');
+                        return;
+                    }
+                    if (attachments.length >= MAX_FILES) {
+                        alert('حداکثر ۵ فایل می‌توانید اضافه کنید');
+                        return;
+                    }
+                    attachments.push({file, description});
+                    renderAttachments();
+                    if (modalFileInput) modalFileInput.value = '';
+                    if (modalDescription) modalDescription.value = '';
+                    const fileList = document.getElementById('fileList');
+                    if (fileList) fileList.innerHTML = '';
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('attachmentsModal'));
+                    if (modal) modal.hide();
+                });
+            }
+
+            // =============================================
+            // ۵. Drag & Drop
+            // =============================================
+
+            const uploadBox = document.getElementById('fileUploadBox');
+            const fileList = document.getElementById('fileList');
+
+            if (uploadBox && modalFileInput) {
+                uploadBox.addEventListener('click', () => modalFileInput.click());
+
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    uploadBox.addEventListener(eventName, function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    uploadBox.addEventListener(eventName, () => uploadBox.classList.add('dragover'));
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    uploadBox.addEventListener(eventName, () => uploadBox.classList.remove('dragover'));
+                });
+
+                uploadBox.addEventListener('drop', function(e) {
+                    const files = e.dataTransfer.files;
+                    if (modalFileInput) modalFileInput.files = files;
+                    if (fileList) {
+                        fileList.innerHTML = '';
+                        Array.from(files).forEach(file => {
+                            const item = document.createElement('div');
+                            item.className = 'file-item';
+                            item.innerHTML = `<div class="file-item-name">${file.name}</div><div class="file-remove">✕</div>`;
+                            fileList.appendChild(item);
+                        });
+                    }
+                });
+
+                if (modalFileInput) {
+                    modalFileInput.addEventListener('change', function() {
+                        if (fileList) {
+                            fileList.innerHTML = '';
+                            Array.from(this.files).forEach(file => {
+                                const item = document.createElement('div');
+                                item.className = 'file-item';
+                                item.innerHTML = `<div class="file-item-name">${file.name}</div><div class="file-remove">✕</div>`;
+                                fileList.appendChild(item);
+                            });
+                        }
+                    });
+                }
+            }
+
+            // =============================================
+            // ۶. اتصال رویدادها
+            // =============================================
+
+            if (descriptionTextarea) {
+                descriptionTextarea.addEventListener('input', function() {
+                    updateCharCount();
+                    validateForm();
+                });
+            }
+
+            if (goalSelect) {
+                goalSelect.addEventListener('change', function() {
+                    toggleGoalDescription();
+                    validateForm();
+                });
+            }
+
+            if (brandInput) {
+                brandInput.addEventListener('input', function() {
+                    validateForm();
+                });
+            }
+
+            if (goalDescriptionInput) {
+                goalDescriptionInput.addEventListener('input', function() {
+                    validateForm();
+                });
+            }
+
+            // =============================================
+            // ۷. اعتبارسنجی نهایی فرم قبل از ارسال
+            // =============================================
+
+            const form = document.getElementById('step2-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const desc = descriptionTextarea ? descriptionTextarea.value.trim() : '';
+                    let hasError = false;
+
+                    if (desc.length < MIN_CHARS) {
+                        alert(`❌ توضیحات باید حداقل ${MIN_CHARS} کاراکتر باشد.`);
+                        if (descriptionTextarea) descriptionTextarea.focus();
+                        hasError = true;
+                    }
+
+                    if (hasError) e.preventDefault();
+                });
+            }
+
+            // =============================================
+            // ۸. مقداردهی اولیه
+            // =============================================
+
+            toggleGoalDescription();
+            updateCharCount();
+            updateTableHead();
+            validateForm();
+
+            // در صورت وجود فایل‌های موجود، جدول رو نمایش بده
+            const existingRows = attachmentsList ? attachmentsList.querySelectorAll('tr[data-existing]') : [];
+            if (existingRows.length > 0) {
+                if (tableHead) tableHead.style.display = 'table-header-group';
+            }
+
+            console.log('✅ مرحله ۲ سفارش مستقل تولید محتوا آماده است');
+        });
+    </script>
+{% endblock %}

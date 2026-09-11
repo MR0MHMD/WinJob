@@ -273,6 +273,12 @@
             margin: 0 auto;
         }
         
+        .type-badge.content-order {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }
+        
         /* ===== پاسخگویی ===== */
         @media (max-width: 768px) {
             .invoice-stats {
@@ -470,9 +476,13 @@
                                         <span class="type-badge campaign">
                                             <i class="fi-flag me-1"></i> کمپین
                                         </span>
-                                    {% else %}
+                                    {% elif invoice.type == 'wallet' %}
                                         <span class="type-badge wallet">
                                             <i class="fi-wallet me-1"></i> کیف پول
+                                        </span>
+                                    {% elif invoice.type == 'content_order' %}
+                                        <span class="type-badge content-order">
+                                            <i class="fi-video me-1"></i> سفارش محتوا
                                         </span>
                                     {% endif %}
                                 </td>
@@ -483,10 +493,14 @@
                                                 {{ invoice.campaign.name|truncatechars:30 }}
                                             </a>
                                         </span>
-                                    {% else %}
+                                    {% elif invoice.type == 'content_order' %}
                                         <span class="campaign-name">
-                                            شارژ کیف پول
+                                            <a href="{% url 'content_team:team_order_detail' invoice.content_order.id %}">
+                                                سفارش #{{ invoice.content_order.id }} - {{ invoice.content_order.team.name }}
+                                            </a>
                                         </span>
+                                    {% else %}
+                                        <span class="campaign-name">شارژ کیف پول</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="تاریخ">
@@ -494,7 +508,7 @@
                                 </td>
                                 <td data-label="مبلغ">
                                     <span class="price-amount text-info">
-                                        {% if invoice.type == 'campaign' %}
+                                        {% if invoice.type == 'campaign' or invoice.type == 'content_order' %}
                                             {{ invoice.payable_amount|floatformat:0|intcomma }}
                                         {% else %}
                                             {{ invoice.wallet_deposit_amount|floatformat:0|intcomma }}

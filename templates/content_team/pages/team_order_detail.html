@@ -1,9 +1,7 @@
 {% extends 'parent/base.html' %}
 {% load static %}
 
-{% block title %}
-    (جزئیات سفارش ( {{ order.campaign.name }}
-{% endblock %}
+{% block title %}{{ order.name }}{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'content_team/css/pages/team_order_detail/variables.css' %}">
@@ -21,7 +19,9 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                 <div class="d-flex align-items-center gap-3">
                     <div class="d-flex flex-column gap-3">
-                        <h1 class="display-6 text-light hero-title">{{ order.campaign.name }}</h1>
+                        <h1 class="display-6 text-light hero-title">
+                            {{ order.name }}
+                        </h1>
                         <div class="d-flex align-items-center justify-content-between">
                             <p class="text-muted hero-order-id">سفارش #{{ order.id }}</p>
                             <a href="{% url 'content_team:team_orders_list' %}"
@@ -510,38 +510,67 @@
 
             <!-- ستون کناری -->
             <div class="col-lg-4">
-                <!-- کارت تبلیغ دهنده -->
+
+                <!-- ========================================== -->
+                <!-- بخش تبلیغ دهنده (با پشتیبانی از حالت مستقل) -->
+                <!-- ========================================== -->
+            
                 <div class="glass-card glass-card-p-4-mb-4 animate-right" style="animation-delay: 0.15s;">
                     <div class="card-header-icon">
                         <div class="info-icon">
                             <i class="fi-user"></i>
                         </div>
-                        <h5 class="text-light mb-0">تبلیغ دهنده</h5>
+                        <h5 class="text-light mb-0">
+                            {% if is_standalone %}
+                                سفارش‌دهنده (مستقل)
+                            {% else %}
+                                تبلیغ دهنده
+                            {% endif %}
+                        </h5>
                     </div>
-                    <div class="text-center mb-3">
-                        {% if order.campaign.advertiser.user.avatar %}
-                            <img class="rounded-circle" width="100"
-                                 src="{{ order.campaign.advertiser.user.avatar.url }}" alt="">
-                        {% else %}
-                            <div class="avatar-circle mx-auto"
-                                 style="width: 80px; height: 80px; font-size: 2rem; background: var(--primary-gradient);">
-                                {{ order.campaign.advertiser.user.nickname|first|upper }}
+                
+                    {% if ordering_user %}
+                        <div class="text-center mb-3">
+                            {% if ordering_user.avatar %}
+                                <img class="rounded-circle" width="100" src="{{ ordering_user.avatar.url }}" alt="{{ ordering_user.nickname }}">
+                            {% else %}
+                                <div class="avatar-circle mx-auto" style="width: 80px; height: 80px; font-size: 2rem; background: var(--primary-gradient);">
+                                    {{ ordering_user.nickname|first|upper|default:'U' }}
+                                </div>
+                            {% endif %}
+                
+                            <h5 class="text-light mt-3 mb-1">{{ ordering_user.nickname|default:ordering_user.phone_number }}</h5>
+                
+                            {% if not is_standalone and order.campaign.advertiser.business_name %}
+                                <div class="small text-muted">{{ order.campaign.advertiser.business_name }}</div>
+                            {% endif %}
+                
+                            <div class="small text-muted mt-2">
+                                <i class="fi-mail"></i> {{ ordering_user.email|default:'ایمیل ثبت نشده' }}
                             </div>
-                        {% endif %}
-
-                        <h5 class="text-light mt-3 mb-1">{{ order.campaign.advertiser.user.nickname }}</h5>
-                        {% if order.campaign.advertiser.business_name %}
-                            <div class="small text-muted">{{ order.campaign.advertiser.business_name }}</div>
-                        {% endif %}
-                        <div class="small text-muted mt-2">
-                            <i class="fi-mail"></i> {{ order.campaign.advertiser.user.email }}
+                
+                            {% if is_standalone %}
+                                <div class="small text-muted mt-2">
+                                    <i class="fi-phone"></i> {{ ordering_user.phone_number }}
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    <span class="badge bg-info bg-opacity-25 text-info">سفارش بدون کمپین</span>
+                                </div>
+                            {% endif %}
                         </div>
-                    </div>
-                    <hr class="border-light opacity-25">
-                    <div class="small text-muted text-center">
-                        <i class="fi-calendar"></i> عضویت
-                        از {{ order.campaign.advertiser.user.date_joined|date:'Y/m/d' }}
-                    </div>
+                
+                        <hr class="border-light opacity-25">
+                
+                        <div class="small text-muted text-center">
+                            <i class="fi-calendar"></i>
+                            عضویت از {{ ordering_user.date_joined|date:'Y/m/d' }}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fi-alert-circle text-warning"></i>
+                            <p class="text-muted small mt-2">اطلاعات سفارش‌دهنده در دسترس نیست.</p>
+                        </div>
+                    {% endif %}
                 </div>
 
                 {% if revisions %}

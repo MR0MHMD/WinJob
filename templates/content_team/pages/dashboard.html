@@ -158,7 +158,7 @@
                                     <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
                                         <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
                                             <i class="fi-file text-danger fs-6"></i>
-                                            <span class="small text-white">{{ order.campaign.name }}</span>
+                                            <span class="small text-white">{{ order.name }}</span>
                                             <span class="small text-muted mx-2">•</span>
                                             <span class="small text-muted">تاریخ ثبت: {{ order.created_at|date:"Y/m/d H:i" }}</span>
                                         </div>
@@ -202,7 +202,7 @@
                                 <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
                                     <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
                                         <i class="fi-clock text-danger fs-6"></i>
-                                        <span class="small text-white">{{ order.campaign.name }}</span>
+                                        <span class="small text-white">{{ order.name }}</span>
                                         <span class="small text-muted mx-2">•</span>
                                         <span class="small text-muted">ددلاین: {{ order.deadline|date:"Y/m/d H:i" }}</span>
                                     </div>
@@ -577,14 +577,20 @@
             <div class="order-info">
                 <div class="text-white fw-bold">
                     <a class="text-decoration-none" href="{{ order.get_absolute_url }}">
-                        {{ order.campaign.name }}
+                        {{ order.name }}   {# ← به جای order.campaign.name #}
                     </a>
                 </div>
                 <div class="small text-muted">
-                    <i class="fi-user ms-1"></i> {{ order.campaign.advertiser.business_name }}
-                    <span class="mx-2">•</span>
-                    <i class="fi-calendar ms-1"></i>
-                    {{ order.campaign.start_date|date:"Y/m/d" }} - {{ order.campaign.end_date|date:"Y/m/d" }}
+                    {% if order.campaign %}
+                        <i class="fi-user ms-1"></i> {{ order.campaign.advertiser.business_name }}
+                        <span class="mx-2">•</span>
+                        <i class="fi-calendar ms-1"></i>
+                        {{ order.campaign.start_date|date:"Y/m/d" }} - {{ order.campaign.end_date|date:"Y/m/d" }}
+                    {% elif order.standalone_user %}
+                        <i class="fi-user ms-1"></i> {{ order.standalone_user.nickname|default:order.standalone_user.phone_number }}
+                        <span class="mx-2">•</span>
+                        سفارش مستقل
+                    {% endif %}
                 </div>
             </div>
 
@@ -636,10 +642,14 @@
                                     <a class="text-decoration-none" href="{{ order.get_absolute_url }}">
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <div>
-                                            <div class="text-white fw-bold">{{ order.campaign.name }}</div>
+                                            <div class="text-white fw-bold">{{ order.name }}</div>   {# ← به جای order.campaign.name #}
                                             <div class="small text-muted">
-                                                {{ order.campaign.advertiser.business_name }} | 
-                                                مبلغ: {{ order.price|floatformat:0 }} تومان
+                                                {% if order.campaign %}
+                                                    {{ order.campaign.advertiser.business_name }}
+                                                {% elif order.standalone_user %}
+                                                    {{ order.standalone_user.nickname|default:order.standalone_user.phone_number }}
+                                                {% endif %}
+                                                | مبلغ: {{ order.price|floatformat:0 }} تومان
                                             </div>
                                         </div>
                                         <div>
@@ -671,10 +681,14 @@
                                     <a class="text-decoration-none" href="{{ order.get_absolute_url }}">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <div class="text-white fw-bold">{{ order.campaign.name }}</div>
+                                                <div class="text-white fw-bold">{{ order.name }}</div>   {# ← به جای order.campaign.name #}
                                                 <div class="small text-muted mt-1">
                                                     <i class="fi-building ms-1"></i>
-                                                    {{ order.campaign.advertiser.business_name }}
+                                                    {% if order.campaign %}
+                                                        {{ order.campaign.advertiser.business_name }}
+                                                    {% elif order.standalone_user %}
+                                                        {{ order.standalone_user.nickname|default:order.standalone_user.phone_number }}
+                                                    {% endif %}
                                                     <span class="mx-2">•</span>
                                                     <i class="fi-cash ms-1"></i>
                                                     {{ order.price|floatformat:0 }} تومان

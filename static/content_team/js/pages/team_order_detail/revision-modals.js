@@ -5,7 +5,7 @@
             const orderId = this.dataset.orderId;
             const revisionId = this.dataset.revisionId;
             const form = document.getElementById('acceptRevisionForm');
-            form.action = `/content_team/team/orders/${orderId}/revision/${revisionId}/accept/`;
+            form.action = `/content_team/orders/${orderId}/revision/${revisionId}/accept/`;
             document.getElementById('acceptRevisionId').value = revisionId;
         });
     });
@@ -16,7 +16,7 @@
             const orderId = this.dataset.orderId;
             const revisionId = this.dataset.revisionId;
             const form = document.getElementById('rejectRevisionForm');
-            form.action = `/content_team/team/orders/${orderId}/revision/${revisionId}/reject/`;
+            form.action = `/content_team/orders/${orderId}/revision/${revisionId}/reject/`;
             document.getElementById('rejectRevisionId').value = revisionId;
         });
     });

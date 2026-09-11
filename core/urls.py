@@ -23,4 +23,6 @@ urlpatterns = [
     path("401/", custom_401, name="401"),
     path("429/", custom_429, name="429"),
     path("503/", custom_503, name="503"),
+
+    path('api/content-service-types/', api_content_service_types, name='api_content_service_types'),
 ]

@@ -45,4 +45,21 @@ urlpatterns = [
     path('team/check-slug/', check_slug_availability, name='check_slug_availability'),
     path('submit-review/', submit_team_review_ajax, name='submit_review'),
     path('edit-review/', edit_team_review_ajax, name='edit_review'),
+    path('api/apply-discount/', standalone_apply_discount, name='standalone_apply_discount'),
+
+
+    # ==================== سفارش مستقل تولید محتوا ====================
+    path('standalone-order/step1/', standalone_order_step1, name='standalone_order_step1'),
+    path('standalone-order/step2/', standalone_order_step2, name='standalone_order_step2'),
+    path('standalone-order/step3/', standalone_order_step3, name='standalone_order_step3'),
+    # path('content_orders-order/success/<int:order_id>/', standalone_order_success, name='standalone_order_success'),
+
+    # AJAX
+    path('ajax/load-teams/', load_teams_by_service, name='load_teams_by_service'),
+    path('ajax/load-plans/', load_plans_by_team, name='load_plans_by_team'),
+
+    path('content_orders/', content_orders_list, name='content_orders_list'),
+    path('content_orders/<int:order_id>/', content_order_detail, name='content_order_detail'),
+    path('orders/<int:order_id>/delete/', delete_content_order, name='delete_content_order'),
+
 ]

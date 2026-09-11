@@ -1,9 +1,8 @@
-from django import forms
-from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
 from core.utils.admin_utils import RegionalFilterAdminMixin
-from accounts.models import CustomUser
 from .forms import ContentServicePlanForm, TeamManageForm
+from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
+from accounts.models import CustomUser
 from .utils import get_team_province
 from .inline_admin import *
 
@@ -534,14 +533,13 @@ class ContentServicePlanAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
 @admin.register(ContentOrder)
 class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
-    form = TeamManageForm
     list_display = (
         "id",
-        "campaign",
+        "order_display",          # ← نمایش هوشمند (کمپین یا کاربر مستقل)
         "team",
         "plan",
         "price",
-        "selected_quantity_display",  # ← جدید
+        "selected_quantity_display",
         "status",
         "has_brief_display",
         "files_count_display",
@@ -551,24 +549,30 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     list_filter = (
         "status",
         "team",
+        "is_standalone",          # ← فیلتر جدید
     )
 
     search_fields = (
         "campaign__name",
         "team__name",
+        "standalone_user__phone_number",
+        "standalone_user__nickname",
+        "campaign__advertiser__business_name",
     )
 
     autocomplete_fields = (
         "campaign",
         "team",
         "plan",
+        "standalone_user",        # ← جدید
     )
 
     readonly_fields = (
         "created_at",
         "has_brief_display",
         "files_count_display",
-        "plan_info_display",  # ← جدید
+        "plan_info_display",
+        "standalone_user_display",  # ← جدید
     )
 
     inlines = [
@@ -579,46 +583,70 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ("اطلاعات سفارش", {
             "fields": (
-                "campaign",
+                ("campaign", "standalone_user"),  # ← کنار هم
+                "is_standalone",                  # ← جدید
                 "team",
                 "plan",
-                "plan_info_display",  # ← جدید
+                "plan_info_display",
                 "price",
             )
         }),
 
-        ("مقدار انتخابی", {  # ← جدید
-            "fields": (
-                "selected_quantity",
-            ),
+        ("مقدار انتخابی", {
+            "fields": ("selected_quantity",),
             "description": "مقداری که کاربر انتخاب کرده (اختیاری - فقط برای اطلاع)"
         }),
 
         ("وضعیت", {
-            "fields": (
-                "status",
-            )
+            "fields": ("status",)
         }),
 
         ("اطلاعات تکمیلی", {
             "fields": (
                 "has_brief_display",
                 "files_count_display",
+                "standalone_user_display",
             ),
             "classes": ("collapse",)
         }),
 
         ("تاریخ", {
-            "fields": (
-                "created_at",
-            ),
+            "fields": ("created_at",),
             "classes": ("collapse",)
         }),
     )
 
     # ========== متدهای جدید ==========
+
+    def order_display(self, obj):
+        """نمایش عنوان سفارش به صورت هوشمند"""
+        if obj.campaign:
+            link = reverse('admin:campaigns_campaign_change', args=[obj.campaign.id])
+            return format_html(
+                '<a href="{}" style="font-weight: bold;">{} (کمپین)</a>',
+                link, obj.campaign.name
+            )
+        elif obj.standalone_user:
+            return format_html(
+                '<span style="color: #007bff;">{} (سفارش مستقل)</span>',
+                obj.standalone_user.nickname or obj.standalone_user.phone_number
+            )
+        return "-"
+    order_display.short_description = _("عنوان سفارش")
+    order_display.admin_order_field = "campaign"  # برای مرتب‌سازی
+
+    def standalone_user_display(self, obj):
+        """نمایش کاربر مستقل به صورت خوانا"""
+        if obj.standalone_user:
+            return format_html(
+                '{} - {}',
+                obj.standalone_user.nickname or obj.standalone_user.phone_number,
+                obj.standalone_user.phone_number
+            )
+        return "-"
+    standalone_user_display.short_description = _("کاربر سفارش‌دهنده (مستقل)")
+
     def selected_quantity_display(self, obj):
-        """نمایش مقدار انتخابی کاربر"""
         if obj.selected_quantity:
             unit_labels = {
                 'second': 'ثانیه',
@@ -628,11 +656,9 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             unit = unit_labels.get(obj.plan.pricing_unit if obj.plan else '', '')
             return f"{obj.selected_quantity} {unit}"
         return "-"
-
     selected_quantity_display.short_description = _("مقدار انتخابی")
 
     def plan_info_display(self, obj):
-        """نمایش اطلاعات کامل پلن در جزئیات"""
         if not obj.plan:
             return "-"
 
@@ -652,15 +678,14 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             obj.plan.delivery_type_display,
             obj.plan.price
         )
-
     plan_info_display.short_description = _("اطلاعات پلن")
 
-    # ========== متدهای قبلی ==========
     def has_brief_display(self, obj):
         has_brief = hasattr(obj, 'brief') and obj.brief is not None
         if has_brief:
             return mark_safe('<span style="color: #28a745;">✓ بله</span>')
         return mark_safe('<span style="color: #dc3545;">✗ خیر</span>')
+    has_brief_display.short_description = _("بریف ثبت شده؟")
 
     def files_count_display(self, obj):
         count = obj.files.count()
@@ -670,30 +695,36 @@ class ContentOrderAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 count
             )
         return mark_safe('<span style="color: #6c757d;">بدون فایل</span>')
-
-    has_brief_display.short_description = _("بریف ثبت شده؟")
     files_count_display.short_description = _("فایل‌های پیوست")
 
-    # ========== محدودیت منطقه‌ای ==========
+    # ========== محدودیت منطقه‌ای (با پشتیبانی از سفارش‌های مستقل) ==========
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_regional_manager and request.user.province:
-            team_ids = []
-            for order in qs:
-                province = get_team_province(order.team)
-                if province and province.id == request.user.province.id:
-                    team_ids.append(order.team_id)
-            return qs.filter(team_id__in=team_ids)
-        return qs
+
+        # اگه کاربر مدیر منطقه‌ای نیست، همه رو نشون بده
+        if not (request.user.is_regional_manager and request.user.province):
+            return qs
+
+        # مدیر منطقه‌ای: فقط تیم‌های استان خودش رو ببینه
+        province_id = request.user.province.id
+        team_ids = ContentTeam.objects.filter(
+            members__user__province_id=province_id,
+            members__is_active=True
+        ).distinct().values_list('id', flat=True)
+
+        return qs.filter(team_id__in=team_ids)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # محدود کردن انتخاب تیم برای مدیر منطقه‌ای
         if db_field.name == 'team' and request.user.is_regional_manager:
-            team_ids = []
-            for team in ContentTeam.objects.all():
-                province = get_team_province(team)
-                if province and province.id == request.user.province.id:
-                    team_ids.append(team.id)
+            province_id = request.user.province.id
+            team_ids = ContentTeam.objects.filter(
+                members__user__province_id=province_id,
+                members__is_active=True
+            ).distinct().values_list('id', flat=True)
             kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
+
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 

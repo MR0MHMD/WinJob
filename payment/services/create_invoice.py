@@ -137,3 +137,99 @@ def create_campaign_invoice(campaign):
         invoice.save()
 
     return invoice
+
+
+def create_standalone_invoice(order):
+    """
+    ساخت فاکتور برای سفارش مستقل تولید محتوا
+    """
+    # ========== محاسبه هزینه‌های پایه ==========
+    base_content_cost = order.price  # قیمت پلن
+
+    # ========== محاسبه کمیسیون ==========
+    base_commission = int(base_content_cost * PLATFORM_COMMISSION)
+
+    # ========== محاسبه تخفیف‌ها ==========
+    total_discount = 0
+    content_discount_amount = 0
+    platform_discount_amount = 0
+
+    # تخفیف تیم محتوا (اگر کوپن به تیم خاصی تعلق داشته باشه)
+    # توجه: در سفارش مستقل، کوپن‌ها رو از خود سفارش میگیریم
+    if order.content_team_coupon:
+        coupon = order.content_team_coupon
+        if coupon.is_valid():
+            # اگر کوپن به تیم خاصی تعلق داره، فقط اگه تیم سفارش با تیم کوپن یکی باشه
+            if coupon.team and coupon.team.id == order.team_id:
+                content_discount_amount = coupon.calculate_discount(base_content_cost)
+            elif not coupon.team:  # کوپن عمومی برای همه تیم‌ها
+                content_discount_amount = coupon.calculate_discount(base_content_cost)
+            total_discount += content_discount_amount
+
+    # تخفیف پلتفرم (برای کمیسیون)
+    if order.platform_coupon:
+        coupon = order.platform_coupon
+        if coupon.is_valid():
+            platform_discount_amount = coupon.calculate_discount(base_commission)
+            total_discount += platform_discount_amount
+
+    # ========== محاسبه مبالغ نهایی ==========
+    content_cost = max(base_content_cost - content_discount_amount, 0)
+    commission = max(base_commission - platform_discount_amount, 0)
+
+    total_amount = base_content_cost + base_commission
+    payable_amount = max(total_amount - total_discount, 0)
+
+    # ========== محاسبه مالیات بر ارزش افزوده ==========
+    content_vat = int(content_cost * VAT_PERCENT)
+    commission_vat = int(commission * VAT_PERCENT)
+    total_vat = content_vat + commission_vat
+    payable_amount += total_vat
+
+    # ========== ساخت یا به‌روزرسانی فاکتور ==========
+    invoice, created = Invoice.objects.get_or_create(
+        content_order=order,
+        defaults={
+            "type": Invoice.Type.CONTENT_ORDER,
+            "user": order.standalone_user,
+            "base_content_cost": base_content_cost,
+            "base_commission": base_commission,
+            "content_discount_amount": content_discount_amount,
+            "platform_discount_amount": platform_discount_amount,
+            "content_cost": content_cost,
+            "commission": commission,
+            "discount_amount": total_discount,
+            "total_amount": total_amount,
+            "payable_amount": payable_amount,
+            "content_vat": content_vat,
+            "commission_vat": commission_vat,
+            "total_vat": total_vat,
+            "description": f"فاکتور سفارش مستقل تولید محتوا #{order.id}",
+            "is_paid": False,
+        }
+    )
+
+    if created:
+        invoice.invoice_number = Invoice.generate_invoice_number(
+            invoice.id,
+            invoice.created_at,
+            Invoice.Type.CONTENT_ORDER
+        )
+        invoice.save(update_fields=['invoice_number'])
+    else:
+        # به‌روزرسانی فاکتور موجود
+        invoice.base_content_cost = base_content_cost
+        invoice.base_commission = base_commission
+        invoice.content_discount_amount = content_discount_amount
+        invoice.platform_discount_amount = platform_discount_amount
+        invoice.content_cost = content_cost
+        invoice.commission = commission
+        invoice.discount_amount = total_discount
+        invoice.total_amount = total_amount
+        invoice.payable_amount = payable_amount
+        invoice.content_vat = content_vat
+        invoice.commission_vat = commission_vat
+        invoice.total_vat = total_vat
+        invoice.save()
+
+    return invoice

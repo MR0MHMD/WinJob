@@ -39,7 +39,8 @@ def content_team_dashboard(request):
 
     # سفارش‌ها
     orders = ContentOrder.objects.filter(team=team, ).exclude(
-        campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
+        status='draft', ).exclude(
+        campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING],
     )
 
     total_orders = orders.count()

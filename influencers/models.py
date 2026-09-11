@@ -1,14 +1,13 @@
-import uuid
-
 from core.utils.utils import generate_and_save_qr, get_site_logo_path, get_default_qr_colors
 from django.utils.translation import gettext_lazy as _
 from gamification.mixins import GamificationMixin
 from django_jalali.db import models as jmodels
 from django_resized import ResizedImageField
+from django.db import models, IntegrityError
 from django.conf import settings
 from django.db.models import Avg
 from django.urls import reverse
-from django.db import models, IntegrityError
+import uuid
 
 
 class InfluencerProfile(models.Model):

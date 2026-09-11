@@ -74,11 +74,16 @@
                             <span class="badge bg-primary bg-opacity-25 text-primary px-3 py-1 rounded-pill">
                                 <i class="fi-flag me-1"></i> فاکتور کمپین
                             </span>
-                        {% else %}
+                        {% elif invoice.type == 'wallet' %}
                             <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-1 rounded-pill">
                                 <i class="fi-wallet me-1"></i> فاکتور شارژ کیف پول
                             </span>
+                        {% elif invoice.type == 'content_order' %}
+                            <span class="badge bg-info bg-opacity-25 text-info px-3 py-1 rounded-pill">
+                                <i class="fi-video me-1"></i> فاکتور سفارش محتوا
+                            </span>
                         {% endif %}
+                    
                         {% if invoice.is_paid %}
                             <span class="invoice-status-badge paid">
                                 <span class="dot"></span>
@@ -169,6 +174,55 @@
                             </div>
                         </div>
                     </div>
+                
+                {% elif invoice.type == 'content_order' %}
+                <!-- ===== اطلاعات سفارش محتوا ===== -->
+                <div class="info-card mb-4">
+                    <div class="info-title">
+                        <i class="fi-video text-info"></i>
+                        اطلاعات سفارش محتوا
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">شناسه سفارش</div>
+                            <div class="info-value">
+                                <a href="{% url 'content_team:content_order_detail' invoice.content_order.id %}">
+                                    #{{ invoice.content_order.id }}
+                                    <i class="fi-external-link ms-1" style="font-size:0.7rem;"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">تیم تولید محتوا</div>
+                            <div class="info-value">{{ invoice.content_order.team.name }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">پلن انتخابی</div>
+                            <div class="info-value">{{ invoice.content_order.plan.name }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">نوع خدمت</div>
+                            <div class="info-value">{{ invoice.content_order.plan.service_type.name }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">وضعیت سفارش</div>
+                            <div class="info-value">
+                                <span class="badge 
+                                    {% if invoice.content_order.status == 'completed' %}bg-success
+                                    {% elif invoice.content_order.status == 'pending' %}bg-warning
+                                    {% elif invoice.content_order.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %} 
+                                    bg-opacity-25 text-light">
+                                    {{ invoice.content_order.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-secondary small">تاریخ ثبت سفارش</div>
+                            <div class="info-value">{{ invoice.content_order.created_at|jformat:"%Y/%m/%d - %H:%M" }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% else %}
                     <!-- ===== اطلاعات شارژ کیف پول ===== -->
                     <div class="info-card mb-4">
@@ -243,42 +297,44 @@
                 <div class="cost-breakdown-card">
                     <h6 class="text-light mb-3">
                         <i class="fi-calculator text-primary me-2"></i>
-                        {% if invoice.type == 'campaign' %}
+                        {% if invoice.type == 'campaign' or invoice.type == 'content_order' %}
                             جزئیات هزینه‌ها
                         {% else %}
                             جزئیات فاکتور
                         {% endif %}
                     </h6>
 
-                    {% if invoice.type == 'campaign' %}
+                    {% if invoice.type == 'campaign' or invoice.type == 'content_order' %}
                         <!-- ===== فاکتور کمپین ===== -->
                         <!-- هزینه ناشران -->
-                        <div class="d-flex justify-content-between my-3">
-                            <div class="d-flex flex-column">
-                                <span class="label text-light">
-                                    <i class="fi-star text-warning"></i> هزینه ناشران
-                                </span>
-                                {% if invoice.influencer_discount_amount > 0 %}
-                                    <span class="text-success ms-1 small">تخفیف: 
-                                        {{ invoice.influencer_discount_amount|floatformat:0|intcomma }}
-                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                        {% if invoice.influencer_cost > 0 %}
+                            <div class="d-flex justify-content-between my-3">
+                                <div class="d-flex flex-column">
+                                    <span class="label text-light">
+                                        <i class="fi-star text-warning"></i> هزینه ناشران
                                     </span>
-                                {% endif %}
-                            </div>
-                            <div class="text-end d-flex gap-1">
-                                <div>
-                                    <div class="value fw-bold text-light">
-                                        {{ invoice.influencer_cost|floatformat:0|intcomma }}
-                                    </div>
                                     {% if invoice.influencer_discount_amount > 0 %}
-                                        <div class="small text-danger text-decoration-line-through">
-                                            {{ invoice.base_influencer_cost|floatformat:0|intcomma }}
-                                        </div>
+                                        <span class="text-success ms-1 small">تخفیف: 
+                                            {{ invoice.influencer_discount_amount|floatformat:0|intcomma }}
+                                            <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                        </span>
                                     {% endif %}
                                 </div>
-                                <img width="25" src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                                <div class="text-end d-flex gap-1">
+                                    <div>
+                                        <div class="value fw-bold text-light">
+                                            {{ invoice.influencer_cost|floatformat:0|intcomma }}
+                                        </div>
+                                        {% if invoice.influencer_discount_amount > 0 %}
+                                            <div class="small text-danger text-decoration-line-through">
+                                                {{ invoice.base_influencer_cost|floatformat:0|intcomma }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <img width="25" src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                                </div>
                             </div>
-                        </div>
+                        {% endif %}
 
                         <!-- هزینه تولید محتوا -->
                         {% if invoice.content_cost > 0 %}
@@ -383,6 +439,99 @@
                                 <img src="{% static 'core/svg/toman/toman-accent.svg' %}" alt="">
                             </span>
                         </div>
+                    
+                    {% elif invoice.type == 'content_order' %}
+{#                        <!-- ===== فاکتور سفارش محتوا ===== -->#}
+{#                        <!-- هزینه تولید محتوا -->#}
+{#                        <div class="d-flex justify-content-between my-3">#}
+{#                            <div class="d-flex flex-column">#}
+{#                                <span class="label text-light">#}
+{#                                    <i class="fi-video text-info"></i> هزینه تولید محتوا#}
+{#                                </span>#}
+{#                                {% if invoice.content_discount_amount > 0 %}#}
+{#                                    <span class="text-success ms-1 small">#}
+{#                                        تخفیف: {{ invoice.content_discount_amount|floatformat:0|intcomma }} #}
+{#                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">#}
+{#                                    </span>#}
+{#                                {% endif %}#}
+{#                            </div>#}
+{#                            <div class="text-end d-flex gap-1">#}
+{#                                <div>#}
+{#                                    <div class="value fw-bold text-light">#}
+{#                                        {{ invoice.content_cost|floatformat:0|intcomma }}#}
+{#                                    </div>#}
+{#                                    {% if invoice.content_discount_amount > 0 %}#}
+{#                                        <div class="small text-danger text-decoration-line-through">#}
+{#                                            {{ invoice.base_content_cost|floatformat:0|intcomma }}#}
+{#                                        </div>#}
+{#                                    {% endif %}#}
+{#                                </div>#}
+{#                                <img width="25" src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    #}
+{#                        <!-- کمیسیون پلتفرم -->#}
+{#                        <div class="d-flex justify-content-between my-3 text-warning">#}
+{#                            <div class="d-flex flex-column">#}
+{#                                <span class="label text-warning">#}
+{#                                    <i class="bi bi-percent me-1"></i> کمیسیون پلتفرم (15%)#}
+{#                                </span>#}
+{#                                {% if invoice.platform_discount_amount > 0 %}#}
+{#                                    <span class="text-success ms-1 small">#}
+{#                                        تخفیف: {{ invoice.platform_discount_amount|floatformat:0|intcomma }} #}
+{#                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">#}
+{#                                    </span>#}
+{#                                {% endif %}#}
+{#                            </div>#}
+{#                            <div class="text-end d-flex gap-1">#}
+{#                                <div>#}
+{#                                    <div class="fw-bold">#}
+{#                                        <span class="me-2">+</span>{{ invoice.commission|floatformat:0|intcomma }}#}
+{#                                    </div>#}
+{#                                    {% if invoice.platform_discount_amount > 0 %}#}
+{#                                        <div class="small text-danger text-decoration-line-through">#}
+{#                                            {{ invoice.base_commission|floatformat:0|intcomma }}#}
+{#                                        </div>#}
+{#                                    {% endif %}#}
+{#                                </div>#}
+{#                                <img width="25" src="{% static 'core/svg/toman/toman-warning.svg' %}" alt="">#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    #}
+{#                        <div class="cost-divider"></div>#}
+{#                    #}
+{#                        <!-- جمع کل -->#}
+{#                        <div class="d-flex justify-content-between my-3">#}
+{#                            <span class="label fw-bold text-light fs-6">جمع کل</span>#}
+{#                            <span class="value fw-bold text-light fs-6">#}
+{#                                {{ invoice.total_amount|floatformat:0|intcomma }} #}
+{#                                <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">#}
+{#                            </span>#}
+{#                        </div>#}
+{#                    #}
+{#                        <!-- مالیات -->#}
+{#                        <div class="d-flex justify-content-between my-3 text-primary">#}
+{#                            <span class="label">#}
+{#                                <i class="fi-wallet me-2"></i>مالیات بر ارزش افزوده#}
+{#                            </span>#}
+{#                            <span class="value">#}
+{#                                <span class="me-2">+</span>{{ invoice.total_vat|floatformat:0|intcomma }}#}
+{#                                <img src="{% static 'core/svg/toman/toman-primary.svg' %}" alt="">#}
+{#                            </span>#}
+{#                        </div>#}
+{#                    #}
+{#                        <!-- تخفیف کل -->#}
+{#                        {% if invoice.discount_amount > 0 %}#}
+{#                            <div class="d-flex justify-content-between my-3 fw-bold">#}
+{#                                <span class="label text-success">#}
+{#                                    <i class="fi-ticket me-1"></i> مجموع تخفیف‌های اعمال شده#}
+{#                                </span>#}
+{#                                <span class="value text-success">#}
+{#                                    <span class="me-2">-</span>{{ invoice.discount_amount|floatformat:0|intcomma }}#}
+{#                                    <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">#}
+{#                                </span>#}
+{#                            </div>#}
+{#                        {% endif %}#}
 
                     {% else %}
                         <!-- ===== فاکتور کیف پول ===== -->

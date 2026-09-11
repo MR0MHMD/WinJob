@@ -17,6 +17,7 @@ urlpatterns = [
     path('invoices/<int:invoice_id>/cancel/', cancel_invoice, name='cancel_invoice'),
     path('invoices/<int:invoice_id>/pay/', redirect_to_payment, name='redirect_to_payment'),
     path('campaign/callback/', campaign_payment_callback, name='campaign_payment_callback'),
+    path('callback/content_orders-order/', standalone_order_payment_callback, name='standalone_order_payment_callback'),
 
     path('withdrawals/', withdrawal_list, name='withdrawal_list'),
     path('withdrawals/create/', withdrawal_create, name='withdrawal_create'),

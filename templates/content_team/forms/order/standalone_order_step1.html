@@ -1,0 +1,1772 @@
+<!-- content_team/templates/content_team/standalone_order_step1.html -->
+
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'partials/css/pagination.css' %}">
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* ========================================
+           از فایل create_step_1.css
+        ======================================== */
+        #id_platform,
+        #id_content_type,
+        #id_ad_type,
+        #id_content_service_type {
+            display: none;
+        }
+
+        .option-card-wrapper {
+            cursor: pointer;
+            display: flex;
+        }
+
+        .option-card-inner {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            background: linear-gradient(
+                    145deg,
+                    rgba(31, 27, 45, 0.85),
+                    rgba(31, 27, 45, 0.95)
+            );
+            border: 2px solid rgba(253, 86, 49, 0.12);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            transition: all .2s ease;
+            position: relative;
+            min-height: 170px;
+        }
+
+        .option-card-inner:hover {
+            border-color: rgba(253, 86, 49, 0.45);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+        }
+
+        .option-card-inner.selected {
+            border-color: var(--fi-primary, #fd5631);
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.2),
+            0 8px 32px rgba(253, 86, 49, 0.2);
+        }
+
+        .option-title {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .check-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .07);
+            border: 2px solid rgba(255, 255, 255, .15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .option-card-inner.selected .check-badge {
+            background: #fd5631;
+            border-color: #fd5631;
+            color: #fff;
+        }
+
+        .orange-icon {
+            color: #fd5631 !important;
+            font-size: 2rem;
+        }
+
+        .option-desc {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        .option-badge {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 0.65rem;
+            padding: 0.2rem 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 50rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* ========================================
+           از فایل team.css
+        ======================================== */
+        .team-card-wrapper {
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .team-card-inner {
+            background: linear-gradient(145deg, #26213b, #1a172a);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+            padding: 1.5rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .team-card-inner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.06), transparent);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        .team-card-inner:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.5);
+            border-color: rgba(253, 86, 49, 0.4);
+        }
+
+        .team-card-inner:hover::before {
+            opacity: 1;
+        }
+
+        .team-card-inner.selected {
+            border-color: #fd5631;
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.2),
+            0 8px 32px rgba(253, 86, 49, 0.2);
+        }
+
+        .team-card-inner.selected .check-badge {
+            background: #fd5631;
+            border-color: #fd5631;
+            color: #fff;
+        }
+
+        .team-card-inner .check-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            color: transparent;
+            z-index: 2;
+        }
+
+        .team-logo,
+        .team-logo-placeholder {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .team-logo {
+            object-fit: cover;
+            border: 2px solid #fd5631;
+            padding: 3px;
+            background: #1f1b2d;
+        }
+
+        .team-logo-placeholder {
+            background: rgba(31, 27, 45, 0.6);
+            border: 3px solid rgba(253, 86, 49, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: border-color 0.25s ease;
+        }
+
+        .team-card-inner.selected .team-logo-placeholder {
+            border-color: #fd5631;
+        }
+
+        .team-name {
+            font-size: 0.95rem;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .team-description {
+            font-size: 0.75rem;
+            color: #666276;
+            line-height: 1.5;
+            text-align: center;
+            padding: 0 0.5rem;
+            margin-top: 0.5rem;
+            flex-grow: 1;
+        }
+
+        .badge-members {
+            background: rgba(255, 255, 255, 0.07);
+            color: #666276;
+            border-color: rgba(255, 255, 255, 0.1);
+            font-size: 0.7rem;
+            border: 1px solid transparent;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50rem;
+        }
+
+        .badge-role {
+            background: rgba(93, 60, 242, 0.12);
+            color: #8b7cf7;
+            border-color: rgba(93, 60, 242, 0.2);
+            font-size: 0.6rem;
+            border: 1px solid transparent;
+            padding: 0.15rem 0.5rem;
+            border-radius: 50rem;
+        }
+
+        /* ====== استایل پلن (از team.css) ====== */
+        .plan-card {
+            background: linear-gradient(145deg, rgba(31, 27, 45, 0.95), rgba(20, 17, 35, 0.98));
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 28px;
+            transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 1.5rem;
+        }
+
+        .plan-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(253, 86, 49, 0.15), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+
+        .plan-card:hover::after {
+            opacity: 1;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(253, 86, 49, 0.4);
+            box-shadow: 0 25px 40px -18px rgba(0, 0, 0, 0.8),
+            0 0 0 1px rgba(253, 86, 49, 0.2) inset;
+        }
+
+        .plan-card.selected-plan-card {
+            background: linear-gradient(145deg, #28223f, #1c182f);
+            border: 2px solid #fd5631;
+            box-shadow: 0 0 0 5px rgba(253, 86, 49, 0.2),
+            0 25px 35px -15px black;
+        }
+
+        .plan-selection-indicator {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 5;
+        }
+
+        .plan-selection-indicator .selected-icon {
+            display: none;
+            color: #fd5631;
+        }
+
+        .plan-selection-indicator .unselected-icon {
+            display: block;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .plan-card.selected-plan-card .plan-selection-indicator .selected-icon {
+            display: block;
+        }
+
+        .plan-card.selected-plan-card .plan-selection-indicator .unselected-icon {
+            display: none;
+        }
+
+        .plan-card-popular {
+            border: 1px solid rgba(253, 86, 49, 0.5);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: linear-gradient(135deg, #fd5631, #ff8a5c);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.9rem;
+            border-radius: 40px;
+            z-index: 5;
+            box-shadow: 0 4px 12px rgba(253, 86, 49, 0.4);
+        }
+
+        .plan-preview-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 85px;
+            height: 85px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.3));
+            border-radius: 50%;
+            font-size: 2.8rem;
+            color: #fd5631;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 20px -8px rgba(0, 0, 0, 0.5);
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-card:hover .plan-preview-icon {
+            transform: scale(1.05);
+            color: #fff;
+            border-color: #fd5631;
+            box-shadow: 0 0 15px rgba(253, 86, 49, 0.4);
+        }
+
+        .plan-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #fdc3b0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.1rem;
+        }
+
+        .plan-price {
+            margin-top: 0.2rem;
+        }
+
+        .price-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #fd5631;
+            text-shadow: 0 0 8px rgba(253, 86, 49, 0.3);
+        }
+
+        .plan-description {
+            color: #cbc6e0;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-features ul {
+            padding-right: 0;
+            margin: 0;
+        }
+
+        .plan-features li {
+            list-style: none;
+            font-size: 0.73rem;
+            margin-bottom: 0.3rem;
+            color: #cfcae5;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .plan-features li i {
+            color: #07c98b;
+            font-size: 0.8rem;
+        }
+
+        .plan-delivery {
+            margin-top: 0.7rem;
+            font-size: 0.7rem;
+            color: #aaa5c1;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .plan-delivery i {
+            color: #fd5631;
+            font-size: 0.8rem;
+        }
+
+        .btn-view-profile {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            padding: 4px 12px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-view-profile:hover {
+            color: #fd5631;
+            background: rgba(253, 86, 49, 0.12);
+        }
+
+        /* ====== Stat Box ====== */
+        .stat-box {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 6px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .stat-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #666276;
+            margin-top: 2px;
+        }
+
+        .stat-experience {
+            color: #fd5631;
+        }
+
+        .stat-projects {
+            color: #07c98b;
+            font-size: 0.8rem;
+        }
+
+        /* ====== نشان ====== */
+        .badge-icon-wrapper {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            z-index: 5;
+            cursor: pointer;
+        }
+
+        .badge-icon-wrapper .badge-tooltip {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 50%;
+            transform: translateX(50%);
+            background: #1f1b2d;
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 4px;
+        }
+
+        .badge-icon-wrapper:hover .badge-tooltip {
+            display: block;
+        }
+
+        /* ====== ✅ GRID ====== */
+        .selector-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .service-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .team-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .plan-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* ====== Progress ====== */
+        .progress-custom {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 50rem;
+            overflow: hidden;
+        }
+
+        .progress-custom .progress-bar-custom {
+            height: 100%;
+            background: linear-gradient(90deg, #fd5631, #5d3cf2);
+            border-radius: 50rem;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            width: 33%;
+        }
+
+        /* ====== دکمه ====== */
+        .btn-next {
+            background: linear-gradient(135deg, #fd5631, #d93b1a);
+            border: none;
+            color: #fff;
+            padding: 0.75rem 2rem;
+            border-radius: 50rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(253, 86, 49, 0.25);
+        }
+
+        .btn-next:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(253, 86, 49, 0.35);
+            color: #fff;
+        }
+
+        .btn-next:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        /* ====== Loader ====== */
+        .card-loader {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.3);
+            gap: 0.5rem;
+            grid-column: 1 / -1;
+        }
+
+        .card-loader .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-top-color: #fd5631;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: rgba(255, 255, 255, 0.3);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            opacity: 0.5;
+        }
+
+        /* ====== Scroll ====== */
+        .scroll-container {
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 50rem;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50rem;
+        }
+
+        /* ====== انیمیشن ====== */
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-slide-up {
+            animation: fadeSlideUp 0.4s ease forwards;
+        }
+
+        .fade-slide-up.delay-1 {
+            animation-delay: 0.05s;
+        }
+
+        .fade-slide-up.delay-2 {
+            animation-delay: 0.1s;
+        }
+
+        .fade-slide-up.delay-3 {
+            animation-delay: 0.15s;
+        }
+
+        /* ====== 🔥 استایل جستجو ====== */
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.3);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .search-input-wrapper .form-control {
+            padding-right: 38px;
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-radius: 50rem;
+            height: 44px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input-wrapper .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .search-input-wrapper .form-control:focus {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(253, 86, 49, 0.3);
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.08);
+        }
+
+        .search-input-wrapper .clear-search-btn {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.3);
+            padding: 4px 8px;
+            cursor: pointer;
+            display: none;
+            z-index: 5;
+            font-size: 1.2rem;
+        }
+
+        .search-input-wrapper .clear-search-btn:hover {
+            color: #fff;
+        }
+
+        .search-input-wrapper .clear-search-btn.visible {
+            display: block;
+        }
+
+        .search-result-count {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-right: 8px;
+        }
+
+        .search-result-count strong {
+            color: #fd5631;
+        }
+
+        /* ====== صفحه‌بندی ====== */
+        #team-pagination .pagination {
+            gap: 0.25rem;
+        }
+
+        #team-pagination .page-link {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.6);
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        #team-pagination .page-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-color: rgba(253, 86, 49, 0.2);
+        }
+
+        #team-pagination .page-item.active .page-link {
+            background: linear-gradient(135deg, #fd5631, #d93b1a);
+            border-color: #fd5631;
+            color: #fff;
+        }
+
+        #team-pagination .page-item.disabled .page-link {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* ====== مخفی کردن اولیه ====== */
+        #team-section, #plan-section {
+            display: none;
+        }
+
+        /* ====== Responsive ====== */
+        @media (max-width: 1200px) {
+            .service-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .team-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .plan-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .service-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .plan-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .team-logo, .team-logo-placeholder {
+                width: 60px;
+                height: 60px;
+            }
+
+            .plan-preview-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+
+            .price-number {
+                font-size: 1.4rem;
+            }
+
+            .plan-name {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .service-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .plan-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4" dir="rtl">
+
+        <!-- Inline steps: Light version -->
+<div class="steps steps-light mt-5" style="margin: 2rem">
+    <div class="step active">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">1</span>
+        </div>
+        <div class="step-label">انتخاب تیم و پلن</div>
+    </div>
+    <div class="step">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">2</span>
+        </div>
+        <div class="step-label">جزئیات سفارش</div>
+    </div>
+    <div class="step">
+        <div class="step-progress">
+            <span class="step-progress-start"></span>
+            <span class="step-progress-end"></span>
+            <span class="step-number">3</span>
+        </div>
+        <div class="step-label">تایید و پرداخت</div>
+    </div>
+</div>
+
+
+        <!-- ====== Card ====== -->
+        <div class="card border-0 shadow-sm page-card bg-dark">
+            <div class="card-body p-4">
+
+                <form method="POST" id="step1-form">
+                    {% csrf_token %}
+                    
+                    <!-- ====== ۰. نام سفارش ====== -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-light">
+                            <i class="fi-edit me-2 text-primary"></i>
+                            نام سفارش
+                            <span class="text-danger">*</span>
+                        </label>
+                    
+                        {{ form.name }}
+                    
+                        <small class="text-muted d-block mt-2">
+                            <i class="fi-info-circle me-1"></i>
+                            یه نام کوتاه و واضح برای این سفارش انتخاب کنید (مثلاً: «تیزر معرفی محصول»)
+                        </small>
+                    
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-2">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ====== ۱. انتخاب نوع خدمت ====== -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-light">
+                            <i class="fi-category me-2 text-primary"></i>
+                            نوع خدمت تولید محتوا
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="service-grid selector-grid" id="service-grid">
+                            <div class="card-loader">
+                                <div class="spinner"></div>
+                                <span>بارگذاری...</span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="service_type" id="selected-service"
+                               value="{{ form.service_type.value|default:'' }}">
+                        {% if form.service_type.errors %}
+                            <div class="text-danger small mt-2">{{ form.service_type.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ====== ۲. انتخاب تیم ====== -->
+                    <div class="mb-4" id="team-section">
+                        <label class="form-label fw-bold text-light">
+                            <i class="fi-users me-2 text-primary"></i>
+                            تیم تولید محتوا
+                            <span class="text-danger">*</span>
+                            <span class="text-muted small fw-normal" id="team-count"></span>
+                        </label>
+
+                        <!-- ====== 🔥 بخش جستجو ====== -->
+                        <div id="search-section" style="display: none;">
+                            <div class="search-input-wrapper mb-3">
+                                <span class="search-icon"><i class="fi-search"></i></span>
+                                <input type="text"
+                                       class="form-control form-control-light"
+                                       id="team-search-input"
+                                       placeholder="جستجوی تیم..."
+                                       autocomplete="off">
+                                <button class="clear-search-btn" id="clear-search-btn" type="button">
+                                    <i class="fi-x"></i>
+                                </button>
+                            </div>
+                            <div id="search-result-info" class="search-result-count mb-2" style="display: none;">
+                                <span id="result-count-text"></span>
+                            </div>
+                        </div>
+
+                        <div class="team-grid selector-grid mt-4" id="team-grid"></div>
+
+                        <!-- ====== 🔥 صفحه‌بندی ====== -->
+                        <div id="team-pagination" class="mt-4"></div>
+
+                        <input type="hidden" name="team" id="selected-team" value="{{ form.team.value|default:'' }}">
+                        {% if form.team.errors %}
+                            <div class="text-danger small mt-2">{{ form.team.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ====== ۳. انتخاب پلن ====== -->
+                    <div class="mb-4" id="plan-section">
+                        <label class="form-label fw-bold text-light">
+                            <i class="fi-ticket me-2 text-primary"></i>
+                            پلن انتخابی
+                            <span class="text-danger">*</span>
+                            <span class="text-muted small fw-normal" id="plan-count"></span>
+                        </label>
+
+                        <div class="plan-grid selector-grid scroll-container" id="plan-grid"></div>
+
+                        <input type="hidden" name="plan" id="selected-plan" value="{{ form.plan.value|default:'' }}">
+                        {% if form.plan.errors %}
+                            <div class="text-danger small mt-2">{{ form.plan.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ====== دکمه‌ها ====== -->
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top border-light border-opacity-10">
+                        <a href="{% url 'core:home' %}" class="btn-back">
+                            <i class="fi-arrow-right me-2"></i>
+                            بازگشت
+                        </a>
+                        <button type="submit" class="btn-next" id="submit-btn" disabled>
+                            ادامه مرحله بعد
+                            <i class="fi-arrow-left ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            'use strict';
+
+            // ====== متغیرها ======
+            let searchTimeout = null;
+            let currentSearchQuery = '';
+
+            // =============================================
+            // ۱. دریافت سرویس‌ها از سرور
+            // =============================================
+            function loadServices() {
+                const grid = document.getElementById('service-grid');
+                grid.innerHTML = `
+            <div class="card-loader">
+                <div class="spinner"></div>
+                <span>در حال بارگذاری خدمات...</span>
+            </div>
+        `;
+
+                const url = window.location.origin + '/api/content-service-types/';
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        grid.innerHTML = '';
+
+                        if (!data || data.length === 0) {
+                            grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fi-alert-circle"></i>
+                            <span>هیچ خدمتی موجود نیست</span>
+                        </div>
+                    `;
+                            return;
+                        }
+
+                        const selectedId = document.getElementById('selected-service').value;
+
+                        data.forEach(function (service, index) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'option-card-wrapper fade-slide-up delay-' + ((index % 3) + 1);
+
+                            const inner = document.createElement('div');
+                            inner.className = 'option-card-inner' + (selectedId && selectedId == service.id ? ' selected' : '');
+                            inner.dataset.value = service.id;
+
+                            inner.innerHTML = `
+                        <div class="check-badge">✓</div>
+                        <div class="orange-icon"><i class="${service.icon || 'fi-category'}"></i></div>
+                        <div class="option-title">${service.name}</div>
+                        <div class="option-desc">${service.description || 'انتخاب کنید'}</div>
+                        <span class="option-badge">${service.allowed_units_display || ''}</span>
+                    `;
+
+                            inner.addEventListener('click', function () {
+                                grid.querySelectorAll('.option-card-inner').forEach(c => c.classList.remove('selected'));
+                                this.classList.add('selected');
+                                const serviceId = this.dataset.value;
+                                document.getElementById('selected-service').value = serviceId;
+
+                                showSearchSection();
+
+                                const searchInput = document.getElementById('team-search-input');
+                                if (searchInput) searchInput.value = '';
+                                const clearBtn = document.getElementById('clear-search-btn');
+                                if (clearBtn) clearBtn.classList.remove('visible');
+                                const resultInfo = document.getElementById('search-result-info');
+                                if (resultInfo) resultInfo.style.display = 'none';
+                                currentSearchQuery = '';
+
+                                loadTeams(serviceId, '', 1);
+                            });
+
+                            wrapper.appendChild(inner);
+                            grid.appendChild(wrapper);
+                        });
+
+                        if (selectedId) {
+                            showSearchSection();
+                            loadTeams(selectedId, '', 1);
+                        }
+
+                        setTimeout(checkUrlParams, 500);
+                    })
+                    .catch(error => {
+                        console.error('❌ خطا:', error);
+                        grid.innerHTML = `
+                    <div class="empty-state text-danger">
+                        <i class="fi-alert-triangle"></i>
+                        <span>خطا در بارگذاری خدمات</span>
+                    </div>
+                `;
+                    });
+            }
+
+            // =============================================
+            // ۲. نمایش بخش جستجو
+            // =============================================
+            function showSearchSection() {
+                const section = document.getElementById('search-section');
+                if (section) {
+                    section.style.display = 'block';
+                }
+            }
+
+            // =============================================
+            // ۳. بارگذاری تیم‌ها (با جستجو و صفحه‌بندی)
+            // =============================================
+            function loadTeams(serviceTypeId, searchQuery, pageNumber) {
+                const grid = document.getElementById('team-grid');
+                const section = document.getElementById('team-section');
+                const planSection = document.getElementById('plan-section');
+                const resultInfo = document.getElementById('search-result-info');
+                const resultCountText = document.getElementById('result-count-text');
+
+                pageNumber = pageNumber || 1;
+
+                if (!serviceTypeId) {
+                    section.style.display = 'none';
+                    planSection.style.display = 'none';
+                    document.getElementById('selected-team').value = '';
+                    document.getElementById('selected-plan').value = '';
+                    checkSubmitButton();
+                    return;
+                }
+
+                section.style.display = 'block';
+                planSection.style.display = 'none';
+                grid.innerHTML = `
+            <div class="card-loader">
+                <div class="spinner"></div>
+                <span>بارگذاری تیم‌ها...</span>
+            </div>
+        `;
+                document.getElementById('team-count').textContent = '';
+                document.getElementById('selected-team').value = '';
+                document.getElementById('selected-plan').value = '';
+
+                if (resultInfo) resultInfo.style.display = 'none';
+
+                let url = window.location.origin + `/content_team/ajax/load-teams/?service_type_id=${serviceTypeId}&page=${pageNumber}`;
+
+                if (searchQuery && searchQuery.trim() !== '') {
+                    url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+                }
+
+                console.log('🔍 درخواست تیم‌ها:', url);
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        grid.innerHTML = '';
+
+                        if (resultInfo && searchQuery && searchQuery.trim() !== '') {
+                            resultInfo.style.display = 'block';
+                            resultCountText.textContent = `${data.total_count} نتیجه برای "${searchQuery}"`;
+                        }
+
+                        if (!data.teams || data.teams.length === 0) {
+                            grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fi-users"></i>
+                            <span>هیچ تیمی یافت نشد</span>
+                            ${searchQuery ? `<span class="d-block small mt-1">نتیجه‌ای برای "${searchQuery}" پیدا نشد</span>` : ''}
+                        </div>
+                    `;
+                            document.getElementById('team-count').textContent = '(۰ تیم)';
+                            document.getElementById('team-pagination').innerHTML = '';
+                            checkSubmitButton();
+                            return;
+                        }
+
+                        document.getElementById('team-count').textContent = `(${data.total_count} تیم)`;
+                        const selectedId = document.getElementById('selected-team').value;
+
+                        data.teams.forEach(function (team, index) {
+                            const avgRating = team.avg_rating ? team.avg_rating : 'بدون امتیاز';
+                            const ratingStars = team.avg_rating ? generateStars(team.avg_rating) : '';
+                            const logoUrl = team.logo || '{% static "finder/img/default-team.png" %}';
+
+                            const badgeIcon = team.badge && team.badge.icon ? team.badge.icon : null;
+                            const badgeName = team.badge && team.badge.name ? team.badge.name : 'شروع';
+                            const badgePoints = team.badge && team.badge.min_points !== undefined ? team.badge.min_points : 0;
+
+                            const tooltipText = `${badgeName} (${badgePoints} امتیاز)`;
+
+                            const membersRoles = team.members_roles || {};
+                            const roleLabels = {
+                                'manager': 'مدیر',
+                                'editor': 'ادیتور',
+                                'writer': 'نویسنده',
+                                'designer': 'طراح',
+                                'videographer': 'فیلمبردار',
+                                'other': 'سایر'
+                            };
+                            let rolesHtml = '';
+                            const roleEntries = Object.entries(membersRoles);
+                            if (roleEntries.length > 0) {
+                                rolesHtml = roleEntries.map(([role, count]) =>
+                                    `<span class="badge badge-role">${roleLabels[role] || role}: ${count}</span>`
+                                ).join(' ');
+                            }
+
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'team-card-wrapper fade-slide-up delay-' + ((index % 3) + 1);
+
+                            const inner = document.createElement('div');
+                            inner.className = 'team-card-inner' + (selectedId && selectedId == team.id ? ' selected' : '');
+                            inner.dataset.value = team.id;
+
+                            inner.innerHTML = `
+                        <div class="check-badge">✓</div>
+    
+                        <div class="badge-icon-wrapper">
+                            ${badgeIcon ? `
+                                <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center"
+                                     style="width:34px;height:34px;background-color:#2a2638;border:2px solid rgba(255,255,255,0.15);">
+                                    <img src="${badgeIcon}" alt="${badgeName}" style="width:100%;height:100%;object-fit:cover;">
+                                </div>
+                            ` : `
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:34px;height:34px;background-color:#2a2638;border:2px solid rgba(255,255,255,0.1);">
+                                    <i class="fi-award text-white-50" style="font-size:0.9rem;"></i>
+                                </div>
+                            `}
+                            <span class="badge-tooltip">${tooltipText}</span>
+                        </div>
+                        
+                        <div class="d-flex flex-column align-items-center text-center">
+                            <img src="${logoUrl}" alt="${team.name}" class="team-logo mb-2"
+                                 onerror="this.src='{% static "finder/img/default-team.png" %}'">
+                            <h6 class="team-name">${team.name}</h6>
+                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-center">
+                                <span class="team-rating" style="color:#fdbc31;font-size:0.75rem;">${ratingStars}</span>
+                                <span class="text-muted small">${team.completed_orders_count || 0} سفارش</span>
+                                ${team.total_reviews ? `<span class="text-muted small">• ${team.total_reviews} نظر</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${team.description ? `
+                            <div class="team-description">${team.description.length > 120 ? team.description.substring(0, 120) + '...' : team.description}</div>
+                        ` : ''}
+                        
+                        <div class="d-flex flex-wrap gap-1 justify-content-center mt-2">
+                            <span class="badge badge-members">👥 ${team.members_count || 0} نفر</span>
+                            ${rolesHtml}
+                        </div>
+                        
+                        <div class="row g-2 mt-2">
+                            <div class="col-6">
+                                <div class="stat-box text-center">
+                                    <div class="stat-value stat-experience">${avgRating}</div>
+                                    <div class="stat-label">امتیاز</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-box text-center">
+                                    <div class="stat-value stat-projects">${team.completed_orders_count || 0}</div>
+                                    <div class="stat-label">پروژه</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-center">
+                            <a href="/content_team/team/team/${team.slug}/${team.id}/?return_to=standalone_order&service_type_id=${serviceTypeId}&source=standalone&page=${pageNumber}" 
+                               class="btn-view-profile" 
+                               onclick="event.stopPropagation();">
+                                <i class="fi-arrow-left ms-1"></i>
+                                مشاهده تیم
+                            </a>
+                        </div>
+                    `;
+
+                            inner.addEventListener('click', function () {
+                                grid.querySelectorAll('.team-card-inner').forEach(c => c.classList.remove('selected'));
+                                this.classList.add('selected');
+                                document.getElementById('selected-team').value = this.dataset.value;
+                                loadPlans(serviceTypeId, this.dataset.value, pageNumber);
+                            });
+
+                            wrapper.appendChild(inner);
+                            grid.appendChild(wrapper);
+                        });
+
+                        if (selectedId) {
+                            loadPlans(serviceTypeId, selectedId, pageNumber);
+                        }
+
+                        renderPagination(data, serviceTypeId, searchQuery);
+                        checkSubmitButton();
+
+                        const searchInput = document.getElementById('team-search-input');
+                        const clearBtn = document.getElementById('clear-search-btn');
+                        if (searchInput && searchInput.value.trim() !== '') {
+                            clearBtn.classList.add('visible');
+                        } else {
+                            clearBtn.classList.remove('visible');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ خطا:', error);
+                        grid.innerHTML = `
+                    <div class="empty-state text-danger">
+                        <i class="fi-alert-triangle"></i>
+                        <span>خطا در بارگذاری تیم‌ها</span>
+                        <span class="d-block small mt-1">${error.message}</span>
+                    </div>
+                `;
+                        document.getElementById('team-pagination').innerHTML = '';
+                    });
+            }
+
+            // =============================================
+            // ۴. بارگذاری پلن‌ها
+            // =============================================
+            function loadPlans(serviceTypeId, teamId, pageNumber) {
+                const grid = document.getElementById('plan-grid');
+                const section = document.getElementById('plan-section');
+
+                pageNumber = pageNumber || 1;
+
+                if (!serviceTypeId || !teamId) {
+                    section.style.display = 'none';
+                    document.getElementById('selected-plan').value = '';
+                    checkSubmitButton();
+                    return;
+                }
+
+                section.style.display = 'block';
+                grid.innerHTML = `
+            <div class="card-loader">
+                <div class="spinner"></div>
+                <span>بارگذاری پلن‌ها...</span>
+            </div>
+        `;
+                document.getElementById('plan-count').textContent = '';
+                document.getElementById('selected-plan').value = '';
+
+                const url = window.location.origin + `/content_team/ajax/load-plans/?service_type_id=${serviceTypeId}&team_id=${teamId}`;
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        grid.innerHTML = '';
+
+                        if (!data.plans || data.plans.length === 0) {
+                            grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fi-ticket"></i>
+                            <span>هیچ پلن فعالی برای این تیم وجود ندارد</span>
+                        </div>
+                    `;
+                            document.getElementById('plan-count').textContent = '(۰ پلن)';
+                            checkSubmitButton();
+                            return;
+                        }
+
+                        document.getElementById('plan-count').textContent = `(${data.plans.length} پلن)`;
+                        const selectedId = document.getElementById('selected-plan').value;
+
+                        data.plans.forEach(function (plan, index) {
+                            const priceDisplay = new Intl.NumberFormat('fa-IR').format(plan.price);
+                            const isPopular = plan.is_most_popular || false;
+                            const avgRating = plan.avg_rating ? plan.avg_rating : null;
+
+                            let quantityText = plan.quantity_display || '';
+
+                            const features = plan.features || [];
+                            let featuresHtml = '';
+                            if (features.length > 0) {
+                                featuresHtml = features.slice(0, 3).map(f =>
+                                    `<li><i class="fi-check-circle"></i> ${f}</li>`
+                                ).join('');
+                                if (features.length > 3) {
+                                    featuresHtml += `<li class="text-secondary">+${features.length - 3} ویژگی دیگر</li>`;
+                                }
+                            }
+
+                            const card = document.createElement('div');
+                            card.className = `plan-card fade-slide-up delay-${(index % 3) + 1}${isPopular ? ' plan-card-popular' : ''}`;
+                            if (selectedId && selectedId == plan.id) {
+                                card.classList.add('selected-plan-card');
+                            }
+                            card.dataset.value = plan.id;
+
+                            card.innerHTML = `
+                        <div class="plan-selection-indicator">
+                            <i class="fi-check-circle selected-icon"></i>
+                            <i class="fi-circle unselected-icon"></i>
+                        </div>
+                        
+                        ${isPopular ? `
+                            <div class="popular-badge">
+                                <i class="fi-star-filled me-1"></i> محبوب‌ترین
+                            </div>
+                        ` : ''}
+                        
+                        <div class="text-center">
+                            <div class="plan-preview-icon">
+                                <i class="${plan.service_type_icon || 'fi-star'}"></i>
+                            </div>
+                            <h4 class="plan-name">${plan.name}</h4>
+                            <div class="plan-price">
+                                <span class="price-number">${priceDisplay}</span>
+                                <span class="text-muted small">تومان</span>
+                            </div>
+                            ${quantityText ? `<div class="text-muted small">${quantityText}</div>` : ''}
+                            ${avgRating ? `
+                                <div class="mt-1 d-flex gap-1 justify-content-center flex-wrap">
+                                    <span class="badge bg-warning bg-opacity-10 text-warning">
+                                        <i class="fi-star-filled me-1"></i> ${avgRating}
+                                    </span>
+                                    ${plan.completed_orders_count ? `
+                                        <span class="badge bg-secondary bg-opacity-10 text-muted">
+                                            ${plan.completed_orders_count} سفارش
+                                        </span>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="plan-body mt-2 flex-grow-1">
+                            ${plan.description ? `
+                                <p class="plan-description">${plan.description}</p>
+                            ` : ''}
+                            
+                            ${featuresHtml ? `
+                                <div class="plan-features">
+                                    <ul>${featuresHtml}</ul>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="plan-delivery">
+                                <i class="fi-clock"></i>
+                                <span>تحویل: ${plan.estimated_delivery_days || 5} روز کاری</span>
+                                ${plan.delivery_type_display ? `
+                                    <span class="text-muted mx-1">•</span>
+                                    <span class="text-muted">${plan.delivery_type_display}</span>
+                                ` : ''}
+                                ${plan.pricing_unit_display ? `
+                                    <span class="text-muted mx-1">•</span>
+                                    <span class="text-muted">واحد: ${plan.pricing_unit_display}</span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-2">
+                            <a href="/content_team/team/plan/${plan.id}/?return_to=standalone_order&service_type_id=${serviceTypeId}&team_id=${teamId}&source=standalone&page=${pageNumber}" 
+                               class="btn-view-profile" 
+                               onclick="event.stopPropagation();">
+                                مشاهده پلن <i class="fi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                    `;
+
+                            card.addEventListener('click', function () {
+                                grid.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected-plan-card'));
+                                this.classList.add('selected-plan-card');
+                                document.getElementById('selected-plan').value = this.dataset.value;
+                                checkSubmitButton();
+                            });
+
+                            grid.appendChild(card);
+                        });
+
+                        checkSubmitButton();
+                    })
+                    .catch(error => {
+                        console.error('❌ خطا:', error);
+                        grid.innerHTML = `
+                    <div class="empty-state text-danger">
+                        <i class="fi-alert-triangle"></i>
+                        <span>خطا در بارگذاری پلن‌ها</span>
+                    </div>
+                `;
+                    });
+            }
+
+            // =============================================
+            // ۵. Helper: ستاره‌ها
+            // =============================================
+            function generateStars(rating) {
+                const full = Math.floor(rating);
+                const half = rating % 1 >= 0.5 ? 1 : 0;
+                const empty = 5 - full - half;
+                let stars = '';
+                for (let i = 0; i < full; i++) stars += '<i class="fi-star-filled"></i>';
+                if (half) stars += '<i class="fi-star-half"></i>';
+                for (let i = 0; i < empty; i++) stars += '<i class="fi-star"></i>';
+                return stars;
+            }
+
+            // =============================================
+            // ۶. دکمه submit
+            // =============================================
+            function checkSubmitButton() {
+                const nameValue = document.getElementById('id_name')?.value?.trim() || '';
+                const serviceId = document.getElementById('selected-service').value;
+                const teamId = document.getElementById('selected-team').value;
+                const planId = document.getElementById('selected-plan').value;
+                const btn = document.getElementById('submit-btn');
+
+                if (nameValue && serviceId && teamId && planId) {
+                    btn.disabled = false;
+                } else {
+                    btn.disabled = true;
+                }
+            }
+
+            // =============================================
+            // ۷. رندر صفحه‌بندی
+            // =============================================
+            function renderPagination(data, serviceTypeId, searchQuery) {
+                const container = document.getElementById('team-pagination');
+                if (!container) return;
+
+                if (data.total_pages <= 1) {
+                    container.innerHTML = '';
+                    return;
+                }
+
+                const currentPage = data.current_page;
+                const totalPages = data.total_pages;
+
+                let html = `
+            <nav aria-label="پیمایش صفحات" class="custom-pagination-wrapper" dir="rtl">
+                <ul class="custom-pagination card-light">
+        `;
+
+                if (data.has_previous) {
+                    html += `
+                <li class="page-item">
+                    <a class="page-link nav-arrow" href="javascript:void(0)" 
+                       data-page="${data.previous_page_number}" 
+                       onclick="event.preventDefault(); window.loadTeamsPage('${serviceTypeId}', '${searchQuery || ''}', ${data.previous_page_number});">
+                        <i class="fi-arrow-right"></i>
+                    </a>
+                </li>
+            `;
+                } else {
+                    html += `
+                <li class="page-item disabled">
+                    <span class="page-link nav-arrow"><i class="fi-arrow-right"></i></span>
+                </li>
+            `;
+                }
+
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, currentPage + 2);
+
+                if (endPage - startPage < 4) {
+                    if (startPage > 1) startPage = Math.max(1, totalPages - 4);
+                    if (endPage < totalPages) endPage = Math.min(totalPages, startPage + 4);
+                }
+
+                if (startPage > 1) {
+                    html += `
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" 
+                       data-page="1" 
+                       onclick="event.preventDefault(); window.loadTeamsPage('${serviceTypeId}', '${searchQuery || ''}', 1);">
+                        ۱
+                    </a>
+                </li>
+            `;
+                    if (startPage > 2) {
+                        html += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i === currentPage) {
+                        html += `
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link" data-page="${i}">${i}</span>
+                    </li>
+                `;
+                    } else {
+                        html += `
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" 
+                           data-page="${i}" 
+                           onclick="event.preventDefault(); window.loadTeamsPage('${serviceTypeId}', '${searchQuery || ''}', ${i});">
+                            ${i}
+                        </a>
+                    </li>
+                `;
+                    }
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        html += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+                    }
+                    html += `
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" 
+                       data-page="${totalPages}" 
+                       onclick="event.preventDefault(); window.loadTeamsPage('${serviceTypeId}', '${searchQuery || ''}', ${totalPages});">
+                        ${totalPages}
+                    </a>
+                </li>
+            `;
+                }
+
+                if (data.has_next) {
+                    html += `
+                <li class="page-item">
+                    <a class="page-link nav-arrow" href="javascript:void(0)" 
+                       data-page="${data.next_page_number}" 
+                       onclick="event.preventDefault(); window.loadTeamsPage('${serviceTypeId}', '${searchQuery || ''}', ${data.next_page_number});">
+                        <i class="fi-arrow-left"></i>
+                    </a>
+                </li>
+            `;
+                } else {
+                    html += `
+                <li class="page-item disabled">
+                    <span class="page-link nav-arrow"><i class="fi-arrow-left"></i></span>
+                </li>
+            `;
+                }
+
+                html += `
+                </ul>
+            </nav>
+        `;
+
+                container.innerHTML = html;
+            }
+
+            // ====== تابع جهانی برای صفحه‌بندی ======
+            window.loadTeamsPage = function (serviceTypeId, searchQuery, pageNumber) {
+                loadTeams(serviceTypeId, searchQuery, pageNumber);
+            };
+
+            // =============================================
+            // ۸. بررسی پارامترهای URL برای انتخاب خودکار
+            // =============================================
+            function checkUrlParams() {
+                const params = new URLSearchParams(window.location.search);
+                const selectedServiceId = params.get('selected_service');
+                const selectedTeamId = params.get('selected_team');
+                const selectedPlanId = params.get('selected_plan');
+                const page = params.get('page') || 1;
+
+                console.log('🔍 پارامترهای URL:', {
+                    selectedServiceId,
+                    selectedTeamId,
+                    selectedPlanId,
+                    page
+                });
+
+                if (selectedServiceId) {
+                    document.getElementById('selected-service').value = selectedServiceId;
+
+                    document.querySelectorAll('.option-card-inner').forEach(card => {
+                        if (card.dataset.value == selectedServiceId) {
+                            card.classList.add('selected');
+                        }
+                    });
+
+                    showSearchSection();
+                    loadTeams(selectedServiceId, '', parseInt(page) || 1);
+
+                    if (selectedTeamId) {
+                        setTimeout(function () {
+                            document.querySelectorAll('.team-card-inner').forEach(card => {
+                                if (card.dataset.value == selectedTeamId) {
+                                    card.classList.add('selected');
+                                    document.getElementById('selected-team').value = selectedTeamId;
+                                    const serviceId = document.getElementById('selected-service').value;
+                                    loadPlans(serviceId, selectedTeamId, parseInt(page) || 1);
+                                }
+                            });
+                        }, 700);
+                    }
+
+                    if (selectedPlanId) {
+                        setTimeout(function () {
+                            document.querySelectorAll('.plan-card').forEach(card => {
+                                if (card.dataset.value == selectedPlanId) {
+                                    card.classList.add('selected-plan-card');
+                                    document.getElementById('selected-plan').value = selectedPlanId;
+                                    checkSubmitButton();
+                                }
+                            });
+                        }, 1100);
+                    }
+                }
+            }
+
+            // =============================================
+            // ۹. جستجوی زنده
+            // =============================================
+            function initSearch() {
+                const searchInput = document.getElementById('team-search-input');
+                const clearBtn = document.getElementById('clear-search-btn');
+
+                if (!searchInput) return;
+
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+                    currentSearchQuery = query;
+
+                    if (query.length > 0) {
+                        clearBtn.classList.add('visible');
+                    } else {
+                        clearBtn.classList.remove('visible');
+                    }
+
+                    searchTimeout = setTimeout(function () {
+                        const serviceId = document.getElementById('selected-service').value;
+                        if (serviceId) {
+                            loadTeams(serviceId, query, 1);
+                        }
+                    }, 500);
+                });
+
+                clearBtn.addEventListener('click', function () {
+                    searchInput.value = '';
+                    currentSearchQuery = '';
+                    this.classList.remove('visible');
+
+                    const resultInfo = document.getElementById('search-result-info');
+                    if (resultInfo) resultInfo.style.display = 'none';
+
+                    const serviceId = document.getElementById('selected-service').value;
+                    if (serviceId) {
+                        loadTeams(serviceId, '', 1);
+                    }
+                });
+            }
+
+            // =============================================
+            // ۱۰. 🔥 اتصال listener به فیلد نام سفارش
+            // =============================================
+            function initNameField() {
+                const nameInput = document.getElementById('id_name');
+                if (!nameInput) {
+                    console.warn('⚠️ فیلد id_name پیدا نشد');
+                    return;
+                }
+
+                // با هر تایپ کردن، دکمه رو چک کن
+                nameInput.addEventListener('input', function () {
+                    checkSubmitButton();
+                });
+
+                // اگه مقدار اولیه داشت (مثلاً از session)، یک بار چک کن
+                checkSubmitButton();
+            }
+
+            // =============================================
+            // ۱۱. مقداردهی اولیه
+            // =============================================
+            loadServices();
+            initSearch();
+            initNameField();
+        });
+    </script>
+{% endblock %}

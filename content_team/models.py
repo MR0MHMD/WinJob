@@ -530,6 +530,7 @@ class ContentServicePlan(models.Model):
 
 class ContentOrder(models.Model):
     class Status(models.TextChoices):
+        DRAFT = "draft", "پیش نویس"
         PENDING = "pending", "در انتظار"
         REVIEW_PENDING = "review_pending", "در انتظار ویرایش"
         IN_PROGRESS = "in_progress", "در حال انجام"
@@ -542,7 +543,9 @@ class ContentOrder(models.Model):
         'campaigns.Campaign',
         on_delete=models.CASCADE,
         related_name="content_orders",
-        verbose_name="کمپین"
+        verbose_name="کمپین",
+        null=True,
+        blank=True
     )
 
     team = models.ForeignKey(
@@ -563,6 +566,13 @@ class ContentOrder(models.Model):
     price = models.PositiveBigIntegerField(
         verbose_name="قیمت",
         help_text='قیمت نهایی از روی پلن کپی می‌شود'
+    )
+
+    name = models.CharField(
+        _('نام سفارش'),
+        max_length=255,
+        blank=True,
+        help_text=_('برای سفارش‌های کمپینی خودکار از نام کمپین پر می‌شود')
     )
 
     # ========== مقدار انتخابی کاربر (فقط برای اطلاع) ==========
@@ -613,6 +623,39 @@ class ContentOrder(models.Model):
         verbose_name='تاریخ جایگزینی'
     )
 
+    # ========== کوپن‌ها ==========
+    content_team_coupon = models.ForeignKey(
+        'payment.Coupon',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='standalone_content_team_orders',
+        verbose_name="کد تخفیف تیم محتوا"
+    )
+
+    platform_coupon = models.ForeignKey(
+        'payment.Coupon',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='standalone_platform_orders',
+        verbose_name="کد تخفیف پلتفرم"
+    )
+
+    is_standalone = models.BooleanField(
+        default=False,
+        verbose_name="سفارش مستقل (بدون کمپین)"
+    )
+
+    standalone_user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='standalone_content_orders',
+        verbose_name="کاربر سفارش‌دهنده (بدون کمپین)"
+    )
+
     # ========== متادیتا ==========
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
@@ -627,12 +670,25 @@ class ContentOrder(models.Model):
         return reverse('content_team:team_order_detail', kwargs={'order_id': self.id})
 
     def __str__(self):
-        return f'سفارش {self.campaign.name} - {self.team.name}'
+        if self.name:
+            return f'{self.name} - {self.team.name}'
+        return f'سفارش #{self.id} - {self.team.name}'
 
     def save(self, *args, **kwargs):
         """قیمت رو مستقیم از پلن میگیره"""
         if self.plan and not self.price:
             self.price = self.plan.price
+
+        # اگر is_standalone فعال باشه، مطمئن بشیم campaign خالی باشه
+        if self.is_standalone:
+            self.campaign = None
+
+        # ========== پر کردن خودکار name ==========
+        if self.campaign and not self.name:
+            self.name = self.campaign.name
+        elif self.is_standalone and not self.name:
+            self.name = f'سفارش #{self.pk or "جدید"}'
+
         super().save(*args, **kwargs)
 
     def has_selected_file(self):

@@ -212,3 +212,199 @@ class TeamManageForm(forms.ModelForm):
         if ContentTeam.objects.exclude(pk=self.instance.pk).filter(slug=slug).exists():
             raise forms.ValidationError("این اسلاگ قبلاً استفاده شده است.")
         return slug
+
+
+# content_team/forms.py
+
+from django import forms
+from core.models import ContentServiceType
+from .models import ContentTeam, ContentServicePlan
+
+
+class StandaloneOrderStep1Form(forms.Form):
+    """مرحله ۱: انتخاب نوع خدمت، تیم و پلن"""
+
+    # ۱. انتخاب نوع خدمت
+    service_type = forms.ModelChoiceField(
+        queryset=ContentServiceType.objects.filter(is_active=True),
+        label='نوع خدمت تولید محتوا',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'service-type-select'
+        })
+    )
+
+    # ۲. انتخاب تیم (در ابتدا خالی)
+    team = forms.ModelChoiceField(
+        queryset=ContentTeam.objects.none(),
+        label='تیم تولید محتوا',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'team-select'
+        })
+    )
+
+    # ۳. انتخاب پلن (در ابتدا خالی)
+    plan = forms.ModelChoiceField(
+        queryset=ContentServicePlan.objects.none(),
+        label='پلن انتخابی',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'plan-select'
+        })
+    )
+
+    name = forms.CharField(
+        label='نام سفارش',
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-light',
+            'placeholder': 'مثلاً: تیزر معرفی محصول جدید',
+        }),
+        error_messages={
+            'required': 'لطفاً نام سفارش را وارد کنید.',
+        }
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ========== ۱. فیلتر تیم‌ها بر اساس سرویس انتخاب شده ==========
+        service_type_id = self.data.get('service_type') or self.initial.get('service_type')
+
+        if service_type_id:
+            # تیم‌هایی که حداقل یک پلن فعال برای این سرویس دارن
+            team_ids = ContentServicePlan.objects.filter(
+                service_type_id=service_type_id,
+                is_active=True
+            ).values_list('team_id', flat=True).distinct()
+
+            self.fields['team'].queryset = ContentTeam.objects.filter(
+                id__in=team_ids,
+                is_active=True
+            )
+
+        # ========== ۲. فیلتر پلن‌ها بر اساس تیم و سرویس ==========
+        team_id = self.data.get('team') or self.initial.get('team')
+
+        if service_type_id and team_id:
+            self.fields['plan'].queryset = ContentServicePlan.objects.filter(
+                service_type_id=service_type_id,
+                team_id=team_id,
+                is_active=True
+            )
+
+
+# content_team/forms.py
+
+from django import forms
+from .models import ContentOrderDescription, ContentOrder, ContentOrderFile
+from core.models import ContentServiceType
+from django.core.exceptions import ValidationError
+
+
+class StandaloneOrderStep2Form(forms.ModelForm):
+    """
+    فرم بریف سفارش تولید محتوای مستقل - کاملاً مشابه CampaignStep3BriefForm
+    """
+
+    class Meta:
+        model = ContentOrderDescription
+        fields = [
+            'goal',
+            'goal_description',
+            'tone',
+            'brand_name',
+            'hashtags',
+            'reference_links',
+            'target_audience',
+            'description',
+            'do_not_include',
+        ]
+        widgets = {
+            'goal': forms.Select(attrs={
+                'class': 'form-select form-select-light',
+                'id': 'id_goal',
+            }),
+            'goal_description': forms.TextInput(attrs={
+                'class': 'form-control form-control-light',
+                'placeholder': 'توضیح بیشتر برای هدف انتخابی...',
+                'id': 'id_goal_description',
+            }),
+            'tone': forms.Select(attrs={
+                'class': 'form-select form-select-light',
+                'id': 'id_tone',
+            }),
+            'brand_name': forms.TextInput(attrs={
+                'class': 'form-control form-control-light',
+                'placeholder': 'مثلاً: دیجی‌کالا، اسنپ...',
+                'id': 'id_brand_name',
+            }),
+            'hashtags': forms.TextInput(attrs={
+                'class': 'form-control form-control-light',
+                'placeholder': 'مثلاً: #برند_من #تخفیف_ویژه',
+                'id': 'id_hashtags',
+            }),
+            'reference_links': forms.Textarea(attrs={
+                'class': 'form-control form-control-light',
+                'rows': 3,
+                'placeholder': 'هر لینک را در یک خط بنویسید...',
+                'id': 'id_reference_links',
+            }),
+            'target_audience': forms.TextInput(attrs={
+                'class': 'form-control form-control-light',
+                'placeholder': 'مثلاً: زنان ۲۵-۳۵ ساله علاقه‌مند به مد',
+                'id': 'id_target_audience',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control form-control-light',
+                'rows': 5,
+                'placeholder': 'هر اطلاعات دیگری که تیم باید بداند... (حداقل ۲۰ کاراکتر)',
+                'id': 'id_description',
+            }),
+            'do_not_include': forms.Textarea(attrs={
+                'class': 'form-control form-control-light',
+                'rows': 3,
+                'placeholder': 'مثلاً: رنگ قرمز، افکت‌های بصری خاص...',
+                'id': 'id_do_not_include',
+            }),
+        }
+        error_messages = {
+            'description': {
+                'required': 'لطفاً توضیحات را وارد کنید.',
+            },
+            'goal': {
+                'required': 'لطفاً هدف محتوا را انتخاب کنید.',
+            },
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.order = kwargs.pop('order', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_description(self):
+        description = self.cleaned_data.get("description", "").strip()
+        if len(description) < 20:
+            raise forms.ValidationError("توضیحات باید حداقل ۲۰ کاراکتر باشد.")
+        return description
+
+    def clean_goal_description(self):
+        """اگر هدف 'سایر' انتخاب شد، توضیح الزامی است"""
+        goal = self.cleaned_data.get("goal")
+        goal_description = self.cleaned_data.get("goal_description") or ""
+
+        if goal == ContentOrderDescription.ContentGoal.OTHER and not goal_description.strip():
+            raise forms.ValidationError(
+                "چون «سایر» انتخاب کردید، لطفاً توضیح بدهید."
+            )
+
+        return goal_description
+
+    def save(self, commit=True):
+        """ذخیره بریف و اتصال به سفارش"""
+        instance = super().save(commit=False)
+        if self.order:
+            instance.order = self.order
+        if commit:
+            instance.save()
+        return instance

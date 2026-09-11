@@ -36,8 +36,9 @@ class Invoice(models.Model):
     class Type(models.TextChoices):
         CAMPAIGN = 'campaign', 'فاکتور کمپین'
         WALLET = 'wallet', 'فاکتور شارژ کیف پول'
+        CONTENT_ORDER = 'content_order', 'فاکتور سفارش محتوا'  # ✅ جدید
 
-    # ========== فیلدهای جدید ==========
+    # ========== فیلدهای اصلی ==========
     type = models.CharField(
         max_length=20,
         choices=Type.choices,
@@ -51,17 +52,27 @@ class Invoice(models.Model):
         related_name="invoices",
         verbose_name="کاربر",
         null=True,
-        blank=True  # برای کمپین‌ها از campaign.advertiser.user استفاده میشه
+        blank=True
     )
 
-    # ========== فیلدهای موجود (با تغییرات جزئی) ==========
+    # ========== ارتباط با کمپین (اختیاری) ==========
     campaign = models.OneToOneField(
         'campaigns.Campaign',
         on_delete=models.CASCADE,
         related_name="invoice",
         verbose_name="کمپین",
         null=True,
-        blank=True  # برای کیف پول خالی باشه
+        blank=True
+    )
+
+    # ========== ✅ ارتباط با سفارش محتوا (اختیاری) ==========
+    content_order = models.OneToOneField(
+        'content_team.ContentOrder',
+        on_delete=models.CASCADE,
+        related_name="invoice",
+        verbose_name="سفارش محتوا",
+        null=True,
+        blank=True
     )
 
     invoice_number = models.CharField(
@@ -72,24 +83,27 @@ class Invoice(models.Model):
     )
 
     # ========== هزینه‌های پایه (قبل از تخفیف) ==========
-    base_influencer_cost = models.PositiveBigIntegerField(
+    base_influencer_cost = models.PositiveBigIntegerField(  # 🆕 اضافه کن
         default=0,
-        verbose_name="هزینه پایه ناشران"
+        verbose_name="هزینه پایه اینفلوئنسرها"
     )
+
     base_content_cost = models.PositiveBigIntegerField(
         default=0,
         verbose_name="هزینه پایه تولید محتوا"
     )
+
     base_commission = models.PositiveBigIntegerField(
         default=0,
         verbose_name="کمیسیون پایه پلتفرم"
     )
 
-    # ========== مبالغ تخفیف اعمال شده (به تفکیک) ==========
-    influencer_discount_amount = models.PositiveBigIntegerField(
+    # ========== مبالغ تخفیف ==========
+    influencer_discount_amount = models.PositiveBigIntegerField(  # 🆕 اضافه کن
         default=0,
-        verbose_name="تخفیف ناشران"
+        verbose_name="تخفیف اینفلوئنسرها"
     )
+
     content_discount_amount = models.PositiveBigIntegerField(
         default=0,
         verbose_name="تخفیف تولید محتوا"
@@ -100,10 +114,11 @@ class Invoice(models.Model):
     )
 
     # ========== هزینه‌های نهایی (بعد از تخفیف) ==========
-    influencer_cost = models.PositiveBigIntegerField(
+    influencer_cost = models.PositiveBigIntegerField(  # 🆕 اضافه کن
         default=0,
-        verbose_name="هزینه نهایی اینفلوئنسر"
+        verbose_name="هزینه نهایی اینفلوئنسرها"
     )
+
     content_cost = models.PositiveBigIntegerField(
         default=0,
         verbose_name="هزینه نهایی تولید محتوا"
@@ -128,23 +143,12 @@ class Invoice(models.Model):
         verbose_name="مبلغ قابل پرداخت"
     )
 
-    is_paid = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name="پرداخت شده"
-    )
-
-    paid_at = jmodels.jDateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="تاریخ پرداخت"
-    )
-
-    # ========== فیلدهای مالیات بر ارزش افزوده ==========
-    influencer_vat = models.PositiveBigIntegerField(
+    # ========== مالیات بر ارزش افزوده ==========
+    influencer_vat = models.PositiveBigIntegerField(  # 🆕 اضافه کن
         default=0,
-        verbose_name="مالیات هزینه ناشران"
+        verbose_name="مالیات هزینه اینفلوئنسرها"
     )
+
     content_vat = models.PositiveBigIntegerField(
         default=0,
         verbose_name="مالیات هزینه تولید محتوا"
@@ -153,13 +157,24 @@ class Invoice(models.Model):
         default=0,
         verbose_name="مالیات کمیسیون پلتفرم"
     )
-
     total_vat = models.PositiveBigIntegerField(
         default=0,
         verbose_name="جمع کل مالیات بر ارزش افزوده"
     )
 
-    # ========== فیلدهای جدید برای کیف پول ==========
+    # ========== وضعیت ==========
+    is_paid = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="پرداخت شده"
+    )
+    paid_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ پرداخت"
+    )
+
+    # ========== فیلدهای اضافی برای کیف پول ==========
     wallet_deposit_amount = models.PositiveBigIntegerField(
         default=0,
         verbose_name="مبلغ شارژ کیف پول"
@@ -174,7 +189,6 @@ class Invoice(models.Model):
         auto_now_add=True,
         verbose_name="زمان ایجاد"
     )
-
     updated_at = jmodels.jDateTimeField(
         auto_now=True,
         verbose_name="آخرین بروزرسانی"
@@ -201,15 +215,13 @@ class Invoice(models.Model):
         year = created_at.year
         month = str(created_at.month).zfill(2)
         day = str(created_at.day).zfill(2)
-        prefix = 'INV'
-        if invoice_type == cls.Type.WALLET:
-            prefix = 'WAL'
-        elif invoice_type == cls.Type.CAMPAIGN:
-            prefix = 'CMP'
+        prefix_map = {
+            cls.Type.CAMPAIGN: 'CMP',
+            cls.Type.WALLET: 'WAL',
+            cls.Type.CONTENT_ORDER: 'CTO',
+        }
+        prefix = prefix_map.get(invoice_type, 'INV')
         return f"{prefix}-{year}{month}{day}-{invoice_id}"
-
-    def payable_amount_display(self):
-        return f"{self.payable_amount:,} تومان"
 
     @property
     def is_campaign_invoice(self):
@@ -218,6 +230,11 @@ class Invoice(models.Model):
     @property
     def is_wallet_invoice(self):
         return self.type == self.Type.WALLET
+
+    @property
+    def is_content_order_invoice(self):
+        return self.type == self.Type.CONTENT_ORDER
+
 
 class Coupon(models.Model):
     class Scope(models.TextChoices):
@@ -399,6 +416,8 @@ class Transaction(models.Model):
         INFLUENCER_PAYMENT = "influencer_payment", "پرداخت به ناشر"
 
         TEAM_PAYMENT = "team_payment", "پرداخت به تیم تولید محتوا"
+        CONTENT_ORDER_PAYMENT = 'content_order_payment', 'پرداخت سفارش تولید محتوا'
+        CONTENT_ORDER_REFUND = 'content_order_refund', 'بازگشت وجه سفارش محتوا'
 
         INFLUENCER_WITHDRAWAL = 'influencer_withdrawal', _('تسویه ناشر')
         CONTENT_TEAM_WITHDRAWAL = 'content_team_withdrawal', _('تسویه تیم محتوا')

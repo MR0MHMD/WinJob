@@ -18,17 +18,25 @@
         </div>
 
         <div class="container position-relative" style="z-index: 5;">
-        <ol class="breadcrumb breadcrumb-light">
-        <li class="breadcrumb-item">
-            <a href="{% url 'core:home' %}">خانه</a>
-        </li>
-        
-        <li class="breadcrumb-item">
-            <a href="{% url 'content_team:team_list' %}">تیم های تولید محتوا</a>
-        </li>
-
-        <li class="breadcrumb-item active" aria-current="page">تیم {{ team.name }}</li>
-    </ol>
+            <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'core:home' %}">خانه</a>
+            </li>
+            
+            {% if from_standalone %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'content_team:standalone_order_step1' %}">سفارش محتوای مستقل</a>
+                </li>
+                
+                <li class="breadcrumb-item active" aria-current="page">تیم {{ team.name }}</li>
+            {% else %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'content_team:team_list' %}">تیم های تولید محتوا</a>
+                </li>
+                
+                <li class="breadcrumb-item active" aria-current="page">تیم {{ team.name }}</li>
+            {% endif %}
+        </ol>
             <div class="row align-items-end g-4">
                 <div class="col-md-auto text-center text-md-start">
                     <div class="avatar-hologram">
@@ -101,9 +109,21 @@
                         </div>
                     </div>
                 </div>
-
+             
                 <div class="col-md-auto">
-                    {% if from_campaign %}
+                    {% if from_standalone and select_team_url %}
+                        <div class="d-flex flex-column gap-2">
+                            <a href="{{ select_team_url }}" class="cta-button pulse-animation w-100 w-md-auto text-center" style="text-decoration: none;">
+                                <span class="cta-button-text">
+                                    <i class="fi-check-circle me-2"></i> انتخاب این تیم
+                                </span>
+                            </a>
+                            <a href="{{ back_url }}" class="btn btn-outline-secondary rounded-pill w-100 w-md-auto text-center">
+                                <i class="fi-arrow-right me-2"></i> بازگشت به سفارش
+                            </a>
+                        </div>
+                    {% elif from_campaign %}
+                        <!-- ====== حالت کمپین ====== -->
                         <div class="d-flex flex-column gap-2 w-100">
                             <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_team={{ team.id }}&page={{ return_page }}" class="cta-button pulse-animation w-100 w-md-auto text-center" style="text-decoration: none;">
                                 <span class="cta-button-text mx-auto">
@@ -114,7 +134,9 @@
                                 بازگشت به صفحه قبل<i class="fi-arrow-left ms-2"></i>
                             </a>
                         </div>
+                        
                     {% else %}
+                        <!-- ====== حالت عادی ====== -->
                         <button class="cta-button pulse-animation" id="orderBtn">
                             <span class="cta-button-text">
                                 <i class="fi-send me-2"></i> درخواست همکاری

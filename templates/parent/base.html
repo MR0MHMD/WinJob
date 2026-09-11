@@ -4,7 +4,7 @@
 
 <html lang="fa">
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    
+
     <head>
         <meta charset="UTF-8">
         <title>وینحاب |
@@ -36,7 +36,7 @@
         <link rel="stylesheet" href="{% static 'finder/css/bootstrap-icons.css' %}">
         <link rel="stylesheet" href="{% static 'parent/base.css' %}">
     </head>
-    
+
     <body class="bg-dark" dir="rtl" data-user-role="{% if user.is_authenticated %}{% if user.is_advertiser %}advertiser{% elif user.is_influencer %}influencer{% elif user.is_team_member %}team_member{% else %}user{% endif %}{% else %}guest{% endif %}">
         <!-- WinJob Developer Signature Boot Loader -->
         <div class="page-loading active" aria-label="در حال بارگذاری">
@@ -44,7 +44,7 @@
             <!-- Ambient background -->
             <div class="loader-ambient loader-ambient-orange"></div>
             <div class="loader-ambient loader-ambient-purple"></div>
-        
+
             <!-- Floating particles -->
             <div class="loader-particles" aria-hidden="true">
                 <span></span>
@@ -60,7 +60,7 @@
                 <span></span>
                 <span></span>
             </div>
-        
+
             <div class="page-loading-inner">
                 <!-- Influence Network -->
                 <div class="loader-network" aria-hidden="true">
@@ -72,17 +72,17 @@
                         <path class="network-line network-line-5" d="M55 65 C120 145, 140 180, 65 205"></path>
                         <path class="network-line network-line-6" d="M365 65 C300 145, 280 180, 355 205"></path>
                     </svg>
-        
+
                     <!-- Outer Nodes -->
                     <span class="network-node node-1"></span>
                     <span class="network-node node-2"></span>
                     <span class="network-node node-3"></span>
                     <span class="network-node node-4"></span>
-        
+
                     <!-- Secondary Nodes -->
                     <span class="network-node node-5"></span>
                     <span class="network-node node-6"></span>
-        
+
                     <!-- Central W -->
                     <div class="loader-logo-core">
                         <div class="loader-logo-ring"></div>
@@ -92,8 +92,8 @@
                         <div class="loader-logo-glow"></div>
                     </div>
                 </div>
-        
-        
+
+
                 <!-- Brand -->
                 <div class="loader-brand">
                     <div class="loader-brand-name">
@@ -103,7 +103,7 @@
                         CONNECT&nbsp; · &nbsp;CREATE&nbsp; · &nbsp;WIN
                     </div>
                 </div>
-        
+
                 <!-- Minimal Progress -->
                 <div class="loader-progress">
                     <div class="loader-progress-track">
@@ -113,18 +113,18 @@
                         </div>
                         <div class="loader-progress-glow"></div>
                     </div>
-        
+
                     <div class="loader-progress-percent">
                         <span data-loader-percent>000%</span>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <header class="navbar navbar-expand-lg navbar-dark header fixed-top" data-scroll-header>
             {% include 'partials/header.html' %}
         </header>
-        
+
         <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem" >
             {% if messages %}
                 <div id="django-messages-data" style="display: none;">
@@ -135,19 +135,19 @@
             {% endif %}
             {% block content %} {% endblock %}
         </main>
-        
+
         <footer class="footer bg-faded-light mt-3">
             {% include 'partials/footer.html' %}
         </footer>
-        
+
         <!-- ==================== کانتینر Toast Notifications ==================== -->
         <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090; direction: ltr;">
             <!-- Toasts به صورت داینامیک اینجا اضافه می‌شن -->
         </div>
-        
+
         <!-- Back to top button-->
         <a class="btn-scroll-top" href="#" data-scroll><span class="btn-scroll-top-tooltip text-muted fs-sm ms-2">بالا</span><i class="btn-scroll-top-icon fi-chevron-up"> </i></a>
-        
+
         <!-- ==================== مودال نوتیفیکیشن جهانی ==================== -->
         <div class="modal fade notification-modal" id="globalNotificationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
             <div class="modal-dialog modal-dialog-centered">
@@ -175,14 +175,14 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Vendor scripts: js libraries and plugins-->
         <script src="{% static 'finder/vendor/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
         <script src="{% static 'finder/vendor/smooth-scroll/dist/smooth-scroll.polyfills.min.js' %}"></script>
-        
+
         <script>
             // ==================== توابع نمایش مودال نوتیفیکیشن ====================
-            
+
             /**
              * نمایش مودال نوتیفیکیشن
              * @param {string} title - عنوان مودال
@@ -196,18 +196,18 @@
                 const modalIcon = document.getElementById('notificationModalIcon');
                 const modalMessage = document.getElementById('notificationModalMessage');
                 const modalBtn = document.getElementById('notificationModalBtn');
-                
+
                 // تنظیم عنوان
                 modalTitle.innerHTML = `<i class="fi-info-circle me-2"></i> ${title}`;
-                
+
                 // تنظیم متن پیام
                 modalMessage.innerHTML = message;
-                
+
                 // تنظیم آیکون و رنگ بر اساس نوع
                 modalIcon.className = 'notification-icon';
                 let iconClass = 'fi-info-circle';
                 let btnClass = 'btn-primary';
-                
+
                 switch(type) {
                     case 'success':
                         modalIcon.classList.add('success');
@@ -229,14 +229,14 @@
                         iconClass = 'fi-info-circle';
                         btnClass = 'btn-primary';
                 }
-                
+
                 modalIcon.innerHTML = `<i class="${iconClass}"></i>`;
                 modalBtn.className = `btn ${btnClass} rounded-pill px-4`;
-                
+
                 // نمایش مودال
                 const modal = new bootstrap.Modal(modalElement);
                 modal.show();
-                
+
                 // مدیریت بسته شدن
                 modalElement.addEventListener('hidden.bs.modal', function() {
                     if (onClose && typeof onClose === 'function') {
@@ -244,12 +244,12 @@
                     }
                 }, { once: true });
             }
-            
+
             // جایگزینی alert با مودال
             window.alert = function(message) {
                 showNotificationModal('توجه', message, 'info');
             };
-            
+
             // تابع confirm با استایل مودال (اختیاری)
             window.confirmModal = function(title, message, onConfirm, onCancel) {
                 // می‌توانید یک مودال اختصاصی برای confirm بسازید
@@ -274,15 +274,15 @@
                     }
                     this.defaultDuration = 5000; // 5 ثانیه
                 }
-            
+
                 show(message, type = 'info', duration = this.defaultDuration) {
                     const toast = this.createToastElement(message, type);
                     this.container.appendChild(toast);
-                    
+
                     // انیمیشن پیشرفت
                     const progressBar = toast.querySelector('.toast-progress-bar');
                     let startTime = null;
-                    
+
                     const animateProgress = (timestamp) => {
                         if (!startTime) startTime = timestamp;
                         const elapsed = timestamp - startTime;
@@ -295,24 +295,24 @@
                         }
                     };
                     requestAnimationFrame(animateProgress);
-                    
+
                     // دکمه بستن
                     const closeBtn = toast.querySelector('.toast-close');
                     closeBtn.addEventListener('click', () => this.hideToast(toast));
-                    
+
                     return toast;
                 }
-                
+
                 createToastElement(message, type) {
                     const toastDiv = document.createElement('div');
                     toastDiv.className = 'toast-notification';
-                    
+
                     let iconClass = 'fi-info-circle';
                     if (type === 'success') iconClass = 'fi-check-circle';
                     else if (type === 'error') iconClass = 'fi-alert-circle';
                     else if (type === 'warning') iconClass = 'fi-alert-triangle';
                     else iconClass = 'fi-info-circle';
-                    
+
                     toastDiv.innerHTML = `
                         <div class="toast-content">
                             <div class="toast-icon ${type}">
@@ -327,7 +327,7 @@
                     `;
                     return toastDiv;
                 }
-                
+
                 hideToast(toast) {
                     toast.classList.add('hide');
                     toast.addEventListener('animationend', () => {
@@ -335,7 +335,7 @@
                     }, { once: true });
                 }
             }
-            
+
             // تابع کمکی برای جلوگیری از XSS
             function escapeHtml(str) {
                 if (!str) return '';
@@ -348,10 +348,10 @@
                     return c;
                 });
             }
-            
+
             // راه‌اندازی مدیر toast
             const toastManager = new ToastManager();
-            
+
             // تبدیل پیام‌های جنگو به toast به محض لود صفحه
             document.addEventListener('DOMContentLoaded', function() {
                 const messagesContainer = document.getElementById('django-messages-data');
@@ -367,7 +367,7 @@
                             else if (tag === 'error' || tag === 'danger') type = 'error';
                             else if (tag === 'warning') type = 'warning';
                             else type = 'info';
-                            
+
                             toastManager.show(text, type);
                         }
                     });
@@ -376,9 +376,9 @@
                 }
             });
         </script>
-        
+
         {% block script %}{% endblock %}
-        
+
         <!-- Main theme script-->
         <script src="{% static 'finder/js/theme.min.js' %}"></script>
     </body>

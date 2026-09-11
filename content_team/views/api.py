@@ -107,3 +107,116 @@ def edit_team_review_ajax(request):
         return JsonResponse({'success': False, 'message': 'نظر مورد نظر یافت نشد.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+
+# content_team/api_views.py
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
+from payment.models import Coupon
+from payment.services.create_invoice import create_standalone_invoice
+from ..models import ContentOrder
+import json
+import traceback
+
+
+# content_team/api.py
+
+@require_POST
+@login_required
+def standalone_apply_discount(request):
+    """
+    اعمال کد تخفیف برای سفارش مستقل تولید محتوا
+    """
+    try:
+        body = json.loads(request.body)
+        code = body.get("code", "").strip()
+        scope = body.get("scope", "")
+
+        if not code:
+            return JsonResponse({"success": False, "message": "کد تخفیف وارد نشده است."}, status=400)
+
+        if scope not in ['content_team', 'platform']:
+            return JsonResponse({"success": False, "message": "نوع تخفیف نامعتبر است."}, status=400)
+
+        order_id = request.session.get('standalone_order_step2', {}).get('order_id')
+        if not order_id:
+            return JsonResponse({"success": False, "message": "سفارش یافت نشد."}, status=400)
+
+        order = get_object_or_404(
+            ContentOrder,
+            id=order_id,
+            standalone_user=request.user,
+            is_standalone=True
+        )
+
+        # ========== نقشه اسکوپ به فیلدهای مدل ==========
+        scope_field_map = {
+            'content_team': 'content_team_coupon',  # ✅ اسم فیلد واقعی
+            'platform': 'platform_coupon'            # ✅ اسم فیلد واقعی
+        }
+
+        # چک کردن کوپن‌های موجود
+        existing_coupon = getattr(order, scope_field_map[scope])
+        if existing_coupon:
+            return JsonResponse({
+                "success": False,
+                "message": f"شما قبلاً از یک کد تخفیف برای این بخش استفاده کرده‌اید."
+            }, status=400)
+
+        try:
+            coupon = Coupon.objects.get(code__iexact=code, scope=scope)
+        except Coupon.DoesNotExist:
+            return JsonResponse({"success": False, "message": "کد تخفیف معتبر نیست."}, status=404)
+
+        if not coupon.is_valid():
+            return JsonResponse({
+                "success": False,
+                "message": "این کد تخفیف قابل استفاده نیست (منقضی شده یا استفاده شده)."
+            }, status=400)
+
+        # ========== اعمال کوپن ==========
+        if scope == 'content_team':
+            order.content_team_coupon = coupon
+        else:
+            order.platform_coupon = coupon
+
+        order.save(update_fields=[scope_field_map[scope]])
+
+        # ساخت فاکتور جدید
+        invoice = create_standalone_invoice(order)
+
+        return JsonResponse({
+            "success": True,
+            "message": "کد تخفیف با موفقیت اعمال شد.",
+            "scope": scope,
+            "coupon_code": coupon.code,
+            "discount_type": coupon.discount_type,
+            "discount_value": float(coupon.value),
+
+            "base_content_cost": invoice.base_content_cost,
+            "base_commission": invoice.base_commission,
+            "content_discount_amount": invoice.content_discount_amount,
+            "platform_discount_amount": invoice.platform_discount_amount,
+
+            "discount_amount": invoice.discount_amount,
+            "discount_amount_formatted": f"{invoice.discount_amount:,}",
+            "payable_amount": invoice.payable_amount,
+            "payable_amount_formatted": f"{invoice.payable_amount:,}",
+            "final_total": invoice.total_amount,
+            "final_total_formatted": f"{invoice.total_amount:,}",
+            "commission": invoice.commission,
+            "commission_formatted": f"{invoice.commission:,}",
+            "content_cost": invoice.content_cost,
+            "content_cost_formatted": f"{invoice.content_cost:,}",
+            "content_vat": invoice.content_vat,
+            "commission_vat": invoice.commission_vat,
+            "total_vat": invoice.total_vat,
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

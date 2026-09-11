@@ -87,7 +87,6 @@ class CouponAdmin(admin.ModelAdmin):
         }),
     )
 
-
 class InvoiceTypeFilter(SimpleListFilter):
     title = 'نوع فاکتور'
     parameter_name = 'type'
@@ -96,12 +95,14 @@ class InvoiceTypeFilter(SimpleListFilter):
         return (
             ('campaign', 'فاکتور کمپین'),
             ('wallet', 'فاکتور شارژ کیف پول'),
+            ('content_order', 'فاکتور سفارش محتوا'),  # ✅ جدید
         )
 
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(type=self.value())
         return queryset
+
 
 
 @admin.register(Invoice)
@@ -111,8 +112,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         'invoice_number_display',
         'type_display',
         'user_display',
-        'campaign_link',
-        'influencer_cost_display',
+        'campaign_or_order_link',
         'content_cost_display',
         'commission_display',
         'total_vat_display',
@@ -133,6 +133,9 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "campaign__name",
         "campaign__advertiser__business_name",
         "campaign__advertiser__user__phone_number",
+        "content_order__id",
+        "content_order__team__name",
+        "content_order__campaign__name",
         "user__phone_number",
         "user__nickname",
         "description",
@@ -143,19 +146,16 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "type",
         "user",
         "campaign",
-        "base_influencer_cost",
+        "content_order",
         "base_content_cost",
         "base_commission",
-        "influencer_discount_amount",
         "content_discount_amount",
         "platform_discount_amount",
-        "influencer_cost",
         "content_cost",
         "commission",
         "discount_amount",
         "total_amount",
         "payable_amount",
-        "influencer_vat",
         "content_vat",
         "commission_vat",
         "total_vat",
@@ -164,19 +164,19 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "formatted_created_at",
         "formatted_updated_at",
         "payments_list",
+        "related_order_link",
     )
 
     fieldsets = (
         ("📋 اطلاعات پایه", {
             "fields": (
                 ("type", "invoice_number"),
-                ("user", "campaign"),
+                ("user", "campaign", "content_order"),
                 "description",
             )
         }),
-        ("💰 هزینه‌های پایه (قبل از تخفیف)", {
+        ("💰 هزینه پایه (قبل از تخفیف)", {
             "fields": (
-                "base_influencer_cost",
                 "base_content_cost",
                 "base_commission",
             ),
@@ -184,15 +184,13 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
         ("🎯 تخفیف‌های اعمال شده", {
             "fields": (
-                "influencer_discount_amount",
                 "content_discount_amount",
                 "platform_discount_amount",
             ),
             "classes": ("collapse",)
         }),
-        ("💵 هزینه‌های نهایی (بعد از تخفیف)", {
+        ("💵 هزینه نهایی (بعد از تخفیف)", {
             "fields": (
-                "influencer_cost",
                 "content_cost",
                 "commission",
                 "discount_amount",
@@ -200,7 +198,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         }),
         ("🧾 مالیات بر ارزش افزوده (۱۰٪)", {
             "fields": (
-                ("influencer_vat", "content_vat", "commission_vat"),
+                ("content_vat", "commission_vat"),
                 "total_vat",
             ),
             "classes": ("collapse",)
@@ -224,30 +222,35 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             "classes": ("collapse",)
         }),
         ("پرداخت‌های مرتبط", {
-            "fields": ("payments_list",),
+            "fields": ("payments_list", "related_order_link"),
             "classes": ("collapse",)
         }),
     )
 
-    # ========== متدهای نمایش ==========
+    # ================================================================
+    # متدهای نمایش در لیست و جزئیات
+    # ================================================================
 
     def invoice_number_display(self, obj):
+        """نمایش شماره فاکتور"""
         return format_html(
             '<span class="fw-bold">{}</span>',
             obj.invoice_number or '---'
         )
-
     invoice_number_display.short_description = "شماره فاکتور"
     invoice_number_display.admin_order_field = "invoice_number"
 
     def type_display(self, obj):
+        """نمایش نوع فاکتور با رنگ مناسب"""
         colors = {
             'campaign': 'primary',
             'wallet': 'success',
+            'content_order': 'info',
         }
         labels = {
             'campaign': '📢 کمپین',
             'wallet': '💰 شارژ کیف پول',
+            'content_order': '📄 سفارش محتوا',
         }
         color = colors.get(obj.type, 'secondary')
         label = labels.get(obj.type, obj.type)
@@ -256,24 +259,25 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             color,
             label
         )
-
     type_display.short_description = "نوع فاکتور"
     type_display.admin_order_field = "type"
 
     def user_display(self, obj):
+        """نمایش کاربر با لینک به ادمین"""
         if obj.user:
+            url = reverse("admin:accounts_customuser_change", args=[obj.user.id])
             return format_html(
                 '<a href="{}" target="_blank">{}</a>',
-                reverse("admin:accounts_customuser_change", args=[obj.user.id]),
+                url,
                 obj.user.phone_number
             )
         return "-"
-
     user_display.short_description = "کاربر"
     user_display.admin_order_field = "user__phone_number"
 
-    def campaign_link(self, obj):
-        if obj.campaign:
+    def campaign_or_order_link(self, obj):
+        """نمایش لینک کمپین یا سفارش محتوا به صورت هوشمند"""
+        if obj.type == Invoice.Type.CAMPAIGN and obj.campaign:
             url = reverse("admin:campaigns_campaign_change", args=[obj.campaign.id])
             return format_html(
                 '<a href="{}" target="_blank">{} - {}</a>',
@@ -281,74 +285,71 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 obj.campaign.name[:40] if obj.campaign.name else f"کمپین #{obj.campaign.id}",
                 obj.campaign.get_status_display() if hasattr(obj.campaign, 'get_status_display') else ''
             )
+        elif obj.type == Invoice.Type.CONTENT_ORDER and obj.content_order:
+            url = reverse("admin:content_team_contentorder_change", args=[obj.content_order.id])
+            team_name = obj.content_order.team.name if obj.content_order.team else 'بدون تیم'
+            return format_html(
+                '<a href="{}" target="_blank">سفارش #{} - {}</a>',
+                url,
+                obj.content_order.id,
+                team_name
+            )
         return "-"
-
-    campaign_link.short_description = "کمپین"
-    campaign_link.admin_order_field = "campaign__name"
-
-    def influencer_cost_display(self, obj):
-        if obj.type == Invoice.Type.WALLET:
-            return "-"
-        return f"{obj.influencer_cost:,}" if obj.influencer_cost else "۰"
-
-    influencer_cost_display.short_description = "هزینه ناشران"
-    influencer_cost_display.admin_order_field = "influencer_cost"
+    campaign_or_order_link.short_description = "کمپین / سفارش"
+    campaign_or_order_link.admin_order_field = "campaign__name"
 
     def content_cost_display(self, obj):
+        """نمایش هزینه تولید محتوا"""
         if obj.type == Invoice.Type.WALLET:
             return "-"
         return f"{obj.content_cost:,}" if obj.content_cost else "۰"
-
     content_cost_display.short_description = "هزینه محتوا"
     content_cost_display.admin_order_field = "content_cost"
 
     def commission_display(self, obj):
+        """نمایش کمیسیون"""
         if obj.type == Invoice.Type.WALLET:
             return "-"
         return f"{obj.commission:,}" if obj.commission else "۰"
-
     commission_display.short_description = "کمیسیون"
     commission_display.admin_order_field = "commission"
 
     def total_vat_display(self, obj):
+        """نمایش مالیات"""
         return f"{obj.total_vat:,}" if obj.total_vat else "۰"
-
     total_vat_display.short_description = "مالیات"
     total_vat_display.admin_order_field = "total_vat"
 
     def payable_amount_display(self, obj):
+        """نمایش مبلغ قابل پرداخت"""
         if obj.type == Invoice.Type.WALLET:
             return f"{obj.wallet_deposit_amount:,}"
         return f"{obj.payable_amount:,}"
-
     payable_amount_display.short_description = "مبلغ قابل پرداخت"
     payable_amount_display.admin_order_field = "payable_amount"
 
     def is_paid_display(self, obj):
+        """نمایش وضعیت پرداخت با بج رنگی"""
         if obj.is_paid:
-            return mark_safe(
-                '<span class="badge bg-success">✅ پرداخت شده</span>'
-            )
-        return mark_safe(
-            '<span class="badge bg-danger">❌ پرداخت نشده</span>'
-        )
-
+            return mark_safe('<span class="badge bg-success">✅ پرداخت شده</span>')
+        return mark_safe('<span class="badge bg-danger">❌ پرداخت نشده</span>')
     is_paid_display.short_description = "وضعیت پرداخت"
     is_paid_display.admin_order_field = "is_paid"
 
     def formatted_created_at(self, obj):
-        from core.utils.admin_utils import format_datetime
+        """تاریخ ایجاد فرمت شده"""
         return format_datetime(obj.created_at)
-
     formatted_created_at.short_description = "تاریخ ایجاد"
+    formatted_created_at.admin_order_field = "created_at"
 
     def formatted_updated_at(self, obj):
-        from core.utils.admin_utils import format_datetime
+        """تاریخ ویرایش فرمت شده"""
         return format_datetime(obj.updated_at)
-
     formatted_updated_at.short_description = "آخرین بروزرسانی"
+    formatted_updated_at.admin_order_field = "updated_at"
 
     def payments_list(self, obj):
+        """لیست پرداخت‌های مرتبط"""
         payments = obj.payments.all()
         if not payments:
             return "بدون پرداخت"
@@ -366,10 +367,23 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             """
         html += "</ul>"
         return mark_safe(html)
-
     payments_list.short_description = "پرداخت‌ها"
 
-    # ========== اورراید متدهای میکسین ==========
+    def related_order_link(self, obj):
+        """لینک به سفارش مرتبط در صفحه جزئیات"""
+        if obj.type == Invoice.Type.CONTENT_ORDER and obj.content_order:
+            url = reverse("admin:content_team_contentorder_change", args=[obj.content_order.id])
+            return format_html(
+                '<a href="{}" target="_blank" class="button">🔗 مشاهده سفارش #{}</a>',
+                url,
+                obj.content_order.id
+            )
+        return "-"
+    related_order_link.short_description = "سفارش مرتبط"
+
+    # ================================================================
+    # اورراید متدهای میکسین محدودیت منطقه‌ای
+    # ================================================================
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -377,7 +391,8 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if request.user.is_regional_manager and request.user.province:
             qs = qs.filter(
                 models.Q(campaign__advertiser__user__province=request.user.province) |
-                models.Q(user__province=request.user.province)
+                models.Q(user__province=request.user.province) |
+                models.Q(content_order__team__members__user__province=request.user.province)
             )
 
         return qs.select_related(
@@ -386,23 +401,9 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             'campaign__advertiser',
             'campaign__advertiser__user',
             'campaign__advertiser__user__province',
+            'content_order',
+            'content_order__team',
         ).prefetch_related('payments')
-
-    def has_change_permission(self, request, obj=None):
-        if obj and request.user.is_regional_manager and request.user.province:
-            if obj.campaign and obj.campaign.advertiser.user.province != request.user.province:
-                return False
-            if obj.user and obj.user.province != request.user.province:
-                return False
-        return super().has_change_permission(request, obj)
-
-    def has_delete_permission(self, request, obj=None):
-        if obj and request.user.is_regional_manager and request.user.province:
-            if obj.campaign and obj.campaign.advertiser.user.province != request.user.province:
-                return False
-            if obj.user and obj.user.province != request.user.province:
-                return False
-        return super().has_delete_permission(request, obj)
 
 
 @admin.register(Payment)

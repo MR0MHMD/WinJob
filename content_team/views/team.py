@@ -1,5 +1,7 @@
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, get_object_or_404
+from django.urls import reverse
+
 from core.models import ContentServiceType
 from django.utils import timezone
 from itertools import groupby
@@ -96,6 +98,7 @@ def team_list_view(request):
 def team_detail_view(request, slug, id):
     """
     ویو جزئیات تیم تولید محتوا
+    با پشتیبانی از بازگشت به سفارش مستقل و کمپین
     """
     team = get_object_or_404(
         ContentTeam.objects.filter(is_active=True).prefetch_related(
@@ -199,22 +202,18 @@ def team_detail_view(request, slug, id):
     # ========== محاسبات کارت حرفه‌ای‌گری ==========
     # ================================================================
 
-    # ۱. قدمت تیم (محاسبه دقیق به روز)
     now = timezone.now()
     team_age_days = (now - team.created_at).days
 
-    # ۲. درصد موفقیت سفارشات
     total_orders = team.orders.count()
     completed_orders = team.orders.filter(status='completed').count()
     success_rate = int((completed_orders / total_orders * 100)) if total_orders > 0 else 0
 
-    # ۳. میانگین تعداد ویرایش در هر سفارش
     avg_revisions = team.orders.annotate(
         rev_count=Count('revisions')
     ).aggregate(avg=Avg('rev_count'))['avg']
     avg_revisions = round(avg_revisions, 1) if avg_revisions else 0
 
-    # ۴. میانگین روزهای تحویل (از زمان ایجاد سفارش تا تحویل نهایی)
     completed_orders_with_delivery = team.orders.filter(
         status='completed',
         deliveries__isnull=False
@@ -240,21 +239,60 @@ def team_detail_view(request, slug, id):
         'active_members': team.annotated_active_members_count,
         'revenue_share_valid': team.is_revenue_share_valid(),
         'total_revenue_percent': team.get_total_revenue_percent(),
-        # ========== اضافه شده برای کارت حرفه‌ای‌گری ==========
-        'team_age_days': team_age_days,  # قدمت تیم به روز
-        'success_rate': success_rate,  # درصد موفقیت سفارشات
-        'avg_revisions': avg_revisions,  # میانگین تعداد ویرایش در هر سفارش
-        'avg_delivery_days': avg_delivery_days,  # میانگین روزهای تحویل
+        'team_age_days': team_age_days,
+        'success_rate': success_rate,
+        'avg_revisions': avg_revisions,
+        'avg_delivery_days': avg_delivery_days,
     }
 
     # ========== نظرات ==========
     reviews = team.reviews.all()[:3]
     recent_completed_orders = team.orders.filter(status='completed')[:5]
 
-    # ========== پارامترهای انتخاب خودکار از استپ سوم ==========
-    select_team = request.GET.get('select_team')
-    from_campaign = bool(select_team)
-    return_page = request.GET.get('page', '1')
+    # ================================================================
+    # ========== 🆕 پشتیبانی از بازگشت به سفارش مستقل ==========
+    # ================================================================
+
+    # پارامترهای بازگشت
+    return_to = request.GET.get('return_to')
+    service_type_id = request.GET.get('service_type_id')
+    source = request.GET.get('source', '')
+    from_campaign = request.GET.get('from') == 'create_campaign'
+    page = request.GET.get('page', '1')
+    select_plan_id = request.GET.get('select_plan_id')  # برای بازگشت به کمپین با پلن انتخاب شده
+
+    # متغیرهای پیش‌فرض
+    back_url = None
+    select_team_url = None
+    from_standalone = False
+    is_from_campaign = False
+
+    # ====== ۱. حالت بازگشت به سفارش مستقل ======
+    if return_to == 'standalone_order' and service_type_id:
+        from_standalone = True
+        back_url = reverse('content_team:standalone_order_step1')
+        # 🔥 صفحه رو هم به URL اضافه کن
+        select_team_url = f"{back_url}?selected_service={service_type_id}&selected_team={team.id}&return_to=team_detail&page={page}"
+
+    # ====== ۲. حالت بازگشت به کمپین (استپ ۳) ======
+    elif from_campaign or source == 'campaign':
+        is_from_campaign = True
+        campaign_id = request.session.get('campaign_draft_id')
+        if campaign_id:
+            back_url = reverse('campaigns:campaign_create_step3_team')
+            # اگر پلن هم انتخاب شده باشه، اونم برگردون
+            if select_plan_id:
+                select_team_url = f"{back_url}?selected_team={team.id}&selected_plan={select_plan_id}&page={page}"
+            else:
+                select_team_url = f"{back_url}?selected_team={team.id}&page={page}"
+        else:
+            back_url = reverse('campaigns:campaign_create_step1')
+            select_team_url = None
+
+    # ====== ۳. حالت عادی (لیست تیم‌ها) ======
+    else:
+        back_url = reverse('content_team:team_list')
+        select_team_url = None
 
     # ========== بررسی امکان ثبت نظر ==========
     can_submit_review = False
@@ -300,13 +338,21 @@ def team_detail_view(request, slug, id):
         'stats': stats,
         'reviews': reviews,
         'recent_completed_orders': recent_completed_orders,
-        'from_campaign': from_campaign,
-        'team_id': select_team,
-        'return_page': return_page,
+        'from_campaign': is_from_campaign,
+        'from_standalone': from_standalone,
+        'team_id': team.id,
+        'return_page': page,
         'gamification': team.gamification_status,
         'can_submit_review': can_submit_review,
         'pending_orders': pending_orders,
         'sorted_reviews': sorted_reviews,
+        # ====== 🔥 اضافه شده برای بازگشت ======
+        'page': page,
+        'back_url': back_url,
+        'select_team_url': select_team_url,
+        'service_type_id': service_type_id,
+        'return_to': return_to,
+        'select_plan_id': select_plan_id,
     }
 
     return render(request, 'content_team/pages/team_detail.html', context)
@@ -315,14 +361,55 @@ def team_detail_view(request, slug, id):
 def plan_detail(request, plan_id):
     """
     نمایش جزئیات یک پلن
+    با پشتیبانی از بازگشت به سفارش مستقل و کمپین
     """
     plan = get_object_or_404(
         ContentServicePlan.objects.select_related('team', 'service_type'),
         id=plan_id, is_active=True
     )
     team = plan.team
+
+    # ================================================================
+    # ========== 🆕 پشتیبانی از بازگشت به سفارش مستقل ==========
+    # ================================================================
+
+    # پارامترهای بازگشت
+    return_to = request.GET.get('return_to')
+    service_type_id = request.GET.get('service_type_id')
+    team_id = request.GET.get('team_id')
+    source = request.GET.get('source', '')
+
     from_campaign = request.GET.get('from') == 'create_campaign'
     page = request.GET.get('page', '1')
+
+    # متغیرهای پیش‌فرض
+    back_url = None
+    select_plan_url = None
+    from_standalone = False
+    is_from_campaign = False
+
+    # ====== ۱. حالت بازگشت به سفارش مستقل ======
+    if return_to == 'standalone_order' and service_type_id and team_id:
+        from_standalone = True
+        back_url = reverse('content_team:standalone_order_step1')
+        # 🔥 صفحه رو هم به URL اضافه کن
+        select_plan_url = f"{back_url}?selected_service={service_type_id}&selected_team={team_id}&selected_plan={plan.id}&return_to=plan_detail&page={page}"
+
+    # ====== ۲. حالت بازگشت به کمپین (استپ ۳) ======
+    elif from_campaign or source == 'campaign':
+        is_from_campaign = True
+        campaign_id = request.session.get('campaign_draft_id')
+        if campaign_id:
+            back_url = reverse('campaigns:campaign_create_step3_team')
+            select_plan_url = f"{back_url}?selected_plan={plan.id}&selected_team={team.id}&page={page}"
+        else:
+            back_url = reverse('campaigns:campaign_create_step1')
+            select_plan_url = None
+
+    # ====== ۳. حالت عادی (لیست تیم‌ها) ======
+    else:
+        back_url = reverse('content_team:team_list')
+        select_plan_url = None
 
     # ========== تعداد سفارش‌های موفق این پلن ==========
     completed_orders_count = plan.orders.filter(
@@ -383,8 +470,15 @@ def plan_detail(request, plan_id):
         'reviews_count': reviews_count,
         'portfolio_items': portfolio_items,
         'members': members,
-        'from_campaign': from_campaign,
+        'from_campaign': is_from_campaign,
+        'from_standalone': from_standalone,  # ✅ اضافه شده
         'page': page,
         'is_most_popular': is_most_popular,
+        # ====== 🔥 اضافه شده برای بازگشت ======
+        'back_url': back_url,
+        'select_plan_url': select_plan_url,
+        'service_type_id': service_type_id,
+        'team_id': team_id,
+        'return_to': return_to,
     }
     return render(request, 'content_team/pages/plan_detail.html', context)

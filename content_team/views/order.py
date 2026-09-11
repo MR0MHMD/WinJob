@@ -45,18 +45,28 @@ def team_orders_list(request):
     price_max = request.GET.get('price_max', '')
     show_current_only = request.GET.get('current') == '1'
 
-    if show_current_only:
-        orders = ContentOrder.objects.exclude(campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING])
-        orders = orders.exclude(status__in=['completed', 'cancelled'])
-    else:
-        orders = ContentOrder.objects.filter(team=user_team).exclude(
-            campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING]
-        )
+    # ========== کوئری پایه ==========
+    # همه سفارش‌های تیم (بدون فیلتر اولیه)
+    orders = ContentOrder.objects.filter(team=user_team).exclude(status='draft')
 
+    # ========== فیلتر کمپین‌های پیش‌نویس ==========
+    # فقط سفارش‌هایی که کمپین دارند و وضعیت کمپین DRAFT یا PENDING نباشند
+    # یا سفارش‌های مستقل که کمپین ندارند
+    from django.db.models import Q
+    orders = orders.filter(
+        Q(campaign__isnull=True) |  # سفارش‌های مستقل
+        ~Q(campaign__status__in=[Campaign.Status.DRAFT, Campaign.Status.PENDING])  # کمپین‌های معتبر
+    )
+
+    if show_current_only:
+        orders = orders.exclude(status__in=['completed', 'cancelled'])
+
+    # ========== انتخاب فیلدهای مرتبط ==========
     orders = orders.select_related(
         'campaign',
         'campaign__advertiser',
         'campaign__advertiser__user',
+        'standalone_user',          # ✅ اضافه شد
         'plan',
         'plan__service_type',
     ).prefetch_related(
@@ -69,7 +79,7 @@ def team_orders_list(request):
         revisions_count=Count('revisions')
     ).order_by(sort_by)
 
-    # اعمال فیلترها
+    # ========== اعمال فیلترها ==========
     if status_filter:
         orders = orders.filter(status=status_filter)
 
@@ -78,8 +88,9 @@ def team_orders_list(request):
             Q(campaign__name__icontains=search_query) |
             Q(campaign__advertiser__user__nickname__icontains=search_query) |
             Q(campaign__advertiser__business_name__icontains=search_query) |
+            Q(standalone_user__nickname__icontains=search_query) |      # ✅ جدید
+            Q(standalone_user__phone_number__icontains=search_query) |  # ✅ جدید
             Q(brief__brand_name__icontains=search_query)
-
         )
 
     if price_min:
@@ -87,7 +98,7 @@ def team_orders_list(request):
     if price_max:
         orders = orders.filter(price__lte=int(price_max))
 
-    # آمارهای پیشرفته
+    # ========== آمار ==========
     stats = {
         'total': orders.count(),
         'pending': orders.filter(status='pending').count(),
@@ -99,13 +110,10 @@ def team_orders_list(request):
         'completed_count': user_team.completed_orders_count,
     }
 
-    # صفحه‌بندی
-    paginator = Paginator(orders, 12)  # 12 تا در هر صفحه برای نمایش بهتر
+    # ========== صفحه‌بندی ==========
+    paginator = Paginator(orders, 12)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
-
-    # وضعیت‌ها برای فیلتر
-    status_choices = ContentOrder.Status.choices
 
     context = {
         'orders': page_obj,
@@ -115,7 +123,7 @@ def team_orders_list(request):
         'sort_by': sort_by,
         'price_min': price_min,
         'price_max': price_max,
-        'status_choices': status_choices,
+        'status_choices': ContentOrder.Status.choices,
         'user_team': user_team,
         'team_member': team_member,
         'is_team_member': True,
@@ -127,7 +135,7 @@ def team_orders_list(request):
 
 @login_required
 def team_order_detail(request, order_id):
-    """نمایش جزئیات سفارش"""
+    """نمایش جزئیات سفارش (پشتیبانی از سفارش‌های مستقل)"""
 
     try:
         team_member = ContentTeamMember.objects.select_related('team').get(
@@ -139,6 +147,7 @@ def team_order_detail(request, order_id):
         messages.warning(request, 'شما عضو هیچ تیم تولید محتوایی نیستید!')
         return redirect('content_team:team_orders_list')
 
+    # ========== دریافت سفارش با prefetch کامل ==========
     order = get_object_or_404(
         ContentOrder.objects.select_related(
             'campaign',
@@ -147,6 +156,7 @@ def team_order_detail(request, order_id):
             'team',
             'plan',
             'plan__service_type',
+            'standalone_user',          # ✅ اضافه شد
         ).prefetch_related(
             'brief',
             'files',
@@ -160,21 +170,34 @@ def team_order_detail(request, order_id):
         team=user_team
     )
 
+    # ========== تعیین کاربر سفارش‌دهنده (تبلیغ‌دهنده یا مستقل) ==========
+    if order.campaign:
+        # حالت کمپین: کاربر از طریق campaign.advertiser.user
+        ordering_user = order.campaign.advertiser.user
+        ordering_user_type = 'campaign'
+    elif order.standalone_user:
+        # حالت مستقل: کاربر مستقیم
+        ordering_user = order.standalone_user
+        ordering_user_type = 'content_orders'
+    else:
+        ordering_user = None
+        ordering_user_type = 'unknown'
+
+    # ========== بقیه منطق (بدون تغییر) ==========
     show_count_down = False
-    if order.status == "in_progress" or order.status == "review_pending":
+    if order.status in ["in_progress", "review_pending"]:
         show_count_down = True
 
     revisions = order.revisions.all().order_by('-created_at')
 
-    # ========== ✅ پیدا کردن فایل انتخاب شده ==========
+    # پیدا کردن فایل انتخاب شده
     selected_file = None
     for delivery in order.deliveries.all():
         selected_file = delivery.files.filter(is_selected=True).first()
         if selected_file:
             break
 
-    # ========== ✅ تعداد فایل‌های مورد نیاز برای تحویل ==========
-    # حالت SINGLE: همیشه ۱ فایل
+    # تعداد فایل‌های مورد نیاز برای تحویل
     if order.plan.delivery_type == 'single':
         required_file_count = 1
     else:
@@ -183,6 +206,7 @@ def team_order_detail(request, order_id):
         else:
             required_file_count = 1
 
+    # ========== اطلاعات وضعیت ==========
     status_info = {
         'pending': {
             'badge_class': 'bg-warning bg-opacity-10 text-warning',
@@ -227,7 +251,11 @@ def team_order_detail(request, order_id):
         'attached_files': order.files.all(),
         'current_status_info': current_status_info,
         'selected_file': selected_file,
-        'required_file_count': required_file_count,  # ✅ اضافه شد
+        'required_file_count': required_file_count,
+        # ========== متغیرهای جدید برای تمپلیت ==========
+        'ordering_user': ordering_user,
+        'ordering_user_type': ordering_user_type,  # 'campaign' یا 'content_orders'
+        'is_standalone': order.is_standalone,
     }
 
     return render(request, 'content_team/pages/team_order_detail.html', context)
