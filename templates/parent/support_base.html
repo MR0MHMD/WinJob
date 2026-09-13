@@ -1,0 +1,340 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>
+        {% block title %}پنل مدیریت{% endblock %} | WinJob
+    </title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="پنل مدیریت وین‌جاب">
+    <meta name="author" content="MR_MHMD">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1f1b2d">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" sizes="32x32"
+          href="{% static 'finder/img/icons/favicon.ico' %}">
+
+    <!-- Core Styles -->
+    <link rel="stylesheet" media="screen" href="{% static 'finder/css/theme.min.css' %}">
+    <link rel="stylesheet" href="{% static 'finder/css/bootstrap-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'parent/base.css' %}">
+
+    <!-- Support Panel Styles -->
+    <link rel="stylesheet" href="{% static 'support/parent/support_base.css' %}">
+
+    {% block extra_head %}{% endblock %}
+    {% block extra_style %}{% endblock %}
+</head>
+
+<body class="bg-dark support-panel"
+      dir="rtl"
+      data-user-role="{% if user.is_authenticated %}{% if user.is_ceo %}ceo{% elif user.is_developer %}developer{% elif user.is_publish_manager %}publish_manager{% elif user.is_content_manager %}content_manager{% elif user.is_regional_manager %}regional_manager{% else %}user{% endif %}{% else %}guest{% endif %}">
+
+    <!-- ============================================================ -->
+    <!-- TOPBAR (Sticky) -->
+    <!-- ============================================================ -->
+    <header class="support-topbar">
+        {% include 'support/partials/support_topbar.html' %}
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- LAYOUT: Sidebar + Main -->
+    <!-- ============================================================ -->
+    <div class="support-layout">
+
+        <!-- ===== Sidebar (Desktop) ===== -->
+        <aside class="support-sidebar" id="supportSidebar">
+            {% include 'support/partials/support_sidebar.html' %}
+        </aside>
+
+        <!-- ===== Offcanvas Sidebar (Mobile) ===== -->
+        <div class="offcanvas offcanvas-end bg-dark text-white"
+             tabindex="-1"
+             id="supportMobileSidebar"
+             aria-labelledby="supportMobileSidebarLabel">
+            <div class="offcanvas-header border-bottom border-light">
+                <h5 class="offcanvas-title text-light" id="supportMobileSidebarLabel">
+                    <i class="bi bi-shield-lock-fill text-primary me-2"></i>
+                    پنل مدیریت
+                </h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="offcanvas"
+                        aria-label="بستن"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                {% include 'support/partials/support_sidebar.html' %}
+            </div>
+        </div>
+
+        <!-- ===== Main Content ===== -->
+        <main class="support-main" id="supportMain">
+
+            <!-- Django Messages (Hidden - برای Toast) -->
+            {% if messages %}
+                <div id="django-messages-data" style="display: none;">
+                    {% for message in messages %}
+                        <div data-message-tag="{{ message.tags }}"
+                             data-message-text="{{ message|escapejs }}"></div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Page Content -->
+            <div class="container py-4">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Toast Notifications Container -->
+    <!-- ============================================================ -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"
+         style="z-index: 1090; direction: ltr;">
+        <!-- Toasts به صورت داینامیک اضافه می‌شن -->
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Global Notification Modal -->
+    <!-- ============================================================ -->
+    <div class="modal fade notification-modal"
+         id="globalNotificationModal"
+         tabindex="-1"
+         data-bs-backdrop="static"
+         data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-light">
+                    <h5 class="modal-title text-light" id="notificationModalTitle">
+                        <i class="bi bi-info-circle me-2"></i>
+                        اطلاعیه
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="notification-icon" id="notificationModalIcon">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <p class="text-light mb-0"
+                       id="notificationModalMessage"
+                       style="font-size: 1rem; line-height: 1.6;">
+                        پیام سیستم
+                    </p>
+                </div>
+                <div class="modal-footer border-light">
+                    <button type="button"
+                            class="btn btn-primary rounded-pill px-4"
+                            data-bs-dismiss="modal"
+                            id="notificationModalBtn">
+                        <i class="bi bi-check me-1"></i> متوجه شدم
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Vendor Scripts -->
+    <!-- ============================================================ -->
+    <script src="{% static 'finder/vendor/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'finder/vendor/smooth-scroll/dist/smooth-scroll.polyfills.min.js' %}"></script>
+
+    <!-- ============================================================ -->
+    <!-- Support Panel Scripts -->
+    <!-- ============================================================ -->
+    <script>
+        // ==================== Support Sidebar Toggle (Desktop) ====================
+        (function () {
+            const STORAGE_KEY = 'winjob_support_sidebar_collapsed';
+            const body = document.body;
+
+            // بازیابی وضعیت از localStorage
+            const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+            if (isCollapsed && window.innerWidth >= 992) {
+                body.classList.add('sidebar-collapsed');
+            }
+
+            // دکمه toggle (توی topbar)
+            document.addEventListener('click', function (e) {
+                const toggleBtn = e.target.closest('[data-sidebar-toggle]');
+                if (!toggleBtn) return;
+
+                // فقط در دسکتاپ
+                if (window.innerWidth < 992) return;
+
+                body.classList.toggle('sidebar-collapsed');
+                const collapsed = body.classList.contains('sidebar-collapsed');
+                localStorage.setItem(STORAGE_KEY, collapsed ? 'true' : 'false');
+            });
+        })();
+
+        // ==================== Notification Modal ====================
+        function showNotificationModal(title, message, type = 'info', onClose = null) {
+            const modalElement = document.getElementById('globalNotificationModal');
+            const modalTitle = document.getElementById('notificationModalTitle');
+            const modalIcon = document.getElementById('notificationModalIcon');
+            const modalMessage = document.getElementById('notificationModalMessage');
+            const modalBtn = document.getElementById('notificationModalBtn');
+
+            modalTitle.innerHTML = `<i class="bi bi-info-circle me-2"></i> ${title}`;
+            modalMessage.innerHTML = message;
+
+            modalIcon.className = 'notification-icon';
+            let iconClass = 'bi-info-circle';
+            let btnClass = 'btn-primary';
+
+            switch (type) {
+                case 'success':
+                    modalIcon.classList.add('success');
+                    iconClass = 'bi-check-circle';
+                    btnClass = 'btn-success';
+                    break;
+                case 'error':
+                    modalIcon.classList.add('error');
+                    iconClass = 'bi-exclamation-circle';
+                    btnClass = 'btn-danger';
+                    break;
+                case 'warning':
+                    modalIcon.classList.add('warning');
+                    iconClass = 'bi-exclamation-triangle';
+                    btnClass = 'btn-warning';
+                    break;
+                default:
+                    modalIcon.classList.add('info');
+                    iconClass = 'bi-info-circle';
+                    btnClass = 'btn-primary';
+            }
+
+            modalIcon.innerHTML = `<i class="${iconClass}"></i>`;
+            modalBtn.className = `btn ${btnClass} rounded-pill px-4`;
+
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                if (onClose && typeof onClose === 'function') onClose();
+            }, { once: true });
+        }
+
+        // جایگزینی alert
+        window.alert = function (message) {
+            showNotificationModal('توجه', message, 'info');
+        };
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- Toast Notification System -->
+    <!-- ============================================================ -->
+    <script>
+        class ToastManager {
+            constructor(containerSelector = '.toast-container') {
+                this.container = document.querySelector(containerSelector);
+                if (!this.container) {
+                    this.container = document.createElement('div');
+                    this.container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                    this.container.style.zIndex = '1090';
+                    document.body.appendChild(this.container);
+                }
+                this.defaultDuration = 5000;
+            }
+
+            show(message, type = 'info', duration = this.defaultDuration) {
+                const toast = this.createToastElement(message, type);
+                this.container.appendChild(toast);
+
+                const progressBar = toast.querySelector('.toast-progress-bar');
+                let startTime = null;
+
+                const animateProgress = (timestamp) => {
+                    if (!startTime) startTime = timestamp;
+                    const elapsed = timestamp - startTime;
+                    const percent = Math.min((elapsed / duration) * 100, 100);
+                    progressBar.style.width = `${percent}%`;
+                    if (elapsed < duration) {
+                        requestAnimationFrame(animateProgress);
+                    } else {
+                        this.hideToast(toast);
+                    }
+                };
+                requestAnimationFrame(animateProgress);
+
+                const closeBtn = toast.querySelector('.toast-close');
+                closeBtn.addEventListener('click', () => this.hideToast(toast));
+
+                return toast;
+            }
+
+            createToastElement(message, type) {
+                const toastDiv = document.createElement('div');
+                toastDiv.className = 'toast-notification';
+
+                let iconClass = 'bi-info-circle';
+                if (type === 'success') iconClass = 'bi-check-circle';
+                else if (type === 'error') iconClass = 'bi-exclamation-circle';
+                else if (type === 'warning') iconClass = 'bi-exclamation-triangle';
+
+                toastDiv.innerHTML = `
+                    <div class="toast-content">
+                        <div class="toast-icon ${type}">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="toast-text">${escapeHtml(message)}</div>
+                        <button class="toast-close" aria-label="بستن">&times;</button>
+                    </div>
+                    <div class="toast-progress">
+                        <div class="toast-progress-bar"></div>
+                    </div>
+                `;
+                return toastDiv;
+            }
+
+            hideToast(toast) {
+                toast.classList.add('hide');
+                toast.addEventListener('animationend', () => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, { once: true });
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/[&<>]/g, function (m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
+        }
+
+        const toastManager = new ToastManager();
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const messagesContainer = document.getElementById('django-messages-data');
+            if (messagesContainer) {
+                const messages = messagesContainer.querySelectorAll('div');
+                messages.forEach(msg => {
+                    let tag = msg.getAttribute('data-message-tag');
+                    let text = msg.getAttribute('data-message-text');
+                    if (text) {
+                        let type = 'info';
+                        if (tag === 'success') type = 'success';
+                        else if (tag === 'error' || tag === 'danger') type = 'error';
+                        else if (tag === 'warning') type = 'warning';
+                        toastManager.show(text, type);
+                    }
+                });
+                messagesContainer.remove();
+            }
+        });
+    </script>
+
+    {% block script %}{% endblock %}
+</body>
+</html>

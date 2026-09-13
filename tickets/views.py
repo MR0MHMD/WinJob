@@ -185,7 +185,7 @@ class TicketCreateView(LoginRequiredMixin, CreateView):
                 category_id=category_id,
                 title_id=title_id if title_id else None,
                 custom_title=custom_title if not title_id else None,
-                status=Ticket.Status.OPEN
+                status=Ticket.Status.WAITING_ADMIN
             )
 
             # ایجاد اولین پیام

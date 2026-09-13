@@ -1,59 +1,97 @@
-{% extends 'parent/base.html' %}
+{% extends 'parent/support_base.html' %}
 {% load static %}
 
-{% block title %}لیست تیکت‌های پشتیبانی{% endblock %}
+{% block title %}تیکت‌های پشتیبانی{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/tickets/ticket_list.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-light">📩 تیکت‌های پشتیبانی</h2>
-        <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} تیکت</span>
+
+    <!-- ============================================================ -->
+    <!-- هدر صفحه -->
+    <!-- ============================================================ -->
+    <div class="support-page-header">
+        <div>
+            <span class="page-subtitle">
+                <i class="bi bi-headset text-primary"></i>
+                مدیریت تیکت‌های پشتیبانی کاربران
+                {% if dash_perms.is_regional_scope %}
+                    <span class="text-warning">• {{ dash_perms.scope_label }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="page-actions">
+            <span class="page-count-badge">
+                <i class="bi bi-chat-dots me-1"></i>
+                {{ page_obj.paginator.count }} تیکت
+            </span>
+        </div>
     </div>
 
-    <div class="card bg-dark border-light">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-hover mb-0">
-                    <thead class="table-secondary">
+    <!-- ============================================================ -->
+    <!-- لیست تیکت‌ها -->
+    <!-- ============================================================ -->
+    <div class="support-card">
+        <div class="support-card-body flush">
+            <div class="support-table-wrap">
+                <table class="table table-dark support-table table-tickets table-fixed-scroll">
+                    <thead>
                         <tr>
-                            <th>#</th>
-                            <th>عنوان</th>
-                            <th>کاربر</th>
-                            <th>وضعیت</th>
-                            <th>آخرین بروزرسانی</th>
-                            <th>عملیات</th>
+                            <th class="col-id">ID</th>
+                            <th class="col-title">عنوان</th>
+                            <th class="col-user">کاربر</th>
+                            <th class="col-status">وضعیت</th>
+                            <th class="col-updated">آخرین بروزرسانی</th>
+                            <th class="col-actions">عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ticket in tickets %}
-                        <tr>
-                            <td>{{ ticket.id }}</td>
-                            <td>{{ ticket.get_display_title }}</td>
-                            <td>{{ ticket.user.phone_number }}</td>
-                            <td>
-                                <span class="badge 
-                                    {% if ticket.status == 'open' %}bg-warning
-                                    {% elif ticket.status == 'waiting_user' %}bg-info
-                                    {% elif ticket.status == 'closed' %}bg-secondary
-                                    {% else %}bg-primary{% endif %}">
-                                    {{ ticket.get_status_display }}
-                                </span>
-                            </td>
-                            <td>{{ ticket.updated_at|date:"Y/m/d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'support:ticket_detail' ticket.pk %}" 
-                                   class="btn btn-sm btn-primary rounded-pill px-3">
-                                   <i class="fi-eye-on me-1"></i> مشاهده
-                                </a>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td class="col-id">
+                                    <strong>#{{ ticket.id }}</strong>
+                                </td>
+                                <td class="col-title">
+                                    <span class="text-light">
+                                        {{ ticket.get_display_title|truncatechars:50 }}
+                                    </span>
+                                </td>
+                                <td class="col-user">
+                                    <span class="text-light">{{ ticket.user.phone_number }}</span>
+                                </td>
+                                <td class="col-status">
+                                    <span class="support-status-badge
+                                        {% if ticket.status == 'open' %}bg-info
+                                        {% elif ticket.status == 'waiting_user' %}bg-warning
+                                        {% elif ticket.status == 'waiting_admin' %}bg-primary
+                                        {% elif ticket.status == 'closed' %}bg-accent
+                                        {% else %}bg-info{% endif %}">
+                                        {{ ticket.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="col-updated">
+                                    <span class="text-light">
+                                        {{ ticket.updated_at|date:"Y/m/d H:i" }}
+                                    </span>
+                                </td>
+                                <td class="col-actions">
+                                    <a href="{% url 'support:ticket_detail' ticket.pk %}"
+                                       class="btn btn-sm btn-primary rounded-pill btn-sm-action">
+                                        <i class="bi bi-eye me-1"></i> مشاهده
+                                    </a>
+                                </td>
+                            </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fi-info-circle fs-4 d-block mb-2"></i>
-                                هیچ تیکتی یافت نشد.
-                            </td>
-                        </tr>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="support-empty">
+                                        <i class="bi bi-info-circle"></i>
+                                        <p>هیچ تیکتی یافت نشد.</p>
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -61,37 +99,9 @@
         </div>
     </div>
 
-    <!-- Pagination با استایل تم -->
-    {% if is_paginated %}
-    <div class="d-flex justify-content-center mt-4">
-        <nav aria-label="Page navigation">
-            <ul class="pagination pagination-light">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="قبلی">
-                        <i class="fi-chevron-right"></i>
-                    </a>
-                </li>
-                {% endif %}
+    <!-- ============================================================ -->
+    <!-- Pagination -->
+    <!-- ============================================================ -->
+    {% include 'partials/pagination.html' with page_obj=page_obj %}
 
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% endif %}
-                {% endfor %}
-
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="بعدی">
-                        <i class="fi-chevron-left"></i>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
-    {% endif %}
-</div>
 {% endblock %}

@@ -170,6 +170,7 @@ TEMPLATES = [
                 'core.context_processors.domain',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
+                'support.context_processors.support_menu',
             ],
         },
     },

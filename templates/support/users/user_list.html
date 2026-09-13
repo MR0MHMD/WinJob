@@ -1,176 +1,214 @@
-{% extends 'parent/base.html' %}
+{% extends 'parent/support_base.html' %}
 {% load static %}
 
 {% block title %}مدیریت کاربران{% endblock %}
 
-{% block extra_style %}
-    <style>
-        .activity-icon {
-            width: 30px;
-            height: 30px;
-            min-width: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 0.75rem;
-        }
-    </style>
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/users/user_list.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-light">👥 مدیریت کاربران</h2>
-            <span class="badge bg-primary fs-6">{{ total_users }} کاربر</span>
-        </div>
 
-        <!-- آمار -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card bg-dark border-light text-center">
-                    <div class="card-body">
-                        <h5 class="text-light">{{ total_users }}</h5>
-                        <span class="text-muted">کل کاربران</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-dark border-light text-center">
-                    <div class="card-body">
-                        <h5 class="text-success">{{ advertisers_count }}</h5>
-                        <span class="text-muted">تبلیغ دهنده</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-dark border-light text-center">
-                    <div class="card-body">
-                        <h5 class="text-primary">{{ influencers_count }}</h5>
-                        <span class="text-muted">اینفلوئنسر</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-dark border-light text-center">
-                    <div class="card-body">
-                        <h5 class="text-warning">{{ team_members_count }}</h5>
-                        <span class="text-muted">تیم تولید محتوا</span>
-                    </div>
-                </div>
+    <!-- ============================================================ -->
+    <!-- هدر صفحه -->
+    <!-- ============================================================ -->
+    <div class="support-page-header">
+        <div>
+            <span class="page-subtitle">
+                <i class="bi bi-people-fill text-primary"></i>
+                مدیریت کاربران پلتفرم
+                {% if dash_perms.is_regional_scope %}
+                    <span class="text-warning">• {{ dash_perms.scope_label }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="page-actions">
+            <span class="page-count-badge">
+                <i class="bi bi-person me-1"></i>
+                {{ total_users }} کاربر
+            </span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- آمار کلی -->
+    <!-- ============================================================ -->
+    <div class="row g-2 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="support-stat-card">
+                <div class="number">{{ total_users }}</div>
+                <div class="label">کل کاربران</div>
             </div>
         </div>
-
-        <!-- فیلتر و جستجو -->
-        <div class="card bg-dark border-light mb-4">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="q" class="d-none"></label>
-                        <input id="q" type="text" name="q" class="form-control bg-dark text-light border-light"
-                               placeholder="جستجو بر اساس شماره، نام مستعار، کسب‌وکار..." value="{{ current_search }}">
-                        
-                    </div>
-                    <div class="col-md-3">
-                        <label for="role" class="d-none"></label>
-                        <select id="role" name="role" class="form-select bg-dark text-light border-light">
-                            <option value="">همه نقش‌ها</option>
-                            <option value="advertiser" {% if current_role == 'advertiser' %}selected{% endif %}>
-                                تبلیغ دهنده
-                            </option>
-                            <option value="influencer" {% if current_role == 'influencer' %}selected{% endif %}>
-                                اینفلوئنسر
-                            </option>
-                            <option value="team_member" {% if current_role == 'team_member' %}selected{% endif %}>عضو
-                                تیم محتوا
-                            </option>
-                            <option value="none" {% if current_role == 'none' %}selected{% endif %}>بدون نقش</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                            <i class="fi-search me-1"></i> فیلتر
-                        </button>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'support:user_list' %}" class="btn btn-outline-secondary w-100 rounded-pill">
-                            <i class="fi-refresh me-1"></i> ریست
-                        </a>
-                    </div>
-                </form>
+        <div class="col-md-3 col-6">
+            <div class="support-stat-card">
+                <div class="number text-success">{{ advertisers_count }}</div>
+                <div class="label">تبلیغ دهنده</div>
             </div>
         </div>
+        <div class="col-md-3 col-6">
+            <div class="support-stat-card">
+                <div class="number text-primary">{{ influencers_count }}</div>
+                <div class="label">اینفلوئنسر</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="support-stat-card">
+                <div class="number text-warning">{{ team_members_count }}</div>
+                <div class="label">تیم تولید محتوا</div>
+            </div>
+        </div>
+    </div>
 
-        <!-- لیست کاربران -->
-        <div class="card bg-dark border-light">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0">
-                        <thead class="table-secondary">
+    <!-- ============================================================ -->
+    <!-- فیلترها -->
+    <!-- ============================================================ -->
+    <div class="support-card mb-4">
+        <div class="support-card-body">
+            <form method="get" class="row g-3 align-items-end">
+
+                <!-- جستجو -->
+                <div class="col-md-5">
+                    <label class="text-muted form-label mb-1" style="font-size:0.75rem;">
+                        جستجو
+                    </label>
+                    <input type="text"
+                           name="q"
+                           class="form-control form-control-sm bg-dark text-light border-light"
+                           placeholder="شماره، نام مستعار، کسب‌وکار..."
+                           value="{{ current_search }}">
+                </div>
+
+                <!-- نقش -->
+                <div class="col-md-3">
+                    <label class="text-muted form-label mb-1" style="font-size:0.75rem;">
+                        نقش
+                    </label>
+                    <select name="role"
+                            class="form-select form-select-sm bg-dark text-light border-light">
+                        <option value="">همه نقش‌ها</option>
+                        <option value="advertiser" {% if current_role == 'advertiser' %}selected{% endif %}>
+                            تبلیغ دهنده
+                        </option>
+                        <option value="influencer" {% if current_role == 'influencer' %}selected{% endif %}>
+                            اینفلوئنسر
+                        </option>
+                        <option value="team_member" {% if current_role == 'team_member' %}selected{% endif %}>
+                            عضو تیم محتوا
+                        </option>
+                        <option value="none" {% if current_role == 'none' %}selected{% endif %}>
+                            بدون نقش
+                        </option>
+                    </select>
+                </div>
+
+                <!-- دکمه اعمال -->
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100">
+                        <i class="bi bi-search me-1"></i> فیلتر
+                    </button>
+                </div>
+
+                <!-- دکمه ریست -->
+                <div class="col-md-2">
+                    <a href="{% url 'support:user_list' %}"
+                       class="btn btn-outline-secondary btn-sm rounded-pill w-100">
+                        <i class="bi bi-arrow-clockwise me-1"></i> ریست
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- لیست کاربران -->
+    <!-- ============================================================ -->
+    <div class="support-card">
+        <div class="support-card-body flush">
+            <div class="support-table-wrap">
+                <table class="table table-dark support-table table-users table-fixed-scroll">
+                    <thead>
                         <tr>
-                            <th>شماره تماس</th>
-                            <th>نام مستعار</th>
-                            <th>نقش</th>
-                            <th>استان</th>
-                            <th>تاریخ عضویت</th>
-                            <th>عملیات</th>
+                            <th class="col-id">ID</th>
+                            <th class="col-user">کاربر</th>
+                            <th class="col-nickname">نام مستعار</th>
+                            <th class="col-roles">نقش</th>
+                            <th class="col-province">استان</th>
+                            <th class="col-date">تاریخ عضویت</th>
+                            <th class="col-actions">عملیات</th>
                         </tr>
-                        </thead>
-                        <tbody>
-                        {% for user in users %}
+                    </thead>
+                    <tbody>
+                        {% for user_obj in users %}
                             <tr>
-                                <td class="d-flex align-items-center gap-2">
-                                    {% if user.avatar %}
-                                        <img width="30" height="30" class="rounded-circle" src="{{ user.avatar.url }}"
-                                             alt="" style="flex-shrink:0;">
-                                    {% else %}
-                                        <div class="activity-icon"
-                                             style="background:rgba(60,118,242,0.1); color:#3c76f2;">
-                                            <i class="fi-user"></i>
-                                        </div>
-                                    {% endif %}
-                                    {{ user.phone_number }}
+                                <td class="col-id">
+                                    <strong>#{{ user_obj.id }}</strong>
                                 </td>
-                                <td>{{ user.nickname|default:"-" }}</td>
-                                <td>
-                                    {% if user.advertiser_count %}
-                                        <span class="badge bg-success me-1">تبلیغ دهنده</span>
+                                <td class="col-user">
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if user_obj.avatar %}
+                                            <img src="{{ user_obj.avatar.url }}"
+                                                 class="user-avatar"
+                                                 width="32"
+                                                 height="32"
+                                                 alt="{{ user_obj.phone_number }}">
+                                        {% else %}
+                                            <div class="user-avatar-placeholder">
+                                                <i class="bi bi-person"></i>
+                                            </div>
+                                        {% endif %}
+                                        <span class="text-light">{{ user_obj.phone_number }}</span>
+                                    </div>
+                                </td>
+                                <td class="col-nickname">
+                                    <span class="text-light">{{ user_obj.nickname|default:"-" }}</span>
+                                </td>
+                                <td class="col-roles">
+                                    {% if user_obj.advertiser_count %}
+                                        <span class="support-status-badge bg-success me-1">تبلیغ دهنده</span>
                                     {% endif %}
-                                    {% if user.influencer_count %}
-                                        <span class="badge bg-primary me-1">اینفلوئنسر</span>
+                                    {% if user_obj.influencer_count %}
+                                        <span class="support-status-badge bg-primary me-1">اینفلوئنسر</span>
                                     {% endif %}
-                                    {% if user.team_member_count %}
-                                        <span class="badge bg-warning">تیم محتوا</span>
+                                    {% if user_obj.team_member_count %}
+                                        <span class="support-status-badge bg-warning">تیم محتوا</span>
                                     {% endif %}
-                                    {% if not user.advertiser_count and not user.influencer_count and not user.team_member_count %}
-                                        <span class="badge bg-secondary">بدون نقش</span>
+                                    {% if not user_obj.advertiser_count and not user_obj.influencer_count and not user_obj.team_member_count %}
+                                        <span class="support-status-badge bg-info">بدون نقش</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ user.province.name|default:"-" }}</td>
-                                <td>{{ user.date_joined|date:"Y/m/d" }}</td>
-                                <td>
-                                    <a href="{% url 'support:user_detail' user.pk %}"
-                                       class="btn btn-sm btn-primary rounded-pill px-3">
-                                        <i class="fi-eye-on me-1"></i> مشاهده
+                                <td class="col-province">
+                                    <span class="text-light">{{ user_obj.province.name|default:"-" }}</span>
+                                </td>
+                                <td class="col-date">
+                                    <span class="text-light">{{ user_obj.date_joined|date:"Y/m/d" }}</span>
+                                </td>
+                                <td class="col-actions">
+                                    <a href="{% url 'support:user_detail' user_obj.pk %}"
+                                       class="btn btn-sm btn-primary rounded-pill btn-sm-action">
+                                        <i class="bi bi-eye me-1"></i> مشاهده
                                     </a>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    <i class="fi-info-circle fs-4 d-block mb-2"></i>
-                                    کاربری یافت نشد.
+                                <td colspan="7">
+                                    <div class="support-empty">
+                                        <i class="bi bi-info-circle"></i>
+                                        <p>هیچ کاربری یافت نشد.</p>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <!-- Pagination -->
-        {% include 'partials/pagination.html' with page_obj=page_obj %}
     </div>
+
+    <!-- ============================================================ -->
+    <!-- Pagination -->
+    <!-- ============================================================ -->
+    {% include 'partials/pagination.html' with page_obj=page_obj %}
+
 {% endblock %}

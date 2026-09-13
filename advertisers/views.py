@@ -113,7 +113,6 @@ def campaign_detail(request, campaign_id):
     channels_count = channels.count()
 
     # ========== MULTI_CHOICE: دریافت دلیوری‌های با گزینه ==========
-    print(campaign.content_orders.all())
     content_order = campaign.content_orders.last() if campaign.content_orders.exists() else None
     multi_choice_deliveries = []
     is_multi_choice = False

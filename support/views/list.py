@@ -1,51 +1,89 @@
-from influencers.models import ChannelServiceRate, Channel, InfluencerProfile, ChannelBooking
+# support/views/list.py
+
+"""
+ListView های پنل Support
+
+هر View بر اساس نقش، دسترسی و فیلتر استانی مناسب داره.
+"""
+
+from django.contrib.auth import get_user_model
 from django.db.models import Q, Count, Avg, Prefetch, Sum
+from django.views.generic import ListView
+from django.utils import timezone
+from datetime import timedelta
+
+from ..mixins import (
+    BaseSupportMixin,
+    ContentManagerRequiredMixin,
+    PublishManagerRequiredMixin,
+    RegionalFilterMixin,
+    RegionalFilterComplexMixin,
+)
+from influencers.models import ChannelServiceRate, Channel, InfluencerProfile, ChannelBooking
 from campaigns.models import Campaign, CampaignReport
 from advertisers.models import AdvertiserProfile
-from django.contrib.auth import get_user_model
 from notifications.models import Notification
-from core.models import Platform, Province
-from django.views.generic import ListView
-from ..mixins import SupportRequiredMixin
-from tickets.models import TicketMessage
+from core.models import Platform, Province, Category
+from tickets.models import TicketMessage, Ticket
 from accounts.models import CustomUser
-from tickets.models import Ticket
-from django.utils import timezone
-from core.models import Category
-from datetime import timedelta
 from content_team.models import (
     ContentOrder,
     ContentTeam,
     ContentTeamMember,
     ContentOrderDescription,
     ContentOrderFile,
-    ContentDelivery
+    ContentDelivery,
 )
 
 User = get_user_model()
 
 
-class TicketListView(SupportRequiredMixin, ListView):
+# ============================================================
+#                        Ticket List
+# ============================================================
+class TicketListView(BaseSupportMixin, RegionalFilterMixin, ListView):
+    """
+    لیست تیکت‌ها
+
+    دسترسی: همه نقش‌ها
+    فیلتر Regional: کاربر استان خودش
+    """
     model = Ticket
     template_name = 'support/tickets/ticket_list.html'
     context_object_name = 'tickets'
     paginate_by = 20
     ordering = ['-updated_at']
 
+    province_field_path = 'user__province'
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'user', 'category', 'title'
         ).prefetch_related(
-            Prefetch('messages', queryset=TicketMessage.objects.order_by('-created_at')[:1], to_attr='last_msg')
+            Prefetch(
+                'messages',
+                queryset=TicketMessage.objects.order_by('-created_at')[:1],
+                to_attr='last_msg'
+            )
         )
 
 
-class ChannelListView(SupportRequiredMixin, ListView):
-    """لیست کامل کانال‌های اینفلوئنسر با فیلترهای پیشرفته"""
+# ============================================================
+#                        Channel List
+# ============================================================
+class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView):
+    """
+    لیست کانال‌های اینفلوئنسر
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: خود Channel فیلد province داره
+    """
     model = Channel
     template_name = 'support/channels/channel_list.html'
     context_object_name = 'channels'
     paginate_by = 50
+
+    province_field_path = 'province'
 
     def get_queryset(self):
         queryset = Channel.objects.select_related(
@@ -65,6 +103,12 @@ class ChannelListView(SupportRequiredMixin, ListView):
             total_revenue_=Sum('campaign_bookings__price', filter=Q(campaign_bookings__status='completed'))
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(province=user.province)
+
+        # ========== جستجو ==========
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -74,6 +118,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
                 Q(influencer__user__phone_number__icontains=search)
             )
 
+        # ========== فیلترها ==========
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             queryset = queryset.filter(influencer_id=int(influencer_id))
@@ -94,6 +139,7 @@ class ChannelListView(SupportRequiredMixin, ListView):
         if category:
             queryset = queryset.filter(category_id=category)
 
+        # ========== مرتب‌سازی ==========
         sort_by = self.request.GET.get('sort')
         if sort_by == 'name':
             queryset = queryset.order_by('channel_name')
@@ -102,9 +148,9 @@ class ChannelListView(SupportRequiredMixin, ListView):
         elif sort_by == 'followers_desc':
             queryset = queryset.order_by('-followers_count')
         elif sort_by == 'rating':
-            queryset = queryset.order_by('-avg_rating')
+            queryset = queryset.order_by('-avg_rating_')
         elif sort_by == 'revenue':
-            queryset = queryset.order_by('-total_revenue')
+            queryset = queryset.order_by('-total_revenue_')
         else:
             queryset = queryset.order_by('-created_at')
 
@@ -112,20 +158,33 @@ class ChannelListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
-        context['total_count'] = Channel.objects.count()
-        context['pending_count'] = Channel.objects.filter(status='pending').count()
-        context['approved_count'] = Channel.objects.filter(status='approved').count()
-        context['rejected_count'] = Channel.objects.filter(status='rejected').count()
-        context['active_count'] = Channel.objects.filter(is_active=True).count()
+        # آمار پایه (بر اساس دسترسی کاربر)
+        base_qs = Channel.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(province=user.province)
+
+        context['total_count'] = base_qs.count()
+        context['pending_count'] = base_qs.filter(status='pending').count()
+        context['approved_count'] = base_qs.filter(status='approved').count()
+        context['rejected_count'] = base_qs.filter(status='rejected').count()
+        context['active_count'] = base_qs.filter(is_active=True).count()
+
         context['current_status'] = self.request.GET.get('status', '')
         context['current_platform'] = self.request.GET.get('platform', '')
         context['current_province'] = self.request.GET.get('province', '')
         context['current_category'] = self.request.GET.get('category', '')
         context['current_search'] = self.request.GET.get('q', '')
         context['current_sort'] = self.request.GET.get('sort', '')
+
         context['platforms'] = Platform.objects.filter(is_active=True)
-        context['provinces'] = Province.objects.all().order_by('name')
+        # اگه Regional هست، فقط استان خودش رو توی فیلتر نشون بده
+        if is_regional:
+            context['provinces'] = Province.objects.filter(id=user.province_id)
+        else:
+            context['provinces'] = Province.objects.all().order_by('name')
         context['categories'] = Category.objects.filter(is_active=True)
         context['status_choices'] = Channel.STATUS_CHOICES
 
@@ -140,17 +199,34 @@ class ChannelListView(SupportRequiredMixin, ListView):
         return context
 
 
-class CampaignListView(SupportRequiredMixin, ListView):
+# ============================================================
+#                       Campaign List
+# ============================================================
+class CampaignListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView):
+    """
+    لیست کمپین‌ها
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: از طریق تبلیغ‌دهنده
+    """
     model = Campaign
     template_name = 'support/campaigns/campaign_list.html'
     context_object_name = 'campaigns'
     paginate_by = 20
+
+    province_field_path = 'advertiser__user__province'
 
     def get_queryset(self):
         queryset = Campaign.objects.select_related(
             'advertiser', 'platform', 'content_type', 'ad_type', 'advertiser__user'
         ).prefetch_related('influencer_bookings')
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(advertiser__user__province=user.province)
+
+        # ========== فیلترها ==========
         advertiser_id = self.request.GET.get('advertiser')
         if advertiser_id and advertiser_id.isdigit():
             queryset = queryset.filter(advertiser_id=int(advertiser_id))
@@ -183,6 +259,7 @@ class CampaignListView(SupportRequiredMixin, ListView):
             year_ago = today - timedelta(days=365)
             queryset = queryset.filter(created_at__date__gte=year_ago)
 
+        # ========== مرتب‌سازی بر اساس اولویت وضعیت ==========
         status_order = {
             'pending': 0,
             'approved': 1,
@@ -199,14 +276,21 @@ class CampaignListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
-        context['total_count'] = Campaign.objects.count()
-        context['pending_count'] = Campaign.objects.filter(status='pending').count()
-        context['approved_count'] = Campaign.objects.filter(status='approved').count()
-        context['running_count'] = Campaign.objects.filter(status='running').count()
-        context['completed_count'] = Campaign.objects.filter(status='completed').count()
-        context['draft_count'] = Campaign.objects.filter(status='draft').count()
-        context['cancelled_count'] = Campaign.objects.filter(status='cancelled').count()
+        # آمار پایه (بر اساس دسترسی کاربر)
+        base_qs = Campaign.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(advertiser__user__province=user.province)
+
+        context['total_count'] = base_qs.count()
+        context['pending_count'] = base_qs.filter(status='pending').count()
+        context['approved_count'] = base_qs.filter(status='approved').count()
+        context['running_count'] = base_qs.filter(status='running').count()
+        context['completed_count'] = base_qs.filter(status='completed').count()
+        context['draft_count'] = base_qs.filter(status='draft').count()
+        context['cancelled_count'] = base_qs.filter(status='cancelled').count()
 
         context['current_status'] = self.request.GET.get('status', '')
         context['current_date_filter'] = self.request.GET.get('date_filter', '')
@@ -225,15 +309,26 @@ class CampaignListView(SupportRequiredMixin, ListView):
         return context
 
 
-class ReportListView(SupportRequiredMixin, ListView):
+# ============================================================
+#                        Report List
+# ============================================================
+class ReportListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView):
+    """
+    لیست گزارشات در انتظار بررسی
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: از طریق کانال
+    """
     model = CampaignReport
     template_name = 'support/reports/report_list.html'
     context_object_name = 'reports'
     paginate_by = 20
     ordering = ['-created_at']
 
+    province_field_path = 'campaign_influencer__channel__province'
+
     def get_queryset(self):
-        return super().get_queryset().filter(
+        qs = super().get_queryset().filter(
             status='pending'
         ).select_related(
             'campaign_influencer',
@@ -244,13 +339,32 @@ class ReportListView(SupportRequiredMixin, ListView):
             'campaign_influencer__channel__platform'
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(
+                campaign_influencer__channel__province=user.province
+            )
 
-class UserListView(SupportRequiredMixin, ListView):
-    """لیست تمام کاربران با قابلیت فیلتر و جستجو"""
+        return qs
+
+
+# ============================================================
+#                         User List
+# ============================================================
+class UserListView(BaseSupportMixin, RegionalFilterMixin, ListView):
+    """
+    لیست تمام کاربران
+
+    دسترسی: همه نقش‌ها
+    فیلتر Regional: کاربر استان خودش
+    """
     model = User
     template_name = 'support/users/user_list.html'
     context_object_name = 'users'
     paginate_by = 50
+
+    province_field_path = 'province'
 
     def get_queryset(self):
         queryset = User.objects.select_related('province', 'wallet').annotate(
@@ -261,6 +375,12 @@ class UserListView(SupportRequiredMixin, ListView):
             campaign_count=Count('advertiser_profile__campaigns', distinct=True),
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(province=user.province)
+
+        # ========== فیلتر نقش ==========
         role = self.request.GET.get('role')
         if role == 'advertiser':
             queryset = queryset.filter(advertiser_profile__isnull=False)
@@ -275,6 +395,7 @@ class UserListView(SupportRequiredMixin, ListView):
                 team_member__isnull=True
             )
 
+        # ========== جستجو ==========
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -288,21 +409,44 @@ class UserListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['total_users'] = User.objects.count()
-        context['advertisers_count'] = AdvertiserProfile.objects.count()
-        context['influencers_count'] = InfluencerProfile.objects.count()
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
+
+        # آمار پایه
+        user_qs = User.objects.all()
+        adv_qs = AdvertiserProfile.objects.all()
+        inf_qs = InfluencerProfile.objects.all()
+
+        if is_regional:
+            user_qs = user_qs.filter(province=user.province)
+            adv_qs = adv_qs.filter(user__province=user.province)
+            inf_qs = inf_qs.filter(user__province=user.province)
+
+        context['total_users'] = user_qs.count()
+        context['advertisers_count'] = adv_qs.count()
+        context['influencers_count'] = inf_qs.count()
         context['team_members_count'] = ContentTeamMember.objects.count()
         context['current_role'] = self.request.GET.get('role', '')
         context['current_search'] = self.request.GET.get('q', '')
         return context
 
 
-class CampaignBookingListView(SupportRequiredMixin, ListView):
-    """لیست رزروهای اینفلوئنسر با فیلترهای پیشرفته"""
+# ============================================================
+#                    Campaign Booking List
+# ============================================================
+class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView):
+    """
+    لیست رزروهای اینفلوئنسر
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: از طریق کانال
+    """
     model = ChannelBooking
     template_name = 'support/campaigns/booking_list.html'
     context_object_name = 'bookings'
     paginate_by = 50
+
+    province_field_path = 'channel__province'
 
     def get_queryset(self):
         queryset = ChannelBooking.objects.select_related(
@@ -318,6 +462,12 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             Prefetch('report', queryset=CampaignReport.objects.all())
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(channel__province=user.province)
+
+        # ========== فیلترها ==========
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             queryset = queryset.filter(channel__influencer_id=int(influencer_id))
@@ -357,6 +507,7 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
                 Q(campaign__name__icontains=search)
             )
 
+        # ========== مرتب‌سازی ==========
         sort_by = self.request.GET.get('sort')
         if sort_by == 'price_asc':
             queryset = queryset.order_by('price')
@@ -375,6 +526,8 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
         context['current_influencer'] = self.request.GET.get('influencer', '')
         context['current_campaign'] = self.request.GET.get('campaign', '')
@@ -413,7 +566,11 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
             except Channel.DoesNotExist:
                 pass
 
-        base_qs = self.get_queryset()
+        # آمار پایه با فیلتر Regional
+        base_qs = ChannelBooking.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(channel__province=user.province)
+
         context['total_count'] = base_qs.count()
         context['pending_count'] = base_qs.filter(status='pending').count()
         context['accepted_count'] = base_qs.filter(status='accepted').count()
@@ -422,18 +579,33 @@ class CampaignBookingListView(SupportRequiredMixin, ListView):
         context['paid_count'] = base_qs.filter(is_paid=True).count()
         context['unpaid_count'] = base_qs.filter(is_paid=False).count()
         context['platforms'] = Platform.objects.filter(is_active=True)
-        context['provinces'] = Province.objects.all().order_by('name')
+
+        if is_regional:
+            context['provinces'] = Province.objects.filter(id=user.province_id)
+        else:
+            context['provinces'] = Province.objects.all().order_by('name')
+
         context['status_choices'] = ChannelBooking.Status.choices
 
         return context
 
 
-class TeamListView(SupportRequiredMixin, ListView):
-    """لیست تیم‌های تولید محتوا"""
+# ============================================================
+#                        Team List
+# ============================================================
+class TeamListView(ContentManagerRequiredMixin, RegionalFilterMixin, ListView):
+    """
+    لیست تیم‌های تولید محتوا
+
+    دسترسی: CEO + Dev + Content Manager
+    فیلتر Regional: خود ContentTeam فیلد province داره
+    """
     model = ContentTeam
     template_name = 'support/content_team/team_list.html'
     context_object_name = 'teams'
     paginate_by = 20
+
+    province_field_path = 'province'
 
     def get_queryset(self):
         queryset = ContentTeam.objects.annotate(
@@ -442,8 +614,14 @@ class TeamListView(SupportRequiredMixin, ListView):
             completed_orders_count_=Count('orders', filter=Q(orders__status='completed')),
             avg_rating_=Avg('reviews__rating'),
             total_revenue=Sum('orders__price', filter=Q(orders__status='completed'))
-        ).select_related('score')
+        ).select_related('score', 'province')
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(province=user.province)
+
+        # ========== جستجو ==========
         search = self.request.GET.get('q')
         if search:
             queryset = queryset.filter(
@@ -453,21 +631,23 @@ class TeamListView(SupportRequiredMixin, ListView):
                 Q(members__user__nickname__icontains=search)
             ).distinct()
 
+        # ========== فیلتر وضعیت ==========
         status = self.request.GET.get('status')
         if status == 'active':
             queryset = queryset.filter(is_active=True)
         elif status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
+        # ========== مرتب‌سازی ==========
         sort_by = self.request.GET.get('sort')
         if sort_by == 'name':
             queryset = queryset.order_by('name')
         elif sort_by == 'members':
-            queryset = queryset.order_by('-members_count')
+            queryset = queryset.order_by('-members_count_')
         elif sort_by == 'orders':
-            queryset = queryset.order_by('-orders_count')
+            queryset = queryset.order_by('-orders_count_')
         elif sort_by == 'rating':
-            queryset = queryset.order_by('-avg_rating')
+            queryset = queryset.order_by('-avg_rating_')
         else:
             queryset = queryset.order_by('-created_at')
 
@@ -475,10 +655,17 @@ class TeamListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
-        context['total_count'] = ContentTeam.objects.count()
-        context['active_count'] = ContentTeam.objects.filter(is_active=True).count()
-        context['inactive_count'] = ContentTeam.objects.filter(is_active=False).count()
+        # آمار پایه با فیلتر Regional
+        base_qs = ContentTeam.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(province=user.province)
+
+        context['total_count'] = base_qs.count()
+        context['active_count'] = base_qs.filter(is_active=True).count()
+        context['inactive_count'] = base_qs.filter(is_active=False).count()
 
         context['current_search'] = self.request.GET.get('q', '')
         context['current_status'] = self.request.GET.get('status', '')
@@ -487,12 +674,30 @@ class TeamListView(SupportRequiredMixin, ListView):
         return context
 
 
-class ContentOrderListView(SupportRequiredMixin, ListView):
-    """لیست سفارش‌های تولید محتوا با فیلترهای پیشرفته"""
+# ============================================================
+#                     Content Order List
+# ============================================================
+class ContentOrderListView(ContentManagerRequiredMixin, RegionalFilterComplexMixin, ListView):
+    """
+    لیست سفارش‌های تولید محتوا
+
+    دسترسی: CEO + Dev + Content Manager
+    فیلتر Regional: پیچیده (هم از کمپین، هم از standalone)
+    """
     model = ContentOrder
     template_name = 'support/content_team/order_list.html'
     context_object_name = 'orders'
     paginate_by = 20
+
+    @staticmethod
+    def province_q_object(province):
+        """
+        فیلتر پیچیده برای Regional Manager
+        """
+        return (
+                Q(campaign__advertiser__user__province=province) |
+                Q(standalone_user__province=province)
+        )
 
     def get_queryset(self):
         queryset = ContentOrder.objects.select_related(
@@ -509,6 +714,15 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
             Prefetch('deliveries', queryset=ContentDelivery.objects.all()),
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(
+                Q(campaign__advertiser__user__province=user.province) |
+                Q(standalone_user__province=user.province)
+            )
+
+        # ========== فیلترها ==========
         team_id = self.request.GET.get('team')
         if team_id and team_id.isdigit():
             queryset = queryset.filter(team_id=int(team_id))
@@ -541,6 +755,7 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
             month_ago = today - timedelta(days=30)
             queryset = queryset.filter(created_at__date__gte=month_ago)
 
+        # ========== مرتب‌سازی ==========
         sort_by = self.request.GET.get('sort')
         if sort_by == 'price_asc':
             queryset = queryset.order_by('price')
@@ -555,10 +770,19 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
         team_id = self.request.GET.get('team')
 
+        # آمار پایه با فیلتر Regional
         base_qs = ContentOrder.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(
+                Q(campaign__advertiser__user__province=user.province) |
+                Q(standalone_user__province=user.province)
+            )
+
         if team_id and team_id.isdigit():
             base_qs = base_qs.filter(team_id=int(team_id))
 
@@ -567,7 +791,6 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
         context['in_progress_count'] = base_qs.filter(status='in_progress').count()
         context['completed_count'] = base_qs.filter(status='completed').count()
         context['cancelled_count'] = base_qs.filter(status='cancelled').count()
-
         context['review_pending_count'] = base_qs.filter(status='review_pending').count()
         context['done_count'] = base_qs.filter(status='done').count()
 
@@ -577,7 +800,11 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
         context['current_date_filter'] = self.request.GET.get('date_filter', '')
         context['current_sort'] = self.request.GET.get('sort', '')
 
-        context['teams'] = ContentTeam.objects.filter(is_active=True)
+        # تیم‌ها (با فیلتر Regional اگه لازم باشه)
+        teams_qs = ContentTeam.objects.filter(is_active=True)
+        if is_regional:
+            teams_qs = teams_qs.filter(province=user.province)
+        context['teams'] = teams_qs
 
         context['status_choices'] = ContentOrder.Status.choices
 
@@ -590,16 +817,33 @@ class ContentOrderListView(SupportRequiredMixin, ListView):
 
         return context
 
-class NotificationListView(SupportRequiredMixin, ListView):
-    """لیست نوتیفیکیشن‌ها با فیلترهای پیشرفته"""
+
+# ============================================================
+#                    Notification List
+# ============================================================
+class NotificationListView(BaseSupportMixin, RegionalFilterMixin, ListView):
+    """
+    لیست نوتیفیکیشن‌ها
+
+    دسترسی: همه نقش‌ها
+    فیلتر Regional: نوتیفیکیشن کاربر استان خودش
+    """
     model = Notification
     template_name = 'support/notification/notification_list.html'
     context_object_name = 'notifications'
-    paginate_by = 500
+    paginate_by = 100
+
+    province_field_path = 'user__province'
 
     def get_queryset(self):
         queryset = Notification.objects.select_related('user').order_by('-created_at')
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            queryset = queryset.filter(user__province=user.province)
+
+        # ========== فیلترها ==========
         user_id = self.request.GET.get('user')
         if user_id and user_id.isdigit():
             queryset = queryset.filter(user_id=int(user_id))
@@ -615,7 +859,6 @@ class NotificationListView(SupportRequiredMixin, ListView):
             queryset = queryset.filter(type=notification_type)
 
         date_filter = self.request.GET.get('date_filter')
-
         today = timezone.now().date()
 
         if date_filter == 'today':
@@ -640,6 +883,8 @@ class NotificationListView(SupportRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_regional = user.is_regional_manager and user.province_id
 
         context['current_user'] = self.request.GET.get('user', '')
         context['current_is_read'] = self.request.GET.get('is_read', '')
@@ -650,12 +895,16 @@ class NotificationListView(SupportRequiredMixin, ListView):
         user_id = self.request.GET.get('user')
         if user_id and user_id.isdigit():
             try:
-                user = CustomUser.objects.get(id=int(user_id))
-                context['filtered_user_name'] = user.nickname or user.phone_number
+                user_obj = CustomUser.objects.get(id=int(user_id))
+                context['filtered_user_name'] = user_obj.nickname or user_obj.phone_number
             except CustomUser.DoesNotExist:
                 pass
 
+        # آمار پایه با فیلتر Regional
         base_qs = Notification.objects.all()
+        if is_regional:
+            base_qs = base_qs.filter(user__province=user.province)
+
         if user_id and user_id.isdigit():
             base_qs = base_qs.filter(user_id=int(user_id))
 

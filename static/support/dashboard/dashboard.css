@@ -1,13 +1,18 @@
 /* ============================================================ */
-/* کارت‌های آماری */
+/* Dashboard - اختصاصی */
 /* ============================================================ */
+
+/* ===== کارت‌های آماری اصلی داشبورد ===== */
 .stat-card {
     background: rgba(255, 255, 255, 0.03);
     border-radius: 0.75rem;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.06);
     transition: all 0.3s;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .stat-card:hover {
@@ -18,10 +23,11 @@
 }
 
 .stat-card .stat-number {
-    font-size: 1.8rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: #fff;
     line-height: 1.2;
+    word-break: break-word;
 }
 
 .stat-card .stat-label {
@@ -33,7 +39,7 @@
 
 .stat-card .stat-change {
     font-size: 0.7rem;
-    padding: 0.1rem 0.5rem;
+    padding: 0.15rem 0.6rem;
     border-radius: 50rem;
     display: inline-block;
     margin-top: 0.3rem;
@@ -64,9 +70,16 @@
     flex-shrink: 0;
 }
 
-/* ============================================================ */
-/* کارت‌های کوچک */
-/* ============================================================ */
+/* وقتی کارت‌ها ۱ یا ۲ تا هستن، بزرگ‌تر */
+.row.g-3 > [class*="col-"]:only-child .stat-card .stat-number {
+    font-size: 2.25rem;
+}
+
+.row.g-3 > [class*="col-md-6"] .stat-card .stat-number {
+    font-size: 2rem;
+}
+
+/* ===== کارت‌های کوچک ===== */
 .mini-stat {
     background: rgba(255, 255, 255, 0.02);
     border-radius: 0.5rem;
@@ -90,9 +103,7 @@
     margin-top: 0.1rem;
 }
 
-/* ============================================================ */
-/* لیست فعالیت‌ها - نسخه بهبود یافته */
-/* ============================================================ */
+/* ===== لیست فعالیت‌ها ===== */
 .activity-item {
     display: flex;
     align-items: center;
@@ -168,116 +179,12 @@
     white-space: nowrap;
 }
 
-/* ============================================================ */
-/* چارت */
-/* ============================================================ */
+/* ===== چارت ===== */
 #statsChart {
     max-height: 200px;
 }
 
-/* ============================================================ */
-/* Responsive - بهبود یافته */
-/* ============================================================ */
-@media (max-width: 768px) {
-    .stat-card .stat-number {
-        font-size: 1.3rem;
-    }
-
-    .stat-icon-wrapper {
-        width: 36px;
-        height: 36px;
-    }
-
-    .stat-icon-wrapper i {
-        font-size: 1.1rem !important;
-    }
-
-    .stat-card .stat-change {
-        font-size: 0.6rem;
-        padding: 0.05rem 0.4rem;
-    }
-
-    .activity-item {
-        padding: 0.35rem 0.4rem;
-        gap: 0.4rem;
-    }
-
-    .activity-item .activity-icon {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        font-size: 0.6rem;
-    }
-
-    .activity-item .activity-content .title {
-        font-size: 0.7rem;
-    }
-
-    .activity-item .activity-content .subtitle {
-        font-size: 0.55rem;
-    }
-
-    .activity-item .activity-meta .badge {
-        font-size: 0.45rem;
-        padding: 0.05rem 0.3rem;
-    }
-
-    .activity-item .activity-meta .time {
-        font-size: 0.5rem;
-    }
-
-    .mini-stat .number {
-        font-size: 0.9rem;
-    }
-
-    .mini-stat .label {
-        font-size: 0.5rem;
-    }
-
-    #statsChart {
-        max-height: 130px;
-    }
-
-    /* کامپکت کردن کارت‌های آخرین فعالیت‌ها */
-    .card-body .row.g-2 .col-12 {
-        padding-left: 0.25rem !important;
-        padding-right: 0.25rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .stat-card {
-        padding: 0.75rem 1rem;
-    }
-
-    .stat-card .stat-number {
-        font-size: 1.1rem;
-    }
-
-    .stat-card .stat-label {
-        font-size: 0.65rem;
-    }
-
-    .activity-item .activity-content .title {
-        font-size: 0.65rem;
-    }
-
-    .activity-item .activity-content .subtitle {
-        font-size: 0.5rem;
-    }
-
-    .mini-stat {
-        padding: 0.4rem 0.3rem;
-    }
-
-    .mini-stat .number {
-        font-size: 0.8rem;
-    }
-}
-
-/* ============================================================ */
-/* بخش اقدامات سریع */
-/* ============================================================ */
+/* ===== بخش اقدامات سریع ===== */
 .action-item {
     display: flex;
     align-items: center;
@@ -364,10 +271,72 @@
     opacity: 0.3;
 }
 
-/* ============================================================ */
-/* Responsive */
-/* ============================================================ */
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
+    .stat-card .stat-number {
+        font-size: 1.3rem;
+    }
+
+    .stat-icon-wrapper {
+        width: 36px;
+        height: 36px;
+    }
+
+    .stat-icon-wrapper i {
+        font-size: 1.1rem !important;
+    }
+
+    .stat-card .stat-change {
+        font-size: 0.6rem;
+        padding: 0.05rem 0.4rem;
+    }
+
+    .activity-item {
+        padding: 0.35rem 0.4rem;
+        gap: 0.4rem;
+    }
+
+    .activity-item .activity-icon {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        font-size: 0.6rem;
+    }
+
+    .activity-item .activity-content .title {
+        font-size: 0.7rem;
+    }
+
+    .activity-item .activity-content .subtitle {
+        font-size: 0.55rem;
+    }
+
+    .activity-item .activity-meta .badge {
+        font-size: 0.45rem;
+        padding: 0.05rem 0.3rem;
+    }
+
+    .activity-item .activity-meta .time {
+        font-size: 0.5rem;
+    }
+
+    .mini-stat .number {
+        font-size: 0.9rem;
+    }
+
+    .mini-stat .label {
+        font-size: 0.5rem;
+    }
+
+    #statsChart {
+        max-height: 130px;
+    }
+
+    .card-body .row.g-2 .col-12 {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
+
     .action-item {
         padding: 0.4rem 0.5rem;
         gap: 0.4rem;
@@ -396,5 +365,35 @@
 
     .action-item .action-time {
         font-size: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .stat-card {
+        padding: 0.75rem 1rem;
+    }
+
+    .stat-card .stat-number {
+        font-size: 1.1rem;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.65rem;
+    }
+
+    .activity-item .activity-content .title {
+        font-size: 0.65rem;
+    }
+
+    .activity-item .activity-content .subtitle {
+        font-size: 0.5rem;
+    }
+
+    .mini-stat {
+        padding: 0.4rem 0.3rem;
+    }
+
+    .mini-stat .number {
+        font-size: 0.8rem;
     }
 }

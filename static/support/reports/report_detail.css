@@ -1,102 +1,242 @@
-.report-detail .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem 1.5rem;
-}
+/* ============================================================ */
+/* Report Detail - اختصاصی */
+/* ============================================================ */
 
-.report-detail .info-item {
+/* ===== دایره امتیاز ===== */
+.score-circle-wrap {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.report-detail .info-item .label {
-    color: #9691a4;
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    gap: 0.15rem;
+    transition: transform 0.3s ease;
+    position: relative;
+}
+
+.score-circle:hover {
+    transform: scale(1.03);
+}
+
+.score-circle .score-value {
+    font-size: 1.75rem;
+    line-height: 1;
+    font-family: "vazir-bold", sans-serif;
+}
+
+.score-circle .score-label {
+    font-size: 0.6rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+/* رنگ‌بندی امتیاز */
+.score-circle.high {
+    background: rgba(7, 201, 139, 0.12);
+    color: #07c98b;
+    border: 3px solid #07c98b;
+    box-shadow: 0 0 30px rgba(7, 201, 139, 0.15);
+}
+
+.score-circle.medium {
+    background: rgba(253, 188, 49, 0.12);
+    color: #fdbc31;
+    border: 3px solid #fdbc31;
+    box-shadow: 0 0 30px rgba(253, 188, 49, 0.15);
+}
+
+.score-circle.low {
+    background: rgba(242, 60, 73, 0.12);
+    color: #f23c49;
+    border: 3px solid #f23c49;
+    box-shadow: 0 0 30px rgba(242, 60, 73, 0.15);
+}
+
+.score-circle.empty {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--support-text-muted);
+    border: 3px dashed rgba(255, 255, 255, 0.15);
+    font-size: 2rem;
+}
+
+.score-circle.empty .score-label {
+    font-size: 0.6rem;
+    margin-top: 0.25rem;
+}
+
+/* ===== لینک پست ===== */
+.post-link-box {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.9rem;
+    background: rgba(60, 118, 242, 0.08);
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    border-radius: 0.5rem;
+    color: #3c76f2;
     font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    word-break: break-all;
+    min-width: 0;
 }
 
-.report-detail .info-item .value {
-    color: #fff;
-    font-size: 0.85rem;
-    text-align: left;
-    direction: ltr;
+.post-link-box:hover {
+    background: rgba(60, 118, 242, 0.15);
+    color: #3c76f2;
 }
 
-.report-detail .screenshot-box {
-    background: rgba(255, 255, 255, 0.03);
+.post-link-box span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== اسکرین‌شات ===== */
+.screenshot-link {
+    position: relative;
+    display: block;
     border-radius: 0.5rem;
-    padding: 1rem;
-    text-align: center;
+    overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.report-detail .screenshot-box img {
-    max-width: 100%;
-    max-height: 400px;
-    border-radius: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.report-detail .auto-check-box {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 0.5rem;
-    padding: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s;
     max-height: 300px;
+}
+
+.screenshot-link:hover {
+    border-color: rgba(253, 86, 49, 0.4);
+}
+
+.screenshot-img {
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.screenshot-link:hover .screenshot-img {
+    transform: scale(1.03);
+}
+
+.screenshot-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(31, 27, 45, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.screenshot-link:hover .screenshot-overlay {
+    opacity: 1;
+}
+
+.screenshot-empty {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--support-text-muted);
+}
+
+.screenshot-empty i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    opacity: 0.4;
+}
+
+.screenshot-empty p {
+    font-size: 0.75rem;
+    margin: 0;
+}
+
+/* ===== جعبه بررسی خودکار ===== */
+.auto-check-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    max-height: 320px;
     overflow-y: auto;
 }
 
-.report-detail .auto-check-box pre {
+.auto-check-box::-webkit-scrollbar {
+    width: 4px;
+}
+
+.auto-check-box::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.auto-check-box::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    border-radius: 10px;
+}
+
+.auto-check-box pre {
     margin: 0;
-    font-size: 0.75rem;
-    color: #ccc;
+    font-size: 0.72rem;
+    color: #b8b4c5;
     white-space: pre-wrap;
     word-wrap: break-word;
+    direction: ltr;
+    text-align: left;
+    line-height: 1.6;
 }
 
-.report-detail .score-circle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-.report-detail .score-circle.high {
-    background: rgba(7, 201, 139, 0.15);
-    color: #07c98b;
-    border: 2px solid #07c98b;
-}
-
-.report-detail .score-circle.medium {
-    background: rgba(253, 188, 49, 0.15);
-    color: #fdbc31;
-    border: 2px solid #fdbc31;
-}
-
-.report-detail .score-circle.low {
-    background: rgba(242, 60, 73, 0.15);
-    color: #f23c49;
-    border: 2px solid #f23c49;
-}
-
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
-    .report-detail .info-grid {
-        grid-template-columns: 1fr;
+    .score-circle {
+        width: 100px;
+        height: 100px;
     }
 
-    .report-detail .info-item {
-        flex-wrap: wrap;
+    .score-circle .score-value {
+        font-size: 1.4rem;
     }
 
-    .report-detail .info-item .value {
-        width: 100%;
-        text-align: right;
-        padding-top: 0.2rem;
+    .score-circle .score-label {
+        font-size: 0.55rem;
+    }
+
+    .post-link-box {
+        padding: 0.55rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .screenshot-link,
+    .screenshot-img {
+        max-height: 220px;
+    }
+
+    .auto-check-box {
+        max-height: 250px;
+        padding: 0.75rem;
+    }
+
+    .auto-check-box pre {
+        font-size: 0.68rem;
     }
 }

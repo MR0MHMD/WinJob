@@ -12,6 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
 from django.db import models
+import logging
 import uuid
 from notifications.utils import (
     notify_advertiser_content_order_accepted,
@@ -35,6 +36,7 @@ from notifications.utils import (
     notify_advertiser_influencer_report_rejected,
 )
 
+logger = logging.getLogger(__name__)
 
 # ========== توابع کمکی برای پشتیبانی از سفارش‌های مستقل ==========
 
@@ -59,6 +61,126 @@ def get_order_invoice(order):
     if order.campaign and hasattr(order.campaign, 'invoice'):
         return order.campaign.invoice
     return None
+
+
+# ========== توابع کمکی برای واریز کمیسیون ==========
+
+def _should_payout_commission(invoice, order=None):
+    """
+    آیا الان زمان واریز کمیسیون هست؟
+
+    قواعد:
+    - سفارش مستقل: بله، بلافاصله
+    - کمپین فقط نشر: بله، وقتی کمپین COMPLETED
+    - کمپین ترکیبی (نشر + محتوا): بله، وقتی هم کمپین COMPLETED
+      و هم آخرین سفارش محتوای فعال COMPLETED
+
+    ⚠️ نکته مهم:
+    اگه تیم تولید محتوا رد کرده و تیم جدید انتخاب شده،
+    فقط آخرین سفارش (که CANCELLED نیست) رو چک می‌کنیم.
+    """
+    if not invoice:
+        return False
+
+    if invoice.is_commission_paid:
+        return False
+
+    # ===== تابع کمکی: چک کردن وضعیت سفارش‌های محتوا =====
+    def is_content_ready(campaign):
+        """آیا آخرین سفارش محتوای فعال COMPLETED هست؟"""
+        # آخرین سفارشی که رد نشده رو بگیر
+        last_active_order = campaign.content_orders.exclude(
+            status=ContentOrder.Status.CANCELLED
+        ).order_by('-id').first()
+
+        # اگه هیچ سفارش فعالی نیست، پس مشکلی نیست
+        if not last_active_order:
+            return True
+
+        # آخرین سفارش فعال باید COMPLETED باشه
+        return last_active_order.status == ContentOrder.Status.COMPLETED
+
+    # ===== سفارش مستقل =====
+    if order and order.is_standalone:
+        return True
+
+    # ===== سفارش کمپینی =====
+    if order and order.campaign:
+        campaign = order.campaign
+
+        # چک ۱: کمپین باید COMPLETED باشه
+        if campaign.status != Campaign.Status.COMPLETED:
+            return False
+
+        # چک ۲: آخرین سفارش محتوای فعال باید COMPLETED باشه
+        if not is_content_ready(campaign):
+            return False
+
+        return True
+
+    # ===== حالت مستقیم (فقط invoice) =====
+    if invoice.campaign_id:
+        campaign = invoice.campaign
+
+        if campaign.status != Campaign.Status.COMPLETED:
+            return False
+
+        if not is_content_ready(campaign):
+            return False
+
+        return True
+
+    return False
+
+
+def _try_payout_commission(invoice, order=None):
+    """
+    تلاش برای واریز کمیسیون - با مدیریت خطا
+
+    این تابع هیچ‌وقت exception نمی‌ندازه بیرون.
+    خطاها رو لاگ می‌کنه.
+
+    Returns:
+        PayoutResult یا None
+    """
+    if not invoice:
+        return None
+
+    # چک شرایط واریز
+    if not _should_payout_commission(invoice, order=order):
+        return None
+
+    try:
+        from payment.services.payout import payout_commission, PayoutError
+
+        result = payout_commission(
+            invoice=invoice,
+            campaign=invoice.campaign if hasattr(invoice, 'campaign') else None,
+        )
+
+        if result.success:
+            logger.info(
+                f'✅ کمیسیون واریز شد: {invoice.invoice_number} - '
+                f'{result.total_paid:,} تومان - {len(result.transactions)} تراکنش'
+            )
+        else:
+            logger.warning(
+                f'⚠️ واریز رد شد: {invoice.invoice_number} - {result.message}'
+            )
+
+        return result
+
+    except PayoutError as e:
+        logger.error(
+            f'❌ خطای واریز برای فاکتور {invoice.invoice_number}: {e}'
+        )
+        return None
+
+    except Exception as e:
+        logger.exception(
+            f'❌ خطای غیرمنتظره در واریز برای فاکتور {invoice.invoice_number}: {e}'
+        )
+        return None
 
 
 def submit_campaign_for_review(campaign):
@@ -355,6 +477,13 @@ def submit_influencer_report_service(order, post_link, screenshot):
                 campaign.save(update_fields=['status'])
 
                 notify_advertiser_campaign_completed(campaign)
+
+    # ============================================================
+    # تلاش برای واریز کمیسیون (بیرون از تراکنش)
+    # ============================================================
+    if campaign.status == Campaign.Status.COMPLETED:
+        if hasattr(campaign, 'invoice'):
+            _try_payout_commission(campaign.invoice)
 
 
 def respond_to_influencer_order_service(order, action):
@@ -881,7 +1010,13 @@ def finalize_content_order(order, selected_file=None):
                         pass
 
     # ============================================================
-    # ۶. بازگشت نتیجه (بیرون از تراکنش)
+    # ۶. تلاش برای واریز کمیسیون (بیرون از تراکنش اصلی)
+    # ============================================================
+    if invoice:
+        _try_payout_commission(invoice, order=order)
+
+    # ============================================================
+    # ۷. بازگشت نتیجه
     # ============================================================
     return {
         'success': True,

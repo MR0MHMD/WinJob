@@ -1,0 +1,106 @@
+{% load static %}
+
+<div class="sidebar-inner">
+
+    <!-- ============================================================ -->
+    <!-- لوگو / برند (فقط توی offcanvas موبایل نمایش داده میشه) -->
+    <!-- ============================================================ -->
+    <div class="sidebar-brand d-lg-none">
+        <div class="sidebar-brand-icon">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div class="sidebar-brand-text">
+            <div class="sidebar-brand-name">WinJob</div>
+            <div class="sidebar-brand-sub">پنل مدیریت</div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- اطلاعات کاربر (بالای سایدبار - مخفی در حالت collapse) -->
+    <!-- ============================================================ -->
+    <div class="sidebar-user">
+        <div class="sidebar-user-avatar">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}"
+                     alt="{{ user.nickname|default:user.phone_number }}">
+            {% else %}
+                <div class="sidebar-user-avatar-placeholder">
+                    <i class="bi bi-person"></i>
+                </div>
+            {% endif %}
+            <span class="sidebar-user-status"></span>
+        </div>
+
+        <div class="sidebar-user-info">
+            <div class="sidebar-user-name">
+                {{ user.nickname|default:user.phone_number }}
+            </div>
+            <div class="sidebar-user-role">
+                {{ support_user_role_label|default:"کاربر" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- منوی داینامیک -->
+    <!-- ============================================================ -->
+    <nav class="sidebar-nav" aria-label="منوی پنل مدیریت">
+
+        {% for section_key, section_data in support_menu_grouped.items %}
+
+            <div class="sidebar-section">
+
+                <!-- عنوان بخش -->
+                <div class="sidebar-section-title">
+                    <span class="sidebar-section-line"></span>
+                    <span class="sidebar-section-text">{{ section_data.label }}</span>
+                </div>
+
+                <!-- آیتم‌های بخش -->
+                <ul class="sidebar-menu">
+                    {% for item in section_data.items %}
+                        <li class="sidebar-menu-item">
+                            <a href="{% url item.url_name %}"
+                               class="sidebar-menu-link{% if request.resolver_match.url_name == item.url_name %} active{% endif %}"
+                               title="{{ item.title }}"
+                               data-tooltip="{{ item.title }}">
+                                <span class="sidebar-menu-icon">
+                                    <i class="bi {{ item.bi_icon }}"></i>
+                                </span>
+                                <span class="sidebar-menu-text">{{ item.title }}</span>
+                                <span class="sidebar-menu-indicator"></span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            </div>
+
+        {% empty %}
+
+            <!-- اگه هیچ منویی نبود -->
+            <div class="sidebar-empty">
+                <i class="bi bi-info-circle"></i>
+                <p>هیچ منویی برای نمایش وجود ندارد</p>
+            </div>
+
+        {% endfor %}
+
+    </nav>
+
+    <!-- ============================================================ -->
+    <!-- فوتر سایدبار -->
+    <!-- ============================================================ -->
+    <div class="sidebar-footer">
+        <a href="{% url 'core:home' %}" class="sidebar-footer-link" title="بازگشت به سایت">
+            <i class="bi bi-arrow-right-circle"></i>
+            <span>بازگشت به سایت</span>
+        </a>
+
+        <div class="sidebar-footer-version">
+            <span>نسخه</span>
+            <span class="sidebar-version-number">1.0</span>
+        </div>
+    </div>
+
+</div>

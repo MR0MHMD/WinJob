@@ -1,569 +1,577 @@
-{% extends 'parent/base.html' %}
+{% extends 'parent/support_base.html' %}
 {% load static %}
 
-{% block title %} کاربر {{ user.nickname|default:user.phone_number }}{% endblock %}
+{% block title %}کاربر {{ user_obj.nickname|default:user_obj.phone_number }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/users/user_detail.css' %}">
+{% endblock %}
 
 {% block content %}
-    <div class="container py-4">
 
-        <!-- ============================================================ -->
-        <!-- HEADER -->
-        <!-- ============================================================ -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <h2 class="text-light mb-1">
-                    <i class="fi-user text-primary me-2"></i> {{ user.phone_number }}
-                </h2>
-                <span class="text-muted">{{ user.nickname|default:"بدون نام مستعار" }}</span>
-            </div>
-            <a href="{% url 'support:user_list' %}" class="btn btn-outline-light rounded-pill px-4">
-                <i class="fi-arrow-forward me-1"></i> بازگشت
+    <!-- ============================================================ -->
+    <!-- هدر صفحه -->
+    <!-- ============================================================ -->
+    <div class="support-page-header">
+        <div>
+            <span class="page-subtitle">
+                <i class="bi bi-person-fill text-primary"></i>
+                پروفایل کاربر
+                <span class="text-warning">• {{ user_obj.phone_number }}</span>
+            </span>
+        </div>
+        <div class="page-actions">
+            {% if user_obj.is_staff %}
+                <span class="support-status-badge bg-warning">
+                    <i class="bi bi-shield-check me-1"></i> ادمین
+                </span>
+            {% endif %}
+            {% if user_obj.is_active %}
+                <span class="support-status-badge bg-success">فعال</span>
+            {% else %}
+                <span class="support-status-badge bg-danger">غیرفعال</span>
+            {% endif %}
+            <a href="{% url 'support:user_list' %}"
+               class="btn btn-sm btn-outline-light rounded-pill px-4">
+                <i class="bi bi-arrow-right me-1"></i> بازگشت
             </a>
         </div>
+    </div>
 
-        <div class="row g-4">
+    <div class="row g-4">
 
-            <!-- ============================================================ -->
-            <!-- ستون اول: اطلاعات پایه + کیف پول -->
-            <!-- ============================================================ -->
-            <div class="col-lg-4">
+        <!-- ============================================================ -->
+        <!-- ستون اول: اطلاعات پایه + کیف پول -->
+        <!-- ============================================================ -->
+        <div class="col-lg-4">
 
-                <!-- کارت پروفایل کاربر -->
-                <div class="card bg-dark border-light">
-                    <div class="card-body text-center">
-                        <!-- آواتار -->
-                        {% if user.avatar %}
-                            <img src="{{ user.avatar.url }}" class="rounded-circle mb-3" width="120" height="120"
-                                 alt="آواتار">
+            <!-- کارت پروفایل -->
+            <div class="support-card mb-4">
+                <div class="support-card-body text-center">
+                    <!-- آواتار -->
+                    <div class="user-detail-avatar-wrap">
+                        {% if user_obj.avatar %}
+                            <img src="{{ user_obj.avatar.url }}"
+                                 class="user-detail-avatar"
+                                 alt="{{ user_obj.phone_number }}">
                         {% else %}
-                            <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                                 style="width: 120px; height: 120px; font-size: 3rem;">
-                                <i class="fi-user text-light"></i>
+                            <div class="user-detail-avatar user-detail-avatar-placeholder">
+                                <i class="bi bi-person"></i>
                             </div>
                         {% endif %}
+                        {% if user_obj.is_active %}
+                            <span class="user-detail-status"></span>
+                        {% endif %}
+                    </div>
 
-                        <h5 class="text-light mb-1">{{ user.phone_number }}</h5>
-                        <p class="text-muted small">{{ user.nickname|default:"بدون نام مستعار" }}</p>
+                    <h5 class="text-light mt-3 mb-1">
+                        {{ user_obj.phone_number }}
+                    </h5>
+                    <p class="text-muted small mb-3">
+                        {{ user_obj.nickname|default:"بدون نام مستعار" }}
+                    </p>
 
-                        <!-- نقش‌ها -->
-                        <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-                            {% if user.is_advertiser %}
-                                <span class="badge bg-success">تبلیغ دهنده</span>
-                            {% endif %}
-                            {% if user.is_influencer %}
-                                <span class="badge bg-primary">اینفلوئنسر</span>
-                            {% endif %}
-                            {% if user.is_team_member %}
-                                <span class="badge bg-warning">تیم محتوا</span>
-                            {% endif %}
-                            {% if user.is_staff %}
-                                <span class="badge bg-danger">ادمین</span>
-                            {% endif %}
-                            {% if user.is_regional_manager %}
-                                <span class="badge bg-info">مدیر استانی</span>
-                            {% endif %}
+                    <!-- نقش‌ها -->
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                        {% if user_obj.is_advertiser %}
+                            <span class="support-status-badge bg-success">تبلیغ دهنده</span>
+                        {% endif %}
+                        {% if user_obj.is_influencer %}
+                            <span class="support-status-badge bg-primary">اینفلوئنسر</span>
+                        {% endif %}
+                        {% if user_obj.is_team_member %}
+                            <span class="support-status-badge bg-warning">تیم محتوا</span>
+                        {% endif %}
+                        {% if user_obj.is_staff %}
+                            <span class="support-status-badge bg-danger">ادمین</span>
+                        {% endif %}
+                        {% if user_obj.is_regional_manager %}
+                            <span class="support-status-badge bg-info">مدیر استانی</span>
+                        {% endif %}
+                        {% if not user_obj.is_advertiser and not user_obj.is_influencer and not user_obj.is_team_member and not user_obj.is_staff and not user_obj.is_regional_manager %}
+                            <span class="support-status-badge bg-info">بدون نقش</span>
+                        {% endif %}
+                    </div>
+
+                    <hr class="border-secondary">
+
+                    <!-- اطلاعات پایه -->
+                    <div class="text-start">
+                        <div class="info-row">
+                            <span class="label">شناسه</span>
+                            <span class="value ltr"><strong>#{{ user_obj.id }}</strong></span>
                         </div>
-
-                        <hr class="border-secondary">
-
-                        <!-- اطلاعات پایه -->
-                        <div class="text-start">
-                            <div class="d-flex justify-content-between py-2">
-                                <span class="text-muted">استان</span>
-                                <span class="text-light">{{ user.province.name|default:"-" }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between py-2 border-top border-secondary">
-                                <span class="text-muted">ایمیل</span>
-                                <span class="text-light">{{ user.email|default:"-" }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between py-2 border-top border-secondary">
-                                <span class="text-muted">تاریخ عضویت</span>
-                                <span class="text-light">{{ user.date_joined|date:"Y/m/d H:i" }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between py-2 border-top border-secondary">
-                                <span class="text-muted">وضعیت</span>
-                                <span>
-                                {% if user.is_active %}
-                                    <span class="badge bg-success">فعال</span>
-                                {% else %}
-                                    <span class="badge bg-danger">غیرفعال</span>
-                                {% endif %}
-                            </span>
-                            </div>
+                        <div class="info-row">
+                            <span class="label">استان</span>
+                            <span class="value">{{ user_obj.province.name|default:"-" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">ایمیل</span>
+                            <span class="value ltr">{{ user_obj.email|default:"-" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">تاریخ عضویت</span>
+                            <span class="value ltr">{{ user_obj.date_joined|date:"Y/m/d H:i" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">آخرین بروزرسانی</span>
+                            <span class="value ltr">{{ user_obj.updated_at|date:"Y/m/d H:i" }}</span>
                         </div>
                     </div>
                 </div>
-
-                <!-- کارت کیف پول -->
-                <div class="card bg-dark border-light mt-4">
-                    <div class="card-body">
-                        <h5 class="text-light mb-3">
-                            <i class="fi-wallet text-primary me-1"></i> کیف پول
-                        </h5>
-                        {% if wallet %}
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">موجودی</span>
-                                <span class="h4 text-primary mb-0">{{ wallet.balance|floatformat:0|default:0 }} تومان</span>
-                            </div>
-                            <div class="text-muted small mt-2">
-                                آخرین بروزرسانی: {{ wallet.updated_at|date:"Y/m/d H:i" }}
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">کیف پولی برای این کاربر ثبت نشده است.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
             </div>
 
-            <!-- ============================================================ -->
-            <!-- ستون دوم: اطلاعات تکمیلی -->
-            <!-- ============================================================ -->
-            <div class="col-lg-8">
-
-                <!-- ===== تراکنش‌ها ===== -->
-                {% if transactions %}
-                    <div class="card bg-dark border-light mb-4">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="text-light mb-0">
-                                    <i class="fi-credit-card text-primary me-1"></i> تراکنش‌های اخیر
-                                </h5>
-                                <span class="badge bg-secondary">{{ transactions_count }} تراکنش</span>
+            <!-- کارت کیف پول -->
+            <div class="support-card">
+                <div class="support-card-body">
+                    <div class="section-header">
+                        <span class="title">
+                            <i class="bi bi-wallet2"></i>
+                            کیف پول
+                        </span>
+                    </div>
+                    {% if wallet %}
+                        <div class="wallet-card">
+                            <span class="wallet-label">موجودی</span>
+                            <div class="wallet-amount">
+                                {{ wallet.balance|floatformat:0|default:0 }}
+                                <span class="wallet-currency">تومان</span>
                             </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-dark table-hover table-sm mb-0">
-                                    <thead>
-                                    <tr>
-                                        <th>نوع</th>
-                                        <th>مبلغ</th>
-                                        <th>وضعیت</th>
-                                        <th>تاریخ</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {% for tx in transactions %}
-                                        <tr>
-                                            <td>{{ tx.get_type_display }}</td>
-                                            <td class="{% if tx.is_income %}text-success{% else %}text-danger{% endif %}">
-                                                {{ tx.sign_display }}
-                                            </td>
-                                            <td>
-                                            <span class="badge 
-                                                {% if tx.status == 'success' %}bg-success
-                                                {% elif tx.status == 'pending' %}bg-warning
-                                                {% else %}bg-danger{% endif %}">
-                                                {{ tx.get_status_display }}
-                                            </span>
-                                            </td>
-                                            <td>{{ tx.created_at|date:"Y/m/d H:i" }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="wallet-updated">
+                                آخرین بروزرسانی: {{ wallet.updated_at|date:"Y/m/d H:i" }}
                             </div>
-                            {% if transactions_count > 10 %}
-                                <div class="mt-3">
-                                    <a href="{% url '#' %}" class="btn btn-outline-primary btn-sm rounded-pill">
-                                        مشاهده همه <i class="fi-arrow-left me-1"></i>
-                                    </a>
-                                </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0 text-center py-3">
+                            کیف پولی برای این کاربر ثبت نشده است.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- ستون دوم: اطلاعات تکمیلی -->
+        <!-- ============================================================ -->
+        <div class="col-lg-8">
+
+            <!-- ===== پروفایل تبلیغ دهنده ===== -->
+            {% if advertiser_profile %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-briefcase"></i>
+                                پروفایل تبلیغ دهنده
+                            </span>
+                            {% if advertiser_profile.is_verified %}
+                                <span class="support-status-badge bg-success">تأیید شده</span>
                             {% endif %}
                         </div>
-                    </div>
-                {% endif %}
 
-                <!-- پروفایل تبلیغ دهنده -->
-                {% if advertiser_profile %}
-                    <div class="card bg-dark border-light mb-4">
-                        <div class="card-body">
-                            <h5 class="text-light mb-3">
-                                <i class="fi-briefcase text-primary me-1"></i> پروفایل تبلیغ دهنده
-                            </h5>
-
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">کسب‌وکار</span>
-                                    <span class="text-light">{{ advertiser_profile.business_name }}</span>
-                                </div>
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">دسته‌بندی</span>
-                                    <span class="text-light">{{ advertiser_profile.category.name|default:"-" }}</span>
-                                </div>
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">وبسایت</span>
-                                    <span class="text-light">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">کسب‌وکار</span>
+                                <span class="text-light">{{ advertiser_profile.business_name }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">دسته‌بندی</span>
+                                <span class="text-light">{{ advertiser_profile.category.name|default:"-" }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">امتیاز</span>
+                                <span class="text-light">{{ advertiser_profile.score.points|default:0 }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">وبسایت</span>
                                 {% if advertiser_profile.website %}
-                                    <a href="{{ advertiser_profile.website }}" target="_blank" class="text-primary">
-                                        {{ advertiser_profile.website|truncatechars:20 }}
+                                    <a href="{{ advertiser_profile.website }}"
+                                       target="_blank"
+                                       class="text-primary">
+                                        {{ advertiser_profile.website|truncatechars:30 }}
                                     </a>
                                 {% else %}
-                                    -
+                                    <span class="text-muted">-</span>
                                 {% endif %}
-                            </span>
-                                </div>
-                                <div class="col-md-6">
-                                    <span class="text-muted d-block">تأیید شده</span>
-                                    {% if advertiser_profile.is_verified %}
-                                        <span class="badge bg-success">بله</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">خیر</span>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    <span class="text-muted d-block">امتیاز</span>
-                                    <span class="text-light">{{ advertiser_profile.score.points|default:"-" }}</span>
-                                </div>
                             </div>
-
-                            <!-- کمپین‌ها (فقط در صورت وجود) -->
-                            {% if campaigns %}
-                                <hr class="border-secondary my-4">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="text-light mb-0">
-                                        <i class="fi-flag text-primary me-1"></i> کمپین‌های اخیر
-                                    </h6>
-                                    <span class="badge bg-secondary">{{ campaigns_count }} کمپین</span>
-                                </div>
-                                <ul class="list-unstyled mb-0">
-                                    {% for campaign in campaigns %}
-                                        <li class="d-flex justify-content-between align-items-center py-3 border-bottom border-secondary">
-                                            <b><a href="{% url 'support:campaign_detail' campaign.id %}"
-                                                  class="text-light text-decoration-none">{{ campaign.name|truncatechars:30 }}</a></b>
-                                            <span class="badge 
-                                        {% if campaign.status == 'approved' %}bg-success
-                                        {% elif campaign.status == 'pending' %}bg-warning
-                                        {% elif campaign.status == 'cancelled' %}bg-danger
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ campaign.get_status_display }}
-                                    </span>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                {% if campaigns_count > 5 %}
-                                    <div class="mt-3">
-                                        <a href="{% url 'support:campaign_list' %}?advertiser={{ advertiser_profile.id }}"
-                                           class="btn btn-outline-primary btn-sm rounded-pill">
-                                            مشاهده همه <i class="fi-arrow-left me-1"></i>
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
                         </div>
-                    </div>
-                {% endif %}
 
-                <!-- پروفایل اینفلوئنسر -->
-                {% if influencer_profile %}
-                    <div class="card bg-dark border-light mb-4">
-                        <div class="card-body">
-                            <h5 class="text-light mb-3">
-                                <i class="fi-star text-primary me-1"></i> پروفایل اینفلوئنسر
-                            </h5>
-
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">نام کامل</span>
-                                    <span class="text-light">{{ influencer_profile.user.nickname }}</span>
-                                </div>
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">وضعیت</span>
-                                    {% if influencer_profile.is_active %}
-                                        <span class="badge bg-success">فعال</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">غیرفعال</span>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-4">
-                                    <span class="text-muted d-block">امتیاز</span>
-                                    <span class="text-light">{{ influencer_profile.score.points|default:"-" }}</span>
-                                </div>
-                            </div>
-
-                            <!-- کانال‌ها (فقط در صورت وجود) -->
-                            {% if channels %}
-                                <hr class="border-secondary mt-3">
-                                <div class="d-flex justify-content-between align-items-center my-2">
-                                    <h6 class="text-light mb-0">
-                                        <i class="fi-device-desktop text-primary me-1"></i> آخرین کانال ها
-                                    </h6>
-                                    <span class="badge bg-secondary">{{ channels_count }} کانال</span>
-                                </div>
-                                <ul class="list-unstyled mb-0">
-                                    {% for channel in channels %}
-                                        <li class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
-                                            <a href="{% url 'support:channel_detail' channel.id %}"
-                                               class="text-light text-decoration-none">
-                                                {% if channel.avatar %}
-                                                    <img class="rounded-circle m-2" width="35"
-                                                         src="{{ channel.avatar.url }}"
-                                                         alt="{{ channel.channel_name }}">
-                                                {% else %}
-                                                    <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center m-2"
-                                                         style="width: 35px; height: 35px; font-size: 0.9rem;">
-                                                        <i class="fi-device-desktop text-light"></i>
-                                                    </div>
-                                                {% endif %}
-                                                {{ channel.channel_name }}
-                                                <small class="text-muted">(<img width="15"
-                                                                                src="{{ channel.platform.logo.url }}"
-                                                                                alt="">)</small>
-                                            </a>
-                                            <span class="badge 
-                                        {% if channel.status == 'approved' %}bg-success
-                                        {% elif channel.status == 'pending' %}bg-warning
-                                        {% elif channel.status == 'rejected' %}bg-danger
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ channel.get_status_display }}
-                                    </span>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <!-- توی user_detail.html، بخش کانال‌های اخیر -->
-                                {% if channels_count > 5 %}
-                                    <div class="my-3">
-                                        <a href="{% url 'support:channel_list' %}?influencer={{ influencer_profile.id }}"
-                                           class="btn btn-outline-primary btn-sm rounded-pill">
-                                            مشاهده همه <i class="fi-arrow-left me-1"></i>
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
-
-                            <!-- سفارش‌ها (فقط در صورت وجود) -->
-                            {% if campaign_bookings %}
-                                <hr class="border-secondary my-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="text-light mb-0">
-                                        <i class="fi-cart text-primary me-1"></i> سفارش‌های اخیر
-                                    </h6>
-                                    <span class="badge bg-secondary">{{ bookings_count }} سفارش</span>
-                                </div>
-                                <ul class="list-unstyled mb-0">
-                                    {% for booking in campaign_bookings %}
-                                        <li class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
-                                            <b class="text-light">{{ booking.campaign.name|truncatechars:25 }}</b>
-                                            <span class="badge 
-                                        {% if booking.status == 'accepted' %}bg-success
-                                        {% elif booking.status == 'pending' %}bg-warning
-                                        {% elif booking.status == 'rejected' %}bg-danger
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ booking.get_status_display }}
-                                    </span>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <!-- توی user_detail.html، بخش سفارش‌های اخیر اینفلوئنسر -->
-                                {% if bookings_count > 5 %}
-                                    <div class="mt-4">
-                                        <a href="{% url 'support:booking_list' %}?influencer={{ influencer_profile.id }}"
-                                           class="btn btn-outline-primary btn-sm rounded-pill">
-                                            مشاهده همه <i class="fi-arrow-left me-1"></i>
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
-
-
-                <!-- ===== نوتیفیکیشن‌ها ===== -->
-                {% if notifications %}
-                    <div class="card bg-dark border-light mt-4">
-                        <div class="card-body">
+                        {% if campaigns %}
+                            <hr class="border-secondary my-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="text-light mb-0">
-                                    <i class="fi-bell text-primary me-1"></i> نوتیفیکیشن‌های اخیر
-                                </h5>
-                                <div class="d-flex gap-2">
-                                    {% if unread_notifications_count > 0 %}
-                                        <span class="badge bg-danger">{{ unread_notifications_count }} خوانده نشده</span>
-                                    {% endif %}
-                                    <span class="badge bg-secondary">{{ notifications_count }} نوتیفیکیشن</span>
-                                </div>
+                                <h6 class="text-light mb-0">
+                                    <i class="bi bi-flag text-primary me-1"></i>
+                                    کمپین‌های اخیر
+                                </h6>
+                                <span class="badge-count">{{ campaigns_count }} کمپین</span>
                             </div>
+                            <div class="scrollable">
+                                {% for campaign in campaigns %}
+                                    <a href="{% url 'support:campaign_detail' campaign.id %}"
+                                       class="list-item">
+                                        <div class="item-info">
+                                            <div class="name">{{ campaign.name|truncatechars:30 }}</div>
+                                            <div class="sub">{{ campaign.created_at|date:"Y/m/d" }}</div>
+                                        </div>
+                                        <div class="item-meta">
+                                            <span class="support-status-badge
+                                                {% if campaign.status == 'approved' %}bg-success
+                                                {% elif campaign.status == 'pending' %}bg-warning
+                                                {% elif campaign.status == 'running' %}bg-primary
+                                                {% elif campaign.status == 'completed' %}bg-accent
+                                                {% elif campaign.status == 'cancelled' %}bg-danger
+                                                {% else %}bg-info{% endif %}">
+                                                {{ campaign.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            {% if campaigns_count > 5 %}
+                                <div class="mt-3 text-center">
+                                    <a href="{% url 'support:campaign_list' %}?advertiser={{ advertiser_profile.id }}"
+                                       class="btn btn-sm btn-outline-primary rounded-pill">
+                                        مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
 
-                            <div class="notification-list">
-                                {% for notification in notifications %}
-                                    <div class="d-flex my-4 align-items-start gap-3 p-2 rounded-3 {% if not notification.is_read %}bg-dark border-start border-primary{% endif %}"
-                                         style="border-bottom:1px solid rgba(255,255,255,0.05); {% if not notification.is_read %}border-left: 3px solid #fd5631;{% endif %}">
-                                        <!-- آیکون -->
-                                        <div class="flex-shrink-0">
-                                            <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                                 style="width:40px; height:40px; background:{% if notification.is_read %}rgba(255,255,255,0.05){% else %}rgba(253,86,49,0.15){% endif %};">
-                                                <i class="
-                                                        {% with icon=notification.get_icon_data %}{{ icon.0 }}{% endwith %} 
-                                  {% if notification.is_read %}text-muted{% else %}text-primary{% endif %}"
-                                                   style="font-size:1.1rem;"></i>
+            <!-- ===== پروفایل اینفلوئنسر ===== -->
+            {% if influencer_profile %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-star"></i>
+                                پروفایل اینفلوئنسر
+                            </span>
+                            {% if influencer_profile.is_active %}
+                                <span class="support-status-badge bg-success">فعال</span>
+                            {% else %}
+                                <span class="support-status-badge bg-danger">غیرفعال</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <span class="text-muted d-block small">نام کامل</span>
+                                <span class="text-light">{{ influencer_profile.user.nickname|default:"-" }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block small">امتیاز</span>
+                                <span class="text-light">{{ influencer_profile.score.points|default:0 }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block small">تعداد کانال</span>
+                                <span class="text-light">{{ channels_count|default:0 }}</span>
+                            </div>
+                        </div>
+
+                        {% if channels %}
+                            <hr class="border-secondary my-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-light mb-0">
+                                    <i class="bi bi-grid-3x3-gap text-primary me-1"></i>
+                                    آخرین کانال‌ها
+                                </h6>
+                                <span class="badge-count">{{ channels_count }} کانال</span>
+                            </div>
+                            <div class="scrollable">
+                                {% for channel in channels %}
+                                    <a href="{% url 'support:channel_detail' channel.id %}"
+                                       class="list-item">
+                                        <div class="d-flex align-items-center gap-2" style="min-width:0; flex:1;">
+                                            {% if channel.avatar %}
+                                                <img src="{{ channel.avatar.url }}"
+                                                     class="avatar-sm"
+                                                     alt="{{ channel.channel_name }}">
+                                            {% else %}
+                                                <div class="avatar-sm d-flex align-items-center justify-content-center bg-secondary">
+                                                    <i class="bi bi-grid-3x3-gap"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="item-info">
+                                                <div class="name">{{ channel.channel_name|truncatechars:25 }}</div>
+                                                <div class="sub">
+                                                    {{ channel.platform.name }} • {{ channel.followers_formatted }}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div class="item-meta">
+                                            <span class="support-status-badge
+                                                {% if channel.status == 'approved' %}bg-success
+                                                {% elif channel.status == 'pending' %}bg-warning
+                                                {% elif channel.status == 'rejected' %}bg-danger
+                                                {% else %}bg-info{% endif %}">
+                                                {{ channel.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            {% if channels_count > 5 %}
+                                <div class="mt-3 text-center">
+                                    <a href="{% url 'support:channel_list' %}?influencer={{ influencer_profile.id }}"
+                                       class="btn btn-sm btn-outline-primary rounded-pill">
+                                        مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
 
-                                        <!-- محتوا -->
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h6 class="text-light mb-0 {% if not notification.is_read %}fw-bold{% endif %}"
-                                                        style="font-size:0.85rem;">
-                                                        {{ notification.title }}
-                                                    </h6>
-                                                    <span class="text-muted" style="font-size:0.75rem;">
-                                {{ notification.created_at|date:"Y/m/d H:i" }}
-                            </span>
-                                                </div>
-                                                {% if not notification.is_read %}
-                                                    <span class="badge bg-primary" style="font-size:0.6rem;">جدید</span>
-                                                {% endif %}
-                                            </div>
-                                            <p class="text-muted mb-0"
-                                               style="font-size:0.8rem; line-height:1.5; margin-top:0.2rem;">
-                                                {{ notification.message|truncatechars:80 }}
-                                            </p>
+                        {% if campaign_bookings %}
+                            <hr class="border-secondary my-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-light mb-0">
+                                    <i class="bi bi-cart text-primary me-1"></i>
+                                    سفارش‌های اخیر
+                                </h6>
+                                <span class="badge-count">{{ bookings_count }} سفارش</span>
+                            </div>
+                            <div class="scrollable">
+                                {% for booking in campaign_bookings %}
+                                    <div class="list-item">
+                                        <div class="item-info">
+                                            <div class="name">{{ booking.campaign.name|truncatechars:30 }}</div>
+                                            <div class="sub">{{ booking.channel.channel_name }}</div>
+                                        </div>
+                                        <div class="item-meta">
+                                            <span class="support-status-badge
+                                                {% if booking.status == 'accepted' %}bg-success
+                                                {% elif booking.status == 'pending' %}bg-warning
+                                                {% elif booking.status == 'rejected' %}bg-danger
+                                                {% elif booking.status == 'completed' %}bg-accent
+                                                {% else %}bg-info{% endif %}">
+                                                {{ booking.get_status_display }}
+                                            </span>
                                         </div>
                                     </div>
                                 {% endfor %}
                             </div>
-
-                            {% if notifications_count > 5 %}
+                            {% if bookings_count > 5 %}
                                 <div class="mt-3 text-center">
-                                    <a href="{% url 'support:notification_list' %}?user={{ user.pk }}"
-                                       class="btn btn-outline-primary btn-sm rounded-pill px-4">
-                                        مشاهده همه <i class="fi-arrow-left me-1"></i>
+                                    <a href="{% url 'support:booking_list' %}?influencer={{ influencer_profile.id }}"
+                                       class="btn btn-sm btn-outline-primary rounded-pill">
+                                        مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
                                     </a>
                                 </div>
                             {% endif %}
-                        </div>
+                        {% endif %}
                     </div>
-                {% endif %}
+                </div>
+            {% endif %}
 
-                <!-- عضویت در تیم تولید محتوا -->
-                {% if team_member %}
-                    <div class="card bg-dark border-light mb-4">
-                        <div class="card-body">
-                            <h5 class="text-light mb-3">
-                                <i class="fi-users text-primary me-1"></i> عضویت در تیم تولید محتوا
-                            </h5>
+            <!-- ===== عضویت در تیم محتوا ===== -->
+            {% if team_member %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-people"></i>
+                                عضویت در تیم تولید محتوا
+                            </span>
+                            {% if team_member.is_active %}
+                                <span class="support-status-badge bg-success">فعال</span>
+                            {% else %}
+                                <span class="support-status-badge bg-danger">غیرفعال</span>
+                            {% endif %}
+                        </div>
 
-                            <div class="row g-3">
-                                <div class="col-md-3">
-                                    {% if team_member.team.logo %}
-                                        <img src="{{ team_member.team.logo.url }}" class="img-fluid rounded"
-                                             style="max-height: 60px;" alt="لوگوی تیم">
-                                    {% else %}
-                                        <div class="bg-secondary rounded d-inline-flex align-items-center justify-content-center"
-                                             style="width: 60px; height: 60px; font-size: 1.5rem;">
-                                            <i class="fi-users text-light"></i>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-9">
-                                    <div class="row g-2">
-                                        <div class="col-md-4">
-                                            <span class="text-muted d-block">تیم</span>
-                                            <span class="text-light">{{ team_member.team.name }}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <span class="text-muted d-block">نقش</span>
-                                            <span class="text-light">{{ team_member.get_role_display }}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <span class="text-muted d-block">درصد سهم</span>
-                                            <span class="text-light">{{ team_member.revenue_share_percent }}%</span>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <span class="text-muted d-block">وضعیت</span>
-                                            {% if team_member.is_active %}
-                                                <span class="badge bg-success">فعال</span>
-                                            {% else %}
-                                                <span class="badge bg-danger">غیرفعال</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-6">
-                                            <span class="text-muted d-block">امتیاز تیم</span>
-                                            <span class="text-light">{{ team_member.team.score.points|default:"-" }}</span>
-                                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-2 text-center">
+                                {% if team_member.team.logo %}
+                                    <img src="{{ team_member.team.logo.url }}"
+                                         class="avatar-lg rounded-circle"
+                                         style="width:80px;height:80px;"
+                                         alt="{{ team_member.team.name }}">
+                                {% else %}
+                                    <div class="avatar-lg rounded-circle d-inline-flex align-items-center justify-content-center bg-secondary"
+                                         style="width:80px;height:80px;">
+                                        <i class="bi bi-people fs-3 text-light"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-10">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <span class="text-muted d-block small">تیم</span>
+                                        <span class="text-light">{{ team_member.team.name }}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <span class="text-muted d-block small">نقش</span>
+                                        <span class="text-light">{{ team_member.get_role_display }}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <span class="text-muted d-block small">درصد سهم</span>
+                                        <span class="text-success fw-bold">{{ team_member.revenue_share_percent }}%</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <span class="text-muted d-block small">امتیاز تیم</span>
+                                        <span class="text-light">{{ team_member.team.score.points|default:0 }}</span>
                                     </div>
                                 </div>
-                            </div>
 
-                            {% if team_member.bio %}
-                                <hr class="border-secondary">
-                                <div>
-                                    <span class="text-muted d-block">بیوگرافی</span>
-                                    <p class="text-light mb-0 mt-1">{{ team_member.bio }}</p>
+                                {% if team_member.bio %}
+                                    <hr class="border-secondary mt-3">
+                                    <div>
+                                        <span class="text-muted d-block small">بیوگرافی</span>
+                                        <p class="text-light mb-0 mt-1" style="font-size:0.85rem;">
+                                            {{ team_member.bio }}
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- ===== اگر هیچ پروفایلی نداره ===== -->
+            {% if not advertiser_profile and not influencer_profile and not team_member %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="support-empty">
+                            <i class="bi bi-info-circle"></i>
+                            <p>این کاربر هیچ پروفایل تخصصی (تبلیغ دهنده، اینفلوئنسر یا عضو تیم محتوا) ندارد.</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- ===== تراکنش‌ها ===== -->
+            {% if transactions %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-credit-card"></i>
+                                تراکنش‌های اخیر
+                            </span>
+                            <span class="badge-count">{{ transactions_count }} تراکنش</span>
+                        </div>
+
+                        <div class="scrollable">
+                            {% for tx in transactions %}
+                                <div class="list-item">
+                                    <div class="item-info">
+                                        <div class="name">{{ tx.get_type_display }}</div>
+                                        <div class="sub">{{ tx.created_at|date:"Y/m/d H:i" }}</div>
+                                    </div>
+                                    <div class="item-meta">
+                                        <span class="fw-bold {% if tx.is_income %}text-success{% else %}text-danger{% endif %}">
+                                            {{ tx.sign_display }}
+                                        </span>
+                                        <span class="support-status-badge
+                                            {% if tx.status == 'success' %}bg-success
+                                            {% elif tx.status == 'pending' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ tx.get_status_display }}
+                                        </span>
+                                    </div>
                                 </div>
-                            {% endif %}
+                            {% endfor %}
                         </div>
                     </div>
-                {% endif %}
+                </div>
+            {% endif %}
 
-                {% if not advertiser_profile and not influencer_profile and not team_member %}
-                    <div class="card bg-dark border-light">
-                        <div class="card-body text-center py-4">
-                            <i class="fi-info-circle text-muted fs-2 d-block mb-2"></i>
-                            <p class="text-muted mb-0">این کاربر هیچ پروفایل تخصصی (تبلیغ دهنده، اینفلوئنسر یا عضو تیم
-                                محتوا) ندارد.</p>
+            <!-- ===== تیکت‌ها ===== -->
+            {% if tickets %}
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-chat-dots"></i>
+                                تیکت‌های اخیر
+                            </span>
+                            <span class="badge-count">{{ tickets_count }} تیکت</span>
                         </div>
+
+                        <div class="scrollable">
+                            {% for ticket in tickets %}
+                                <a href="{% url 'support:ticket_detail' ticket.id %}"
+                                   class="list-item">
+                                    <div class="item-info">
+                                        <div class="name">{{ ticket.get_display_title|truncatechars:40 }}</div>
+                                        <div class="sub">{{ ticket.created_at|date:"Y/m/d H:i" }}</div>
+                                    </div>
+                                    <div class="item-meta">
+                                        <span class="support-status-badge
+                                            {% if ticket.status == 'open' %}bg-info
+                                            {% elif ticket.status == 'waiting_user' %}bg-warning
+                                            {% elif ticket.status == 'waiting_admin' %}bg-primary
+                                            {% elif ticket.status == 'closed' %}bg-accent
+                                            {% else %}bg-info{% endif %}">
+                                            {{ ticket.get_status_display }}
+                                        </span>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                        {% if tickets_count > 5 %}
+                            <div class="mt-3 text-center">
+                                <a href="{% url 'support:ticket_list' %}?user={{ user_obj.pk }}"
+                                   class="btn btn-sm btn-outline-primary rounded-pill">
+                                    مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
+                </div>
+            {% endif %}
 
-                <!-- ===== تیکت‌ها ===== -->
-                {% if tickets %}
-                    <div class="card bg-dark border-light mt-4">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="text-light mb-0">
-                                    <i class="fi-chat-right text-primary me-1"></i> تیکت‌های اخیر
-                                </h5>
-                                <span class="badge bg-secondary">{{ tickets_count }} تیکت</span>
-                            </div>
+            <!-- ===== نوتیفیکیشن‌ها ===== -->
+            {% if notifications %}
+                <div class="support-card">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-bell"></i>
+                                نوتیفیکیشن‌های اخیر
+                            </span>
+                            <span class="badge-count">{{ notifications_count }} نوتیفیکیشن</span>
+                        </div>
 
-
-                            <div class="table-responsive">
-                                <table class="table table-dark table-hover table-sm mb-0">
-                                    <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>عنوان</th>
-                                        <th>وضعیت</th>
-                                        <th>تاریخ</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {% for ticket in tickets %}
-                                        <tr>
-                                            <td>{{ ticket.id }}</td>
-                                            <td><a class="text-decoration-none"
-                                                   href="{% url 'support:ticket_detail' ticket.id %}">{{ ticket.get_display_title }}</a>
-                                            </td>
-                                            <td>
-                                            <span class="badge 
-                                                {% if ticket.status == 'open' %}bg-warning
-                                                {% elif ticket.status == 'waiting_user' %}bg-info
-                                                {% elif ticket.status == 'closed' %}bg-secondary
-                                                {% else %}bg-primary{% endif %}">
-                                                {{ ticket.get_status_display }}
-                                            </span>
-                                            </td>
-                                            <td>{{ ticket.created_at|date:"Y/m/d H:i" }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% if tickets_count > 5 %}
-                                <div class="mt-3">
-                                    <a href="{% url 'support:ticket_list' %}?user={{ user.pk }}"
-                                       class="btn btn-outline-primary btn-sm rounded-pill">
-                                        مشاهده همه <i class="fi-arrow-left me-1"></i>
-                                    </a>
+                        <div class="scrollable">
+                            {% for notification in notifications %}
+                                <div class="list-item">
+                                    <div class="item-info">
+                                        <div class="name {% if not notification.is_read %}fw-bold{% endif %}">
+                                            {{ notification.title|truncatechars:40 }}
+                                        </div>
+                                        <div class="sub">
+                                            {{ notification.created_at|date:"Y/m/d H:i" }} • {{ notification.get_type_display }}
+                                        </div>
+                                    </div>
+                                    <div class="item-meta">
+                                        {% if not notification.is_read %}
+                                            <span class="support-status-badge bg-primary">جدید</span>
+                                        {% else %}
+                                            <span class="support-status-badge bg-info">خوانده شده</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            {% endif %}
+                            {% endfor %}
                         </div>
+
+                        {% if notifications_count > 5 %}
+                            <div class="mt-3 text-center">
+                                <a href="{% url 'support:notification_list' %}?user={{ user_obj.pk }}"
+                                   class="btn btn-sm btn-outline-primary rounded-pill">
+                                    مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div><!-- /col-lg-8 -->
-        </div><!-- /row -->
-    </div><!-- /container -->
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
 {% endblock %}

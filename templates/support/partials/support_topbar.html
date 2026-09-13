@@ -1,0 +1,179 @@
+{% load static %}
+
+<div class="support-topbar-inner">
+
+    <!-- ============================================================ -->
+    <!-- سمت راست: دکمه toggle + لوگو + عنوان -->
+    <!-- ============================================================ -->
+    <div class="topbar-start">
+
+        <!-- دکمه toggle سایدبار (فقط دسکتاپ) -->
+        <button type="button"
+                class="topbar-icon-btn d-none d-lg-inline-flex"
+                data-sidebar-toggle
+                title="باز/بسته کردن منو"
+                aria-label="باز/بسته کردن منو">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <!-- دکمه hamburger (فقط موبایل) -->
+        <button type="button"
+                class="topbar-icon-btn d-lg-none"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#supportMobileSidebar"
+                aria-controls="supportMobileSidebar"
+                title="منو"
+                aria-label="منو">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <!-- لوگو -->
+        <a href="{% url 'core:home' %}" class="topbar-logo" title="بازگشت به سایت">
+            <img src="{% static 'finder/img/logo/logo.webp' %}"
+                 alt="WinJob"
+                 height="36" width="80">
+        </a>
+
+        <!-- عنوان صفحه -->
+        <div class="topbar-title-wrap d-none d-md-block">
+            <h1 class="topbar-title">
+                {% block page_title %}پنل مدیریت{% endblock %}
+            </h1>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- سمت چپ: کاربر + اعلان‌ها + بازگشت + خروج -->
+    <!-- ============================================================ -->
+    <div class="topbar-end">
+
+        <!-- دکمه بازگشت به سایت -->
+        <a href="{% url 'core:home' %}"
+           class="topbar-icon-btn d-none d-md-inline-flex"
+           title="بازگشت به سایت"
+           aria-label="بازگشت به سایت">
+            <i class="bi bi-house-door"></i>
+        </a>
+
+        <!-- اعلان‌ها -->
+        <a href="{% url 'notifications:list' %}"
+           class="topbar-icon-btn position-relative"
+           title="اعلان‌ها"
+           aria-label="اعلان‌ها">
+            <i class="bi bi-bell"></i>
+            {% if unread_notifications_count %}
+                <span class="topbar-badge">
+                    {{ unread_notifications_count }}
+                </span>
+            {% endif %}
+        </a>
+
+        <!-- دراپ‌داون کاربر -->
+        <div class="dropdown topbar-user-dropdown">
+            <button type="button"
+                    class="topbar-user-btn"
+                    id="topbarUserDropdown"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="حساب کاربری">
+                {% if user.avatar %}
+                    <img src="{{ user.avatar.url }}"
+                         alt="{{ user.nickname|default:user.phone_number }}"
+                         class="topbar-avatar">
+                {% else %}
+                    <div class="topbar-avatar topbar-avatar-placeholder">
+                        <i class="bi bi-person"></i>
+                    </div>
+                {% endif %}
+
+                <div class="topbar-user-info d-none d-md-block">
+                    <span class="topbar-user-name">
+                        {{ user.nickname|default:user.phone_number }}
+                    </span>
+                    {% if support_user_role_label %}
+                        <span class="topbar-user-role">
+                            {{ support_user_role_label }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <i class="bi bi-chevron-down topbar-user-caret d-none d-md-block"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end topbar-dropdown"
+                aria-labelledby="topbarUserDropdown">
+
+                <!-- سربرگ -->
+                <li class="topbar-dropdown-header">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}"
+                                 alt=""
+                                 class="topbar-avatar topbar-avatar-sm">
+                        {% else %}
+                            <div class="topbar-avatar topbar-avatar-sm topbar-avatar-placeholder">
+                                <i class="bi bi-person"></i>
+                            </div>
+                        {% endif %}
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="text-light fw-bold text-truncate">
+                                {{ user.nickname|default:user.phone_number }}
+                            </div>
+                            <div class="text-muted fs-xs text-truncate">
+                                {{ user.phone_number }}
+                            </div>
+                        </div>
+                    </div>
+                    {% if support_user_role_label %}
+                        <span class="badge bg-faded-primary text-primary mt-2 fs-xs">
+                            <i class="bi bi-shield-check me-1"></i>
+                            {{ support_user_role_label }}
+                        </span>
+                    {% endif %}
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                <!-- لینک‌ها -->
+                <li>
+                    <a class="dropdown-item" href="{% url 'core:home' %}">
+                        <i class="bi bi-house-door me-2"></i>
+                        صفحه اصلی سایت
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item" href="{% url 'accounts:dashboard_router' %}">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        داشبورد کاربری
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item" href="{% url 'accounts:edit_profile' %}">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        اطلاعات فردی
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item" href="{% url 'tickets:ticket_list' %}">
+                        <i class="bi bi-headset me-2"></i>
+                        پشتیبانی
+                    </a>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                <!-- خروج -->
+                <li>
+                    <a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+                        <i class="bi bi-box-arrow-right me-2"></i>
+                        خروج از حساب
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+    </div>
+</div>

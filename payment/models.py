@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
 from django.utils import timezone
@@ -174,6 +175,13 @@ class Invoice(models.Model):
         verbose_name="تاریخ پرداخت"
     )
 
+    commission_paid_at = jmodels.jDateTimeField(
+        _('زمان واریز کمیسیون'),
+        null=True,
+        blank=True,
+        help_text=_('زمانی که کمیسیون بین نقش‌های سازمانی تقسیم شد'),
+    )
+
     # ========== فیلدهای اضافی برای کیف پول ==========
     wallet_deposit_amount = models.PositiveBigIntegerField(
         default=0,
@@ -234,6 +242,100 @@ class Invoice(models.Model):
     @property
     def is_content_order_invoice(self):
         return self.type == self.Type.CONTENT_ORDER
+
+    @property
+    def is_commission_paid(self):
+        """آیا کمیسیون این فاکتور قبلاً واریز شده؟"""
+        return self.commission_paid_at is not None
+
+
+class CommissionSplit(models.Model):
+    """
+    تسهیم کمیسیون هر فاکتور
+
+    - یک رکورد به ازای هر فاکتور
+    - وقتی payout_commission اجرا می‌شه، این رکورد پر می‌شه
+    - محل ذخیره سهم هر نقش + هزینه نگهداری سایت
+    - مبلغ کل کمیسیون از `invoice.commission` خونده می‌شه (نیازی به فیلد جدا نیست)
+    """
+
+    invoice = models.OneToOneField(
+        'Invoice',
+        on_delete=models.CASCADE,
+        related_name='commission_split',
+        verbose_name='فاکتور',
+    )
+
+    # ========== سهم نقش‌ها ==========
+    ceo_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='سهم مدیرعامل',
+    )
+    developer_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='سهم توسعه‌دهنده',
+    )
+    publish_manager_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='سهم مدیر نشر',
+    )
+    content_manager_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='سهم مدیر محتوا',
+    )
+    regional_manager_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='سهم مدیر استانی',
+    )
+    site_maintenance_amount = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name='هزینه نگهداری سایت',
+    )
+
+    # ========== متادیتا ==========
+    snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='اسنپ‌شات تنظیمات',
+        help_text='درصدهای تنظیمات در لحظه واریز',
+    )
+
+    created_at = jmodels.jDateTimeField(
+        auto_now_add=True,
+        verbose_name='تاریخ ایجاد',
+    )
+
+    class Meta:
+        verbose_name = 'تسهیم کمیسیون'
+        verbose_name_plural = 'تسهیم‌های کمیسیون'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"تسهیم فاکتور {self.invoice.invoice_number}"
+
+    @property
+    def total_commission(self):
+        """مبلغ کل کمیسیون — از خود فاکتور میاد"""
+        return self.invoice.commission
+
+    @property
+    def sum_of_shares(self):
+        """جمع همه سهم‌ها — باید برابر total_commission باشه"""
+        return (
+            self.ceo_amount +
+            self.developer_amount +
+            self.publish_manager_amount +
+            self.content_manager_amount +
+            self.regional_manager_amount +
+            self.site_maintenance_amount
+        )
+
+    @property
+    def is_balanced(self):
+        return self.sum_of_shares == self.total_commission
 
 
 class Coupon(models.Model):
@@ -422,6 +524,13 @@ class Transaction(models.Model):
         INFLUENCER_WITHDRAWAL = 'influencer_withdrawal', _('تسویه ناشر')
         CONTENT_TEAM_WITHDRAWAL = 'content_team_withdrawal', _('تسویه تیم محتوا')
 
+        # ===== جدید: کمیسیون =====
+        COMMISSION_CEO = 'commission_ceo', _('کمیسیون مدیرعامل')
+        COMMISSION_DEVELOPER = 'commission_developer', _('کمیسیون توسعه‌دهنده')
+        COMMISSION_PUBLISH_MANAGER = 'commission_publish_manager', _('کمیسیون مدیر نشر')
+        COMMISSION_CONTENT_MANAGER = 'commission_content_manager', _('کمیسیون مدیر محتوا')
+        COMMISSION_REGIONAL_MANAGER = 'commission_regional_manager', _('کمیسیون مدیر استانی')
+
     class Status(models.TextChoices):
         PENDING = "pending", "در انتظار"
         SUCCESS = "success", "موفق"
@@ -522,8 +631,18 @@ class Transaction(models.Model):
         """آیا این تراکنش ورودی است؟"""
         if not self.type:
             return False
-        return self.type in [self.Type.DEPOSIT, self.Type.GATEWAY_PAYMENT, self.Type.CAMPAIGN_REFUND,
-                             self.Type.INFLUENCER_PAYMENT, self.Type.TEAM_PAYMENT]
+        return self.type in [
+            self.Type.DEPOSIT,
+            self.Type.GATEWAY_PAYMENT,
+            self.Type.CAMPAIGN_REFUND,
+            self.Type.INFLUENCER_PAYMENT,
+            self.Type.TEAM_PAYMENT,
+            self.Type.COMMISSION_CEO,
+            self.Type.COMMISSION_DEVELOPER,
+            self.Type.COMMISSION_PUBLISH_MANAGER,
+            self.Type.COMMISSION_CONTENT_MANAGER,
+            self.Type.COMMISSION_REGIONAL_MANAGER,
+        ]
 
     @property
     def is_expense(self):

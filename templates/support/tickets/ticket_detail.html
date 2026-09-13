@@ -1,105 +1,269 @@
-{% extends 'parent/base.html' %}
+{% extends 'parent/support_base.html' %}
 {% load static %}
 
-{% block title %}جزییات تیکت #{{ ticket.id }}{% endblock %}
+{% block title %}تیکت #{{ ticket.id }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/tickets/ticket_detail.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-light">📩 تیکت #{{ ticket.id }}</h2>
-        <a href="{% url 'support:ticket_list' %}" class="btn btn-outline-light rounded-pill px-4">
-            <i class="fi-arrow-forward me-1"></i> بازگشت
-        </a>
-    </div>
 
-    <!-- اطلاعات تیکت -->
-    <div class="card bg-dark border-light mb-4">
-        <div class="card-body">
-            <h5 class="card-title text-light">{{ ticket.get_display_title }}</h5>
-            <div class="row g-3 mt-2">
-                <div class="col-md-6">
-                    <span class="text-muted">کاربر:</span>
-                    <span class="text-light">{{ ticket.user.phone_number }}</span>
-                </div>
-                <div class="col-md-6">
-                    <span class="text-muted">وضعیت:</span>
-                    <span class="badge 
-                        {% if ticket.status == 'open' %}bg-warning
-                        {% elif ticket.status == 'waiting_user' %}bg-info
-                        {% elif ticket.status == 'closed' %}bg-secondary
-                        {% else %}bg-primary{% endif %}">
-                        {{ ticket.get_status_display }}
-                    </span>
-                </div>
-                <div class="col-md-6">
-                    <span class="text-muted">دسته‌بندی:</span>
-                    <span class="text-light">{{ ticket.category.name }}</span>
-                </div>
-                {% if ticket.campaign %}
-                <div class="col-md-6">
-                    <span class="text-muted">کمپین مرتبط:</span>
-                    <span class="text-light">{{ ticket.campaign.name }}</span>
-                </div>
-                {% endif %}
-            </div>
+    <!-- ============================================================ -->
+    <!-- هدر صفحه -->
+    <!-- ============================================================ -->
+    <div class="support-page-header">
+        <div>
+            <span class="page-subtitle">
+                <i class="bi bi-chat-dots-fill text-primary"></i>
+                تیکت #{{ ticket.id }}
+                <span class="text-warning">• {{ ticket.get_display_title|truncatechars:60 }}</span>
+            </span>
+        </div>
+        <div class="page-actions">
+            <span class="support-status-badge
+                {% if ticket.status == 'open' %}bg-info
+                {% elif ticket.status == 'waiting_user' %}bg-warning
+                {% elif ticket.status == 'waiting_admin' %}bg-primary
+                {% elif ticket.status == 'closed' %}bg-accent
+                {% else %}bg-info{% endif %}">
+                {{ ticket.get_status_display }}
+            </span>
+            <a href="{% url 'support:ticket_list' %}"
+               class="btn btn-sm btn-outline-light rounded-pill px-4">
+                <i class="bi bi-arrow-right me-1"></i> بازگشت
+            </a>
         </div>
     </div>
 
-    <!-- پیام‌ها -->
-    <div class="card bg-dark border-light mb-4">
-        <div class="card-body">
-            <h5 class="text-light mb-3">پیام‌ها</h5>
-            <div class="messages-container">
-                {% for msg in messages %}
-                <div class="card mb-3 {% if msg.is_admin_reply %}border-primary{% else %}border-secondary{% endif %} bg-dark">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong class="{% if msg.is_admin_reply %}text-primary{% else %}text-light{% endif %}">
-                                <i class="{% if msg.is_admin_reply %}fi-user-check{% else %}fi-user{% endif %} me-1"></i>
-                                {{ msg.sender_name }}
-                            </strong>
-                            <small class="text-muted">{{ msg.created_at|date:"Y/m/d H:i" }}</small>
+    <div class="row g-4">
+
+        <!-- ============================================================ -->
+        <!-- ستون اول: اطلاعات تیکت -->
+        <!-- ============================================================ -->
+        <div class="col-lg-4">
+
+            <!-- کارت اطلاعات -->
+            <div class="support-card mb-4">
+                <div class="support-card-body">
+                    <h5 class="text-light mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        اطلاعات تیکت
+                    </h5>
+
+                    <div class="info-row">
+                        <span class="label">شماره تیکت</span>
+                        <span class="value ltr"><strong>#{{ ticket.id }}</strong></span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="label">کاربر</span>
+                        <span class="value ltr">{{ ticket.user.phone_number }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="label">نام مستعار</span>
+                        <span class="value">{{ ticket.user.nickname|default:"-" }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="label">دسته‌بندی</span>
+                        <span class="value">{{ ticket.category.name }}</span>
+                    </div>
+
+                    {% if ticket.title %}
+                        <div class="info-row">
+                            <span class="label">عنوان</span>
+                            <span class="value">{{ ticket.title.name }}</span>
                         </div>
-                        <p class="card-text text-light mt-2">{{ msg.message|linebreaks }}</p>
-                        {% if msg.attachments.exists %}
-                        <div class="mt-2">
-                            {% for att in msg.attachments.all %}
-                            <a href="{{ att.file.url }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill">
-                                <i class="fi-paperclip me-1"></i> {{ att.file_name }}
-                            </a>
-                            {% endfor %}
+                    {% endif %}
+
+                    {% if ticket.campaign %}
+                        <div class="info-row">
+                            <span class="label">کمپین مرتبط</span>
+                            <span class="value">{{ ticket.campaign.name|truncatechars:30 }}</span>
                         </div>
-                        {% endif %}
+                    {% endif %}
+
+                    <div class="info-row">
+                        <span class="label">اولویت</span>
+                        <span class="value">
+                            <span class="support-status-badge
+                                {% if ticket.priority == 'urgent' %}bg-danger
+                                {% elif ticket.priority == 'high' %}bg-warning
+                                {% elif ticket.priority == 'medium' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ ticket.get_priority_display }}
+                            </span>
+                        </span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="label">تاریخ ایجاد</span>
+                        <span class="value ltr">{{ ticket.created_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="label">آخرین بروزرسانی</span>
+                        <span class="value ltr">{{ ticket.updated_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+
+                    {% if ticket.closed_at %}
+                        <div class="info-row">
+                            <span class="label">تاریخ بسته شدن</span>
+                            <span class="value ltr">{{ ticket.closed_at|date:"Y/m/d H:i" }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- آمار سریع -->
+            <div class="support-card">
+                <div class="support-card-body">
+                    <h5 class="text-light mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-bar-chart text-primary"></i>
+                        آمار تیکت
+                    </h5>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="stat-box">
+                                <div class="number text-primary">{{ ticket.messages_count }}</div>
+                                <div class="label">کل پیام‌ها</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-box">
+                                <div class="number text-warning">{{ ticket.unread_messages_count }}</div>
+                                <div class="label">خوانده نشده</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% empty %}
-                <p class="text-muted text-center py-3">هنوز پیامی وجود ندارد.</p>
-                {% endfor %}
             </div>
+
         </div>
+
+        <!-- ============================================================ -->
+        <!-- ستون دوم: پیام‌ها -->
+        <!-- ============================================================ -->
+        <div class="col-lg-8">
+
+            <!-- پیام‌ها -->
+            <div class="support-card">
+                <div class="support-card-body">
+                    <div class="section-header">
+                        <span class="title">
+                            <i class="bi bi-chat-dots"></i>
+                            گفتگو
+                        </span>
+                        <span class="badge-count">{{ messages|length }} پیام</span>
+                    </div>
+
+                    <div class="messages-container">
+                        {% for msg in messages %}
+                            <div class="message-bubble {% if msg.is_admin_reply %}message-admin{% else %}message-user{% endif %}">
+                                <div class="message-header">
+                                    <div class="message-sender">
+                                        {% if msg.is_admin_reply %}
+                                            <div class="message-avatar message-avatar-admin">
+                                                <i class="bi bi-shield-check"></i>
+                                            </div>
+                                        {% else %}
+                                            <div class="message-avatar message-avatar-user">
+                                                <i class="bi bi-person"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="message-name">
+                                                {% if msg.is_admin_reply %}
+                                                    پشتیبانی
+                                                {% else %}
+                                                    {{ msg.sender.phone_number }}
+                                                {% endif %}
+                                            </div>
+                                            <div class="message-time">
+                                                {{ msg.created_at|date:"Y/m/d H:i" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="message-body">
+                                    {{ msg.message|linebreaks }}
+                                </div>
+
+                                {% if msg.attachments.exists %}
+                                    <div class="message-attachments">
+                                        {% for att in msg.attachments.all %}
+                                            <a href="{{ att.file.url }}"
+                                               target="_blank"
+                                               class="file-item">
+                                                <i class="bi bi-paperclip"></i>
+                                                {{ att.file_name }}
+                                                <span class="text-muted">({{ att.file_size_display }})</span>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <div class="support-empty">
+                                <i class="bi bi-chat-dots"></i>
+                                <p>هنوز پیامی در این تیکت ثبت نشده است.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- فرم پاسخ -->
+            {% if ticket.status != 'closed' %}
+                <div class="support-card mt-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-pencil-square"></i>
+                                پاسخ به تیکت
+                            </span>
+                        </div>
+
+                        <form method="post"
+                              action="{% url 'support:ticket_reply' ticket.pk %}"
+                              enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <textarea name="message"
+                                          rows="5"
+                                          class="form-control bg-dark text-light border-light"
+                                          placeholder="متن پاسخ خود را وارد کنید..."
+                                          required></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    پاسخ شما به عنوان «پشتیبانی» ارسال خواهد شد.
+                                </small>
+                                <button type="submit" class="btn btn-success rounded-pill px-4">
+                                    <i class="bi bi-send me-1"></i> ارسال پاسخ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="support-card mt-4">
+                    <div class="support-card-body text-center py-4">
+                        <i class="bi bi-lock-fill fs-2 text-muted d-block mb-2"></i>
+                        <p class="text-muted mb-0">
+                            این تیکت بسته شده است و امکان ارسال پاسخ وجود ندارد.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+
     </div>
 
-    <!-- فرم پاسخ (فقط در صورت باز بودن تیکت) -->
-    {% if ticket.status != 'closed' %}
-    <div class="card bg-dark border-light">
-        <div class="card-body">
-            <h5 class="text-light mb-3">✏️ پاسخ به تیکت</h5>
-            <form method="post" action="{% url 'support:ticket_reply' ticket.pk %}" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <textarea name="message" rows="5" class="form-control bg-dark text-light border-light" 
-                              placeholder="متن پاسخ خود را وارد کنید..." required></textarea>
-                </div>
-                <button type="submit" class="btn btn-success rounded-pill px-5">
-                    <i class="fi-send me-1"></i> ارسال پاسخ
-                </button>
-            </form>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-secondary text-center">
-        <i class="fi-info-circle me-1"></i> این تیکت بسته شده است و امکان ارسال پاسخ وجود ندارد.
-    </div>
-    {% endif %}
-</div>
 {% endblock %}

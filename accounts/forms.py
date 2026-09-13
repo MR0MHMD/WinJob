@@ -1,5 +1,3 @@
-# accounts/forms.py
-
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.contrib.auth import get_user_model
@@ -38,7 +36,8 @@ class CustomUserCreationForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ('phone_number', 'nickname', 'email', 'avatar', 'province')
+        # ✅ role اضافه شد
+        fields = ('phone_number', 'nickname', 'email', 'avatar', 'province', 'role')
         widgets = {
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -53,6 +52,10 @@ class CustomUserCreationForm(forms.ModelForm):
                 'placeholder': 'example@gmail.com'
             }),
             'province': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            # ✅ ویجت role اضافه شد
+            'role': forms.Select(attrs={
                 'class': 'form-select'
             }),
         }
@@ -100,6 +103,8 @@ class CustomUserChangeForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'province': forms.Select(attrs={'class': 'form-select'}),
             'avatar': forms.FileInput(attrs={'class': 'form-control'}),
+            # ✅ ویجت role اضافه شد
+            'role': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_password(self):

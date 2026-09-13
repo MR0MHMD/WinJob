@@ -97,7 +97,7 @@
                             </div>
                         </div>
 
-                        <div class="stepper-item {% if campaign.status == 'pending' and campaign.status != 'cancelled' and campaign.status != 'draft' %}active completed{% endif %}">
+                        <div class="stepper-item {% if campaign.status == 'pending' or campaign.status != 'cancelled' or campaign.status != 'draft' %}active completed{% endif %}">
                             <div class="stepper-dot">
                                 <span class="stepper-number">2</span>
                                 <span class="stepper-icon"><i class="fi-search"></i></span>
@@ -834,20 +834,50 @@
                 <div class="modal-body p-0">
                     <ul class="nav glass-tabs px-3 pt-3">
                         <li class="nav-item">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-file">فایل</button>
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#modal-preview">پیش‌نمایش</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-file">فایل</button>
                         </li>
                         <li class="nav-item">
                             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-info">توضیحات و لینک</button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modal-preview">پیش‌نمایش</button>
                         </li>
                     </ul>
 
                     <div class="tab-content p-4">
                         {% with content=campaign.content %}
                             {% if content %}
-                                <div class="tab-pane fade show active" id="modal-file">
+                                <div class="tab-pane fade show active" id="modal-preview">
+                                    <div class="bale-card">
+                                        <div class="bale-header">وینجاب</div>
+                                        <div class="bale-image-wrapper">
+                                            {% if content.media %}
+                                                {% if content.is_video %}
+                                                    <video controls class="bale-image">
+                                                        <source src="{{ content.media.url }}" type="video/mp4">
+                                                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                                                    </video>
+                                                {% else %}
+                                                    <img src="{{ content.media.url }}" class="bale-image"
+                                                         alt="پیش‌نمایش">
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="bale-content">
+                                            <p class="bale-text">{{ content.caption }}</p>
+                                            {% if content.link %}
+                                                <a href="{{ content.link }}" class="bale-link"
+                                                   target="_blank">{{ content.link }}</a>
+                                            {% endif %}
+                                            <div class="bale-meta">
+                                                <span>3.2K views 👁</span>
+                                                <span>16:13</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade show" id="modal-file">
                                     {% if content.media %}
                                         {% if content.is_video %}
                                             <video controls class="media-display" style="max-height: 450px;">
@@ -897,36 +927,6 @@
                                             اینفلوئنسرها اعمال می‌شوند.
                                         </div>
                                     {% endif %}
-                                </div>
-
-                                <div class="tab-pane fade" id="modal-preview">
-                                    <div class="bale-card">
-                                        <div class="bale-header">وینجاب</div>
-                                        <div class="bale-image-wrapper">
-                                            {% if content.media %}
-                                                {% if content.is_video %}
-                                                    <video controls class="bale-image">
-                                                        <source src="{{ content.media.url }}" type="video/mp4">
-                                                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                                                    </video>
-                                                {% else %}
-                                                    <img src="{{ content.media.url }}" class="bale-image"
-                                                         alt="پیش‌نمایش">
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                        <div class="bale-content">
-                                            <p class="bale-text">{{ content.caption }}</p>
-                                            {% if content.link %}
-                                                <a href="{{ content.link }}" class="bale-link"
-                                                   target="_blank">{{ content.link }}</a>
-                                            {% endif %}
-                                            <div class="bale-meta">
-                                                <span>3.2K views 👁</span>
-                                                <span>16:13</span>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             {% else %}
                                 <div class="text-center py-5">

@@ -1,53 +1,80 @@
-{% extends 'parent/base.html' %}
+{% extends 'parent/support_base.html' %}
 {% load static %}
 
-{% block title %}داشبورد مدیریت{% endblock %}
+{% block title %}
+    {% if user.is_ceo %}داشبورد مدیرعامل
+    {% elif user.is_developer %}داشبورد توسعه‌دهنده
+    {% elif user.is_publish_manager %}داشبورد مدیر نشر
+    {% elif user.is_content_manager %}داشبورد مدیر محتوا
+    {% elif user.is_regional_manager %}داشبورد مدیر استانی
+    {% else %}داشبورد مدیریت{% endif %}
+{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'support/dashboard/dashboard.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div class="container pt-5">
 
-        <!-- ============================================================ -->
-        <!-- HEADER - اضافه کردن دکمه مدیریت مالی -->
-        <!-- ============================================================ -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <h2 class="text-light mb-1">
-                    <i class="fi-dashboard text-primary me-2"></i> داشبورد مدیریت
-                </h2>
-                <span class="text-muted">خلاصه وضعیت کلی پلتفرم</span>
-            </div>
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <!-- ✅ دکمه مدیریت مالی - فقط برای سوپر یوزر -->
-                {% if user.is_superuser %}
-                    <a href="{% url 'support:finance_dashboard' %}"
-                       class="btn btn-accent rounded-pill px-3 py-2"
-                       style="font-size:0.8rem; font-weight:500;">
-                        <i class="fi-wallet me-1"></i> مدیریت مالی
-                    </a>
+    <!-- ============================================================ -->
+    <!-- هدر صفحه (زیرعنوان + اقدامات) -->
+    <!-- ============================================================ -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+
+        <div>
+            <div class="text-muted fs-sm">
+                <i class="bi bi-calendar3 me-1"></i>
+                {{ jalali_weekday }} {{ jalali_date }}
+                {% if dash_perms.is_regional_scope %}
+                    <span class="mx-2">•</span>
+                    <span class="text-warning">
+                        <i class="bi bi-geo-alt me-1"></i>
+                        {{ dash_perms.scope_label }}
+                    </span>
+                {% else %}
+                    <span class="mx-2">•</span>
+                    <span class="text-info">
+                        <i class="bi bi-globe me-1"></i>
+                        {{ dash_perms.scope_label }}
+                    </span>
                 {% endif %}
-                <span class="badge bg-warning rounded-pill px-3 py-2">
-                    <i class="fi-clock me-1"></i> {{ pending_count }} اقدام نیازمند توجه
-                </span>
-
-                <span class="badge bg-success rounded-pill px-3 py-2">
-                    <i class="fi-check-circle me-1"></i> آنلاین
-                </span>
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- ردیف اول: آمار کلی (۴ کارت اصلی) -->
-        <!-- ============================================================ -->
-        <div class="row g-3 mb-4">
-            <div class="col-12 col-sm-6 col-xl-3">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+
+            {% if dash_perms.can_see_finance %}
+                <a href="{% url 'support:finance_dashboard' %}"
+                   class="btn btn-accent rounded-pill px-3 py-2 btn-sm">
+                    <i class="bi bi-wallet2 me-1"></i>
+                    مدیریت مالی
+                </a>
+            {% endif %}
+
+            <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-3 py-2">
+                <i class="bi bi-clock me-1"></i>
+                {{ pending_count }} اقدام نیازمند توجه
+            </span>
+
+            <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-2">
+                <i class="bi bi-check-circle me-1"></i>
+                آنلاین
+            </span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ردیف اول: آمار کلی (داینامیک بر اساس نقش) -->
+    <!-- ============================================================ -->
+    <div class="row g-3 mb-4">
+
+        <!-- کاربران (همه) -->
+        {% if dash_perms.can_see_users %}
+            <div class="{{ dash_perms.main_col_class }}">
                 <div class="stat-card">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper" style="background:rgba(60,118,242,0.12);">
-                            <i class="fi-users" style="color:#3c76f2; font-size:1.5rem;"></i>
+                            <i class="bi bi-people-fill" style="color:#3c76f2; font-size:1.5rem;"></i>
                         </div>
                         <div>
                             <div class="stat-number">{{ total_users }}</div>
@@ -55,17 +82,21 @@
                         </div>
                     </div>
                     <div class="mt-2">
-                    <span class="stat-change up">
-                        <i class="fi-arrow-up me-1"></i> {{ new_users_week }} جدید این هفته
-                    </span>
+                        <span class="stat-change up">
+                            <i class="bi bi-arrow-up me-1"></i> {{ new_users_week }} جدید این هفته
+                        </span>
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-xl-3">
+        {% endif %}
+
+        <!-- کمپین‌ها -->
+        {% if dash_perms.can_see_campaigns %}
+            <div class="{{ dash_perms.main_col_class }}">
                 <div class="stat-card">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper" style="background:rgba(253,86,49,0.12);">
-                            <i class="fi-flag" style="color:#fd5631; font-size:1.5rem;"></i>
+                            <i class="bi bi-flag-fill" style="color:#fd5631; font-size:1.5rem;"></i>
                         </div>
                         <div>
                             <div class="stat-number">{{ total_campaigns }}</div>
@@ -73,35 +104,43 @@
                         </div>
                     </div>
                     <div class="mt-2">
-                    <span class="stat-change neutral">
-                        <i class="fi-clock me-1"></i> {{ pending_campaigns }} در انتظار
-                    </span>
+                        <span class="stat-change neutral">
+                            <i class="bi bi-clock me-1"></i> {{ pending_campaigns }} در انتظار
+                        </span>
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-xl-3">
+        {% endif %}
+
+        <!-- سفارشات محتوا -->
+        {% if dash_perms.can_see_content %}
+            <div class="{{ dash_perms.main_col_class }}">
                 <div class="stat-card">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper" style="background:rgba(7,201,139,0.12);">
-                            <i class="fi-cart" style="color:#07c98b; font-size:1.5rem;"></i>
+                            <i class="bi bi-cart-fill" style="color:#07c98b; font-size:1.5rem;"></i>
                         </div>
                         <div>
                             <div class="stat-number">{{ total_orders }}</div>
-                            <div class="stat-label">سفارشات</div>
+                            <div class="stat-label">سفارشات محتوا</div>
                         </div>
                     </div>
                     <div class="mt-2">
-                    <span class="stat-change up">
-                        <i class="fi-arrow-up me-1"></i> {{ new_orders_week }} جدید این هفته
-                    </span>
+                        <span class="stat-change up">
+                            <i class="bi bi-arrow-up me-1"></i> {{ new_orders_week }} جدید این هفته
+                        </span>
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-xl-3">
+        {% endif %}
+
+        <!-- درآمد کل (فقط CEO/Dev) یا کانال‌ها (Publish Manager) -->
+        {% if dash_perms.can_see_total_revenue %}
+            <div class="{{ dash_perms.main_col_class }}">
                 <div class="stat-card">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper" style="background:rgba(253,188,49,0.12);">
-                            <i class="fi-credit-card" style="color:#fdbc31; font-size:1.5rem;"></i>
+                            <i class="bi bi-credit-card-fill" style="color:#fdbc31; font-size:1.5rem;"></i>
                         </div>
                         <div>
                             <div class="stat-number">{{ total_revenue|floatformat:0|default:0 }}</div>
@@ -109,18 +148,41 @@
                         </div>
                     </div>
                     <div class="mt-2">
-                    <span class="stat-change up">
-                        <i class="fi-arrow-up me-1"></i> {{ total_deposits|floatformat:0|default:0 }} واریزی
-                    </span>
+                        <span class="stat-change up">
+                            <i class="bi bi-arrow-up me-1"></i> {{ total_deposits|floatformat:0|default:0 }} واریزی
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
+        {% elif dash_perms.can_see_channels %}
+            <div class="{{ dash_perms.main_col_class }}">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrapper" style="background:rgba(93,60,242,0.12);">
+                            <i class="bi bi-grid-3x3-gap-fill" style="color:#5d3cf2; font-size:1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="stat-number">{{ total_channels }}</div>
+                            <div class="stat-label">کانال‌ها</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="stat-change neutral">
+                            <i class="bi bi-clock me-1"></i> {{ pending_channels }} در انتظار تایید
+                        </span>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
 
-        <!-- ============================================================ -->
-        <!-- ردیف دوم: آمار جزئی (۸ کارت کوچک) -->
-        <!-- ============================================================ -->
-        <div class="row g-2 mb-4">
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ردیف دوم: آمار جزئی (داینامیک) -->
+    <!-- ============================================================ -->
+    <div class="row g-2 mb-4">
+
+        {% if dash_perms.can_see_users %}
             <div class="col-6 col-md-3">
                 <div class="mini-stat">
                     <div class="number text-primary">{{ total_advertisers }}</div>
@@ -133,12 +195,18 @@
                     <span class="label">اینفلوئنسر</span>
                 </div>
             </div>
+        {% endif %}
+
+        {% if dash_perms.can_see_teams %}
             <div class="col-6 col-md-3">
                 <div class="mini-stat">
                     <div class="number text-warning">{{ total_teams }}</div>
                     <span class="label">تیم‌های محتوا</span>
                 </div>
             </div>
+        {% endif %}
+
+        {% if dash_perms.can_see_channels %}
             <div class="col-6 col-md-3">
                 <div class="mini-stat">
                     <div class="number text-success">{{ total_channels }}</div>
@@ -151,85 +219,109 @@
                     <span class="label">کانال در انتظار</span>
                 </div>
             </div>
+        {% endif %}
+
+        {% if dash_perms.can_see_tickets %}
             <div class="col-6 col-md-3">
                 <div class="mini-stat">
                     <div class="number text-danger">{{ open_tickets }}</div>
                     <span class="label">تیکت باز</span>
                 </div>
             </div>
+        {% endif %}
+
+        {% if dash_perms.can_see_notifications %}
             <div class="col-6 col-md-3">
                 <div class="mini-stat">
                     <div class="number text-primary">{{ unread_notifications }}</div>
-                    <span class="label">نوتیفیکیشن خوانده نشده</span>
+                    <span class="label">اعلان خوانده نشده</span>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="mini-stat">
-                    <div class="number text-info">{{ today_users }}</div>
-                    <span class="label">کاربران امروز</span>
+        {% endif %}
+
+        <div class="col-6 col-md-3">
+            <div class="mini-stat">
+                <div class="number text-info">{{ today_users }}</div>
+                <span class="label">کاربران امروز</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ردیف سوم: چارت + وضعیت امروز -->
+    <!-- ============================================================ -->
+    <div class="row g-4 mb-4">
+
+        <!-- چارت -->
+        <div class="col-lg-8">
+            <div class="card bg-dark border-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-light mb-0">
+                            <i class="bi bi-graph-up text-primary me-1"></i>
+                            آمار ۷ روز اخیر
+                        </h5>
+                        <div class="text-muted small">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            {{ jalali_weekday }} {{ jalali_date }}
+                        </div>
+                    </div>
+                    <div style="position:relative; height:220px;">
+                        <canvas id="statsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- ردیف سوم: چارت + آمار امروز -->
-        <!-- ============================================================ -->
-        <div class="row g-4 mb-4">
-            <!-- چارت با Chart.js -->
-            <div class="col-lg-8">
-                <div class="card bg-dark border-light">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="text-light mb-0">
-                                <i class="fi-calendar-alt text-primary me-1"></i> آمار ۷ روز اخیر
-                            </h5>
+        <!-- وضعیت امروز -->
+        <div class="col-lg-4">
+            <div class="card bg-dark border-light h-100">
+                <div class="card-body">
+                    <h5 class="text-light mb-3">
+                        <i class="bi bi-clock-history text-primary me-1"></i>
+                        وضعیت امروز
+                    </h5>
 
-                            <div class="text-muted small">
-                                <i class="fi-calendar-alt me-1"></i>
-                                {{ jalali_weekday }} {{ jalali_date }}
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="mini-stat">
+                                <div class="number text-primary">{{ today_users }}</div>
+                                <span class="label">کاربر جدید</span>
                             </div>
                         </div>
-                        <div style="position:relative; height:200px;">
-                            <canvas id="statsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- آمار امروز -->
-            <div class="col-lg-4">
-                <div class="card bg-dark border-light h-100">
-                    <div class="card-body">
-                        <h5 class="text-light mb-3">
-                            <i class="fi-clock text-primary me-1"></i> وضعیت امروز
-                        </h5>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="mini-stat">
-                                    <div class="number text-primary">{{ today_users }}</div>
-                                    <span class="label">کاربر جدید</span>
-                                </div>
-                            </div>
+                        {% if dash_perms.can_see_campaigns %}
                             <div class="col-6">
                                 <div class="mini-stat">
                                     <div class="number text-warning">{{ today_campaigns }}</div>
                                     <span class="label">کمپین جدید</span>
                                 </div>
                             </div>
+                        {% endif %}
+
+                        {% if dash_perms.can_see_content %}
                             <div class="col-6">
                                 <div class="mini-stat">
                                     <div class="number text-success">{{ today_orders }}</div>
                                     <span class="label">سفارش جدید</span>
                                 </div>
                             </div>
+                        {% endif %}
+
+                        {% if dash_perms.can_see_tickets %}
                             <div class="col-6">
                                 <div class="mini-stat">
                                     <div class="number text-danger">{{ today_tickets|default:0 }}</div>
                                     <span class="label">تیکت جدید</span>
                                 </div>
                             </div>
-                        </div>
-                        <hr class="border-secondary">
+                        {% endif %}
+                    </div>
+
+                    <hr class="border-secondary">
+
+                    {% if dash_perms.can_see_campaigns %}
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">در حال اجرا</span>
                             <span class="text-light">{{ running_campaigns }} کمپین</span>
@@ -238,159 +330,176 @@
                             <span class="text-muted">در انتظار تایید</span>
                             <span class="text-warning">{{ pending_campaigns }} کمپین</span>
                         </div>
-                        <div class="d-flex justify-content-between mt-1">
-                            <span class="text-muted">در انتظار پاسخ</span>
-                            <span class="text-info">{{ waiting_tickets }} تیکت</span>
-                        </div>
+                    {% endif %}
+
+                    {% if dash_perms.can_see_channels %}
                         <div class="d-flex justify-content-between mt-1">
                             <span class="text-muted">کانال در انتظار</span>
                             <span class="text-warning">{{ pending_channels }} کانال</span>
                         </div>
+                    {% endif %}
+
+                    {% if dash_perms.can_see_tickets %}
                         <div class="d-flex justify-content-between mt-1">
-                            <span class="text-muted">نوتیفیکیشن خوانده نشده</span>
+                            <span class="text-muted">در انتظار پاسخ</span>
+                            <span class="text-info">{{ waiting_tickets }} تیکت</span>
+                        </div>
+                    {% endif %}
+
+                    {% if dash_perms.can_see_notifications %}
+                        <div class="d-flex justify-content-between mt-1">
+                            <span class="text-muted">اعلان خوانده نشده</span>
                             <span class="text-danger">{{ unread_notifications }}</span>
                         </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- ============================================================ -->
-        <!-- ردیف چهارم: اقدامات سریع (نیازمند توجه) -->
-        <!-- ============================================================ -->
-        <div class="row g-4 mb-4">
-            <div class="col-12">
-                <div class="card bg-dark border-light">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="text-light mb-0">
-                                <i class="fi-bell text-warning me-1"></i> اقدامات نیازمند توجه
-                                <span class="badge bg-warning ms-2" style="font-size:0.6rem;">{{ pending_count }}</span>
-                            </h5>
-                            <span class="text-muted small">{{ pending_count }} مورد نیازمند بررسی</span>
-                        </div>
-                        <div>
-                            {% if pending_actions %}
-                                {% for action in pending_actions %}
-                                    <div class="action-item">
-                                        <div class="action-icon"
-                                             style="background:rgba({{ action.color }},0.12); color:{{ action.color }};">
-                                            <i class="{{ action.icon }}"></i>
-                                        </div>
-                                        <div class="action-content">
-                                            <div class="title">{{ action.title }}</div>
-                                            <div class="subtitle">{{ action.subtitle }}</div>
-                                        </div>
-                                        <div class="action-meta">
-                                            <span class="action-time">{{ action.created_at|timesince }} پیش</span>
-                                            <a href="{% url action.url action.id %}"
-                                               class="btn btn-sm btn-outline-primary rounded-pill">
-                                                <i class="fi-eye-on me-1"></i> مشاهده
-                                            </a>
-                                            {% if action.action_url %}
-                                                <form method="post" action="{% url action.action_url action.id %}"
-                                                      style="display:inline;">
-                                                    {% csrf_token %}
-                                                    <button type="submit"
-                                                            class="btn btn-sm btn-{{ action.action_color }} rounded-pill">
-                                                        {{ action.action_label }}
-                                                    </button>
-                                                </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="action-empty">
-                                    <i class="fi-check-circle text-success"></i>
-                                    <p class="mb-0">همه چیز در وضعیت عادی است! هیچ اقدام فوری نیاز نیست.</p>
-                                </div>
+    <!-- ============================================================ -->
+    <!-- ردیف چهارم: اقدامات نیازمند توجه -->
+    <!-- ============================================================ -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card bg-dark border-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-light mb-0">
+                            <i class="bi bi-bell-fill text-warning me-1"></i>
+                            اقدامات نیازمند توجه
+                            {% if pending_count %}
+                                <span class="badge bg-warning text-dark ms-2" style="font-size:0.65rem;">
+                                    {{ pending_count }}
+                                </span>
                             {% endif %}
-                        </div>
-                        {% if pending_count > 0 %}
-                            <div class="mt-3 text-center">
-                                <a href="#" class="btn btn-sm btn-outline-primary rounded-pill px-4">
-                                    مشاهده همه اقدامات <i class="fi-arrow-left me-1"></i>
-                                </a>
+                        </h5>
+                        <span class="text-muted small">
+                            {{ pending_count }} مورد نیازمند بررسی
+                        </span>
+                    </div>
+
+                    <div>
+                        {% if pending_actions %}
+                            {% for action in pending_actions %}
+                                <div class="action-item">
+                                    <div class="action-icon"
+                                         style="background:{{ action.color }}1F; color:{{ action.color }};">
+                                        <i class="bi {{ action.icon }}"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <div class="title">{{ action.title }}</div>
+                                        <div class="subtitle">{{ action.subtitle }}</div>
+                                    </div>
+                                    <div class="action-meta">
+                                        <span class="action-time">{{ action.created_at|timesince }} پیش</span>
+                                        <a href="{% url action.url action.id %}"
+                                           class="btn btn-sm btn-outline-primary rounded-pill">
+                                            <i class="bi bi-eye me-1"></i> مشاهده
+                                        </a>
+                                        {% if action.action_url %}
+                                            <form method="post"
+                                                  action="{% url action.action_url action.id %}"
+                                                  style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-{{ action.action_color }} rounded-pill">
+                                                    {{ action.action_label }}
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="action-empty">
+                                <i class="bi bi-check-circle text-success"></i>
+                                <p class="mb-0">همه چیز در وضعیت عادی است! هیچ اقدام فوری نیاز نیست.</p>
                             </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- ============================================================ -->
-        <!-- ردیف پنجم: آخرین فعالیت‌ها (۳ ستون) -->
-        <!-- ============================================================ -->
-        <div class="row g-3">
-            <!-- آخرین کاربران -->
+    <!-- ============================================================ -->
+    <!-- ردیف پنجم: آخرین فعالیت‌ها -->
+    <!-- ============================================================ -->
+    <div class="row g-3">
+
+        <!-- آخرین کاربران -->
+        {% if dash_perms.can_see_users %}
             <div class="col-md-4">
-                <div class="card bg-dark border-light">
+                <div class="card bg-dark border-light h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-light mb-0">
-                                <i class="fi-user-plus text-primary me-1"></i> آخرین کاربران
+                                <i class="bi bi-person-plus text-primary me-1"></i>
+                                آخرین کاربران
                             </h6>
-                            <a href="{% url 'support:user_list' %}" class="btn btn-sm btn-outline-primary rounded-pill"
-                               style="font-size:0.6rem; padding:0.15rem 0.6rem;">
+                            <a href="{% url 'support:user_list' %}"
+                               class="btn btn-sm btn-outline-primary rounded-pill btn-xs">
                                 مشاهده همه
                             </a>
                         </div>
                         <div>
-                            {% for user in recent_users %}
-                                <a href="{% url 'support:user_detail' user.pk %}" class="activity-item">
-                                    {% if user.avatar %}
-                                        <img width="30" height="30" class="rounded-circle" src="{{ user.avatar.url }}"
-                                             alt="" style="flex-shrink:0;">
+                            {% for u in recent_users %}
+                                <a href="{% url 'support:user_detail' u.pk %}" class="activity-item">
+                                    {% if u.avatar %}
+                                        <img width="32" height="32" class="rounded-circle"
+                                             src="{{ u.avatar.url }}" alt="">
                                     {% else %}
                                         <div class="activity-icon"
                                              style="background:rgba(60,118,242,0.1); color:#3c76f2;">
-                                            <i class="fi-user"></i>
+                                            <i class="bi bi-person"></i>
                                         </div>
                                     {% endif %}
-
                                     <div class="activity-content">
-                                        <div class="title">{{ user.phone_number }}</div>
-                                        <div class="subtitle">{{ user.nickname|default:"بدون نام" }}</div>
+                                        <div class="title">{{ u.phone_number }}</div>
+                                        <div class="subtitle">{{ u.nickname|default:"بدون نام" }}</div>
                                     </div>
                                     <div class="activity-meta">
-                                        <span class="time">{{ user.date_joined|date:"H:i" }}</span>
+                                        <span class="time">{{ u.date_joined|date:"H:i" }}</span>
                                     </div>
                                 </a>
                             {% empty %}
-                                <p class="text-muted text-center py-2">هیچ کاربری ثبت نشده است.</p>
+                                <p class="text-muted text-center py-2 mb-0">هیچ کاربری ثبت نشده است.</p>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
             </div>
+        {% endif %}
 
-            <!-- آخرین کمپین‌ها -->
+        <!-- آخرین کمپین‌ها -->
+        {% if dash_perms.can_see_campaigns %}
             <div class="col-md-4">
-                <div class="card bg-dark border-light">
+                <div class="card bg-dark border-light h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-light mb-0">
-                                <i class="fi-flag text-primary me-1"></i> آخرین کمپین‌ها
+                                <i class="bi bi-flag text-primary me-1"></i>
+                                آخرین کمپین‌ها
                             </h6>
                             <a href="{% url 'support:campaign_list' %}"
-                               class="btn btn-sm btn-outline-primary rounded-pill"
-                               style="font-size:0.6rem; padding:0.15rem 0.6rem;">
+                               class="btn btn-sm btn-outline-primary rounded-pill btn-xs">
                                 مشاهده همه
                             </a>
                         </div>
                         <div>
                             {% for campaign in recent_campaigns %}
                                 <a href="{% url 'support:campaign_detail' campaign.pk %}" class="activity-item">
-                                    <div class="activity-icon" style="background:rgba(253,86,49,0.1); color:#fd5631;">
-                                        <i class="fi-flag"></i>
+                                    <div class="activity-icon"
+                                         style="background:rgba(253,86,49,0.1); color:#fd5631;">
+                                        <i class="bi bi-flag"></i>
                                     </div>
                                     <div class="activity-content">
                                         <div class="title">{{ campaign.name|truncatechars:22 }}</div>
                                         <div class="subtitle">{{ campaign.advertiser.business_name }}</div>
                                     </div>
                                     <div class="activity-meta">
-                                        <span class="badge 
+                                        <span class="badge
                                             {% if campaign.status == 'pending' %}bg-warning
                                             {% elif campaign.status == 'approved' %}bg-success
                                             {% elif campaign.status == 'running' %}bg-primary
@@ -401,39 +510,42 @@
                                     </div>
                                 </a>
                             {% empty %}
-                                <p class="text-muted text-center py-2">هیچ کمپینی ثبت نشده است.</p>
+                                <p class="text-muted text-center py-2 mb-0">هیچ کمپینی ثبت نشده است.</p>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
             </div>
+        {% endif %}
 
-            <!-- آخرین تیکت‌ها -->
+        <!-- آخرین تیکت‌ها -->
+        {% if dash_perms.can_see_tickets %}
             <div class="col-md-4">
-                <div class="card bg-dark border-light">
+                <div class="card bg-dark border-light h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-light mb-0">
-                                <i class="fi-chat-right text-primary me-1"></i> آخرین تیکت‌ها
+                                <i class="bi bi-headset text-primary me-1"></i>
+                                آخرین تیکت‌ها
                             </h6>
                             <a href="{% url 'support:ticket_list' %}"
-                               class="btn btn-sm btn-outline-primary rounded-pill"
-                               style="font-size:0.6rem; padding:0.15rem 0.6rem;">
+                               class="btn btn-sm btn-outline-primary rounded-pill btn-xs">
                                 مشاهده همه
                             </a>
                         </div>
                         <div>
                             {% for ticket in recent_tickets %}
                                 <a href="{% url 'support:ticket_detail' ticket.pk %}" class="activity-item">
-                                    <div class="activity-icon" style="background:rgba(60,118,242,0.1); color:#3c76f2;">
-                                        <i class="fi-chat-right"></i>
+                                    <div class="activity-icon"
+                                         style="background:rgba(60,118,242,0.1); color:#3c76f2;">
+                                        <i class="bi bi-chat-dots"></i>
                                     </div>
                                     <div class="activity-content">
                                         <div class="title">{{ ticket.get_display_title|truncatechars:22 }}</div>
                                         <div class="subtitle">{{ ticket.user.phone_number }}</div>
                                     </div>
                                     <div class="activity-meta">
-                                        <span class="badge 
+                                        <span class="badge
                                             {% if ticket.status == 'open' %}bg-warning
                                             {% elif ticket.status == 'waiting_user' %}bg-info
                                             {% elif ticket.status == 'closed' %}bg-secondary
@@ -443,45 +555,47 @@
                                     </div>
                                 </a>
                             {% empty %}
-                                <p class="text-muted text-center py-2">هیچ تیکتی ثبت نشده است.</p>
+                                <p class="text-muted text-center py-2 mb-0">هیچ تیکتی ثبت نشده است.</p>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
 
-        <!-- ============================================================ -->
-        <!-- ردیف ششم: آخرین سفارشات -->
-        <!-- ============================================================ -->
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ردیف ششم: آخرین سفارشات -->
+    <!-- ============================================================ -->
+    {% if dash_perms.can_see_content %}
         <div class="row g-3 mt-2">
             <div class="col-12">
                 <div class="card bg-dark border-light">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-light mb-0">
-                                <i class="fi-cart text-primary me-1"></i> آخرین سفارشات تولید محتوا
+                                <i class="bi bi-cart text-primary me-1"></i>
+                                آخرین سفارشات تولید محتوا
                             </h6>
                             <a href="{% url 'support:content_order_list' %}"
-                               class="btn btn-sm btn-outline-primary rounded-pill"
-                               style="font-size:0.6rem; padding:0.15rem 0.6rem;">
+                               class="btn btn-sm btn-outline-primary rounded-pill btn-xs">
                                 مشاهده همه
                             </a>
                         </div>
                         <div class="row g-2">
                             {% for order in recent_orders %}
                                 <div class="col-12 col-md-6 col-lg-4">
-                                    <a href="{% url 'support:content_order_detail' order.pk %}" class="activity-item"
+                                    <a href="{% url 'support:content_order_detail' order.pk %}"
+                                       class="activity-item"
                                        style="border:1px solid rgba(255,255,255,0.04); border-radius:0.5rem; background:rgba(255,255,255,0.02);">
                                         <div class="activity-icon"
                                              style="background:rgba(7,201,139,0.1); color:#07c98b;">
-                                            <i class="fi-file-clean"></i>
+                                            <i class="bi bi-file-earmark"></i>
                                         </div>
                                         <div class="activity-content">
                                             <div class="title">{{ order.campaign.name|truncatechars:18 }}</div>
-                                            <div class="subtitle">{{ order.team.name }}
-                                                • {{ order.price|floatformat:0 }} تومان
-                                            </div>
+                                            <div class="subtitle">{{ order.team.name }} • {{ order.price|floatformat:0 }} تومان</div>
                                         </div>
                                         <div class="activity-meta">
                                             <span class="badge
@@ -497,7 +611,7 @@
                                 </div>
                             {% empty %}
                                 <div class="col-12">
-                                    <p class="text-muted text-center py-2">هیچ سفارشی ثبت نشده است.</p>
+                                    <p class="text-muted text-center py-2 mb-0">هیچ سفارشی ثبت نشده است.</p>
                                 </div>
                             {% endfor %}
                         </div>
@@ -505,8 +619,8 @@
                 </div>
             </div>
         </div>
+    {% endif %}
 
-    </div>
 {% endblock %}
 
 {% block script %}

@@ -70,224 +70,224 @@
     
         <!-- ==================== هشدارهای وضعیت تیم ==================== -->
 
-<!-- هشدار تکمیل اطلاعات تیم (فقط برای مدیر) -->
-{% if is_manager and not is_team_info_complete %}
-    <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
-        <div class="d-flex align-items-start gap-3">
-            <div class="flex-shrink-0">
-                <i class="fi-alert-triangle fs-4 text-warning"></i>
-            </div>
-            <div class="flex-grow-1">
-                <strong class="d-block text-warning mb-1">⚠️ اطلاعات تیم ناقص است!</strong>
-                <span class="small opacity-75">
-                    برای دریافت سفارش، باید اطلاعات تیم خود را کامل کنید. 
-                    اطلاعات زیر هنور تکمیل نشده‌اند:
-                </span>
-                <ul class="small mt-2 mb-2 text-muted">
-                    {% if not team.name %} <li>نام تیم</li> {% endif %}
-                    {% if not team.slug %} <li>اسلاگ (شناسه)</li> {% endif %}
-                    {% if not team.logo %} <li>لوگو</li> {% endif %}
-                    {% if not team.description %} <li>توضیحات تیم</li> {% endif %}
-                </ul>
-                <div class="d-flex align-items-center gap-3 mt-2">
+        <!-- هشدار تکمیل اطلاعات تیم (فقط برای مدیر) -->
+        {% if is_manager and not is_team_info_complete %}
+            <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-alert-triangle fs-4 text-warning"></i>
+                    </div>
                     <div class="flex-grow-1">
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-warning" style="width: {{ completion_percent }}%;"></div>
+                        <strong class="d-block text-warning mb-1">⚠️ اطلاعات تیم ناقص است!</strong>
+                        <span class="small opacity-75">
+                            برای دریافت سفارش، باید اطلاعات تیم خود را کامل کنید. 
+                            اطلاعات زیر هنور تکمیل نشده‌اند:
+                        </span>
+                        <ul class="small mt-2 mb-2 text-muted">
+                            {% if not team.name %} <li>نام تیم</li> {% endif %}
+                            {% if not team.slug %} <li>اسلاگ (شناسه)</li> {% endif %}
+                            {% if not team.logo %} <li>لوگو</li> {% endif %}
+                            {% if not team.description %} <li>توضیحات تیم</li> {% endif %}
+                        </ul>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <div class="flex-grow-1">
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ completion_percent }}%;"></div>
+                                </div>
+                            </div>
+                            <span class="small text-warning">{{ completion_percent }}%</span>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'content_team:team_manage' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fi-edit ms-1"></i> تکمیل اطلاعات تیم
+                            </a>
                         </div>
                     </div>
-                    <span class="small text-warning">{{ completion_percent }}%</span>
-                </div>
-                <div class="mt-3">
-                    <a href="{% url 'content_team:team_manage' %}" class="btn btn-sm btn-outline-warning">
-                        <i class="fi-edit ms-1"></i> تکمیل اطلاعات تیم
-                    </a>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
                 </div>
             </div>
-            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
-        </div>
-    </div>
-{% endif %}
-
-<!-- هشدار نداشتن پلن فعال برای هیچ خدمتی (فقط برای مدیر) -->
-{% if is_manager and not has_any_active_plan %}
-    <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
-        <div class="d-flex align-items-start gap-3">
-            <div class="flex-shrink-0">
-                <i class="fi-layers fs-4 text-warning"></i>
-            </div>
-            <div class="flex-grow-1">
-                <strong class="d-block text-warning mb-1">⚠️ هیچ پلن خدماتی تعریف نشده است!</strong>
-                <span class="small opacity-75">
-                    شما برای هیچ یک از خدمات، پلن قیمت‌گذاری تعریف نکرده‌اید. 
-                    تا زمانی که حداقل یک پلن فعال برای هر نوع خدمت تعریف نکنید، 
-                    نمی‌توانید سفارش دریافت کنید.
-                </span>
-                <div class="mt-3">
-                    <a href="{% url 'content_team:plans_dashboard' %}" class="btn btn-sm btn-outline-warning">
-                        <i class="fi-plus ms-1"></i> تعریف پلن خدماتی
-                    </a>
-                </div>
-            </div>
-            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
-        </div>
-    </div>
-{% endif %}
-
-<!-- هشدار سفارشات در انتظار تایید (فقط برای مدیر) -->
-{% if is_manager and pending_orders_count_for_alert > 0 %}
-    <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
-        <div class="d-flex align-items-start gap-3">
-            <div class="flex-shrink-0">
-                <i class="fi-alert-circle fs-4 text-danger"></i>
-            </div>
-            <div class="flex-grow-1">
-                <strong class="d-block text-danger mb-1">⚠️ سفارشات در انتظار تایید!</strong>
-                <span class="small opacity-75">
-                    شما <strong class="text-danger">{{ pending_orders_count_for_alert }}</strong> سفارش در انتظار تایید دارید.
-                    لطفاً در اسرع وقت سفارشات را بررسی کرده و تصمیم بگیرید.
-                    اگر هر سفارش تا <strong class="text-warning">24 ساعت</strong> پس از تاریخ ثبت آن، تایید یا رد نشود،
-                    <strong class="text-danger">80 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
-                </span>
-                
-                {% if all_pending_orders %}
-                    <div class="mt-3">
-                        <div class="small text-muted mb-2">سفارشات نیازمند بررسی:</div>
-                        <ul class="list-unstyled mb-0">
-                            {% for order in all_pending_orders %}
-                                <li class="mb-2">
-                                    <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
-                                        <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
-                                            <i class="fi-file text-danger fs-6"></i>
-                                            <span class="small text-white">{{ order.name }}</span>
-                                            <span class="small text-muted mx-2">•</span>
-                                            <span class="small text-muted">تاریخ ثبت: {{ order.created_at|date:"Y/m/d H:i" }}</span>
-                                        </div>
-                                    </a>
-                                </li>
-                            {% endfor %}
-                        </ul>
+        {% endif %}
+        
+        <!-- هشدار نداشتن پلن فعال برای هیچ خدمتی (فقط برای مدیر) -->
+        {% if is_manager and not has_any_active_plan %}
+            <div class="alert alert-warning bg-faded-warning border-warning border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-layers fs-4 text-warning"></i>
                     </div>
-                {% endif %}
-                
-                <div class="mt-3 d-flex flex-wrap gap-2">
-                    <a href="{% url 'content_team:team_orders_list' %}?status=pending" class="btn btn-sm btn-outline-danger">
-                        <i class="fi-list ms-1"></i> مشاهده سفارشات در انتظار
-                    </a>
+                    <div class="flex-grow-1">
+                        <strong class="d-block text-warning mb-1">⚠️ هیچ پلن خدماتی تعریف نشده است!</strong>
+                        <span class="small opacity-75">
+                            شما برای هیچ یک از خدمات، پلن قیمت‌گذاری تعریف نکرده‌اید. 
+                            تا زمانی که حداقل یک پلن فعال برای هر نوع خدمت تعریف نکنید، 
+                            نمی‌توانید سفارش دریافت کنید.
+                        </span>
+                        <div class="mt-3">
+                            <a href="{% url 'content_team:plans_dashboard' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="fi-plus ms-1"></i> تعریف پلن خدماتی
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
                 </div>
             </div>
-            <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
-        </div>
-    </div>
-{% endif %}
-    
-        <!-- هشدار سفارشات با ددلاین نزدیک (کمتر از 24 ساعت) -->
-{% if near_deadline_count > 0 %}
-<div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
-    <div class="d-flex align-items-start gap-3">
-        <div class="flex-shrink-0">
-            <i class="fi-alert-circle fs-4 text-danger"></i>
-        </div>
-        <div class="flex-grow-1">
-            <strong class="d-block text-danger mb-1">⚠️ زمان تحویل سفارشات در حال اتمام است!</strong>
-            <span class="small opacity-75">
-                شما <strong class="text-danger">{{ near_deadline_count }}</strong> سفارش در حال انجام دارید که کمتر از <strong class="text-warning">24 ساعت</strong> تا ددلاین آن‌ها فرصت باقی است.
-                لطفاً در اسرع وقت نسبت به تحویل این سفارشات اقدام کنید، در غیر این صورت <strong class="text-danger">20 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
-            </span>
-            {% if orders_near_deadline %}
-                <div class="mt-3">
-                    <div class="small text-muted mb-2">سفارشات نیازمند تحویل فوری:</div>
-                    <ul class="list-unstyled mb-0">
-                        {% for order in orders_near_deadline %}
-                            <li class="mb-2">
-                                <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
-                                    <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
-                                        <i class="fi-clock text-danger fs-6"></i>
-                                        <span class="small text-white">{{ order.name }}</span>
-                                        <span class="small text-muted mx-2">•</span>
-                                        <span class="small text-muted">ددلاین: {{ order.deadline|date:"Y/m/d H:i" }}</span>
-                                    </div>
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
+        {% endif %}
+        
+        <!-- هشدار سفارشات در انتظار تایید (فقط برای مدیر) -->
+        {% if is_manager and pending_orders_count_for_alert > 0 %}
+            <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-alert-circle fs-4 text-danger"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="d-block text-danger mb-1">⚠️ سفارشات در انتظار تایید!</strong>
+                        <span class="small opacity-75">
+                            شما <strong class="text-danger">{{ pending_orders_count_for_alert }}</strong> سفارش در انتظار تایید دارید.
+                            لطفاً در اسرع وقت سفارشات را بررسی کرده و تصمیم بگیرید.
+                            اگر هر سفارش تا <strong class="text-warning">24 ساعت</strong> پس از تاریخ ثبت آن، تایید یا رد نشود،
+                            <strong class="text-danger">80 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
+                        </span>
+                        
+                        {% if all_pending_orders %}
+                            <div class="mt-3">
+                                <div class="small text-muted mb-2">سفارشات نیازمند بررسی:</div>
+                                <ul class="list-unstyled mb-0">
+                                    {% for order in all_pending_orders %}
+                                        <li class="mb-2">
+                                            <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
+                                                <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
+                                                    <i class="fi-file text-danger fs-6"></i>
+                                                    <span class="small text-white">{{ order.name }}</span>
+                                                    <span class="small text-muted mx-2">•</span>
+                                                    <span class="small text-muted">تاریخ ثبت: {{ order.created_at|date:"Y/m/d H:i" }}</span>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <a href="{% url 'content_team:team_orders_list' %}?status=pending" class="btn btn-sm btn-outline-danger">
+                                <i class="fi-list ms-1"></i> مشاهده سفارشات در انتظار
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
                 </div>
-            {% endif %}
-            <div class="mt-3 d-flex flex-wrap gap-2">
-                <a href="{% url 'content_team:team_orders_list' %}?status=in_progress" class="btn btn-sm btn-outline-danger">
-                    <i class="fi-upload ms-1"></i> مشاهده و تحویل سفارشات
-                </a>
             </div>
-        </div>
-        <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
-    </div>
-</div>
-{% endif %}
+        {% endif %}
+            
+                <!-- هشدار سفارشات با ددلاین نزدیک (کمتر از 24 ساعت) -->
+        {% if near_deadline_count > 0 %}
+            <div class="alert alert-danger bg-faded-danger border-danger border-0 rounded-3 shadow-sm mb-4 p-3" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <i class="fi-alert-circle fs-4 text-danger"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="d-block text-danger mb-1">⚠️ زمان تحویل سفارشات در حال اتمام است!</strong>
+                        <span class="small opacity-75">
+                            شما <strong class="text-danger">{{ near_deadline_count }}</strong> سفارش در حال انجام دارید که کمتر از <strong class="text-warning">24 ساعت</strong> تا ددلاین آن‌ها فرصت باقی است.
+                            لطفاً در اسرع وقت نسبت به تحویل این سفارشات اقدام کنید، در غیر این صورت <strong class="text-danger">20 امتیاز</strong> از امتیاز تیم کسر خواهد شد.
+                        </span>
+                        {% if orders_near_deadline %}
+                            <div class="mt-3">
+                                <div class="small text-muted mb-2">سفارشات نیازمند تحویل فوری:</div>
+                                <ul class="list-unstyled mb-0">
+                                    {% for order in orders_near_deadline %}
+                                        <li class="mb-2">
+                                            <a href="{{ order.get_absolute_url }}" class="text-decoration-none">
+                                                <div class="d-flex align-items-center gap-2 p-2 rounded bg-dark bg-opacity-25">
+                                                    <i class="fi-clock text-danger fs-6"></i>
+                                                    <span class="small text-white">{{ order.name }}</span>
+                                                    <span class="small text-muted mx-2">•</span>
+                                                    <span class="small text-muted">ددلاین: {{ order.deadline|date:"Y/m/d H:i" }}</span>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <a href="{% url 'content_team:team_orders_list' %}?status=in_progress" class="btn btn-sm btn-outline-danger">
+                                <i class="fi-upload ms-1"></i> مشاهده و تحویل سفارشات
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="alert" aria-label="بستن"></button>
+                </div>
+            </div>
+        {% endif %}
     
        <div class="row g-4 mb-5">
-    <div class="col-12">
-        <div class="dashboard-card h-100">
-            <div class="dashboard-card-header">
-                <div class="d-flex align-items-center justify-content-between w-100">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fi-award text-warning"></i>
-                        <h5 class="text-white mb-0">سطح کاربری و پیشرفت</h5>
-                    </div>
-                    <a href="{% url 'gamification:points_guide' %}" class="small text-primary text-decoration-none">
-                        مشاهده بیشتر
-                        <i class="fi-arrow-left ms-1"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10" 
-                             style="width: 60px; height: 60px;">
-                            {% if gamification.current_badge_icon %}
-                                <img src="{{ gamification.current_badge_icon }}" 
-                                     alt="{{ gamification.current_badge_name }}" 
-                                     width="48" height="48" 
-                                     style="border-radius: 50%; object-fit: cover;">
-                            {% else %}
-                                {# Fallback: آیکون پیش‌فرض با رنگ مناسب #}
-                                <i class="fi-award" style="font-size: 30px; color: 
-                                    {% if gamification.current_badge_code == 'bronze' %}#cd7f32
-                                    {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
-                                    {% elif gamification.current_badge_code == 'gold' %}#ffd700
-                                    {% elif gamification.current_badge_code == 'emerald' %}#50c878
-                                    {% else %}#ffffff
-                                    {% endif %}"></i>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <h5 class="text-white mb-1">{{ gamification.current_badge_name }}</h5>
-                            <p class="text-muted small mb-0">امتیاز فعلی: <strong class="text-white">{{ gamification.current_points }}</strong></p>
+            <div class="col-12">
+                <div class="dashboard-card h-100">
+                    <div class="dashboard-card-header">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fi-award text-warning"></i>
+                                <h5 class="text-white mb-0">سطح کاربری و پیشرفت</h5>
+                            </div>
+                            <a href="{% url 'gamification:points_guide' %}" class="small text-primary text-decoration-none">
+                                مشاهده بیشتر
+                                <i class="fi-arrow-left ms-1"></i>
+                            </a>
                         </div>
                     </div>
-                    
-                    <div class="text-md-end text-start">
-                        {% if not gamification.is_max_level %}
-                            <span class="text-muted small d-block">نشان بعدی: <strong class="text-warning">{{ gamification.next_badge_name }}</strong></span>
-                            <span class="text-white fw-bold">{{ gamification.points_needed_for_next }} امتیاز تا ارتقاء</span>
-                        {% else %}
-                            <span class="text-warning fw-bold">🌟 بالاترین سطح کاربری 🌟</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="progress mt-4" style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-                         role="progressbar" 
-                         style="width: {{ gamification.progress_percent|stringformat:'f' }}%;" 
-                         aria-valuenow="{{ gamification.progress_percent|stringformat:'f' }}" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10" 
+                                     style="width: 60px; height: 60px;">
+                                    {% if gamification.current_badge_icon %}
+                                        <img src="{{ gamification.current_badge_icon }}" 
+                                             alt="{{ gamification.current_badge_name }}" 
+                                             width="48" height="48" 
+                                             style="border-radius: 50%; object-fit: cover;">
+                                    {% else %}
+                                        {# Fallback: آیکون پیش‌فرض با رنگ مناسب #}
+                                        <i class="fi-award" style="font-size: 30px; color: 
+                                            {% if gamification.current_badge_code == 'bronze' %}#cd7f32
+                                            {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
+                                            {% elif gamification.current_badge_code == 'gold' %}#ffd700
+                                            {% elif gamification.current_badge_code == 'emerald' %}#50c878
+                                            {% else %}#ffffff
+                                            {% endif %}"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h5 class="text-white mb-1">{{ gamification.current_badge_name }}</h5>
+                                    <p class="text-muted small mb-0">امتیاز فعلی: <strong class="text-white">{{ gamification.current_points }}</strong></p>
+                                </div>
+                            </div>
+                            
+                            <div class="text-md-end text-start">
+                                {% if not gamification.is_max_level %}
+                                    <span class="text-muted small d-block">نشان بعدی: <strong class="text-warning">{{ gamification.next_badge_name }}</strong></span>
+                                    <span class="text-white fw-bold">{{ gamification.points_needed_for_next }} امتیاز تا ارتقاء</span>
+                                {% else %}
+                                    <span class="text-warning fw-bold">🌟 بالاترین سطح کاربری 🌟</span>
+                                {% endif %}
+                            </div>
+                        </div>
+        
+                        <div class="progress mt-4" style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                 role="progressbar" 
+                                 style="width: {{ gamification.progress_percent|stringformat:'f' }}%;" 
+                                 aria-valuenow="{{ gamification.progress_percent|stringformat:'f' }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
         <!-- کارت‌های آماری (بدون تغییر) -->
         <div class="row g-4 mb-5">

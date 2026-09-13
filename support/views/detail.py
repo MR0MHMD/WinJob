@@ -1,14 +1,30 @@
+# support/views/detail.py
+
+"""
+DetailView های پنل Support
+
+هر View بر اساس نقش، دسترسی و فیلتر استانی مناسب داره.
+اگه کاربر به آبجکت دسترسی نداشت، 404 می‌گیره.
+"""
+
+from django.contrib.auth import get_user_model
+from django.db.models import Avg, Prefetch, Sum, Q
+from django.views.generic import DetailView
+from django.utils import timezone
+import json
+
+from ..mixins import (
+    BaseSupportMixin,
+    ContentManagerRequiredMixin,
+    PublishManagerRequiredMixin,
+    RegionalFilterMixin,
+    RegionalFilterComplexMixin,
+)
+from ..forms import TicketReplyForm
 from influencers.models import ChannelBooking, ChannelServiceRate, ChannelReview, Channel
 from payment.models import Transaction, Coupon, Payment
 from campaigns.models import Campaign, CampaignReport
-from django.db.models import Avg, Prefetch, Sum
-from django.contrib.auth import get_user_model
-from django.views.generic import DetailView
-from ..mixins import SupportRequiredMixin
-from ..forms import TicketReplyForm
 from tickets.models import Ticket
-from django.utils import timezone
-import json
 from content_team.models import (
     ContentOrder,
     ContentTeam,
@@ -18,19 +34,40 @@ from content_team.models import (
     ContentOrderDescription,
     ContentOrderFile,
     ContentDelivery,
-    ContentOrderRevision, ContentDeliveryFile
+    ContentOrderRevision,
+    ContentDeliveryFile,
 )
 
 User = get_user_model()
 
 
-class TicketDetailView(SupportRequiredMixin, DetailView):
+# ============================================================
+#                        Ticket Detail
+# ============================================================
+class TicketDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات تیکت
+
+    دسترسی: همه نقش‌ها
+    فیلتر Regional: تیکت‌های استان خودش
+    """
     model = Ticket
     template_name = 'support/tickets/ticket_detail.html'
     context_object_name = 'ticket'
 
+    province_field_path = 'user__province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related('user', 'category', 'title', 'campaign')
+        qs = super().get_queryset().select_related(
+            'user', 'category', 'title', 'campaign'
+        )
+
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(user__province=user.province)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -41,15 +78,25 @@ class TicketDetailView(SupportRequiredMixin, DetailView):
         return context
 
 
-class ChannelDetailView(SupportRequiredMixin, DetailView):
-    """جزئیات کامل یک کانال اینفلوئنسر"""
+# ============================================================
+#                       Channel Detail
+# ============================================================
+class ChannelDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات کامل یک کانال اینفلوئنسر
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: کانال استان خودش
+    """
     model = Channel
     template_name = 'support/channels/channel_detail.html'
     context_object_name = 'channel'
     pk_url_kwarg = 'pk'
 
+    province_field_path = 'province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        qs = super().get_queryset().select_related(
             'influencer',
             'influencer__user',
             'platform',
@@ -58,73 +105,88 @@ class ChannelDetailView(SupportRequiredMixin, DetailView):
             'score',
             'score__badge',
         ).prefetch_related(
-            Prefetch('service_rates',
-                     queryset=ChannelServiceRate.objects.select_related('ad_type').filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=ChannelBooking.objects.select_related(
-                'campaign',
-                'campaign__advertiser',
-                'service_rate__ad_type'
-            ).order_by('-created_at')),
-            Prefetch('reviews', queryset=ChannelReview.objects.select_related(
-                'advertiser',
-                'advertiser__user'
-            ).order_by('-created_at')),
+            Prefetch(
+                'service_rates',
+                queryset=ChannelServiceRate.objects.select_related('ad_type').filter(is_active=True)
+            ),
+            Prefetch(
+                'campaign_bookings',
+                queryset=ChannelBooking.objects.select_related(
+                    'campaign',
+                    'campaign__advertiser',
+                    'service_rate__ad_type'
+                ).order_by('-created_at')
+            ),
+            Prefetch(
+                'reviews',
+                queryset=ChannelReview.objects.select_related(
+                    'advertiser',
+                    'advertiser__user'
+                ).order_by('-created_at')
+            ),
             Prefetch('coupons', queryset=Coupon.objects.filter(is_active=True)),
         )
+
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(province=user.province)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         channel = self.object
 
-        # ===== اطلاعات اینفلوئنسر =====
         context['influencer'] = channel.influencer
-
-        # ===== نرخ‌های خدمات =====
         context['service_rates'] = channel.service_rates.filter(is_active=True)
 
-        # ===== سفارش‌های اخیر (۵ تا آخر) =====
         all_bookings = channel.campaign_bookings.all().order_by('-created_at')
         context['recent_bookings'] = all_bookings[:5]
         context['bookings_count'] = all_bookings.count()
 
-        # ===== آمار سفارش‌ها =====
         context['completed_bookings'] = channel.campaign_bookings.filter(status='completed').count()
         context['pending_bookings'] = channel.campaign_bookings.filter(status='pending').count()
         context['accepted_bookings'] = channel.campaign_bookings.filter(status='accepted').count()
         context['rejected_bookings'] = channel.campaign_bookings.filter(status='rejected').count()
 
-        # ===== جمع درآمد =====
         total_revenue = channel.campaign_bookings.filter(
             status='completed'
         ).aggregate(total=Sum('price'))['total'] or 0
         context['total_revenue'] = total_revenue
 
-        # ===== نظرات اخیر (۵ تا آخر) =====
         all_reviews = channel.reviews.all().order_by('-created_at')
         context['recent_reviews'] = all_reviews[:5]
         context['reviews_count'] = all_reviews.count()
 
-        # ===== میانگین امتیاز =====
         context['avg_rating'] = channel.reviews.aggregate(avg=Avg('rating'))['avg']
         if context['avg_rating']:
             context['avg_rating'] = round(context['avg_rating'], 1)
 
-        # ===== کوپن‌های فعال =====
         context['coupons'] = channel.coupons.filter(is_active=True)
-
-        # ===== لینک یکتا =====
         context['channel_url'] = channel.url or f"@{channel.channel_id}"
 
         return context
 
 
-class CampaignDetailView(SupportRequiredMixin, DetailView):
+# ============================================================
+#                       Campaign Detail
+# ============================================================
+class CampaignDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات کامل یک کمپین
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: از طریق تبلیغ‌دهنده
+    """
     model = Campaign
     template_name = 'support/campaigns/campaign_detail.html'
     context_object_name = 'campaign'
 
+    province_field_path = 'advertiser__user__province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        qs = super().get_queryset().select_related(
             'advertiser__user',
             'advertiser__user__province',
             'platform',
@@ -167,17 +229,22 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
                     ),
                 )
             ),
-            # ===== ✅ اضافه کردن پرداخت‌ها =====
             Prefetch(
-                'invoice__payments',  # ← از طریق invoice به payments میرسیم
+                'invoice__payments',
                 queryset=Payment.objects.select_related('user').all()
             ),
-            # ===== ✅ اضافه کردن تراکنش‌ها =====
             Prefetch(
                 'transactions',
                 queryset=Transaction.objects.select_related('user').all()
             ),
         )
+
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(advertiser__user__province=user.province)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -221,7 +288,7 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
         context['content_orders'] = content_orders
         context['orders_count'] = content_orders.count()
 
-        # ===== ✅ پیدا کردن فایل انتخاب شده برای هر سفارش =====
+        # ===== فایل انتخاب شده برای هر سفارش =====
         for order in content_orders:
             selected_file = None
             for delivery in order.deliveries.all():
@@ -240,29 +307,38 @@ class CampaignDetailView(SupportRequiredMixin, DetailView):
         context['reports'] = reports
         context['reports_count'] = reports.count()
 
-        # ===== ✅ پرداخت‌ها (از طریق invoice) =====
+        # ===== پرداخت‌ها =====
         if hasattr(campaign, 'invoice') and campaign.invoice:
             payments = campaign.invoice.payments.all()
         else:
             payments = []
         context['payments'] = payments
 
-        # ===== ✅ تراکنش‌ها =====
-        transactions = campaign.transactions.all()
-        context['transactions'] = transactions
+        # ===== تراکنش‌ها =====
+        context['transactions'] = campaign.transactions.all()
 
         return context
 
 
-class ReportDetailView(SupportRequiredMixin, DetailView):
-    """جزئیات کامل یک گزارش کمپین"""
+# ============================================================
+#                        Report Detail
+# ============================================================
+class ReportDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات کامل یک گزارش کمپین
+
+    دسترسی: CEO + Dev + Publish Manager
+    فیلتر Regional: از طریق کانال
+    """
     model = CampaignReport
     template_name = 'support/reports/report_detail.html'
     context_object_name = 'report'
     pk_url_kwarg = 'pk'
 
+    province_field_path = 'campaign_influencer__channel__province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        qs = super().get_queryset().select_related(
             'campaign_influencer',
             'campaign_influencer__campaign',
             'campaign_influencer__campaign__advertiser',
@@ -277,29 +353,34 @@ class ReportDetailView(SupportRequiredMixin, DetailView):
             'campaign_influencer__service_rate__ad_type',
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(
+                campaign_influencer__channel__province=user.province
+            )
+
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         report = self.object
         booking = report.campaign_influencer
 
-        # اطلاعات کمپین
         context['campaign'] = booking.campaign
-
-        # اطلاعات کانال و اینفلوئنسر
         context['channel'] = booking.channel
         context['influencer'] = booking.channel.influencer
-
-        # اطلاعات رزرو
         context['booking'] = booking
 
         auto_details = report.auto_check_details or {}
         context['auto_details'] = auto_details
-        context['auto_details_json'] = json.dumps(auto_details, indent=2, ensure_ascii=False) if auto_details else None
+        context['auto_details_json'] = (
+            json.dumps(auto_details, indent=2, ensure_ascii=False)
+            if auto_details else None
+        )
 
-        # امتیاز کلی
         context['overall_score'] = auto_details.get('overall_score') if auto_details else None
 
-        # تراکنش‌های مرتبط
         context['transactions'] = Transaction.objects.filter(
             campaign=booking.campaign,
             user=booking.channel.influencer.user
@@ -308,35 +389,53 @@ class ReportDetailView(SupportRequiredMixin, DetailView):
         return context
 
 
-class UserDetailView(SupportRequiredMixin, DetailView):
+# ============================================================
+#                        User Detail
+# ============================================================
+class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات کامل یک کاربر
+
+    دسترسی: همه نقش‌ها
+    فیلتر Regional: کاربر استان خودش
+    """
     model = User
     template_name = 'support/users/user_detail.html'
     context_object_name = 'user'
 
+    province_field_path = 'province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        qs = super().get_queryset().select_related(
             'province', 'wallet'
         ).prefetch_related(
             Prefetch('transactions', queryset=Transaction.objects.order_by('-created_at')),
             Prefetch('tickets', queryset=Ticket.objects.order_by('-created_at')),
         )
 
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(province=user.province)
+
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.object
+        user_obj = self.object
 
         # کیف پول
-        context['wallet'] = getattr(user, 'wallet', None)
+        context['wallet'] = getattr(user_obj, 'wallet', None)
 
-        # تراکنش‌ها (۱۰ تا آخر)
-        all_transactions = user.transactions.all().order_by('-created_at')
+        # تراکنش‌ها
+        all_transactions = user_obj.transactions.all().order_by('-created_at')
         context['transactions'] = all_transactions[:5]
         context['transactions_count'] = all_transactions.count()
 
         # پروفایل تبلیغ دهنده
-        if hasattr(user, 'advertiser_profile'):
-            context['advertiser_profile'] = user.advertiser_profile
-            campaigns_qs = user.advertiser_profile.campaigns.all().order_by('-created_at')
+        if hasattr(user_obj, 'advertiser_profile'):
+            context['advertiser_profile'] = user_obj.advertiser_profile
+            campaigns_qs = user_obj.advertiser_profile.campaigns.all().order_by('-created_at')
             context['campaigns'] = campaigns_qs[:5]
             context['campaigns_count'] = campaigns_qs.count()
         else:
@@ -345,14 +444,14 @@ class UserDetailView(SupportRequiredMixin, DetailView):
             context['campaigns_count'] = 0
 
         # پروفایل اینفلوئنسر
-        if hasattr(user, 'influencer_profile'):
-            context['influencer_profile'] = user.influencer_profile
-            channels_qs = user.influencer_profile.channels.all().order_by('-created_at')
+        if hasattr(user_obj, 'influencer_profile'):
+            context['influencer_profile'] = user_obj.influencer_profile
+            channels_qs = user_obj.influencer_profile.channels.all().order_by('-created_at')
             context['channels'] = channels_qs[:5]
             context['channels_count'] = channels_qs.count()
 
             bookings_qs = ChannelBooking.objects.filter(
-                channel__influencer=user.influencer_profile
+                channel__influencer=user_obj.influencer_profile
             ).order_by('-created_at')
             context['campaign_bookings'] = bookings_qs[:5]
             context['bookings_count'] = bookings_qs.count()
@@ -363,96 +462,132 @@ class UserDetailView(SupportRequiredMixin, DetailView):
             context['campaign_bookings'] = []
             context['bookings_count'] = 0
 
-        # عضو تیم تولید محتوا
-        context['team_member'] = getattr(user, 'team_member', None)
+        # عضو تیم
+        context['team_member'] = getattr(user_obj, 'team_member', None)
 
-        # تیکت‌ها (۵ تا آخر)
-        all_tickets = user.tickets.all().order_by('-created_at')
+        # تیکت‌ها
+        all_tickets = user_obj.tickets.all().order_by('-created_at')
         context['tickets'] = all_tickets[:5]
         context['tickets_count'] = all_tickets.count()
 
-        # ===== نوتیفیکیشن‌ها (۵ تا آخر) =====
-        all_notifications = user.notifications.all().order_by('-created_at')
+        # نوتیفیکیشن‌ها
+        all_notifications = user_obj.notifications.all().order_by('-created_at')
         context['notifications'] = all_notifications[:5]
         context['notifications_count'] = all_notifications.count()
-        context['unread_notifications_count'] = user.notifications.filter(is_read=False).count()
+        context['unread_notifications_count'] = user_obj.notifications.filter(is_read=False).count()
+        context['user_obj'] = user_obj
 
         return context
 
 
-class TeamDetailView(SupportRequiredMixin, DetailView):
-    """جزئیات کامل یک تیم تولید محتوا"""
+# ============================================================
+#                        Team Detail
+# ============================================================
+class TeamDetailView(ContentManagerRequiredMixin, RegionalFilterMixin, DetailView):
+    """
+    جزئیات کامل یک تیم تولید محتوا
+
+    دسترسی: CEO + Dev + Content Manager
+    فیلتر Regional: تیم استان خودش
+    """
     model = ContentTeam
     template_name = 'support/content_team/team_detail.html'
     context_object_name = 'team'
     pk_url_kwarg = 'pk'
 
+    province_field_path = 'province'
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
-            'score'
+        qs = super().get_queryset().select_related(
+            'score', 'province'
         ).prefetch_related(
-            Prefetch('members', queryset=ContentTeamMember.objects.select_related('user').filter(is_active=True)),
-            Prefetch('service_plans',
-                     queryset=ContentServicePlan.objects.select_related('service_type').filter(is_active=True)),
-            Prefetch('orders',
-                     queryset=ContentOrder.objects.select_related('campaign', 'plan').order_by('-created_at')),
-            Prefetch('reviews', queryset=TeamReview.objects.select_related('advertiser__user').order_by('-created_at')),
+            Prefetch(
+                'members',
+                queryset=ContentTeamMember.objects.select_related('user').filter(is_active=True)
+            ),
+            Prefetch(
+                'service_plans',
+                queryset=ContentServicePlan.objects.select_related('service_type').filter(is_active=True)
+            ),
+            Prefetch(
+                'orders',
+                queryset=ContentOrder.objects.select_related('campaign', 'plan').order_by('-created_at')
+            ),
+            Prefetch(
+                'reviews',
+                queryset=TeamReview.objects.select_related('advertiser__user').order_by('-created_at')
+            ),
         )
+
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(province=user.province)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         team = self.object
 
-        # ===== اعضای تیم =====
         context['members'] = team.members.filter(is_active=True)
         context['members_count'] = context['members'].count()
 
-        # ===== پلن‌های خدمت =====
         context['plans'] = team.service_plans.filter(is_active=True)
         context['plans_count'] = context['plans'].count()
 
-        # ===== سفارش‌ها (۵ تا آخر) =====
         all_orders = team.orders.all().order_by('-created_at')
         context['recent_orders'] = all_orders[:5]
         context['orders_count'] = all_orders.count()
 
-        # ===== آمار سفارش‌ها =====
         context['completed_orders'] = team.orders.filter(status='completed').count()
         context['pending_orders'] = team.orders.filter(status='pending').count()
         context['in_progress_orders'] = team.orders.filter(status='in_progress').count()
         context['cancelled_orders'] = team.orders.filter(status='cancelled').count()
 
-        # ===== نظرات (۵ تا آخر) =====
         all_reviews = team.reviews.all().order_by('-created_at')
         context['recent_reviews'] = all_reviews[:5]
         context['reviews_count'] = all_reviews.count()
 
-        # ===== میانگین امتیاز =====
         context['avg_rating'] = team.reviews.aggregate(avg=Avg('rating'))['avg']
         if context['avg_rating']:
             context['avg_rating'] = round(context['avg_rating'], 1)
 
-        # ===== جمع درآمد =====
         total_revenue = team.orders.filter(status='completed').aggregate(
             total=Sum('price')
         )['total'] or 0
         context['total_revenue'] = total_revenue
 
-        # ===== آیا مجموع درصد سهام valid هست؟ =====
         context['is_revenue_valid'] = team.is_revenue_share_valid()
 
         return context
 
 
-class ContentOrderDetailView(SupportRequiredMixin, DetailView):
-    """جزئیات کامل یک سفارش تولید محتوا"""
+# ============================================================
+#                     Content Order Detail
+# ============================================================
+class ContentOrderDetailView(ContentManagerRequiredMixin, RegionalFilterComplexMixin, DetailView):
+    """
+    جزئیات کامل یک سفارش تولید محتوا
+
+    دسترسی: CEO + Dev + Content Manager
+    فیلتر Regional: پیچیده (کمپین یا مستقل)
+    """
     model = ContentOrder
     template_name = 'support/content_team/order_detail.html'
     context_object_name = 'order'
     pk_url_kwarg = 'pk'
 
+    @staticmethod
+    def province_q_object(province):
+        """فیلتر پیچیده برای Regional Manager"""
+        return (
+                Q(campaign__advertiser__user__province=province) |
+                Q(standalone_user__province=province)
+        )
+
     def get_queryset(self):
-        return super().get_queryset().select_related(
+        qs = super().get_queryset().select_related(
             'campaign',
             'campaign__advertiser',
             'campaign__advertiser__user',
@@ -462,18 +597,33 @@ class ContentOrderDetailView(SupportRequiredMixin, DetailView):
             'team',
             'plan',
             'plan__service_type',
+            'standalone_user',
         ).prefetch_related(
             Prefetch('brief', queryset=ContentOrderDescription.objects.all()),
             Prefetch('files', queryset=ContentOrderFile.objects.all()),
             Prefetch(
-                'deliveries',  # ✅ اصلاح: delivery → deliveries
-                queryset=ContentDelivery.objects.select_related('delivered_by__user').order_by('-version')
+                'deliveries',
+                queryset=ContentDelivery.objects.select_related(
+                    'delivered_by__user'
+                ).order_by('-version')
             ),
             Prefetch(
                 'revisions',
-                queryset=ContentOrderRevision.objects.select_related('requested_by').order_by('-created_at')
+                queryset=ContentOrderRevision.objects.select_related(
+                    'requested_by'
+                ).order_by('-created_at')
             ),
         )
+
+        # ========== فیلتر Regional ==========
+        user = self.request.user
+        if user.is_regional_manager and user.province_id:
+            qs = qs.filter(
+                Q(campaign__advertiser__user__province=user.province) |
+                Q(standalone_user__province=user.province)
+            )
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -490,7 +640,6 @@ class ContentOrderDetailView(SupportRequiredMixin, DetailView):
         context['deliveries'] = deliveries
         context['deliveries_count'] = deliveries.count()
 
-        # تحویل نهایی (آخرین نسخه)
         context['latest_delivery'] = deliveries.first() if deliveries.exists() else None
 
         # ===== فایل‌های تحویل =====
@@ -520,12 +669,16 @@ class ContentOrderDetailView(SupportRequiredMixin, DetailView):
         context['transactions'] = transactions[:10]
         context['transactions_count'] = transactions.count()
 
-        # ===== اطلاعات اضافی برای نمایش =====
+        # ===== اطلاعات اضافی =====
         context['now'] = timezone.now()
 
         # ===== وضعیت ددلاین =====
         if order.deadline:
-            deadline_dt = order.deadline.togregorian() if hasattr(order.deadline, 'togregorian') else order.deadline
+            deadline_dt = (
+                order.deadline.togregorian()
+                if hasattr(order.deadline, 'togregorian')
+                else order.deadline
+            )
             if timezone.is_naive(deadline_dt):
                 deadline_dt = timezone.make_aware(deadline_dt)
             context['is_deadline_passed'] = deadline_dt < timezone.now()

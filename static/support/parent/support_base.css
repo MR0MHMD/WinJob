@@ -1,0 +1,2061 @@
+/* ============================================================
+   WinJob Support Panel — Base Styles
+   ============================================================ */
+
+/* ============================================================
+   1. متغیرهای اختصاصی پنل
+   ============================================================ */
+:root {
+    /* ابعاد */
+    --support-topbar-height: 64px;
+    --support-sidebar-width: 260px;
+    --support-sidebar-collapsed-width: 72px;
+    --support-content-padding: 1.5rem;
+
+    /* رنگ‌ها (هماهنگ با تم دارک) */
+    --support-bg-primary: #1f1b2d;
+    --support-bg-secondary: #181423;
+    --support-bg-tertiary: #252135;
+    --support-bg-hover: rgba(253, 86, 49, 0.08);
+    --support-bg-active: rgba(253, 86, 49, 0.12);
+
+    --support-border: rgba(255, 255, 255, 0.08);
+    --support-border-light: rgba(255, 255, 255, 0.12);
+
+    --support-text-primary: #ffffff;
+    --support-text-secondary: rgba(255, 255, 255, 0.7);
+    --support-text-muted: rgba(255, 255, 255, 0.45);
+
+    --support-accent: #fd5631;
+    --support-accent-hover: #fd390e;
+
+    /* انتقال‌ها */
+    --support-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --support-transition-fast: 0.15s ease-in-out;
+}
+
+/* ============================================================
+   2. Layout کلی
+   ============================================================ */
+body.support-panel {
+    background-color: var(--support-bg-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.support-layout {
+    display: flex;
+    min-height: calc(100vh - var(--support-topbar-height));
+    margin-top: var(--support-topbar-height);
+    position: relative;
+    /* 🔑 جلوگیری از overflow */
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ============================================================
+   3. Topbar
+   ============================================================ */
+.support-topbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: var(--support-topbar-height);
+    background-color: var(--support-bg-secondary);
+    border-bottom: 1px solid var(--support-border);
+    z-index: 1030;
+    backdrop-filter: blur(10px);
+}
+
+.support-topbar-inner {
+    height: 100%;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.topbar-start,
+.topbar-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.topbar-start {
+    flex: 1;
+    min-width: 0;
+}
+
+/* دکمه‌های آیکونی */
+.topbar-icon-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--support-text-secondary);
+    font-size: 1.15rem;
+    transition: all var(--support-transition-fast);
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.topbar-icon-btn:hover {
+    background-color: var(--support-bg-hover);
+    color: var(--support-text-primary);
+    border-color: var(--support-border);
+}
+
+.topbar-icon-btn:focus-visible {
+    outline: 2px solid var(--support-accent);
+    outline-offset: 2px;
+}
+
+/* Badge اعلان */
+.topbar-badge {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background-color: var(--support-accent);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: bold;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 0 0 2px var(--support-bg-secondary);
+}
+
+/* لوگو */
+.topbar-logo {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.25rem;
+    text-decoration: none;
+    transition: opacity var(--support-transition-fast);
+    flex-shrink: 0;
+}
+
+.topbar-logo:hover {
+    opacity: 0.85;
+}
+
+.topbar-logo img {
+    display: block;
+}
+
+/* عنوان صفحه */
+.topbar-title-wrap {
+    margin-right: 0.5rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.topbar-title {
+    font-family: var(--fi-font-vazir-bold, inherit);
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--support-text-primary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 340px;
+}
+
+/* ============================================================
+   4. User Dropdown در Topbar
+   ============================================================ */
+.topbar-user-dropdown {
+    position: relative;
+}
+
+.topbar-user-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--support-text-secondary);
+    transition: all var(--support-transition-fast);
+    cursor: pointer;
+    max-width: 220px;
+}
+
+.topbar-user-btn:hover,
+.topbar-user-btn[aria-expanded="true"] {
+    background-color: var(--support-bg-hover);
+    color: var(--support-text-primary);
+    border-color: var(--support-border);
+}
+
+.topbar-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--support-border-light);
+}
+
+.topbar-avatar-sm {
+    width: 40px;
+    height: 40px;
+}
+
+.topbar-avatar-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--support-bg-tertiary);
+    color: var(--support-text-secondary);
+    font-size: 1rem;
+}
+
+.topbar-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    text-align: right;
+}
+
+.topbar-user-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--support-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+    line-height: 1.2;
+}
+
+.topbar-user-role {
+    font-size: 0.7rem;
+    color: var(--support-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+    line-height: 1.2;
+}
+
+.topbar-user-caret {
+    font-size: 0.7rem;
+    color: var(--support-text-muted);
+    transition: transform var(--support-transition-fast);
+    flex-shrink: 0;
+}
+
+.topbar-user-btn[aria-expanded="true"] .topbar-user-caret {
+    transform: rotate(180deg);
+}
+
+/* Dropdown منو */
+.topbar-dropdown {
+    min-width: 260px;
+    padding: 0.5rem;
+    margin-top: 0.5rem !important;
+    border-radius: 0.75rem;
+    border: 1px solid var(--support-border-light);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    background-color: var(--support-bg-secondary);
+}
+
+.topbar-dropdown-header {
+    padding: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.topbar-dropdown .dropdown-item {
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--support-text-secondary);
+    transition: all var(--support-transition-fast);
+}
+
+.topbar-dropdown .dropdown-item:hover,
+.topbar-dropdown .dropdown-item:focus {
+    background-color: var(--support-bg-hover);
+    color: var(--support-text-primary);
+}
+
+.topbar-dropdown .dropdown-item.text-danger:hover {
+    background-color: rgba(242, 60, 73, 0.12);
+    color: #f23c49 !important;
+}
+
+.topbar-dropdown .dropdown-divider {
+    margin: 0.375rem 0.5rem;
+    border-color: var(--support-border);
+}
+
+/* ============================================================
+   5. Sidebar (Desktop)
+   ============================================================ */
+.support-sidebar {
+    position: fixed;
+    top: var(--support-topbar-height);
+    right: 0;
+    width: var(--support-sidebar-width);
+    height: calc(100vh - var(--support-topbar-height));
+    background-color: var(--support-bg-secondary);
+    border-left: 1px solid var(--support-border);
+    transition: width var(--support-transition);
+    z-index: 1020;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem 0.75rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.sidebar-inner::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-inner::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-inner::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.sidebar-inner::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================
+   6. برند سایدبار (فقط موبایل - داخل offcanvas)
+   ============================================================ */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem 1.25rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--support-border);
+}
+
+.sidebar-brand-icon {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #5d3cf2 0%, #fd5631 100%);
+    color: #fff;
+    border-radius: 0.625rem;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.sidebar-brand-name {
+    font-family: var(--fi-font-vazir-bold, inherit);
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: var(--support-text-primary);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+    font-size: 0.75rem;
+    color: var(--support-text-muted);
+    line-height: 1.2;
+}
+
+/* ============================================================
+   7. اطلاعات کاربر (بالای سایدبار)
+   ============================================================ */
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 0.75rem;
+    margin-bottom: 1rem;
+    background-color: var(--support-bg-tertiary);
+    border-radius: 0.75rem;
+    border: 1px solid var(--support-border);
+    transition: all var(--support-transition);
+}
+
+.sidebar-user-avatar {
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+}
+
+.sidebar-user-avatar img,
+.sidebar-user-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--support-border-light);
+}
+
+.sidebar-user-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--support-bg-primary);
+    color: var(--support-text-secondary);
+    font-size: 1.15rem;
+}
+
+.sidebar-user-status {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    background-color: #07c98b;
+    border-radius: 50%;
+    border: 2px solid var(--support-bg-tertiary);
+    box-shadow: 0 0 0 1px rgba(7, 201, 139, 0.3);
+}
+
+.sidebar-user-info {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    transition: opacity var(--support-transition);
+}
+
+.sidebar-user-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--support-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.sidebar-user-role {
+    font-size: 0.75rem;
+    color: var(--support-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+/* ============================================================
+   8. ناوبری سایدبار
+   ============================================================ */
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* عنوان بخش */
+.sidebar-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    margin-bottom: 0.5rem;
+    height: 20px;
+    transition: opacity var(--support-transition),
+                transform var(--support-transition);
+}
+
+.sidebar-section-line {
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(180deg, #fd5631 0%, #5d3cf2 100%);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.sidebar-section-text {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--support-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* منو */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.sidebar-menu-item {
+    margin: 0;
+}
+
+.sidebar-menu-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--support-text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all var(--support-transition-fast);
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar-menu-link:hover {
+    background-color: var(--support-bg-hover);
+    color: var(--support-text-primary);
+}
+
+.sidebar-menu-link:focus-visible {
+    outline: 2px solid var(--support-accent);
+    outline-offset: -2px;
+}
+
+/* حالت active */
+.sidebar-menu-link.active {
+    background: linear-gradient(90deg, rgba(253, 86, 49, 0.15) 0%, rgba(253, 86, 49, 0.03) 100%);
+    color: var(--support-accent);
+    font-weight: 600;
+}
+
+.sidebar-menu-link.active::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background-color: var(--support-accent);
+    border-radius: 0 4px 4px 0;
+}
+
+/* آیکون */
+.sidebar-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    transition: transform var(--support-transition-fast);
+}
+
+.sidebar-menu-link:hover .sidebar-menu-icon {
+    transform: scale(1.08);
+}
+
+/* متن */
+.sidebar-menu-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity var(--support-transition),
+                transform var(--support-transition);
+}
+
+/* ============================================================
+   9. حالت Collapsed (دسکتاپ)
+   ============================================================ */
+body.sidebar-collapsed .support-sidebar {
+    width: var(--support-sidebar-collapsed-width);
+}
+
+body.sidebar-collapsed .support-main {
+    margin-right: var(--support-sidebar-collapsed-width);
+}
+
+/* مخفی کردن متن‌ها و اطلاعات */
+body.sidebar-collapsed .sidebar-user-info,
+body.sidebar-collapsed .sidebar-section-title,
+body.sidebar-collapsed .sidebar-menu-text,
+body.sidebar-collapsed .sidebar-footer-link span,
+body.sidebar-collapsed .sidebar-footer-version {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+}
+
+body.sidebar-collapsed .sidebar-section-title {
+    margin-bottom: 0.25rem;
+}
+
+body.sidebar-collapsed .sidebar-user {
+    padding: 0.5rem;
+    justify-content: center;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+body.sidebar-collapsed .sidebar-menu-link {
+    justify-content: center;
+    padding: 0.625rem;
+}
+
+body.sidebar-collapsed .sidebar-menu-link.active::before {
+    height: 50%;
+}
+
+/* Tooltip در حالت collapsed */
+body.sidebar-collapsed .sidebar-menu-link[data-tooltip] {
+    position: relative;
+}
+
+body.sidebar-collapsed .sidebar-menu-link[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(8px);
+    margin-right: 8px;
+    padding: 0.375rem 0.75rem;
+    background-color: var(--support-bg-tertiary);
+    color: var(--support-text-primary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid var(--support-border-light);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    animation: sidebar-tooltip-in 0.15s ease-out forwards;
+    z-index: 100;
+}
+
+@keyframes sidebar-tooltip-in {
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+body.sidebar-collapsed .sidebar-footer-link {
+    justify-content: center;
+    padding: 0.625rem;
+}
+
+/* ============================================================
+   10. فوتر سایدبار
+   ============================================================ */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--support-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sidebar-footer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--support-text-secondary);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--support-transition-fast);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-footer-link:hover {
+    background-color: var(--support-bg-hover);
+    color: var(--support-accent);
+}
+
+.sidebar-footer-link i {
+    font-size: 1.05rem;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.sidebar-footer-link span {
+    transition: opacity var(--support-transition);
+}
+
+.sidebar-footer-version {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.75rem;
+    font-size: 0.7rem;
+    color: var(--support-text-muted);
+    transition: opacity var(--support-transition);
+}
+
+.sidebar-version-number {
+    color: var(--support-accent);
+    font-weight: 600;
+}
+
+/* ============================================================
+   11. Main Content
+   ============================================================ */
+.support-main {
+    flex: 1;
+    /* 🔑 min-width: 0 باعث می‌شه flex item بتونه کوچیک‌تر از محتواش بشه */
+    min-width: 0;
+    margin-right: var(--support-sidebar-width);
+    padding: var(--support-content-padding);
+    min-height: calc(100vh - var(--support-topbar-height));
+    transition: margin-right var(--support-transition);
+    background-color: var(--support-bg-primary);
+    /* 🔑 جلوگیری از overflow افقی */
+    overflow-x: hidden;
+}
+
+/* ============================================================
+   12. Offcanvas (موبایل)
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .support-sidebar {
+        display: none;
+    }
+
+    .support-main {
+        margin-right: 0;
+        padding: 1rem;
+    }
+
+    #supportMobileSidebar {
+        width: 280px;
+        background-color: var(--support-bg-secondary) !important;
+    }
+
+    #supportMobileSidebar .offcanvas-header {
+        padding: 1rem 1.25rem;
+        background-color: var(--support-bg-secondary);
+    }
+
+    #supportMobileSidebar .offcanvas-body {
+        padding: 0 !important;
+        background-color: var(--support-bg-secondary);
+    }
+
+    #supportMobileSidebar .sidebar-inner {
+        padding: 1rem 0.75rem;
+    }
+}
+
+/* ============================================================
+   13. Toast Notifications (پنل Support)
+   ============================================================ */
+.toast-notification {
+    min-width: 320px;
+    max-width: 420px;
+    background-color: var(--support-bg-tertiary);
+    border: 1px solid var(--support-border-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    animation: toast-slide-in 0.3s ease-out;
+    direction: rtl;
+}
+
+.toast-notification.hide {
+    animation: toast-slide-out 0.3s ease-in forwards;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toast-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.toast-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+}
+
+.toast-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.toast-icon.success {
+    background-color: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+}
+
+.toast-icon.error {
+    background-color: rgba(242, 60, 73, 0.15);
+    color: #f23c49;
+}
+
+.toast-icon.warning {
+    background-color: rgba(253, 188, 49, 0.15);
+    color: #fdbc31;
+}
+
+.toast-icon.info {
+    background-color: rgba(60, 118, 242, 0.15);
+    color: #3c76f2;
+}
+
+.toast-text {
+    flex: 1;
+    color: var(--support-text-primary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    padding-top: 0.35rem;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--support-text-muted);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    transition: all var(--support-transition-fast);
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--support-text-primary);
+}
+
+.toast-progress {
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.toast-progress-bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #fd5631 0%, #5d3cf2 100%);
+    transition: width 0.1s linear;
+}
+
+/* ============================================================
+   14. Notification Modal (پنل Support)
+   ============================================================ */
+.notification-modal .modal-content {
+    background-color: var(--support-bg-secondary);
+    border: 1px solid var(--support-border-light);
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.notification-modal .modal-header {
+    border-bottom: 1px solid var(--support-border);
+    padding: 1rem 1.25rem;
+}
+
+.notification-modal .modal-footer {
+    border-top: 1px solid var(--support-border);
+    padding: 1rem 1.25rem;
+}
+
+.notification-modal .modal-body {
+    padding: 1.5rem 1.25rem;
+}
+
+.notification-icon {
+    width: 72px;
+    height: 72px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 2.25rem;
+    margin: 0 auto 1rem;
+    transition: all var(--support-transition-fast);
+}
+
+.notification-icon.info {
+    background-color: rgba(60, 118, 242, 0.15);
+    color: #3c76f2;
+}
+
+.notification-icon.success {
+    background-color: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+}
+
+.notification-icon.error {
+    background-color: rgba(242, 60, 73, 0.15);
+    color: #f23c49;
+}
+
+.notification-icon.warning {
+    background-color: rgba(253, 188, 49, 0.15);
+    color: #fdbc31;
+}
+
+/* ============================================================
+   15. حالت Empty
+   ============================================================ */
+.sidebar-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--support-text-muted);
+}
+
+.sidebar-empty i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    opacity: 0.5;
+}
+
+.sidebar-empty p {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* ============================================================
+   16. Utilities
+   ============================================================ */
+.min-width-0 {
+    min-width: 0;
+}
+
+/* ============================================================
+   17. Scrollbar کلی
+   ============================================================ */
+body.support-panel *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.support-panel *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body.support-panel *::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+body.support-panel *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================
+   18. Responsive
+   ============================================================ */
+@media (max-width: 767.98px) {
+    .support-topbar-inner {
+        padding: 0 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .topbar-title-wrap {
+        display: none !important;
+    }
+
+    .support-main {
+        padding: 0.875rem;
+    }
+
+    .toast-notification {
+        min-width: 280px;
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .toast-container {
+        padding: 0.75rem !important;
+    }
+
+    .toast-notification {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+/* ============================================================
+   19. Reduced Motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+/* ============================================================
+   20. Stat Cards (مشترک بین همه صفحات پنل)
+   ============================================================ */
+.support-stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.support-stat-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.support-stat-card .number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.support-stat-card .label {
+    font-size: 0.7rem;
+    color: #9691a4;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: block;
+    margin-top: 0.15rem;
+}
+
+/* ============================================================
+   21. Filter Alert (هشدار فیلترها)
+   ============================================================ */
+.support-filter-alert {
+    background: rgba(60, 118, 242, 0.08);
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.support-filter-alert .filter-text {
+    color: var(--support-text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.support-filter-alert .filter-text strong {
+    color: var(--support-accent);
+    font-weight: 600;
+}
+
+/* ============================================================
+   22. Responsive Table (جدول‌های لیست)
+   ============================================================ */
+.support-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 0;
+    border-radius: 0.5rem;
+    max-width: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.support-table-wrap::-webkit-scrollbar {
+    height: 6px;
+}
+
+.support-table-wrap::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.support-table-wrap::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    border-radius: 10px;
+}
+
+/* ============================================================ */
+/* جدول اصلی - نسخه بهبود یافته با فاصله‌های حرفه‌ای */
+/* ============================================================ */
+.support-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* هدر جدول */
+.support-table thead th {
+    color: #9691a4;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 0.875rem 1rem;
+    white-space: nowrap;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.02);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* سلول‌های بدنه */
+.support-table tbody td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    color: var(--support-text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    line-height: 1.5;
+}
+
+/* ردیف */
+.support-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.support-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.support-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ستون اول و آخر - فاصله خاص */
+.support-table thead th:first-child,
+.support-table tbody td:first-child {
+    padding-right: 1.25rem;
+}
+
+.support-table thead th:last-child,
+.support-table tbody td:last-child {
+    padding-left: 1.25rem;
+}
+
+/* ============================================================ */
+/* ستون ID - استاندارد برای همه لیست‌ها */
+/* ============================================================ */
+.support-table .col-id {
+    min-width: 70px;
+    width: 70px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: var(--support-text-muted);
+    font-weight: 500;
+}
+
+.support-table .col-id strong {
+    color: var(--support-text-primary);
+}
+
+/* ============================================================ */
+/* ترانکیت سلول‌های طولانی */
+/* ============================================================ */
+.support-table .cell-truncate {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================ */
+/* ستون عملیات - چپ‌چین */
+/* ============================================================ */
+.support-table .col-actions {
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ============================================================ */
+/* جدول با جدول‌بندی خودکار */
+/* ============================================================ */
+.support-table.table-fixed-scroll {
+    table-layout: auto;
+    width: 100%;
+}
+
+/* ============================================================
+   23. Status Badge (بج وضعیت مشترک)
+   ============================================================ */
+.support-status-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 50rem;
+    font-weight: 500;
+    /*white-space: nowrap;*/
+    display: inline-block;
+    color: white;
+}
+
+/* ============================================================
+   24. Support Card (کارت مشترک لیست‌ها)
+   ============================================================ */
+.support-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    /* 🔑 جلوگیری از پهن شدن */
+    max-width: 100%;
+    width: 100%;
+}
+
+.support-card-body {
+    padding: 1.25rem;
+    /* 🔑 مهم: overflow hidden تا محتوای پهن بیرون نزنه */
+    overflow: hidden;
+}
+
+.support-card-body.flush {
+    padding: 0;
+    /* 🔑 flush هم همینطور */
+    overflow: hidden;
+}
+
+/* ============================================================
+   25. Support Page Header (هدر بالای صفحات)
+   ============================================================ */
+.support-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.support-page-header .page-subtitle {
+    color: var(--support-text-muted);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.support-page-header .page-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.support-page-header .page-count-badge {
+    background-color: rgba(253, 86, 49, 0.15);
+    color: var(--support-accent);
+    padding: 0.35rem 0.85rem;
+    border-radius: 50rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ============================================================
+   26. Empty State (حالت خالی)
+   ============================================================ */
+.support-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--support-text-muted);
+}
+
+.support-empty i {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.4;
+}
+
+.support-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* ============================================================
+   27. Responsive Adjustments (برای کلاس‌های مشترک جدید)
+   ============================================================ */
+@media (max-width: 767.98px) {
+    .support-filter-alert {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .support-stat-card .number {
+        font-size: 1.1rem;
+    }
+
+    .support-stat-card .label {
+        font-size: 0.6rem;
+    }
+
+    .support-table thead th,
+    .support-table tbody td {
+        padding: 0.5rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .support-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+
+/* ============================================================
+   28. Detail Pages - کامپوننت‌های مشترک
+   ============================================================ */
+
+/* ===== کارت اصلی Detail ===== */
+.detail-page {
+    display: block;
+}
+
+/* ===== هدر بخش ===== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.section-header .title {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-header .title i {
+    color: var(--support-accent);
+}
+
+.section-header .badge-count {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--support-text-muted);
+    padding: 0.15rem 0.6rem;
+    border-radius: 50rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* ===== ردیف اطلاعات (info-row) ===== */
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-row .label {
+    color: var(--support-text-muted);
+    font-size: 0.8rem;
+}
+
+.info-row .value {
+    color: var(--support-text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: left;
+}
+
+.info-row .value.ltr {
+    direction: ltr;
+}
+
+/* ===== آیتم اطلاعاتی (info-item) - داخل گرید ===== */
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item .label {
+    color: var(--support-text-muted);
+    font-size: 0.8rem;
+}
+
+.info-item .value {
+    color: var(--support-text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: left;
+}
+
+.info-item .value.ltr {
+    direction: ltr;
+}
+
+/* ===== گرید اطلاعات ===== */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1.5rem;
+}
+
+/* ===== جعبه آمار کوچک ===== */
+.stat-box {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.5rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.2s;
+    height: 100%;
+}
+
+.stat-box:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.stat-box .number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--support-text-primary);
+    line-height: 1.2;
+}
+
+.stat-box .label {
+    font-size: 0.62rem;
+    color: var(--support-text-muted);
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 0.15rem;
+}
+
+/* ===== آواتار بزرگ (Detail pages) ===== */
+.avatar-lg {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    transition: transform 0.3s ease;
+}
+
+.avatar-lg:hover {
+    transform: scale(1.02);
+}
+
+.avatar-lg.rounded-circle {
+    border-radius: 50%;
+}
+
+.avatar-sm {
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ===== لیست اسکرول‌دار ===== */
+.scrollable {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.scrollable::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    border-radius: 10px;
+}
+
+/* ===== آیتم‌های لیست (booking, order, member, review, revision) ===== */
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.2s;
+    gap: 0.75rem;
+}
+
+.list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item .item-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.list-item .item-info .name {
+    color: var(--support-text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.list-item .item-info .sub {
+    color: var(--support-text-muted);
+    font-size: 0.7rem;
+}
+
+.list-item .item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.list-item .item-meta .price {
+    color: #07c98b;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ===== جعبه Brief ===== */
+.brief-box {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-right: 3px solid var(--support-accent);
+}
+
+.brief-box .brief-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 0.82rem;
+    gap: 1rem;
+}
+
+.brief-box .brief-item:last-child {
+    border-bottom: none;
+}
+
+.brief-box .brief-item .label {
+    color: var(--support-text-muted);
+    flex-shrink: 0;
+}
+
+.brief-box .brief-item .value {
+    color: #ddd;
+    text-align: left;
+}
+
+.brief-box .brief-item .value.ltr {
+    direction: ltr;
+}
+
+/* ===== آیتم فایل (بج لینک فایل) ===== */
+.file-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 50rem;
+    background: rgba(255, 255, 255, 0.06);
+    color: #aaa;
+    font-size: 0.72rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin: 0.15rem;
+}
+
+.file-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* ===== کوپن ===== */
+.coupon-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 50rem;
+    background: rgba(253, 86, 49, 0.12);
+    color: var(--support-accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    border: 1px dashed rgba(253, 86, 49, 0.3);
+    margin: 0.15rem;
+}
+
+/* ===== امتیاز ستاره (Detail) ===== */
+.rating {
+    color: #fdbc31;
+    font-size: 0.7rem;
+    direction: ltr;
+    letter-spacing: 1px;
+    display: inline-flex;
+    gap: 1px;
+}
+
+.rating .empty {
+    color: #444;
+}
+
+/* ===== Responsive Detail ===== */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .info-row {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .info-row .value {
+        width: 100%;
+        text-align: right;
+    }
+
+    .info-item {
+        flex-wrap: wrap;
+    }
+
+    .info-item .value {
+        width: 100%;
+        text-align: right;
+    }
+
+    .list-item {
+        flex-wrap: wrap;
+        padding: 0.5rem 0.65rem;
+    }
+
+    .list-item .item-meta {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .avatar-lg {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+a {
+    text-decoration: none;
+}
+
+
+/* ============================================================
+   29. Delivery History (مشترک بین Order Detail و Campaign Detail)
+   ============================================================ */
+
+/* ===== Wrapper هر نسخه ===== */
+.delivery-wrapper {
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.delivery-wrapper:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0.5rem;
+}
+
+/* ===== هدر نسخه ===== */
+.delivery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.delivery-version {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.85rem;
+    border-radius: 50rem;
+    background: rgba(93, 60, 242, 0.15);
+    color: #a08cff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.delivery-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--support-text-muted);
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+/* ===== توضیحات تحویل ===== */
+.delivery-notes {
+    background: rgba(255, 255, 255, 0.02);
+    border-right: 3px solid var(--support-accent);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.4rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin-bottom: 0.85rem;
+}
+
+.delivery-notes p:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== جدول فایل‌های تحویل ===== */
+.delivery-files-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    max-width: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.delivery-files-table::-webkit-scrollbar {
+    height: 6px;
+}
+
+.delivery-files-table::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.delivery-files-table::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    border-radius: 10px;
+}
+
+.table-delivery {
+    min-width: 720px;
+    margin-bottom: 0;
+}
+
+.table-delivery thead th {
+    font-size: 0.68rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.table-delivery tbody td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78rem;
+    vertical-align: middle;
+}
+
+.table-delivery tbody tr.delivery-file-selected {
+    background: rgba(7, 201, 139, 0.08) !important;
+}
+
+.table-delivery tbody tr.delivery-file-selected:hover {
+    background: rgba(7, 201, 139, 0.12) !important;
+}
+
+/* ===== پیش‌نمایش فایل ===== */
+.delivery-preview-img,
+.delivery-preview-video {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s;
+    display: block;
+}
+
+.delivery-preview-img:hover,
+.delivery-preview-video:hover {
+    border-color: var(--support-accent);
+    transform: scale(1.05);
+}
+
+.delivery-preview-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.4rem;
+    background: rgba(60, 118, 242, 0.1);
+    color: #3c76f2;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s;
+}
+
+.delivery-preview-icon:hover {
+    background: rgba(60, 118, 242, 0.2);
+    border-color: rgba(60, 118, 242, 0.4);
+}
+
+.delivery-preview-deleted {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.4rem;
+    background: rgba(242, 60, 73, 0.08);
+    color: #f23c49;
+    font-size: 1.1rem;
+    border: 1px dashed rgba(242, 60, 73, 0.3);
+}
+
+/* ===== نام فایل ===== */
+.delivery-file-name {
+    color: #fff;
+    font-size: 0.8rem;
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.delivery-file-name.deleted {
+    color: #f23c49;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* ===== حالت خالی تحویل ===== */
+.delivery-empty {
+    text-align: center;
+    padding: 1rem;
+    color: var(--support-text-muted);
+    font-size: 0.8rem;
+}
+
+.delivery-empty i {
+    font-size: 1.2rem;
+    margin-left: 0.4rem;
+    opacity: 0.5;
+}
+
+/* ===== جمع‌بندی تحویل‌ها ===== */
+.delivery-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.8rem;
+    color: var(--support-text-muted);
+}
+
+/* ===== Responsive Delivery ===== */
+@media (max-width: 768px) {
+    .delivery-header {
+        gap: 0.5rem;
+    }
+
+    .delivery-version {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.7rem;
+    }
+
+    .delivery-meta {
+        font-size: 0.68rem;
+    }
+
+    .delivery-files-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+
+    .table-delivery {
+        min-width: 720px;
+        width: 720px;
+    }
+
+    .table-delivery thead th {
+        font-size: 0.62rem;
+        padding: 0.5rem 0.55rem;
+        white-space: nowrap;
+    }
+
+    .table-delivery tbody td {
+        padding: 0.5rem 0.55rem;
+        font-size: 0.72rem;
+        white-space: nowrap;
+    }
+
+    .delivery-preview-img,
+    .delivery-preview-video,
+    .delivery-preview-icon,
+    .delivery-preview-deleted {
+        width: 38px;
+        height: 38px;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+
+    .delivery-file-name {
+        max-width: 130px;
+        font-size: 0.72rem;
+    }
+
+    .delivery-summary {
+        font-size: 0.72rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .delivery-files-table {
+        border-radius: 0.4rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+
+    .table-delivery {
+        min-width: 700px;
+        width: 700px;
+    }
+
+    .delivery-notes {
+        font-size: 0.78rem;
+        padding: 0.5rem 0.75rem;
+    }
+}

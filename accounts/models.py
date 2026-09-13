@@ -1,4 +1,7 @@
+# accounts/models.py
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
 from django_resized import ResizedImageField
@@ -10,6 +13,23 @@ import random
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+    """
+    مدل کاربر سفارشی
+    - ورود با شماره تلفن
+    - نقش‌های سازمانی از طریق فیلد role
+    - امکان داشتن پروفایل تبلیغ‌دهنده/اینفلوئنسر/عضو تیم به صورت مستقل
+    """
+
+    # ==================== نقش‌های سازمانی ====================
+    class Role(models.TextChoices):
+        NONE = 'none', _('بدون نقش')
+        CEO = 'ceo', _('مدیرعامل')
+        DEVELOPER = 'developer', _('توسعه‌دهنده')
+        CONTENT_MANAGER = 'content_manager', _('مدیر تولید محتوا')
+        PUBLISH_MANAGER = 'publish_manager', _('مدیر نشر')
+        REGIONAL_MANAGER = 'regional_manager', _('مدیر استانی')
+
+    # ==================== فیلدهای اصلی ====================
     bale_chat_id = models.CharField(
         _('شناسه ربات بله'),
         max_length=50,
@@ -60,15 +80,26 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default=False
     )
 
-    province = models.ForeignKey("core.Province", on_delete=models.CASCADE,
-                                 related_name='accounts', verbose_name=_('استان'), null=True, blank=True)
-
-    is_regional_manager = models.BooleanField(
-        'مدیر استانی',
-        default=False,
-        help_text='اگر فعال باشد، کاربر فقط دسترسی به استان خودش را دارد'
+    province = models.ForeignKey(
+        "core.Province",
+        on_delete=models.CASCADE,
+        related_name='accounts',
+        verbose_name=_('استان'),
+        null=True,
+        blank=True
     )
 
+    # ==================== فیلد نقش ====================
+    role = models.CharField(
+        _('نقش سازمانی'),
+        max_length=30,
+        choices=Role.choices,
+        default=Role.NONE,
+        db_index=True,
+        help_text=_('نقش کاربر در پنل پشتیبانی و دسترسی‌ها')
+    )
+
+    # ==================== تاریخ‌ها ====================
     date_joined = jmodels.jDateTimeField(
         _('تاریخ عضویت'),
         default=timezone.now
@@ -84,6 +115,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         auto_now=True
     )
 
+    # ==================== Manager ====================
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'phone_number'
@@ -100,6 +132,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def get_full_name(self):
         return self.nickname
 
+    # ==================== متدهای نمایشی ====================
     def display_sheba(self):
         if not self.sheba_code:
             return "-"
@@ -113,17 +146,98 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
         return f"IR - {first_two} {formatted_rest}"
 
+    # ==================== Properties: پروفایل‌ها ====================
     @property
     def is_advertiser(self):
+        """آیا این کاربر پروفایل تبلیغ‌دهنده داره؟"""
         return hasattr(self, "advertiser_profile")
 
     @property
     def is_influencer(self):
+        """آیا این کاربر پروفایل اینفلوئنسر داره؟"""
         return hasattr(self, "influencer_profile")
 
     @property
     def is_team_member(self):
+        """آیا این کاربر عضو تیم تولید محتواست؟"""
         return hasattr(self, "team_member")
+
+    # ==================== Properties: نقش‌های سازمانی ====================
+    @property
+    def is_ceo(self):
+        """مدیرعامل"""
+        return self.role == self.Role.CEO
+
+    @property
+    def is_developer(self):
+        """توسعه‌دهنده"""
+        return self.role == self.Role.DEVELOPER
+
+    @property
+    def is_content_manager(self):
+        """مدیر تولید محتوا"""
+        return self.role == self.Role.CONTENT_MANAGER
+
+    @property
+    def is_publish_manager(self):
+        """مدیر نشر"""
+        return self.role == self.Role.PUBLISH_MANAGER
+
+    @property
+    def is_regional_manager(self):
+        """مدیر استانی (جایگزین فیلد قبلی)"""
+        return self.role == self.Role.REGIONAL_MANAGER
+
+    # ==================== Properties: دسترسی‌ها ====================
+    @property
+    def is_top_manager(self):
+        """مدیرعامل یا توسعه‌دهنده - دسترسی کامل به همه چیز"""
+        return self.role in [self.Role.CEO, self.Role.DEVELOPER]
+
+    @property
+    def has_support_access(self):
+        """آیا به پنل پشتیبانی دسترسی داره؟"""
+        return self.role in [
+            self.Role.CEO,
+            self.Role.DEVELOPER,
+            self.Role.CONTENT_MANAGER,
+            self.Role.PUBLISH_MANAGER,
+            self.Role.REGIONAL_MANAGER,
+        ]
+
+    # ==================== Validation ====================
+    def clean(self):
+        """
+        اعتبارسنجی‌های مدل:
+        - مدیر استانی باید استان داشته باشد
+        - هر استان فقط یک مدیر استانی
+        """
+        super().clean()
+
+        if self.role == self.Role.REGIONAL_MANAGER:
+            # چک ۱: داشتن استان
+            if not self.province_id:
+                raise ValidationError({
+                    'province': _('مدیر استانی باید استان داشته باشد')
+                })
+
+            # چک ۲: یکتا بودن مدیر هر استان
+            existing = CustomUser.objects.filter(
+                role=self.Role.REGIONAL_MANAGER,
+                province=self.province,
+            ).exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError({
+                    'province': _(
+                        f'استان «{self.province.name}» قبلاً یک مدیر استانی دارد'
+                    )
+                })
+
+    def save(self, *args, **kwargs):
+        # اجرای validation
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class OTPRequest(models.Model):

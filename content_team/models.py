@@ -47,6 +47,16 @@ class ContentTeam(GamificationMixin, models.Model):
                              crop=['middle', 'center'],
                              null=True, blank=True)
 
+    province = models.ForeignKey(
+        'core.Province',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='content_teams',
+        verbose_name=_('استان'),
+        help_text=_('استانی که این تیم در آن فعالیت می‌کند')
+    )
+
     is_active = models.BooleanField(
         _('فعال'),
         default=True
@@ -138,6 +148,11 @@ class ContentTeam(GamificationMixin, models.Model):
     @property
     def members_count(self):
         return self.members.filter(is_active=True).count()
+
+    @property
+    def has_province(self):
+        """آیا تیم استان داره؟"""
+        return self.province_id is not None
 
 
 class ContentTeamMember(models.Model):

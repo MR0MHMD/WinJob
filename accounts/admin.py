@@ -34,17 +34,16 @@ class CustomUserAdmin(UserAdmin):
     list_display = [
         'phone_number',
         'nickname',
-        'user_type_display',
-        'profile_status',
+        'role_badge',          # ← جایگزین user_type_display
+        'profile_badges',      # ← نمایش پروفایل‌ها (تبلیغ‌دهنده/اینفلوئنسر/عضو تیم)
         'wallet_balance_short',
         'formatted_created_at',
     ]
 
     list_filter = [
         'is_active',
-        'is_staff',
         'is_superuser',
-        'is_regional_manager',
+        'role',                # ← جایگزین is_regional_manager
         ('created_at', JDateFieldListFilter),
         'province',
     ]
@@ -86,7 +85,7 @@ class CustomUserAdmin(UserAdmin):
             'classes': ('collapse',)
         }),
         (_('مجوزها و دسترسی‌ها'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager'),
+            'fields': ('is_active', 'role', 'is_superuser'),
             'classes': ('collapse',)
         }),
         (_('گروه‌ها و دسترسی‌های خاص'), {
@@ -109,7 +108,7 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('nickname', 'email', 'avatar', 'province',),
         }),
         (_('مجوزها'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'is_regional_manager'),
+            'fields': ('is_active', 'role', 'is_superuser'),
         }),
     )
 
@@ -137,49 +136,61 @@ class CustomUserAdmin(UserAdmin):
 
     # ==================== متدهای نمایشی ====================
 
-    def user_type_display(self, obj):
-        """نوع کاربر با آیکون و رنگ مناسب"""
+    def role_badge(self, obj):
+        """نمایش نقش سازمانی با آیکون و رنگ مناسب"""
+        role_map = {
+            'ceo':              ('👑 مدیرعامل',                '#9C27B0', 'bold'),
+            'developer':        ('💻 توسعه‌دهنده',              '#2196F3', 'bold'),
+            'content_manager':  ('📝 مدیر تولید محتوا',         '#4CAF50', 'bold'),
+            'publish_manager':  ('📢 مدیر نشر',                 '#FF9800', 'bold'),
+            'regional_manager': ('🏛️ مدیر استانی',              '#FF5722', 'bold'),
+            'none':             ('—',                          '#9E9E9E', 'normal'),
+        }
+
+        # اگه سوپر یوزر باشه، اون مهم‌تره
+        if obj.is_superuser:
+            return mark_safe(
+                '<span style="color:#f44336; font-weight:bold;">⭐ سوپر یوزر</span>'
+            )
+
+        label, color, weight = role_map.get(obj.role, ('—', '#9E9E9E', 'normal'))
+
+        return format_html(
+            '<span style="color: {}; font-weight: {};">{}</span>',
+            color, weight, label
+        )
+
+    role_badge.short_description = _('نقش سازمانی')
+    role_badge.admin_order_field = 'role'
+
+    def profile_badges(self, obj):
+        """نمایش پروفایل‌های کاربر (تبلیغ‌دهنده / اینفلوئنسر / عضو تیم)"""
+        badges = []
+
         if hasattr(obj, 'advertiser_profile'):
-            return mark_safe('<span style="color: #4CAF50; font-weight: bold;">🏢 تبلیغ دهنده</span>')
-        elif hasattr(obj, 'influencer_profile'):
-            return mark_safe('<span style="color: #2196F3; font-weight: bold;">🌟 اینفلوئنسر</span>')
-        elif hasattr(obj, 'team_member'):
-            return mark_safe('<span style="color: #9C27B0; font-weight: bold;">👥 عضو تیم</span>')
-        elif obj.is_superuser:
-            return mark_safe('<span style="color: #f44336; font-weight: bold;">👑 مدیر ارشد</span>')
-        elif obj.is_staff and obj.is_regional_manager:
-            return mark_safe('<span style="color: #FF9800; font-weight: bold;">🏛️ مدیر استانی</span>')
-        elif obj.is_staff:
-            return mark_safe('<span style="color: #607D8B; font-weight: bold;">👔 کارمند</span>')
-        return mark_safe('<span style="color: #9E9E9E;">-</span>')
+            badges.append(
+                '<span style="background:#4CAF50; color:white; padding:2px 6px; '
+                'border-radius:3px; font-size:10px; margin-right:2px;">🏢 تبلیغ‌دهنده</span>'
+            )
 
-    user_type_display.short_description = 'نوع کاربر'
-    user_type_display.admin_order_field = 'phone_number'
+        if hasattr(obj, 'influencer_profile'):
+            badges.append(
+                '<span style="background:#2196F3; color:white; padding:2px 6px; '
+                'border-radius:3px; font-size:10px; margin-right:2px;">🌟 اینفلوئنسر</span>'
+            )
 
-    def profile_status(self, obj):
-        """وضعیت پروفایل با رنگ‌بندی مناسب"""
-        try:
-            if hasattr(obj, 'advertiser_profile'):
-                if obj.advertiser_profile.is_verified:
-                    return mark_safe('<span style="color: #4CAF50;">✅ تأیید شده</span>')
-                else:
-                    return mark_safe('<span style="color: #FF9800;">⏳ در انتظار تأیید</span>')
+        if hasattr(obj, 'team_member'):
+            badges.append(
+                '<span style="background:#9C27B0; color:white; padding:2px 6px; '
+                'border-radius:3px; font-size:10px; margin-right:2px;">👥 عضو تیم</span>'
+            )
 
-            elif hasattr(obj, 'influencer_profile'):
-                if obj.influencer_profile.is_active:
-                    return mark_safe('<span style="color: #4CAF50;">✅ فعال</span>')
-                else:
-                    return mark_safe('<span style="color: #f44336;">❌ غیرفعال</span>')
+        if not badges:
+            return mark_safe('<span style="color:#9E9E9E;">—</span>')
 
-            elif obj.is_superuser:
-                return mark_safe('<span style="color: #9C27B0;">👑 مدیر</span>')
+        return mark_safe(''.join(badges))
 
-            return mark_safe('<span style="color: #9E9E9E;">-</span>')
-
-        except Exception:
-            return mark_safe('<span style="color: #f44336;">⚠️ خطا</span>')
-
-    profile_status.short_description = 'وضعیت پروفایل'
+    profile_badges.short_description = _('پروفایل‌ها')
 
     def wallet_balance_short(self, obj):
         """نمایش مختصر موجودی در لیست"""
@@ -283,7 +294,6 @@ class CustomUserAdmin(UserAdmin):
         if not obj.sheba_code:
             return mark_safe('<span style="color: #9E9E9E;">-</span>')
 
-        # حذف IR و فرمت‌بندی
         raw = obj.sheba_code.replace("IR", "").strip()
         first_two = raw[:2]
         rest = raw[2:]
@@ -329,9 +339,12 @@ class CustomUserAdmin(UserAdmin):
     actions = [
         'activate_users',
         'deactivate_users',
-        'make_regional_manager',
-        'remove_regional_manager',
-        'delete_profiles'
+        'assign_role_ceo',
+        'assign_role_developer',
+        'assign_role_content_manager',
+        'assign_role_publish_manager',
+        'clear_role',
+        'delete_profiles',
     ]
 
     def activate_users(self, request, queryset):
@@ -346,17 +359,35 @@ class CustomUserAdmin(UserAdmin):
 
     deactivate_users.short_description = 'غیرفعال کردن کاربران انتخاب‌شده'
 
-    def make_regional_manager(self, request, queryset):
-        updated = queryset.update(is_regional_manager=True)
-        self.message_user(request, f'✅ {updated} کاربر به عنوان مدیر استانی تعیین شدند.', messages.SUCCESS)
+    def assign_role_ceo(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.CEO)
+        self.message_user(request, f'✅ {updated} کاربر به عنوان مدیرعامل تعیین شدند.', messages.SUCCESS)
 
-    make_regional_manager.short_description = 'تبدیل به مدیر استانی'
+    assign_role_ceo.short_description = 'تبدیل به مدیرعامل'
 
-    def remove_regional_manager(self, request, queryset):
-        updated = queryset.update(is_regional_manager=False)
-        self.message_user(request, f'✅ نقش مدیر استانی از {updated} کاربر برداشته شد.', messages.SUCCESS)
+    def assign_role_developer(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.DEVELOPER)
+        self.message_user(request, f'✅ {updated} کاربر به عنوان توسعه‌دهنده تعیین شدند.', messages.SUCCESS)
 
-    remove_regional_manager.short_description = 'برداشتن نقش مدیر استانی'
+    assign_role_developer.short_description = 'تبدیل به توسعه‌دهنده'
+
+    def assign_role_content_manager(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.CONTENT_MANAGER)
+        self.message_user(request, f'✅ {updated} کاربر به عنوان مدیر تولید محتوا تعیین شدند.', messages.SUCCESS)
+
+    assign_role_content_manager.short_description = 'تبدیل به مدیر تولید محتوا'
+
+    def assign_role_publish_manager(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.PUBLISH_MANAGER)
+        self.message_user(request, f'✅ {updated} کاربر به عنوان مدیر نشر تعیین شدند.', messages.SUCCESS)
+
+    assign_role_publish_manager.short_description = 'تبدیل به مدیر نشر'
+
+    def clear_role(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.NONE)
+        self.message_user(request, f'✅ نقش سازمانی {updated} کاربر پاک شد.', messages.SUCCESS)
+
+    clear_role.short_description = 'پاک کردن نقش سازمانی'
 
     def delete_profiles(self, request, queryset):
         deleted = 0
