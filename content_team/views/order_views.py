@@ -1,18 +1,21 @@
+from content_team.models import ContentTeam, ContentServicePlan, ContentOrder, ContentOrderFile
+from notifications.utils import create_notification, notify_content_team_new_order
+from content_team.forms import StandaloneOrderStep1Form, StandaloneOrderStep2Form
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.urls import reverse
-from django.utils import timezone
+from payment.services.create_invoice import create_standalone_invoice
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django_iranian_payment.contrib.django import services
-
-from gamification.models import Badge
+from django.contrib.auth.decorators import login_required
 from payment.models import Transaction, Payment
-from ..forms import StandaloneOrderStep1Form
-from ..models import ContentOrder, ContentTeam, ContentServicePlan
 from django.db.models import Q, Avg, Count
+from gamification.models import Badge
+from django.http import JsonResponse
+from django.contrib import messages
+from django.db import transaction
+from django.utils import timezone
+from django.urls import reverse
+import traceback
 import json
 
 
@@ -164,11 +167,9 @@ def load_teams_by_service(request):
 
             # ========== ✅ اطلاعات گیمیفیکیشن (مشابه gamification_status) ==========
             # ۱. امتیاز و نشان فعلی
-            points = 0
             current_badge = None
 
             if hasattr(team, 'score') and team.score:
-                points = team.score.points or 0
                 current_badge = team.score.badge
 
             # ۲. اگر نشان فعلی معتبر نیست، اولین نشان فعال رو بگیر
@@ -224,7 +225,6 @@ def load_teams_by_service(request):
         })
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return JsonResponse({
             'teams': [],
@@ -328,23 +328,8 @@ def load_plans_by_team(request):
         return JsonResponse({'plans': plans_list})
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return JsonResponse({'plans': [], 'error': str(e)}, status=500)
-
-
-# content_team/views/order_views.py
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.views.decorators.http import require_http_methods
-from django.db import transaction
-from django.http import JsonResponse
-
-from ..forms import StandaloneOrderStep2Form
-from ..models import ContentOrder, ContentOrderDescription, ContentOrderFile
-from campaigns.models import CampaignContent
 
 
 @login_required
@@ -397,7 +382,6 @@ def standalone_order_step2(request):
 
                 files = request.FILES.getlist('attachments')
                 descriptions_json = request.POST.get('attachment_descriptions', '[]')
-                import json
                 try:
                     descriptions = json.loads(descriptions_json)
                 except:
@@ -486,11 +470,6 @@ def standalone_order_step2(request):
     return render(request, 'content_team/forms/order/standalone_order_step2.html', context)
 
 
-# content_team/views/order_views.py
-
-from payment.services.create_invoice import create_standalone_invoice
-
-
 @login_required
 def standalone_order_step3(request):
     """
@@ -565,7 +544,6 @@ def standalone_order_step3(request):
                 request.session.pop('standalone_order_step2', None)
 
                 # ====== ارسال نوتیف به کاربر ======
-                from notifications.utils import create_notification
                 create_notification(
                     user=request.user,
                     notification_type='new_content_order',
@@ -578,13 +556,12 @@ def standalone_order_step3(request):
                 )
 
                 # ====== ارسال نوتیف به تیم محتوا ======
-                from notifications.utils import notify_content_team_new_order
                 active_members = order.team.members.filter(is_active=True).select_related('user')
                 for member in active_members:
                     notify_content_team_new_order(member.user, order)
 
                 messages.success(request, '✅ سفارش شما با موفقیت ثبت و پرداخت شد.')
-                return redirect('content_team:content_order_detail', order_id=order.id)
+                return redirect('advertisers:content_order_detail', order_id=order.id)
 
         # ===== پرداخت از درگاه =====
         else:

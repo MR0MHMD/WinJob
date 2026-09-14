@@ -108,7 +108,7 @@ def get_order_link(order):
     if order.campaign:
         return reverse('advertisers:campaign_detail', kwargs={'campaign_id': order.campaign.id})
     elif order.standalone_user:
-        return reverse('content_team:content_order_detail', kwargs={'order_id': order.id})
+        return reverse('advertisers:content_order_detail', kwargs={'order_id': order.id})
     return '#'
 
 def get_order_invoice(order):

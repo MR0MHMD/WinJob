@@ -6,4 +6,3 @@ from content_team.views.coupon import team_coupons, team_coupon_create, team_cou
 from content_team.views.dashboard import content_team_dashboard, team_performance_report, plans_dashboard
 from content_team.views.plan import service_plans_management, create_plan, edit_plan, delete_plan
 from content_team.views.team import team_list_view, team_detail_view, plan_detail
-from content_team.views.content_order_views import content_orders_list, content_order_detail, delete_content_order

@@ -45,11 +45,8 @@
     <!-- منوی داینامیک -->
     <!-- ============================================================ -->
     <nav class="sidebar-nav" aria-label="منوی پنل مدیریت">
-
         {% for section_key, section_data in support_menu_grouped.items %}
-
             <div class="sidebar-section">
-
                 <!-- عنوان بخش -->
                 <div class="sidebar-section-title">
                     <span class="sidebar-section-line"></span>
@@ -61,7 +58,7 @@
                     {% for item in section_data.items %}
                         <li class="sidebar-menu-item">
                             <a href="{% url item.url_name %}"
-                               class="sidebar-menu-link{% if request.resolver_match.url_name == item.url_name %} active{% endif %}"
+                               class="sidebar-menu-link{% if item.url_prefix in request.resolver_match.view_name %} active{% endif %}"
                                title="{{ item.title }}"
                                data-tooltip="{{ item.title }}">
                                 <span class="sidebar-menu-icon">
@@ -73,19 +70,14 @@
                         </li>
                     {% endfor %}
                 </ul>
-
             </div>
-
         {% empty %}
-
             <!-- اگه هیچ منویی نبود -->
             <div class="sidebar-empty">
                 <i class="bi bi-info-circle"></i>
                 <p>هیچ منویی برای نمایش وجود ندارد</p>
             </div>
-
         {% endfor %}
-
     </nav>
 
     <!-- ============================================================ -->
@@ -102,5 +94,4 @@
             <span class="sidebar-version-number">1.0</span>
         </div>
     </div>
-
 </div>

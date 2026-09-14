@@ -1,0 +1,291 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'partials/css/sidebar.css' %}">
+
+{% if not request.user.is_authenticated or request.user.is_advertiser or request.user.is_influencer or request.user.is_team_member %}
+
+{% with url_ns=request.resolver_match.namespace url_name=request.resolver_match.url_name %}
+
+<aside class="wj-sidebar" id="wjSidebar" dir="rtl">
+
+    {# ============ برند ============ #}
+    <div class="wj-sidebar-brand">
+        <span class="wj-sidebar-brand-text">منوی اصلی</span>
+        <i class="bi bi-layout-sidebar-inset-reverse"></i>
+    </div>
+
+    {# ============ محتوای اصلی سایدبار ============ #}
+    <nav class="wj-sidebar-nav">
+
+        {# ============ خانه (همه) ============ #}
+        <ul class="wj-sidebar-list wj-sidebar-list-support">
+            <li class="wj-sidebar-item">
+                <a href="{% url 'core:home' %}"
+                   class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'home' %}active{% endif %}">
+                    <span class="wj-sidebar-icon"><i class="bi bi-house-door"></i></span>
+                    <span class="wj-sidebar-text">خانه</span>
+                </a>
+            </li>
+    
+        {# ============ پنل پشتیبانی (بدون active) ============ #}
+        {% if request.user.is_authenticated and request.user.has_support_access %}
+            
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'support:dashboard' %}" class="wj-sidebar-link">
+                        <span class="wj-sidebar-icon"><i class="bi bi-shield-lock-fill"></i></span>
+                        <span class="wj-sidebar-text">پنل پشتیبانی</span>
+                    </a>
+                </li>
+            
+        {% endif %}
+        </ul>
+
+        {# ============ پنل من (فقط لاگین‌شده) ============ #}
+        {% if request.user.is_authenticated %}
+            <div class="wj-sidebar-group">
+                <span class="wj-sidebar-group-title">پنل من</span>
+
+                <ul class="wj-sidebar-list">
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'accounts:dashboard_router' %}"
+                           class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'dashboard_router' or url_ns == 'content_team' and url_name == 'dashboard' or url_ns == 'advertisers' and url_name == 'dashboard' or url_ns == 'influencers' and url_name == 'dashboard' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-speedometer2"></i></span>
+                            <span class="wj-sidebar-text">داشبورد</span>
+                        </a>
+                    </li>
+
+                    {# ---- اطلاعات فردی ---- #}
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'accounts:edit_profile' %}"
+                           class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'edit_profile' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-person-gear"></i></span>
+                            <span class="wj-sidebar-text">اطلاعات فردی</span>
+                        </a>
+                    </li>
+
+                    {# ---- فاکتورها ---- #}
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'payment:invoice_list' %}"
+                           class="wj-sidebar-link {% if url_ns == 'payment' and url_name == 'invoice_list' or url_ns == 'payment' and url_name == 'invoice_detail' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-receipt"></i></span>
+                            <span class="wj-sidebar-text">فاکتورها</span>
+                        </a>
+                    </li>
+
+                    {# ---- امتیازات (فقط ناشر) ---- #}
+                    {% if request.user.is_influencer %}
+                        <li class="wj-sidebar-item">
+                            <a href="{% url 'gamification:points_guide' %}"
+                               class="wj-sidebar-link {% if url_ns == 'gamification' %}active{% endif %}">
+                                <span class="wj-sidebar-icon"><i class="bi bi-star-fill"></i></span>
+                                <span class="wj-sidebar-text">امتیازات من</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {# ---- پشتیبانی (تیکت) ---- #}
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'tickets:ticket_list' %}"
+                           class="wj-sidebar-link {% if url_ns == 'tickets' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-headset"></i></span>
+                            <span class="wj-sidebar-text">پشتیبانی</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
+
+        {# ============ منوی نقش ============ #}
+        {% if request.user.is_authenticated %}
+            {% with is_advertiser=request.user.is_advertiser is_influencer=request.user.is_influencer is_team_member=request.user.is_team_member %}
+                {% with has_role=is_advertiser|default:is_influencer|default:is_team_member %}
+
+                    {% if has_role %}
+                        <div class="wj-sidebar-group">
+                            <span class="wj-sidebar-group-title">
+                                {% if is_advertiser %}پنل تبلیغ‌دهنده
+                                {% elif is_influencer %}پنل ناشر
+                                {% elif is_team_member %}پنل تیم محتوا
+                                {% endif %}
+                            </span>
+
+                            <ul class="wj-sidebar-list">
+
+                                {# ==================== تبلیغ‌دهنده ==================== #}
+                                {% if is_advertiser %}
+                                    {# تبلیغات من #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'advertisers:campaigns_list' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'advertisers' and url_name == 'campaigns_list' or url_ns == 'advertisers' and url_name == 'campaign_detail' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-megaphone"></i></span>
+                                            <span class="wj-sidebar-text">تبلیغات من</span>
+                                        </a>
+                                    </li>
+
+                                    {# سفارشات تولید محتوا #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'advertisers:content_orders_list' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'advertisers' and url_name == 'content_orders_list' or url_ns == 'advertisers' and url_name == 'content_order_detail' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-camera-video"></i></span>
+                                            <span class="wj-sidebar-text">سفارشات تولید محتوا</span>
+                                        </a>
+                                    </li>
+                                    
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'influencers:channel_list' %}"
+                                               class="wj-sidebar-link
+                                               {% if not request.user.is_influencer and url_ns == 'influencers' and url_name == 'channel_list' or not request.user.is_influencer and url_ns == 'influencers' and url_name == 'channel_detail' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-star-fill"></i></span>
+                                                <span class="wj-sidebar-text">لیست ناشران</span>
+                                            </a>
+                                        </li>
+                        
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'content_team:team_list' %}"
+                                               class="wj-sidebar-link
+                                               {% if not request.user.is_team_member and url_ns == 'content_team' and url_name == 'team_list' or not request.user.is_team_member and url_ns == 'content_team' and url_name == 'team_detail' or not request.user.is_team_member and url_ns == 'content_team' and url_name == 'plan_detail' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-people-fill"></i></span>
+                                                <span class="wj-sidebar-text">تیم‌های محتوا</span>
+                                            </a>
+                                        </li>
+
+                                {# ==================== ناشر ==================== #}
+                                {% elif is_influencer %}
+                                    {# سفارشات #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'influencers:order_list' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'influencers' and url_name == 'order_list' or url_ns == 'influencers' and url_name == 'order_detail' or url_ns == 'influencers' and url_name == 'influencer_respond' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-bag-check"></i></span>
+                                            <span class="wj-sidebar-text">سفارشات</span>
+                                        </a>
+                                    </li>
+
+                                    {# مدیریت کانال‌ها #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'influencers:influencer_channels' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'influencers' and url_name == 'influencer_channels' or url_ns == 'influencers' and url_name == 'edit_channel' or url_ns == 'influencers' and url_name == 'channel_detail' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-chat-dots"></i></span>
+                                            <span class="wj-sidebar-text">مدیریت کانال‌ها</span>
+                                        </a>
+                                    </li>
+
+                                    {# مدیریت تعرفه‌ها #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'influencers:service_rates' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'influencers' and url_name == 'service_rates' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-calculator"></i></span>
+                                            <span class="wj-sidebar-text">مدیریت تعرفه‌ها</span>
+                                        </a>
+                                    </li>
+
+                                    {# کدهای تخفیف حذف شد ✅ #}
+
+                                {# ==================== تیم محتوا ==================== #}
+                                {% elif is_team_member %}
+                                    {# داشبورد تیم حذف شد ✅ #}
+
+                                    {# سفارشات تیم #}
+                                    <li class="wj-sidebar-item">
+                                        <a href="{% url 'content_team:team_orders_list' %}"
+                                           class="wj-sidebar-link {% if url_ns == 'content_team' and url_name == 'team_orders_list' or url_ns == 'content_team' and url_name == 'team_order_detail' %}active{% endif %}">
+                                            <span class="wj-sidebar-icon"><i class="bi bi-list-check"></i></span>
+                                            <span class="wj-sidebar-text">سفارشات تیم</span>
+                                        </a>
+                                    </li>
+
+                                    {% if request.user.team_member.role == 'manager' %}
+                                        {# مدیریت تیم #}
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'content_team:team_manage' %}"
+                                               class="wj-sidebar-link {% if url_ns == 'content_team' and url_name == 'team_manage' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-people"></i></span>
+                                                <span class="wj-sidebar-text">مدیریت تیم</span>
+                                            </a>
+                                        </li>
+
+                                        {# مدیریت اعضا (جدید) ✅ #}
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'content_team:team_members_manage' team_slug=request.user.team_member.team.slug %}"
+                                               class="wj-sidebar-link {% if url_ns == 'content_team' and url_name == 'team_members_manage' or url_ns == 'content_team' and url_name == 'team_member_edit' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-person-badge"></i></span>
+                                                <span class="wj-sidebar-text">مدیریت اعضا</span>
+                                            </a>
+                                        </li>
+
+                                        {# پلن‌های خدمت #}
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'content_team:plans_dashboard' %}"
+                                               class="wj-sidebar-link {% if url_ns == 'content_team' and url_name == 'plans_dashboard' or url_ns == 'content_team' and url_name == 'service_plans' or url_ns == 'content_team' and url_name == 'plan_detail' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-layers"></i></span>
+                                                <span class="wj-sidebar-text">پلن‌های خدمت</span>
+                                            </a>
+                                        </li>
+
+                                        {# گزارش عملکرد (جدید) ✅ #}
+                                        <li class="wj-sidebar-item">
+                                            <a href="{% url 'content_team:performance' %}"
+                                               class="wj-sidebar-link {% if url_ns == 'content_team' and url_name == 'performance' %}active{% endif %}">
+                                                <span class="wj-sidebar-icon"><i class="bi bi-bar-chart-line"></i></span>
+                                                <span class="wj-sidebar-text">گزارش عملکرد</span>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endif %}
+
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                {% endwith %}
+            {% endwith %}
+        {% endif %}
+
+        {# ============ بیشتر ============ #}
+        <div class="wj-sidebar-group">
+            <span class="wj-sidebar-group-title">بیشتر</span>
+
+            <ul class="wj-sidebar-list">
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:about' %}"
+                       class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'about' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-info-square"></i></span>
+                        <span class="wj-sidebar-text">درباره ما</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:contact' %}"
+                       class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'contact' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-telephone"></i></span>
+                        <span class="wj-sidebar-text">تماس با ما</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:faq' %}"
+                       class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'faq' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-question-circle"></i></span>
+                        <span class="wj-sidebar-text">سوالات متداول</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:help' %}"
+                       class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'help' or url_ns == 'core' and url_name == 'guide' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-bookmark"></i></span>
+                        <span class="wj-sidebar-text">راهنما</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:terms' %}"
+                       class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'terms' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-file-earmark-text"></i></span>
+                        <span class="wj-sidebar-text">قوانین و مقررات</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+    </nav>
+</aside>
+
+{% endwith %}
+
+{% endif %}

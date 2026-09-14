@@ -203,7 +203,7 @@ def platform_landing_page(request, slug):
             'gradient': 'linear-gradient(135deg, #7a4587, #5bd5bd, #b8cd06, #f4a926, #e54d52)',
             'primary_color': '#7a4587',
             'accent_color': '#5bd5bd',
-            'hero_image': 'landing/rubika/rub-hero.webp',
+            'hero_image': 'landing/rubika/rub_hero.webp',
             'hero_title': 'روبیکا',
             'stats_label': 'کانال روبیکا',
             "channel_label": "کانال های روبیکا"

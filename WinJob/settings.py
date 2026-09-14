@@ -235,7 +235,7 @@ BALE_BOT_TOKEN = os.environ.get("BALE_BOT_TOKEN")
 if not BALE_BOT_TOKEN:
     raise ValueError("متغیر BALE_BOT_TOKEN در فایل .env تنظیم نشده است!")
 
-SITE_URL = os.environ.get("SITE_URL", "https://winjob.chbkn.run")
+SITE_URL = os.environ.get("SITE_URL", "https://winjob.ir")
 
 
 # ========== تنظیمات Celery ==========

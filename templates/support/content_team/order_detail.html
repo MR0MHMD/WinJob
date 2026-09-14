@@ -17,7 +17,7 @@
             <span class="page-subtitle">
                 <i class="bi bi-file-earmark-text-fill text-primary"></i>
                 سفارش #{{ order.id }}
-                <span class="text-warning">• {{ order.campaign.name|truncatechars:40 }}</span>
+                <span class="text-warning">• {{ order.name|truncatechars:40 }}</span>
                 <span class="text-muted">• {{ order.team.name }}</span>
             </span>
         </div>
@@ -172,66 +172,69 @@
         <!-- ستون دوم: اطلاعات تکمیلی -->
         <!-- ============================================================ -->
         <div class="col-lg-8">
-
-            <!-- ===== اطلاعات کمپین ===== -->
-            <div class="support-card mb-4">
-                <div class="support-card-body">
-                    <div class="section-header">
-                        <span class="title">
-                            <i class="bi bi-flag"></i>
-                            اطلاعات کمپین
-                        </span>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <span class="text-muted d-block small">نام سفارش</span>
-                            <span class="text-light">{{ order.campaign.name }}</span>
+            
+            {% if order.campaign %}
+                <!-- ===== اطلاعات کمپین ===== -->
+                <div class="support-card mb-4">
+                    <div class="support-card-body">
+                        <div class="section-header">
+                            <span class="title">
+                                <i class="bi bi-flag"></i>
+                                اطلاعات کمپین
+                            </span>
                         </div>
-                        <div class="col-md-6">
-                            <span class="text-muted d-block small">تبلیغ دهنده</span>
-                            <div class="d-flex align-items-center gap-2 mt-1">
-                                {% if order.campaign.advertiser.user.avatar %}
-                                    <img src="{{ order.campaign.advertiser.user.avatar.url }}"
-                                         class="avatar-sm"
-                                         style="width:28px;height:28px;"
-                                         alt="">
-                                {% endif %}
-                                <div>
-                                    <div class="text-light" style="font-size:0.85rem;">
-                                        {{ order.campaign.advertiser.business_name }}
-                                    </div>
-                                    <div class="text-muted" style="font-size:0.7rem;">
-                                        {{ order.campaign.advertiser.user.phone_number }}
+    
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">نام سفارش</span>
+                                <span class="text-light">{{ order.campaign.name }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">تبلیغ دهنده</span>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    {% if order.campaign.advertiser.user.avatar %}
+                                        <img src="{{ order.campaign.advertiser.user.avatar.url }}"
+                                             class="avatar-sm"
+                                             style="width:28px;height:28px;"
+                                             alt="">
+                                    {% endif %}
+                                    <div>
+                                        <div class="text-light" style="font-size:0.85rem;">
+                                            {{ order.campaign.advertiser.business_name }}
+                                        </div>
+                                        <div class="text-muted" style="font-size:0.7rem;">
+                                            {{ order.campaign.advertiser.user.phone_number }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <span class="text-muted d-block small">پلتفرم</span>
-                            <img src="{{ order.campaign.platform.logo.url }}"
-                                 width="28"
-                                 alt="{{ order.campaign.platform.name }}">
-                        </div>
-                        <div class="col-md-6">
-                            <span class="text-muted d-block small">نوع محتوا</span>
-                            <span class="text-light">
-                                <i class="{{ order.campaign.content_type.icon }} me-2 text-primary"></i>
-                                {{ order.campaign.content_type.name }}
-                            </span>
-                        </div>
-                        {% if order.campaign.ad_type %}
                             <div class="col-md-6">
-                                <span class="text-muted d-block small">نوع تبلیغ</span>
+                                <span class="text-muted d-block small">پلتفرم</span>
+                                <img src="{{ order.campaign.platform.logo.url }}"
+                                     width="28"
+                                     alt="{{ order.campaign.platform.name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <span class="text-muted d-block small">نوع محتوا</span>
                                 <span class="text-light">
-                                    <i class="{{ order.campaign.ad_type.icon }} me-2 text-primary"></i>
-                                    {{ order.campaign.ad_type.name }}
+                                    <i class="{{ order.campaign.content_type.icon }} me-2 text-primary"></i>
+                                    {{ order.campaign.content_type.name }}
                                 </span>
                             </div>
-                        {% endif %}
+                            {% if order.campaign.ad_type %}
+                                <div class="col-md-6">
+                                    <span class="text-muted d-block small">نوع تبلیغ</span>
+                                    <span class="text-light">
+                                        <i class="{{ order.campaign.ad_type.icon }} me-2 text-primary"></i>
+                                        {{ order.campaign.ad_type.name }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %} 
+        
 
             <!-- ===== بریف سفارش ===== -->
             {% if brief %}

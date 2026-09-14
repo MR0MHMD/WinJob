@@ -587,7 +587,7 @@ def standalone_order_payment_callback(request):
                     f"✅ پرداخت سفارش تولید محتوا #{order.id} با موفقیت انجام شد. "
                     f"کد پیگیری: {result.reference_id}"
                 )
-                return redirect('content_team:content_order_detail', order.id)
+                return redirect('advertisers:content_order_detail', order.id)
 
             else:
                 messages.error(request, f"پرداخت ناموفق بود. وضعیت: {result.status}")

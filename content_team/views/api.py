@@ -1,8 +1,12 @@
 from campaigns.services.raiting_service import submit_team_review_service
+from payment.services.create_invoice import create_standalone_invoice
 from content_team.models import ContentTeam, ContentOrder, TeamReview
 from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from payment.models import Coupon
+import json
 
 
 @require_GET
@@ -109,21 +113,6 @@ def edit_team_review_ajax(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
-# content_team/api_views.py
-
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404
-from payment.models import Coupon
-from payment.services.create_invoice import create_standalone_invoice
-from ..models import ContentOrder
-import json
-import traceback
-
-
-# content_team/api.py
-
 @require_POST
 @login_required
 def standalone_apply_discount(request):
@@ -155,7 +144,7 @@ def standalone_apply_discount(request):
         # ========== نقشه اسکوپ به فیلدهای مدل ==========
         scope_field_map = {
             'content_team': 'content_team_coupon',  # ✅ اسم فیلد واقعی
-            'platform': 'platform_coupon'            # ✅ اسم فیلد واقعی
+            'platform': 'platform_coupon'  # ✅ اسم فیلد واقعی
         }
 
         # چک کردن کوپن‌های موجود

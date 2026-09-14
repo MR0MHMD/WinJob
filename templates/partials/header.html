@@ -5,275 +5,19 @@
 <div class="container px-4">
     <div class="d-flex align-items-center justify-content-between w-100 py-2">
 
+        {# ============ راست: لوگو ============ #}
         <div class="d-flex align-items-center">
             <a href="{% url 'core:home' %}" class="logo-wrapper d-flex align-items-center text-decoration-none">
                 <div class="logo-icon-wrapper">
-                    <img src="{% static 'finder/img/logo/logo.webp' %}" width="100" alt="WinJob"
-                         class="logo-img">
+                    <img src="{% static 'finder/img/logo/logo.webp' %}" width="100" alt="WinJob" class="logo-img">
                 </div>
             </a>
         </div>
 
-        <div class="d-none d-lg-flex">
-            <ul class="navbar-nav flex-row navbar-desktop-menu">
-                {% if not request.user.is_authenticated %}
-                    <!-- ========== منوی کاربر مهمان ========== -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
-                           data-bs-toggle="dropdown" id="servicesDropdown" role="button" aria-expanded="false">
-                            <i class="bi bi-question-circle"></i>
-                            <span>خدمات ما</span>
-                            <i class="bi bi-chevron-down dropdown-arrow transition-rotate"></i>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-dark mt-0" aria-labelledby="servicesDropdown">
-                            {% for platform in platforms %}
-                                <li>
-                                    <a class="dropdown-item" href="{{ platform.get_absolute_url }}">
-                                        <img width="25" src="{{ platform.logo.url }}" alt="" class="me-2">
-                                        <span>تبلیغات در {{ platform.name }}</span>
-                                    </a>
-                                </li>
-                                {% if platform.name == "سروش پلاس" %}
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center gap-2" href="{% url 'influencers:channel_list' %}">
-                            <i class="bi bi-star-fill"></i>
-                            <span>لیست ناشران</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center gap-2" href="{% url 'content_team:team_list' %}">
-                            <i class="bi bi-people-fill"></i>
-                            <span>لیست تیم های تولید محتوا</span>
-                        </a>
-                    </li>
-
-                {% elif request.user.is_authenticated %}
-                    {# ========== تشخیص اینکه کاربر نقش دارد یا فقط ادمین است ========== #}
-                    {% with is_advertiser=request.user.is_advertiser is_influencer=request.user.is_influencer is_team_member=request.user.is_team_member %}
-                        {% with has_role=is_advertiser|default:is_influencer|default:is_team_member %}
-
-                            {# ========== اگر کاربر نقش دارد ========== #}
-                            {% if has_role %}
-
-                                {# -------- منوی تبلیغ دهنده -------- #}
-                                {% if is_advertiser %}
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'advertisers:campaigns_list' %}">
-                                            <i class="bi bi-megaphone"></i>
-                                            <span>تبلیغات من</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'content_team:content_orders_list' %}">
-                                            <i class="bi bi-camera-video"></i>
-                                            <span>سفارشات تولید محتوای من</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'influencers:channel_list' %}">
-                                            <i class="bi bi-star-fill"></i>
-                                            <span>لیست ناشران</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'content_team:team_list' %}">
-                                            <i class="bi bi-people-fill"></i>
-                                            <span>لیست تیم های تولید محتوا</span>
-                                        </a>
-                                    </li>
-
-                                    {# -------- منوی اینفلوئنسر -------- #}
-                                {% elif is_influencer %}
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'influencers:order_list' %}">
-                                            <i class="bi bi-bag-check"></i>
-                                            <span>سفارشات</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'influencers:influencer_channels' %}">
-                                            <i class="bi bi-chat-dots"></i>
-                                            <span>مدیریت کانال ها</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'influencers:service_rates' %}">
-                                            <i class="bi bi-calculator"></i>
-                                            <span>مدیریت تعرفه ها</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'influencers:coupon_list' %}">
-                                            <i class="bi bi-ticket-perforated"></i>
-                                            <span>مدیریت کد های تخفیف</span>
-                                        </a>
-                                    </li>
-
-                                    {# -------- منوی تیم تولید محتوا -------- #}
-                                {% elif is_team_member %}
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'content_team:dashboard' %}">
-                                            <i class="bi bi-speedometer2"></i>
-                                            <span>داشبورد تیم</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'content_team:team_orders_list' %}">
-                                            <i class="bi bi-list-check"></i>
-                                            <span>سفارشات تیم</span>
-                                        </a>
-                                    </li>
-                                    {% if request.user.team_member.role == 'manager' %}
-                                        <li class="nav-item">
-                                            <a class="nav-link d-flex align-items-center gap-2"
-                                               href="{% url 'content_team:team_manage' %}">
-                                                <i class="bi bi-people"></i>
-                                                <span>مدیریت تیم</span>
-                                            </a>
-                                        </li>
-                                        <li class="nav-item">
-                                            <a class="nav-link d-flex align-items-center gap-2"
-                                               href="{% url 'content_team:plans_dashboard' %}">
-                                                <i class="bi bi-layers"></i>
-                                                <span>پلن‌های خدمت</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                {% endif %}
-
-                                {# ========== دکمه پنل پشتیبانی (برای همه نقش‌ها) ========== #}
-                                {% if request.user.is_staff or perms.support.view_ticket %}
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2 text-warning"
-                                           href="{% url 'support:dashboard' %}">
-                                            <i class="bi bi-shield-lock-fill"></i>
-                                            <span>پنل پشتیبانی</span>
-                                        </a>
-                                    </li>
-                                {% endif %}
-
-                                {# ========== اگر کاربر فقط ادمین است و نقشی ندارد ========== #}
-                            {% else %}
-                                {% if request.user.is_staff %}
-                                    {# ========== منوی ادمین (فقط برای کاربران is_staff) ========== #}
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2 text-primary"
-                                           href="{% url 'support:dashboard' %}">
-                                            <i class="bi bi-speedometer2"></i>
-                                            <span>داشبورد ادمین</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:user_list' %}">
-                                            <i class="bi bi-people-fill"></i>
-                                            <span>مدیریت کاربران</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:ticket_list' %}">
-                                            <i class="bi bi-ticket-perforated"></i>
-                                            <span>تیکت‌ها</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:campaign_list' %}">
-                                            <i class="bi bi-megaphone"></i>
-                                            <span>کمپین‌ها</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:channel_list' %}">
-                                            <i class="bi bi-grid-3x3-gap-fill"></i>
-                                            <span>کانال‌ها</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:report_list' %}">
-                                            <i class="bi bi-file-earmark-text"></i>
-                                            <span>گزارشات</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center gap-2"
-                                           href="{% url 'support:team_list' %}">
-                                            <i class="bi bi-people"></i>
-                                            <span>تیم‌های محتوا</span>
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endif %}
-
-                        {% endwith %}
-                    {% endwith %}
-                {% endif %}
-
-                <!-- ========== منوی «بیشتر» (مشترک بین همه) ========== -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-                       href="#"
-                       data-bs-toggle="dropdown">
-                        <i class="bi bi-question-circle"></i>
-                        <span>بیشتر</span>
-                        <i class="bi bi-chevron-down dropdown-arrow transition-rotate"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-dark mt-0">
-                        <li>
-                            <a class="dropdown-item" href="{% url 'core:help' %}">
-                                <i class="bi bi-bookmark me-2"></i>راهنما
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'core:about' %}">
-                                <i class="bi bi-info-square me-2"></i>درباره ما
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'core:contact' %}">
-                                <i class="bi bi-telephone me-2"></i>تماس با ما
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'core:terms' %}">
-                                <i class="bi bi-file-earmark-text me-2"></i>قوانین و مقررات
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'core:faq' %}">
-                                <i class="bi bi-question-circle me-2"></i>سوالات متداول
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-
-        {# ========== بخش راست هدر (پروفایل، اعلان‌ها، همبرگر) ========== #}
+        {# ============ چپ: پروفایل + زنگوله + همبرگر موبایل ============ #}
         <div class="d-flex align-items-center gap-3">
 
+            {# ---- دسکتاپ: کاربر مهمان ---- #}
             <div class="d-none d-lg-flex align-items-center gap-2">
                 {% if not user.is_authenticated %}
 
@@ -285,186 +29,136 @@
                     </a>
 
                 {% elif user.is_authenticated %}
-                    {% with is_advertiser=request.user.is_advertiser is_influencer=request.user.is_influencer is_team_member=request.user.is_team_member %}
-                        {% with has_role=is_advertiser|default:is_influencer|default:is_team_member %}
 
-                            <!-- ================================================ -->
-                            <!-- دراپ‌داون پروفایل کاربر - با قابلیت hover و کلیک -->
-                            <!-- ================================================ -->
-                            <div class="dropdown dropdown-hover">
-                                <!-- دکمه پروفایل - لینک به داشبورد هنگام کلیک -->
-                                <a href="{% url 'accounts:dashboard_router' %}"
-                                   class="btn user-avatar-only p-0 border-0"
-                                   role="button"
-                                   aria-haspopup="true"
-                                   aria-expanded="false"
-                                   id="userProfileDropdown">
-                                    <div class="user-avatar-wrapper">
-                                        {% if user.avatar %}
-                                            <img src="{{ user.avatar.url }}" class="user-avatar-img" alt="User">
-                                        {% else %}
-                                            <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center">
-                                                <i class="bi bi-person text-white fs-sm"></i>
-                                            </div>
-                                        {% endif %}
-                                        <span class="user-status online"></span>
+                    {# ---- زنگوله نوتیف ---- #}
+                    <a href="{% url 'notifications:list' %}"
+                       class="btn btn-icon btn-sm btn-translucent-light position-relative">
+                        <i class="bi bi-bell fs-sm"></i>
+                        {% if unread_notifications_count != 0 %}
+                            <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">
+                                {{ unread_notifications_count }}
+                            </span>
+                        {% endif %}
+                    </a>
+
+                    {# ---- دراپ‌داون پروفایل (ساده‌شده) ---- #}
+                    <div class="dropdown dropdown-hover">
+                        <a href="{% url 'accounts:dashboard_router' %}"
+                           class="btn user-avatar-only p-0 border-0"
+                           role="button"
+                           aria-haspopup="true"
+                           aria-expanded="false"
+                           id="userProfileDropdown">
+                            <div class="user-avatar-wrapper">
+                                {% if user.avatar %}
+                                    <img src="{{ user.avatar.url }}" class="user-avatar-img" alt="User">
+                                {% else %}
+                                    <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-person text-white fs-sm"></i>
                                     </div>
-                                </a>
-                                <!-- منوی دراپ‌داون -->
-                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end mt-2 p-2"
-                                    style="min-width: 240px"
-                                    aria-labelledby="userProfileDropdown">
-                                    <li class="px-3 py-3 text-center">
-                                        <div class="user-avatar-wrapper mb-2 mx-auto d-inline-block">
-                                            {% if user.avatar %}
-                                                <img src="{{ user.avatar.url }}"
-                                                     class="user-avatar-img user-avatar-img-drop" alt="User">
+                                {% endif %}
+                                <span class="user-status online"></span>
+                            </div>
+                        </a>
+
+                        {# ---- منوی دراپ‌داون (فقط اطلاعات خلاصه + خروج) ---- #}
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end mt-2 p-2"
+                            style="min-width: 260px"
+                            aria-labelledby="userProfileDropdown">
+
+                            {# --- هدر: آواتار + نام + شماره --- #}
+                            <li class="px-3 py-3 text-center">
+                                <div class="user-avatar-wrapper mb-2 mx-auto d-inline-block">
+                                    {% if user.avatar %}
+                                        <img src="{{ user.avatar.url }}"
+                                             class="user-avatar-img user-avatar-img-drop" alt="User">
+                                    {% else %}
+                                        <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                                             style="width: 60px; height: 60px;">
+                                            <i class="bi bi-person text-white fs-4"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <h6 class="text-white mb-0 mt-2">{{ user.nickname|default:"کاربر" }}</h6>
+                                <span class="text-success fs-xs">{{ user.phone_number }}</span>
+                            </li>
+
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# --- کیف پول --- #}
+                            {% if request.user.wallet %}
+                                <li class="px-3 py-2">
+                                    <a class="text-decoration-none d-flex align-items-center gap-2"
+                                       href="{% url 'payment:wallet_dashboard' %}">
+                                        <i class="bi bi-wallet2 text-primary fs-5"></i>
+                                        <div>
+                                            {% if request.user.wallet.balance == 0 %}
+                                                <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
                                             {% else %}
-                                                <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto"
-                                                     style="width: 60px; height: 60px;">
-                                                    <i class="bi bi-person text-white fs-4"></i>
-                                                </div>
+                                                <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
+                                                <span class="fw-bold text-white">{{ request.user.wallet.balance }} تومان</span>
                                             {% endif %}
                                         </div>
-                                        <h6 class="text-white mb-0 mt-2">{{ user.nickname|default:"کاربر" }}</h6>
-                                        <span class="text-success fs-xs">{{ user.phone_number }}</span>
-                                        {% if user.is_staff %}
-                                            <span class="badge bg-warning text-dark mt-1 d-block">ادمین</span>
-                                        {% endif %}
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li class="px-3 py-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-wallet2 text-primary fs-5"></i>
-                                            <div>
-                                                <a class="text-decoration-none"
-                                                   href="{% url 'payment:wallet_dashboard' %}">
-                                                    {% if request.user.wallet.balance == 0 %}
-                                                        <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
-                                                    {% else %}
-                                                        <div class="d-flex flex-column align-items-center">
-                                                            <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
-                                                            <span class="fw-bold">
-                                                            {{ request.user.wallet.balance }} تومان
-                                                        </span>
-                                                        </div>
-                                                    {% endif %}
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </li>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                                    {# نمایش امتیاز فقط برای کاربرانی که نقش دارند #}
-                                    {% if has_role %}
-                                        {% if not user.is_influencer %}
-                                            <li>
-                                                <hr class="dropdown-divider">
-                                            </li>
-                                            <li class="px-3 py-2">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    {% if user.is_advertiser %}
-                                                        {% with score=user.advertiser_profile.score %}
-                                                            <a href="{% url 'gamification:points_guide' %}"
-                                                               class="text-decoration-none d-flex align-items-center gap-2">
-                                                                {% if score.badge and score.badge.icon %}
-                                                                    <img src="{{ score.badge.icon.url }}" width="28"
-                                                                         height="28"
-                                                                         class="rounded-circle" alt="نشان">
-                                                                {% else %}
-                                                                    <i class="bi bi-trophy text-primary fs-5"></i>
-                                                                {% endif %}
-                                                                <div class="d-flex gap-1">
-                                                                    <span class="text-light fs-sm d-block">امتیاز شما</span>
-                                                                    <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
-                                                                </div>
-                                                            </a>
-                                                        {% endwith %}
-                                                    {% elif user.is_team_member %}
-                                                        {% with score=user.team_member.team.score %}
-                                                            <a href="{% url 'gamification:points_guide' %}"
-                                                               class="text-decoration-none d-flex align-items-center gap-2">
-                                                                {% if score.badge and score.badge.icon %}
-                                                                    <img src="{{ score.badge.icon.url }}" width="28"
-                                                                         height="28"
-                                                                         class="rounded-circle" alt="نشان">
-                                                                {% else %}
-                                                                    <i class="bi bi-trophy text-primary fs-5"></i>
-                                                                {% endif %}
-                                                                <div class="d-flex gap-1">
-                                                                    <span class="text-light fs-sm d-block">امتیاز تیم</span>
-                                                                    <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
-                                                                </div>
-                                                            </a>
-                                                        {% endwith %}
-                                                    {% endif %}
+                            {# --- امتیاز (فقط adv و team_member) --- #}
+                            {% if user.is_advertiser or user.is_team_member %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="px-3 py-2">
+                                    {% if user.is_advertiser %}
+                                        {% with score=user.advertiser_profile.score %}
+                                            <a href="{% url 'gamification:points_guide' %}"
+                                               class="text-decoration-none d-flex align-items-center gap-2">
+                                                {% if score.badge and score.badge.icon %}
+                                                    <img src="{{ score.badge.icon.url }}" width="28" height="28"
+                                                         class="rounded-circle" alt="نشان">
+                                                {% else %}
+                                                    <i class="bi bi-trophy text-primary fs-5"></i>
+                                                {% endif %}
+                                                <div class="d-flex gap-1">
+                                                    <span class="text-light fs-sm d-block">امتیاز شما</span>
+                                                    <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
                                                 </div>
-                                            </li>
-                                        {% endif %}
+                                            </a>
+                                        {% endwith %}
+                                    {% elif user.is_team_member %}
+                                        {% with score=user.team_member.team.score %}
+                                            <a href="{% url 'gamification:points_guide' %}"
+                                               class="text-decoration-none d-flex align-items-center gap-2">
+                                                {% if score.badge and score.badge.icon %}
+                                                    <img src="{{ score.badge.icon.url }}" width="28" height="28"
+                                                         class="rounded-circle" alt="نشان">
+                                                {% else %}
+                                                    <i class="bi bi-trophy text-primary fs-5"></i>
+                                                {% endif %}
+                                                <div class="d-flex gap-1">
+                                                    <span class="text-light fs-sm d-block">امتیاز تیم</span>
+                                                    <span class="fw-bold text-white">{{ score.points|default:0 }}</span>
+                                                </div>
+                                            </a>
+                                        {% endwith %}
                                     {% endif %}
+                                </li>
+                            {% endif %}
 
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'core:home' %}"><i
-                                            class="bi bi-house-door me-2"></i>خانه</a></li>
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'accounts:dashboard_router' %}"><i
-                                            class="bi bi-speedometer2 me-2"></i>داشبورد</a></li>
+                            <li><hr class="dropdown-divider"></li>
 
-                                    {# اگر کاربر نقش ندارد و ادمین است، لینک‌های ادمین رو اضافه کن #}
-
-                                    {% if not has_role and user.is_staff %}
-                                        <li><a class="dropdown-item rounded-3 text-warning"
-                                               href="{% url 'support:dashboard' %}"><i
-                                                class="bi bi-shield-lock-fill me-2"></i>پنل مدیریت</a></li>
-                                        <li><a class="dropdown-item rounded-3" href="{% url 'support:user_list' %}"><i
-                                                class="bi bi-people-fill me-2"></i>مدیریت کاربران</a></li>
-                                        <li><a class="dropdown-item rounded-3" href="{% url 'support:ticket_list' %}"><i
-                                                class="bi bi-ticket-perforated me-2"></i>تیکت ها</a></li>
-                                    {% endif %}
-
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'accounts:edit_profile' %}"><i
-                                            class="bi bi-pencil-square me-2"></i>اطلاعات فردی</a></li>
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'payment:invoice_list' %}"><i
-                                            class="bi bi-receipt me-2"></i>فاکتور ها</a></li>
-
-                                    {% if has_role %}
-                                        {% if user.is_influencer %}
-                                            <li><a class="dropdown-item rounded-3"
-                                                   href="{% url 'gamification:points_guide' %}"><i
-                                                    class="bi bi-star-fill me-2"></i>امتیاز های من</a></li>
-                                        {% elif user.is_team_member %}
-                                            <li><a class="dropdown-item rounded-3"
-                                                   href="{% url 'gamification:points_guide' %}"><i
-                                                    class="bi bi-trophy me-2"></i>امتیاز تیم</a></li>
-                                        {% endif %}
-                                    {% endif %}
-
-                                    <li><a class="dropdown-item rounded-3" href="{% url 'tickets:ticket_list' %}"><i
-                                            class="bi bi-headset me-2"></i>پشتیبانی</a>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li><a class="dropdown-item rounded-3" style="color: var(--fi-danger) !important;"
-                                           href="{% url 'accounts:logout' %}"><i
-                                            class="bi bi-box-arrow-right me-2"></i>خروج</a></li>
-                                </ul>
-                            </div>
-
-                            <a href="{% url 'notifications:list' %}"
-                               class="btn btn-icon btn-sm btn-translucent-light position-relative">
-                                <i class="bi bi-bell fs-sm"></i>
-                                {% if unread_notifications_count != 0 %}
-                                    <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
-                                {% endif %}
-                            </a>
-
-                        {% endwith %}
-                    {% endwith %}
+                            {# --- خروج --- #}
+                            <li>
+                                <a class="dropdown-item rounded-3"
+                                   style="color: var(--fi-danger) !important;"
+                                   href="{% url 'accounts:logout' %}">
+                                    <i class="bi bi-box-arrow-right me-2"></i>خروج
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 {% endif %}
             </div>
 
+            {# ---- موبایل: همبرگر (دست‌نخورده) ---- #}
             <button class="btn d-lg-none p-0 border-0 hamburger-btn" type="button"
                     data-bs-toggle="offcanvas"
                     data-bs-target="#mobileMenu">
@@ -478,6 +172,9 @@
     </div>
 </div>
 
+ <!-- ==================================================================
+      OFFCANVAS موبایل — دست نخورده و کامل
+      ================================================================== -->
 <div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="mobileMenu">
     <div class="offcanvas-header border-bottom border-light">
         <h5 class="offcanvas-title text-white">
@@ -544,7 +241,7 @@
                                     </li>
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
-                                           href="{% url 'content_team:content_orders_list' %}">
+                                           href="{% url 'advertisers:content_orders_list' %}">
                                             <i class="bi bi-camera-video"></i>
                                             <span>سفارشات تولید محتوای من</span>
                                         </a>
@@ -628,7 +325,7 @@
                                 {% endif %}
 
                                 {# ========== دکمه پنل پشتیبانی موبایل (برای همه نقش‌ها) ========== #}
-                                {% if request.user.is_staff or perms.support.view_ticket %}
+                                {% if request.user.has_support_access %}
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3 text-warning"
                                            href="{% url 'support:dashboard' %}">
@@ -639,8 +336,8 @@
                                 {% endif %}
 
                             {% else %}
-                                {# ========== منوی موبایل ادمین (فقط is_staff) ========== #}
-                                {% if not has_role and request.user.is_staff %}
+                                {# ========== منوی موبایل ادمین (فقط has_support_access) ========== #}
+                                {% if request.user.has_support_access %}
                                     <li class="nav-item">
                                         <a class="nav-link mobile-nav-link d-flex align-items-center gap-3 text-primary"
                                            href="{% url 'support:dashboard' %}">
@@ -703,19 +400,15 @@
                             <a href="{% url 'core:help' %}" class="mobile-sub-link">
                                 <i class="bi bi-bookmark me-2"></i>راهنما
                             </a>
-
                             <a href="{% url 'core:about' %}" class="mobile-sub-link">
                                 <i class="bi bi-info-square me-2"></i>درباره ما
                             </a>
-                            
                             <a href="{% url 'core:contact' %}" class="mobile-sub-link">
                                 <i class="bi bi-telephone me-2"></i>تماس با ما
                             </a>
-                            
                             <a href="{% url 'core:terms' %}" class="mobile-sub-link">
                                 <i class="bi bi-file-earmark-text me-2"></i>قوانین و مقررات
                             </a>
-                            
                             <a href="{% url 'core:faq' %}" class="mobile-sub-link">
                                 <i class="bi bi-question-circle me-2"></i>سوالات متداول
                             </a>
@@ -742,8 +435,7 @@
                         <div class="user-avatar-wrapper mb-3 mx-auto d-inline-block">
                             {% if user.avatar %}
                                 <img src="{{ user.avatar.url }}" class="user-avatar-img user-avatar-img-drop" alt="User"
-                                     width="70"
-                                     height="70">
+                                     width="70" height="70">
                             {% else %}
                                 <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto"
                                      style="width: 70px; height: 70px;">
@@ -752,8 +444,9 @@
                             {% endif %}
                             <span class="user-status online" style="width: 14px; height: 14px;"></span>
                             {% if user.is_influencer %}
-                                <span class="verified-badge" style="font-size: 18px;"><i
-                                        class="bi bi-check-circle-fill"></i></span>
+                                <span class="verified-badge" style="font-size: 18px;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </span>
                             {% endif %}
                         </div>
                         <h6 class="text-white mb-1">{{ user.nickname|default:"کاربر" }}</h6>
@@ -764,7 +457,7 @@
                             <p class="text-muted fs-xs mt-1 mb-3">تبلیغ دهنده</p>
                         {% elif user.is_team_member %}
                             <p class="text-muted fs-xs mt-1 mb-3">تیم تولید محتوا</p>
-                        {% elif user.is_staff %}
+                        {% elif user.has_support_access %}
                             <p class="text-warning fs-xs mt-1 mb-3">ادمین</p>
                         {% endif %}
                         <div class="d-flex justify-content-center gap-2">
@@ -772,7 +465,9 @@
                                class="btn btn-icon btn-sm btn-translucent-light position-relative">
                                 <i class="bi bi-bell fs-sm"></i>
                                 {% if unread_notifications_count != 0 %}
-                                    <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">{{ unread_notifications_count }}</span>
+                                    <span class="badge bg-danger position-absolute top-0 start-0 translate-middle p-1 rounded-circle">
+                                        {{ unread_notifications_count }}
+                                    </span>
                                 {% endif %}
                             </a>
                         </div>
@@ -789,9 +484,7 @@
                                         <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
                                     {% else %}
                                         <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
-                                        <span class="fw-bold text-white">
-                                        {{ request.user.wallet.balance }} تومان
-                                    </span>
+                                        <span class="fw-bold text-white">{{ request.user.wallet.balance }} تومان</span>
                                     {% endif %}
                                 </a>
                             </div>
@@ -855,7 +548,7 @@
                             <i class="bi bi-speedometer2 me-2"></i>داشبورد
                         </a>
 
-                        {% if not has_role and user.is_staff %}
+                        {% if not has_role and request.user.has_support_access %}
                             <a href="{% url 'support:dashboard' %}"
                                class="list-group-item bg-transparent text-warning border-light rounded-3 mb-1">
                                 <i class="bi bi-shield-lock-fill me-2"></i>پنل مدیریت
@@ -900,8 +593,9 @@
                         </a>
 
                         <a href="{% url 'accounts:logout' %}"
-                           class="list-group-item bg-transparent text-danger border-light rounded-3"><i
-                                class="bi bi-box-arrow-right me-2"></i>خروج</a>
+                           class="list-group-item bg-transparent text-danger border-light rounded-3">
+                            <i class="bi bi-box-arrow-right me-2"></i>خروج
+                        </a>
                     </div>
                 {% endif %}
             </div>
@@ -912,12 +606,12 @@
 <script>
     /**
      * WinJob - Header JavaScript
-     * رفع مشکل بسته شدن سریع دراپ‌داون پروفایل
+     * مدیریت دراپ‌داون پروفایل
      */
     document.addEventListener('DOMContentLoaded', function () {
 
         // =============================================
-        // ۱. دراپ‌داون پروفایل کاربر با hover و کلیک
+        // دراپ‌داون پروفایل کاربر با hover و کلیک
         // =============================================
         const profileDropdown = document.querySelector('.dropdown-hover');
 
@@ -928,21 +622,19 @@
             let hideTimeout;
 
             // نمایش منو با hover روی دکمه
-            dropdownToggle.addEventListener('mouseenter', function (e) {
+            dropdownToggle.addEventListener('mouseenter', function () {
                 clearTimeout(hideTimeout);
-                // با استفاده از بوت‌استرپ نمایش می‌دیم
                 const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
                 if (bsDropdown) {
                     bsDropdown.show();
                 } else {
-                    // اگر هنوز instance ساخته نشده، بساز و نمایش بده
                     const newDropdown = new bootstrap.Dropdown(dropdownToggle);
                     newDropdown.show();
                 }
             });
 
             // نمایش منو با hover روی خود منو
-            dropdownMenu.addEventListener('mouseenter', function (e) {
+            dropdownMenu.addEventListener('mouseenter', function () {
                 clearTimeout(hideTimeout);
                 const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
                 if (bsDropdown) {
@@ -952,7 +644,6 @@
 
             // پنهان کردن منو با تاخیر
             profileDropdown.addEventListener('mouseleave', function (e) {
-                // بررسی کن که موس به منو یا دکمه نرفته
                 const relatedTarget = e.relatedTarget;
                 if (relatedTarget && (
                     profileDropdown.contains(relatedTarget) ||
@@ -974,103 +665,5 @@
                 clearTimeout(hideTimeout);
             });
         }
-
-        // =============================================
-        // ۲. دراپ‌داون‌های معمولی (منوهای هدر) - hover
-        // =============================================
-        const dropdownItems = document.querySelectorAll('.navbar-nav .dropdown');
-
-        dropdownItems.forEach(function (dropdown) {
-            // از دراپ‌داون پروفایل رد میشیم (قبلاً هندل شده)
-            if (dropdown.classList.contains('dropdown-hover')) return;
-
-            const toggle = dropdown.querySelector('.dropdown-toggle');
-            const menu = dropdown.querySelector('.dropdown-menu');
-
-            if (!toggle || !menu) return;
-
-            let hideTimeout;
-
-            dropdown.addEventListener('mouseenter', function () {
-                clearTimeout(hideTimeout);
-                const bsDropdown = bootstrap.Dropdown.getInstance(toggle);
-                if (bsDropdown) {
-                    bsDropdown.show();
-                } else {
-                    const newDropdown = new bootstrap.Dropdown(toggle);
-                    newDropdown.show();
-                }
-            });
-
-            dropdown.addEventListener('mouseleave', function (e) {
-                const relatedTarget = e.relatedTarget;
-                if (relatedTarget && dropdown.contains(relatedTarget)) {
-                    return;
-                }
-
-                hideTimeout = setTimeout(function () {
-                    const bsDropdown = bootstrap.Dropdown.getInstance(toggle);
-                    if (bsDropdown) {
-                        bsDropdown.hide();
-                    }
-                }, 200);
-            });
-
-            menu.addEventListener('mouseenter', function () {
-                clearTimeout(hideTimeout);
-            });
-
-            menu.addEventListener('mouseleave', function (e) {
-                const relatedTarget = e.relatedTarget;
-                if (relatedTarget && dropdown.contains(relatedTarget)) {
-                    return;
-                }
-
-                hideTimeout = setTimeout(function () {
-                    const bsDropdown = bootstrap.Dropdown.getInstance(toggle);
-                    if (bsDropdown) {
-                        bsDropdown.hide();
-                    }
-                }, 200);
-            });
-        });
-
-        // =============================================
-        // ۳. رفع مشکل مگا منو
-        // =============================================
-        const megaWrapper = document.querySelector('.mega-dropdown-wrapper');
-
-        if (megaWrapper) {
-            let megaHideTimeout;
-            const megaMenu = megaWrapper.querySelector('.mega-dropdown-menu');
-
-            megaWrapper.addEventListener('mouseenter', function () {
-                clearTimeout(megaHideTimeout);
-            });
-
-            megaWrapper.addEventListener('mouseleave', function () {
-                megaHideTimeout = setTimeout(function () {
-                    megaMenu.style.opacity = '0';
-                    megaMenu.style.visibility = 'hidden';
-                    megaMenu.style.transform = 'translateY(-10px)';
-                }, 200);
-            });
-
-            megaMenu.addEventListener('mouseenter', function () {
-                clearTimeout(megaHideTimeout);
-                megaMenu.style.opacity = '1';
-                megaMenu.style.visibility = 'visible';
-                megaMenu.style.transform = 'translateY(0)';
-            });
-
-            megaMenu.addEventListener('mouseleave', function () {
-                megaHideTimeout = setTimeout(function () {
-                    megaMenu.style.opacity = '0';
-                    megaMenu.style.visibility = 'hidden';
-                    megaMenu.style.transform = 'translateY(-10px)';
-                }, 200);
-            });
-        }
-
     });
 </script>

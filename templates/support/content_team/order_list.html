@@ -192,7 +192,7 @@
                     <thead>
                         <tr>
                             <th class="col-id">ID</th>
-                            <th class="col-campaign">کمپین</th>
+                            <th class="col-campaign">نام سفارش</th>
                             <th class="col-advertiser">تبلیغ دهنده</th>
                             <th class="col-team">تیم</th>
                             <th class="col-plan">پلن</th>
@@ -209,13 +209,23 @@
                                     <strong>#{{ order.id }}</strong>
                                 </td>
                                 <td class="col-campaign">
-                                    <span class="text-light">{{ order.campaign.name|truncatechars:30 }}</span>
+                                    <span class="text-light">{{ order.name|truncatechars:30 }}</span>
                                 </td>
                                 <td class="col-advertiser">
-                                    <span class="text-light">{{ order.campaign.advertiser.business_name }}</span>
+                                    <span class="text-light">
+                                        {% if order.campaign %}
+                                        	{{ order.campaign.advertiser.business_name }}
+                                        {% else %}
+                                            {{ order.standalone_user.nickname }}
+                                        {% endif %} 
+                                    </span>
                                     <br>
                                     <small class="text-muted">
-                                        {{ order.campaign.advertiser.user.phone_number }}
+                                        {% if order.campaign %}
+                                        	{{ order.campaign.advertiser.user.phone_number }}
+                                        {% else %}
+                                            {{ order.standalone_user.phone_number }}
+                                        {% endif %} 
                                     </small>
                                 </td>
                                 <td class="col-team">

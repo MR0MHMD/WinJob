@@ -38,94 +38,17 @@
     </head>
 
     <body class="bg-dark" dir="rtl" data-user-role="{% if user.is_authenticated %}{% if user.is_advertiser %}advertiser{% elif user.is_influencer %}influencer{% elif user.is_team_member %}team_member{% else %}user{% endif %}{% else %}guest{% endif %}">
-        <!-- WinJob Developer Signature Boot Loader -->
-        <div class="page-loading active" aria-label="در حال بارگذاری">
-
-            <!-- Ambient background -->
-            <div class="loader-ambient loader-ambient-orange"></div>
-            <div class="loader-ambient loader-ambient-purple"></div>
-
-            <!-- Floating particles -->
-            <div class="loader-particles" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-
-            <div class="page-loading-inner">
-                <!-- Influence Network -->
-                <div class="loader-network" aria-hidden="true">
-                    <svg class="loader-network-lines" viewBox="0 0 420 260" preserveAspectRatio="none">
-                        <path class="network-line network-line-1" d="M55 65 C130 35, 155 105, 210 130"></path>
-                        <path class="network-line network-line-2" d="M365 65 C290 35, 265 105, 210 130"></path>
-                        <path class="network-line network-line-3" d="M65 205 C135 225, 165 155, 210 130"></path>
-                        <path class="network-line network-line-4" d="M355 205 C285 225, 255 155, 210 130"></path>
-                        <path class="network-line network-line-5" d="M55 65 C120 145, 140 180, 65 205"></path>
-                        <path class="network-line network-line-6" d="M365 65 C300 145, 280 180, 355 205"></path>
-                    </svg>
-
-                    <!-- Outer Nodes -->
-                    <span class="network-node node-1"></span>
-                    <span class="network-node node-2"></span>
-                    <span class="network-node node-3"></span>
-                    <span class="network-node node-4"></span>
-
-                    <!-- Secondary Nodes -->
-                    <span class="network-node node-5"></span>
-                    <span class="network-node node-6"></span>
-
-                    <!-- Central W -->
-                    <div class="loader-logo-core">
-                        <div class="loader-logo-ring"></div>
-                        <div class="loader-logo">
-                            W
-                        </div>
-                        <div class="loader-logo-glow"></div>
-                    </div>
-                </div>
-
-
-                <!-- Brand -->
-                <div class="loader-brand">
-                    <div class="loader-brand-name">
-                        WINJOB
-                    </div>
-                    <div class="loader-brand-tagline">
-                        CONNECT&nbsp; · &nbsp;CREATE&nbsp; · &nbsp;WIN
-                    </div>
-                </div>
-
-                <!-- Minimal Progress -->
-                <div class="loader-progress">
-                    <div class="loader-progress-track">
-                        <div
-                            class="loader-progress-bar"
-                            data-loader-progress>
-                        </div>
-                        <div class="loader-progress-glow"></div>
-                    </div>
-
-                    <div class="loader-progress-percent">
-                        <span data-loader-percent>000%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- WinJob — Temporal Gateway Loader -->
+        {% include 'partials/page_loading.html' %}
 
         <header class="navbar navbar-expand-lg navbar-dark header fixed-top" data-scroll-header>
             {% include 'partials/header.html' %}
         </header>
 
-        <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem" >
+        {# ============ سایدبار دسکتاپ ============ #}
+        {% include 'partials/sidebar.html' %}
+
+        <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem">
             {% if messages %}
                 <div id="django-messages-data" style="display: none;">
                     {% for message in messages %}
@@ -178,7 +101,6 @@
 
         <!-- Vendor scripts: js libraries and plugins-->
         <script src="{% static 'finder/vendor/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
-        <script src="{% static 'finder/vendor/smooth-scroll/dist/smooth-scroll.polyfills.min.js' %}"></script>
 
         <script>
             // ==================== توابع نمایش مودال نوتیفیکیشن ====================
@@ -197,13 +119,9 @@
                 const modalMessage = document.getElementById('notificationModalMessage');
                 const modalBtn = document.getElementById('notificationModalBtn');
 
-                // تنظیم عنوان
                 modalTitle.innerHTML = `<i class="fi-info-circle me-2"></i> ${title}`;
-
-                // تنظیم متن پیام
                 modalMessage.innerHTML = message;
 
-                // تنظیم آیکون و رنگ بر اساس نوع
                 modalIcon.className = 'notification-icon';
                 let iconClass = 'fi-info-circle';
                 let btnClass = 'btn-primary';
@@ -233,11 +151,9 @@
                 modalIcon.innerHTML = `<i class="${iconClass}"></i>`;
                 modalBtn.className = `btn ${btnClass} rounded-pill px-4`;
 
-                // نمایش مودال
                 const modal = new bootstrap.Modal(modalElement);
                 modal.show();
 
-                // مدیریت بسته شدن
                 modalElement.addEventListener('hidden.bs.modal', function() {
                     if (onClose && typeof onClose === 'function') {
                         onClose();
@@ -245,14 +161,11 @@
                 }, { once: true });
             }
 
-            // جایگزینی alert با مودال
             window.alert = function(message) {
                 showNotificationModal('توجه', message, 'info');
             };
 
-            // تابع confirm با استایل مودال (اختیاری)
             window.confirmModal = function(title, message, onConfirm, onCancel) {
-                // می‌توانید یک مودال اختصاصی برای confirm بسازید
                 if (confirm(message)) {
                     if (onConfirm) onConfirm();
                 } else {
@@ -272,14 +185,13 @@
                         this.container.style.zIndex = '1090';
                         document.body.appendChild(this.container);
                     }
-                    this.defaultDuration = 5000; // 5 ثانیه
+                    this.defaultDuration = 5000;
                 }
 
                 show(message, type = 'info', duration = this.defaultDuration) {
                     const toast = this.createToastElement(message, type);
                     this.container.appendChild(toast);
 
-                    // انیمیشن پیشرفت
                     const progressBar = toast.querySelector('.toast-progress-bar');
                     let startTime = null;
 
@@ -296,7 +208,6 @@
                     };
                     requestAnimationFrame(animateProgress);
 
-                    // دکمه بستن
                     const closeBtn = toast.querySelector('.toast-close');
                     closeBtn.addEventListener('click', () => this.hideToast(toast));
 
@@ -336,7 +247,6 @@
                 }
             }
 
-            // تابع کمکی برای جلوگیری از XSS
             function escapeHtml(str) {
                 if (!str) return '';
                 return str.replace(/[&<>]/g, function(m) {
@@ -349,10 +259,8 @@
                 });
             }
 
-            // راه‌اندازی مدیر toast
             const toastManager = new ToastManager();
 
-            // تبدیل پیام‌های جنگو به toast به محض لود صفحه
             document.addEventListener('DOMContentLoaded', function() {
                 const messagesContainer = document.getElementById('django-messages-data');
                 if (messagesContainer) {
@@ -361,7 +269,6 @@
                         let tag = msg.getAttribute('data-message-tag');
                         let text = msg.getAttribute('data-message-text');
                         if (text) {
-                            // تطابق tagهای جنگو با نوع toast
                             let type = 'info';
                             if (tag === 'success') type = 'success';
                             else if (tag === 'error' || tag === 'danger') type = 'error';
@@ -371,7 +278,6 @@
                             toastManager.show(text, type);
                         }
                     });
-                    // پاک کردن دیتا بعد از استفاده (اختیاری)
                     messagesContainer.remove();
                 }
             });

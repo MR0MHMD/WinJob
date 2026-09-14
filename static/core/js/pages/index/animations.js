@@ -1,41 +1,48 @@
-// ========== تایپ‌نویسی پلتفرم‌ها با رنگ و کرسر + عکس ساده ==========
+// ========== تایپ‌نویسی پلتفرم‌ها با رنگ و کرسر + انیمیشن خفن عکس ==========
 document.addEventListener('DOMContentLoaded', function() {
     const textElement = document.getElementById('changing-text');
     const imageElement = document.getElementById('platformHeroImage');
+    const imageWrapper = imageElement ? imageElement.closest('.platform-image-wrapper') : null;
 
     if (!textElement) return;
 
-    // لیست پلتفرم‌ها با مسیر عکس
+    // لیست پلتفرم‌ها با مسیر عکس + رنگ glow اختصاصی
     const platforms = [
         {
             name: "بله",
             class: "platform-bale",
             image: "/static/landing/bale/bale-hero.webp",
+            glow: "rgba(77, 241, 182, 0.55)"
         },
         {
             name: "ایتا",
             class: "platform-eitaa",
             image: "/static/landing/eitaa/eitaa-hero.webp",
+            glow: "rgba(255, 106, 0, 0.55)"
         },
         {
             name: "روبیکا",
             class: "platform-rubika",
-            image: "/static/landing/rubika/rub-hero.webp",
+            image: "/static/landing/rubika/rub_hero.webp",
+            glow: "rgba(122, 69, 135, 0.55)"
         },
         {
             name: "سروش پلاس",
             class: "platform-soroush",
             image: "/static/landing/sorush/sor-hero.webp",
+            glow: "rgba(57, 145, 172, 0.55)"
         },
         {
             name: "تلگرام",
             class: "platform-telegram",
             image: "/static/landing/telegram/tel-hero.webp",
+            glow: "rgba(2, 209, 255, 0.55)"
         },
         {
             name: "اینستاگرام",
             class: "platform-instagram",
             image: "/static/landing/instagram/insta-hero.webp",
+            glow: "rgba(238, 42, 123, 0.55)"
         }
     ];
 
@@ -54,24 +61,69 @@ document.addEventListener('DOMContentLoaded', function() {
         textElement.className = currentPlatform.class;
     }
 
-    // تابع برای تغییر عکس با افکت محو ساده
+    // ========== انیمیشن خفن تغییر عکس ==========
     function updateImage(index) {
-        if (isImageTransitioning) return;
+        if (isImageTransitioning || !imageElement) return;
         isImageTransitioning = true;
 
         const platform = platforms[index];
-        if (!platform || !imageElement) return;
-
-        // محو شدن
-        imageElement.classList.add('fade-transition');
-
-        setTimeout(() => {
-            // تغییر عکس
-            imageElement.src = platform.image;
-            // نمایش دوباره
-            imageElement.classList.remove('fade-transition');
+        if (!platform) {
             isImageTransitioning = false;
-        }, 350);
+            return;
+        }
+
+        // ست کردن رنگ glow مخصوص پلتفرم
+        if (imageWrapper) {
+            imageWrapper.style.setProperty('--hero-glow-color', platform.glow);
+            imageWrapper.classList.add('is-changing');
+        }
+
+        // مرحله ۱: خروج عکس فعلی
+        imageElement.classList.remove('hero-enter', 'hero-enter-ready');
+        imageElement.classList.add('hero-exit');
+
+        // بعد از تمام شدن انیمیشن خروج، عکس رو عوض کن و انیمیشن ورود رو بزن
+        const onExitEnd = () => {
+            imageElement.removeEventListener('animationend', onExitEnd);
+
+            // تغییر src
+            imageElement.src = platform.image;
+
+            // آماده‌سازی برای ورود
+            imageElement.classList.remove('hero-exit');
+            imageElement.classList.add('hero-enter-ready');
+
+            // فورس ریفلو برای اینکه مرورگر کلاس رو ببینه
+            void imageElement.offsetWidth;
+
+            // شروع انیمیشن ورود
+            imageElement.classList.remove('hero-enter-ready');
+            imageElement.classList.add('hero-enter');
+
+            const onEnterEnd = () => {
+                imageElement.removeEventListener('animationend', onEnterEnd);
+                imageElement.classList.remove('hero-enter');
+
+                if (imageWrapper) {
+                    imageWrapper.classList.remove('is-changing');
+                }
+                isImageTransitioning = false;
+            };
+
+            imageElement.addEventListener('animationend', onEnterEnd, { once: true });
+        };
+
+        imageElement.addEventListener('animationend', onExitEnd, { once: true });
+
+        // fallback اگر animationend به هر دلیلی fire نشد
+        setTimeout(() => {
+            if (isImageTransitioning) {
+                imageElement.classList.remove('hero-exit', 'hero-enter', 'hero-enter-ready');
+                imageElement.src = platform.image;
+                if (imageWrapper) imageWrapper.classList.remove('is-changing');
+                isImageTransitioning = false;
+            }
+        }, 1400);
     }
 
     // تابع اصلی تایپ‌نویسی
@@ -90,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentIndex = (currentIndex + 1) % platforms.length;
                 clearTimeout(timeoutId);
 
-                // قبل از تایپ کلمه جدید، عکس رو عوض کن
+                // قبل از تایپ کلمه جدید، عکس رو با انیمیشن خفن عوض کن
                 updateImage(currentIndex);
 
                 setTimeout(typeEffect, 300);
@@ -119,6 +171,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ست کردن عکس اولیه
     if (imageElement) {
         imageElement.src = platforms[0].image;
+        // رنگ glow اولیه
+        if (imageWrapper) {
+            imageWrapper.style.setProperty('--hero-glow-color', platforms[0].glow);
+        }
     }
 
     // شروع تایپ بعد از یک مکث کوتاه

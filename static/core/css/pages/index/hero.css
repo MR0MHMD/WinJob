@@ -37,7 +37,7 @@
     font-size: 4.5rem;
     font-weight: 800;
     line-height: 1.1;
-    background: linear-gradient(135deg, #fff 0%, var(--primary) 40%, var(--gold) 70%, #fff 100%);
+    background: linear-gradient(135deg, var(--primary), var(--gold));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -310,5 +310,197 @@
 @media (max-width: 576px) {
     .platform-hero-image {
         height: 250px;
+    }
+}
+/* ========== عکس پلتفرم - کشیده و پرکننده فضا ========== */
+.platform-image-wrapper {
+    width: 100%;
+    max-width: 620px;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+}
+
+/* لایه glow رنگی هنگام تغییر عکس */
+.platform-image-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 30px;
+    background: radial-gradient(circle at center, var(--hero-glow-color, rgba(253, 86, 49, 0.45)), transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 0.45s ease;
+    filter: blur(18px);
+}
+
+.platform-image-wrapper.is-changing::after {
+    opacity: 1;
+}
+
+.platform-hero-image {
+    width: 100%;
+    height: 420px;
+    object-fit: contain;
+    display: block;
+    border-radius: 28px;
+    will-change: transform, opacity, filter;
+    backface-visibility: hidden;
+    transform-origin: center center;
+    transition: none;
+}
+
+/* ========== انیمیشن خفن تغییر عکس ========== */
+
+/* حالت خروج (عکس فعلی) */
+.platform-hero-image.hero-exit {
+    animation: heroImageExit 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes heroImageExit {
+    0% {
+        opacity: 1;
+        transform: scale(1) rotateY(0deg) translateZ(0);
+        filter: blur(0) brightness(1);
+    }
+    40% {
+        opacity: 0.7;
+        filter: blur(4px) brightness(1.15);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.12) rotateY(-12deg) translateZ(-40px);
+        filter: blur(12px) brightness(1.3);
+    }
+}
+
+/* حالت ورود (عکس جدید) */
+.platform-hero-image.hero-enter {
+    animation: heroImageEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes heroImageEnter {
+    0% {
+        opacity: 0;
+        transform: scale(0.88) rotateY(14deg) translateZ(-60px);
+        filter: blur(14px) brightness(0.85);
+    }
+    50% {
+        opacity: 0.85;
+        filter: blur(4px) brightness(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotateY(0deg) translateZ(0);
+        filter: blur(0) brightness(1);
+    }
+}
+
+/* حالت آماده برای ورود (قبل از شروع انیمیشن) */
+.platform-hero-image.hero-enter-ready {
+    opacity: 0;
+    transform: scale(0.88) rotateY(14deg) translateZ(-60px);
+    filter: blur(14px);
+}
+
+/* ========== ریسپانسیو ========== */
+@media (max-width: 992px) {
+    .platform-hero-image {
+        height: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    .platform-hero-image {
+        height: 300px;
+    }
+
+    .platform-hero-image.hero-exit {
+        animation-duration: 0.4s;
+    }
+    .platform-hero-image.hero-enter {
+        animation-duration: 0.55s;
+    }
+}
+
+@media (max-width: 576px) {
+    .platform-hero-image {
+        height: 250px;
+    }
+}
+
+/* ========== ریسپانسیو هیرو برای موبایل ========== */
+@media (max-width: 992px) {
+    /* تبدیل چیدمان افقی به عمودی */
+    .hero-section .d-flex.justify-content-between {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 2.5rem;
+    }
+
+    /* متن وسط‌چین */
+    .hero-section .d-flex.justify-content-between > div:first-child {
+        text-align: center !important;
+        width: 100%;
+    }
+
+    /* دکمه‌ها وسط‌چین */
+    .hero-section .d-flex.gap-3 {
+        justify-content: center !important;
+    }
+
+    /* wrapper عکس وسط‌چین */
+    .hero-section .d-flex.justify-content-between > div:last-child {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .platform-image-wrapper {
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-section .d-flex.justify-content-between {
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    .platform-image-wrapper {
+        max-width: 100%;
+    }
+}
+
+/* ========== رفع فاصله بین "در" و نام پلتفرم در موبایل ========== */
+@media (max-width: 768px) {
+    /* حذف min-width که باعث ایجاد فاصله می‌شه */
+    #changing-text {
+        min-width: 0 !important;
+        text-align: right !important;
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* خود quote-wrapper هم تراز کن */
+    .quote-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        flex-wrap: nowrap;
     }
 }

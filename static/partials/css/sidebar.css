@@ -1,0 +1,425 @@
+/* ===================================================================
+ * WINJOB — SIDEBAR (Fixed Final Edition)
+ * سایدبار دسکتاپ با Hover Expand و انیمیشن نرم
+ * =================================================================== */
+
+/* ==================== متغیرها ==================== */
+:root {
+    --wj-sidebar-width-collapsed: 76px;
+    --wj-sidebar-width-expanded: 280px;
+    --wj-sidebar-bg: linear-gradient(180deg, #1f1b2d 0%, #171325 100%);
+    --wj-sidebar-border: rgba(255, 255, 255, 0.07);
+    --wj-sidebar-inner-border: rgba(255, 255, 255, 0.05);
+    --wj-sidebar-item-color: rgba(255, 255, 255, 0.6);
+    --wj-sidebar-item-hover-color: #ffffff;
+    --wj-sidebar-icon-grad: linear-gradient(135deg, #fd5631 0%, #5d3cf2 100%);
+    --wj-sidebar-header-height: 4.35rem;
+    --wj-sidebar-gap-y: 1rem;
+    --wj-sidebar-radius: 1.25rem;
+    --wj-sidebar-zindex: 1025;
+    --wj-sidebar-zindex-hover: 1035;
+
+    /* ⚡ انیمیشن اصلی — نرم و بدون تندی */
+    --wj-sidebar-transition: 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+    --wj-sidebar-fade: 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* ==================== مخفی در موبایل ==================== */
+@media (max-width: 991.98px) {
+    .wj-sidebar {
+        display: none !important;
+    }
+}
+
+/* ==================== فضای رزرو برای سایدبار بسته ==================== */
+/*
+ * فقط روی containerها اعمال می‌شود تا:
+ * 1. محتوای واقعی (متن، دکمه و ...) زیر سایدبار بسته نرود
+ * 2. پس‌زمینه‌های فول‌عرض (مثل گرادیانت هیرو) همچنان تا لبه صفحه بروند و زیر سایدبار بروند
+ */
+@media (min-width: 992px) {
+    :root {
+        --wj-sidebar-space: calc(var(--wj-sidebar-width-collapsed) + var(--wj-sidebar-gap-y) + 0.5rem);
+    }
+
+    .container,
+    .container-sm,
+    .container-md,
+    .container-lg,
+    .container-xl,
+    .container-xxl {
+        padding-right: max(
+            calc(var(--fi-gutter-x, 1.5rem) * 0.5),
+            var(--wj-sidebar-space)
+        ) !important;
+    }
+
+    /* برای container-fluid هم اگر استفاده شده باشد */
+    .container-fluid {
+        padding-right: max(
+            calc(var(--fi-gutter-x, 1.5rem) * 0.5),
+            var(--wj-sidebar-space)
+        ) !important;
+    }
+}
+
+/* ==================== کانتینر ==================== */
+.wj-sidebar {
+    position: fixed;
+    top: calc(var(--wj-sidebar-header-height) + var(--wj-sidebar-gap-y));
+    right: var(--wj-sidebar-gap-y);
+    bottom: var(--wj-sidebar-gap-y);
+    width: var(--wj-sidebar-width-collapsed);
+    background: var(--wj-sidebar-bg);
+    border: 1px solid var(--wj-sidebar-border);
+    border-radius: var(--wj-sidebar-radius);
+    z-index: var(--wj-sidebar-zindex);
+    transition:
+        width var(--wj-sidebar-transition),
+        box-shadow var(--wj-sidebar-transition),
+        z-index 0s;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    direction: rtl;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.wj-sidebar:hover {
+    width: var(--wj-sidebar-width-expanded);
+    z-index: var(--wj-sidebar-zindex-hover);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* هاله‌های گرادیانت */
+.wj-sidebar::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -40%;
+    width: 80%;
+    height: 60%;
+    background: radial-gradient(circle, rgba(253, 86, 49, 0.15) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.wj-sidebar::after {
+    content: '';
+    position: absolute;
+    bottom: -40%;
+    left: -40%;
+    width: 80%;
+    height: 60%;
+    background: radial-gradient(circle, rgba(93, 60, 242, 0.15) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ==================== برند ==================== */
+.wj-sidebar-brand {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    height: 3.5rem;
+    padding: 0 1.4rem;
+    border-bottom: 1px solid var(--wj-sidebar-inner-border);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.wj-sidebar-brand i {
+    font-size: 1.15rem;
+    background: var(--wj-sidebar-icon-grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    transition: transform var(--wj-sidebar-transition);
+}
+
+.wj-sidebar:hover .wj-sidebar-brand i {
+    transform: rotate(180deg);
+}
+
+.wj-sidebar-brand-text {
+    opacity: 0;
+    transform: translateX(10px);
+    transition:
+        opacity var(--wj-sidebar-fade) 0.1s,
+        transform var(--wj-sidebar-fade) 0.1s;
+}
+
+.wj-sidebar:hover .wj-sidebar-brand-text {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ==================== نویگیشن ==================== */
+.wj-sidebar-nav {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.5rem 0 1rem;
+}
+
+.wj-sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.wj-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.wj-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+.wj-sidebar:hover .wj-sidebar-nav::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(253, 86, 49, 0.4), rgba(93, 60, 242, 0.4));
+}
+
+/* ==================== گروه‌ها ==================== */
+/* 🎯 حالت بسته: فقط فاصله صفر و عنوان مخفی (height: 0) */
+/* 🎯 حالت باز: فاصله دار و عنوان visible */
+
+.wj-sidebar-group {
+    margin-top: 0;
+    transition: margin-top var(--wj-sidebar-transition);
+}
+
+.wj-sidebar:hover .wj-sidebar-group {
+    margin-top: 0.6rem;
+}
+
+.wj-sidebar-group:first-child {
+    margin-top: 0;
+}
+
+/* عنوان گروه */
+.wj-sidebar-group-title {
+    display: block;
+    height: 0;
+    padding: 0 1.5rem;
+    margin: 0;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.32);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(10px);
+    overflow: hidden;
+    transition:
+        height 0s linear var(--wj-sidebar-transition),
+        padding 0s linear var(--wj-sidebar-transition),
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+
+.wj-sidebar:hover .wj-sidebar-group-title {
+    height: 1.6rem;
+    padding: 0.6rem 1.5rem 0.4rem;
+    opacity: 1;
+    transform: translateX(0);
+    transition:
+        height 0s linear 0s,
+        padding 0s linear 0s,
+        opacity var(--wj-sidebar-fade) 0.15s,
+        transform var(--wj-sidebar-fade) 0.15s;
+}
+
+/* ==================== لیست آیتم‌ها ==================== */
+.wj-sidebar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.wj-sidebar-item {
+    margin: 0;
+    padding: 0 0.55rem;
+}
+
+/* ==================== لینک ==================== */
+.wj-sidebar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.62rem 0.75rem;
+    margin: 0.15rem 0;
+    border-radius: 0.85rem;
+    color: var(--wj-sidebar-item-color) !important;
+    text-decoration: none !important;
+    font-size: 0.87rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+        background 0.4s ease,
+        color 0.4s ease,
+        transform 0.55s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.4s ease;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* نوار نوری سمت راست */
+.wj-sidebar-link::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%) scaleY(0);
+    transform-origin: center;
+    width: 3px;
+    height: 65%;
+    background: var(--wj-sidebar-icon-grad);
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 14px rgba(253, 86, 49, 0.8);
+    transition:
+        transform 0.55s cubic-bezier(0.25, 1, 0.5, 1),
+        opacity 0.4s ease;
+    opacity: 0;
+    z-index: 2;
+}
+
+.wj-sidebar-link:hover {
+    color: var(--wj-sidebar-item-hover-color) !important;
+    transform: translateX(-3px);
+    background: linear-gradient(135deg,
+        rgba(253, 86, 49, 0.1) 0%,
+        rgba(93, 60, 242, 0.1) 100%);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.wj-sidebar-link:hover::before {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+}
+
+/* ==================== آیکون ==================== */
+.wj-sidebar-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    border-radius: 0.6rem;
+    position: relative;
+    transition:
+        color 0.4s ease,
+        transform 0.55s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.4s ease,
+        box-shadow 0.4s ease;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.wj-sidebar-link:hover .wj-sidebar-icon {
+    color: #fff;
+    background: var(--wj-sidebar-icon-grad);
+    transform: scale(1.08) rotate(-4deg);
+    box-shadow: 0 6px 16px rgba(253, 86, 49, 0.3);
+}
+
+.wj-sidebar-link.active .wj-sidebar-icon {
+    background: var(--wj-sidebar-icon-grad);
+    color: #fff !important;
+    box-shadow: 0 6px 16px rgba(253, 86, 49, 0.35);
+}
+
+/* ==================== متن ==================== */
+.wj-sidebar-text {
+    flex: 1;
+    opacity: 0;
+    transform: translateX(10px);
+    transition:
+        opacity var(--wj-sidebar-fade) 0.1s,
+        transform var(--wj-sidebar-fade) 0.1s;
+    pointer-events: none;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.wj-sidebar:hover .wj-sidebar-text {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    transition:
+        opacity var(--wj-sidebar-fade) 0.2s,
+        transform var(--wj-sidebar-fade) 0.2s;
+}
+
+/* ==================== آیتم فعال ==================== */
+.wj-sidebar-link.active {
+    background: linear-gradient(135deg,
+        rgba(253, 86, 49, 0.15) 0%,
+        rgba(93, 60, 242, 0.15) 100%);
+    color: #ffffff !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.wj-sidebar-link.active::before {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+}
+
+/* ==================== پنل پشتیبانی ==================== */
+.wj-sidebar-list-support {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 1px solid transparent;
+    transition:
+        margin-top var(--wj-sidebar-transition),
+        padding-top var(--wj-sidebar-transition),
+        border-color 0.3s ease;
+}
+
+.wj-sidebar:hover .wj-sidebar-list-support {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top-color: var(--wj-sidebar-inner-border);
+}
+
+/* ==================== جداکننده انتهایی ==================== */
+.wj-sidebar-nav::after {
+    content: '';
+    display: block;
+    height: 1px;
+}
+
+/* ==================== کاهش انیمیشن ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .wj-sidebar,
+    .wj-sidebar-link,
+    .wj-sidebar-text,
+    .wj-sidebar-group,
+    .wj-sidebar-group-title,
+    .wj-sidebar-brand-text,
+    .wj-sidebar-icon,
+    .wj-sidebar-list-support {
+        transition: none !important;
+    }
+}

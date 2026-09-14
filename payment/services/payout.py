@@ -1,4 +1,3 @@
-# payment/services/payout.py
 """
 سرویس واریز سهم کمیسیون به کیف پول کاربران
 
@@ -20,7 +19,6 @@ from accounts.models import CustomUser
 from payment.models import Transaction, Wallet, Invoice, CommissionSplit
 from payment.services.commission import (
     calculate_commission_breakdown,
-    CommissionBreakdown,
     CommissionCalculationError,
 )
 
@@ -132,6 +130,7 @@ def _create_commission_transaction(
 
 # ==================== Main Service ====================
 
+# noinspection PyTypeChecker
 @transaction.atomic
 def payout_commission(
     invoice: Invoice,

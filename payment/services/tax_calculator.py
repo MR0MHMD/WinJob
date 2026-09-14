@@ -2,10 +2,11 @@
 سرویس محاسبه مالیات بر ارزش افزوده برای کمپین‌ها
 """
 
-from typing import Dict, Optional
-from campaigns.models import Campaign
+from payment.constants import PLATFORM_COMMISSION, VAT_PERCENT
 from influencers.models import ChannelBooking
 from content_team.models import ContentOrder
+from campaigns.models import Campaign
+from typing import Dict, Optional
 from django.db import models
 
 
@@ -14,10 +15,9 @@ class CampaignTaxCalculator:
     کلاس محاسبه مالیات کمپین در حالت‌های مختلف
     """
 
-    VAT_PERCENT = 0.10  # 10 درصد
-    PLATFORM_COMMISSION = 0.15  # 15 درصد
-
     def __init__(self, campaign: Campaign):
+        self.PLATFORM_COMMISSION = PLATFORM_COMMISSION
+        self.VAT_PERCENT = VAT_PERCENT
         self.campaign = campaign
 
     def get_current_tax_data(self) -> Dict:
@@ -200,7 +200,6 @@ class CampaignTaxCalculator:
             vat_diff=vat_diff,
             total_deduct=total_deduct,
             is_team_replacement=is_team_replacement,
-            old_content_cost=current['content_cost']
         )
 
         return {
@@ -225,8 +224,9 @@ class CampaignTaxCalculator:
             'old_data': current,
         }
 
-    def _build_breakdown(self, base_cost: int, commission_diff: int, vat_diff: int, total_deduct: int,
-                         is_team_replacement: bool = False, old_content_cost: int = 0) -> list:
+    @staticmethod
+    def _build_breakdown(base_cost: int, commission_diff: int, vat_diff: int, total_deduct: int,
+                         is_team_replacement: bool = False) -> list:
         """
         ساخت جزییات نمایشی با برچسب‌های مناسب
         """
@@ -287,9 +287,9 @@ class CampaignTaxCalculator:
 
 # تابع کمکی برای راحتی کار
 def calculate_replacement_tax(
-    campaign: Campaign,
-    new_selected_cost: int = 0,
-    new_content_cost: Optional[int] = None
+        campaign: Campaign,
+        new_selected_cost: int = 0,
+        new_content_cost: Optional[int] = None
 ) -> Dict:
     """
     تابع کمکی برای محاسبه مالیات در حالت جایگزینی

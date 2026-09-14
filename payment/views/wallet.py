@@ -1,4 +1,4 @@
-from payment.services.wallet_invoice import create_wallet_invoice_for_payment, complete_wallet_payment
+from payment.services.create_invoice import create_wallet_invoice_for_payment, complete_wallet_payment
 from django_iranian_payment.contrib.django import services
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
