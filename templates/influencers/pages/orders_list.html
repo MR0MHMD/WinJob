@@ -106,8 +106,21 @@
                                             <i class="fi-heart me-1"></i> رایگان
                                         </span>
                                     {% else %}
-                                        <span class="text-primary fw-bold" style="font-size:18px">
-                                            {{ order.price }} تومان
+                                        <span class="text-primary fw-bold text-center" style="font-size:18px">
+                                            <div class="text-end d-flex align-items-center">
+                                                <div>
+                                                    <div class="value fw-bold text-success">
+                                                        {{ order.price|floatformat:0 }}
+                                                    </div>
+                                                    {% if order.discount_amount > 0 %}
+                                                        <div class="small text-danger text-decoration-line-through">
+                                                            {{ order.original_price|floatformat:0 }}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                                     style="width: 20px;">
+                                            </div>
                                         </span>
                                     {% endif %}
                                 </div>

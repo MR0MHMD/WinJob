@@ -55,6 +55,7 @@ def standalone_order_step1(request):
                 team=team,
                 plan=plan,
                 price=plan.price,
+                original_price=plan.price,
                 status=ContentOrder.Status.DRAFT,
                 is_standalone=True,
                 standalone_user=request.user,

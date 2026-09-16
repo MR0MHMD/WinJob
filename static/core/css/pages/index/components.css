@@ -243,7 +243,7 @@
     overflow-x: auto;
     gap: 2rem;
     padding: 1rem 0.5rem;
-    scrollbar-width: none;
+    /*scrollbar-width: none;*/
     -ms-overflow-style: none;
     cursor: grab;
     user-select: none;
@@ -418,7 +418,7 @@
 /* ========== ویژگی‌ها ========== */
 .features-section {
     position: relative;
-    padding: 5rem 0;
+    padding: 3rem 0;
     overflow: hidden;
 }
 
@@ -621,4 +621,686 @@
 .horizontal-feature-list i {
     font-size: 1.25rem;
     width: 1.5rem;
+}
+
+/* ========== بخش تولید محتوا (سرویس مستقل) ========== */
+.content-production-section {
+    position: relative;
+    /* پس‌زمینه ساده - مثل بقیه سکشن‌ها */
+}
+
+.content-subtitle {
+    max-width: 680px;
+    margin: 0 auto;
+    font-size: 1rem;
+    line-height: 1.9;
+}
+
+.content-subtitle strong {
+    font-weight: 700;
+}
+
+/* ========== گرید کارت‌ها ========== */
+.content-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.8rem;
+    margin-top: 2rem;
+}
+
+/* ========== کارت تولید محتوا ========== */
+.content-card {
+    position: relative;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(12px);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.content-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--gold), var(--primary));
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+    z-index: 3;
+}
+
+.content-card:hover::before {
+    transform: translateX(0);
+}
+
+.content-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(253, 86, 49, 0.3);
+    box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+/* کارت Featured - فقط با border متمایز */
+.content-card-featured {
+    border-color: rgba(93, 60, 242, 0.35);
+}
+
+.content-card-featured:hover {
+    border-color: rgba(93, 60, 242, 0.6);
+    box-shadow: 0 25px 40px -15px rgba(93, 60, 242, 0.25);
+}
+
+.content-card-featured::before {
+    background: linear-gradient(90deg, var(--accent), var(--primary), var(--gold), var(--accent));
+}
+
+.content-card-featured-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.35rem 0.9rem;
+    background: linear-gradient(135deg, var(--primary), var(--gold));
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 50px;
+    box-shadow: 0 5px 15px rgba(253, 86, 49, 0.4);
+    z-index: 3;
+}
+
+/* ========== عکس کارت ========== */
+.content-card-img-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+}
+
+.content-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: block;
+}
+
+.content-card:hover .content-card-img {
+    transform: scale(1.08);
+}
+
+.content-card-img-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(10, 10, 26, 0) 0%,
+        rgba(10, 10, 26, 0.3) 50%,
+        rgba(10, 10, 26, 0.9) 100%);
+    pointer-events: none;
+}
+
+/* ========== آیکون روی عکس ========== */
+.content-card-icon {
+    position: absolute;
+    bottom: 15px;
+    right: 1.5rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color: #fff;
+    z-index: 2;
+    transition: transform 0.4s ease;
+    border: 3px solid var(--dark);
+}
+
+.content-card-icon.icon-primary {
+    background: linear-gradient(135deg, var(--primary), #ff8c42);
+    box-shadow: 0 10px 25px rgba(253, 86, 49, 0.4);
+}
+
+.content-card-icon.icon-accent {
+    background: linear-gradient(135deg, var(--accent), #7c5cf5);
+    box-shadow: 0 10px 25px rgba(93, 60, 242, 0.4);
+}
+
+.content-card-icon.icon-gold {
+    background: linear-gradient(135deg, var(--gold), #ff9b3d);
+    box-shadow: 0 10px 25px rgba(253, 188, 49, 0.4);
+}
+
+.content-card:hover .content-card-icon {
+    transform: scale(1.1) rotate(-8deg);
+}
+
+/* ========== محتوای کارت ========== */
+.content-card-content {
+    padding: 2.5rem 1.5rem 1.8rem;
+}
+
+.content-card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.85rem;
+    line-height: 1.5;
+}
+
+.content-card-desc {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    line-height: 1.8;
+    margin-bottom: 1.25rem;
+    min-height: 76px;
+}
+
+.content-card-desc strong {
+    font-weight: 700;
+}
+
+/* ========== تگ‌ها ========== */
+.content-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.content-tag {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    background: rgba(253, 86, 49, 0.12);
+    border: 1px solid rgba(253, 86, 49, 0.25);
+    border-radius: 50px;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.content-card:hover .content-tag {
+    background: rgba(253, 86, 49, 0.2);
+    border-color: rgba(253, 86, 49, 0.5);
+}
+
+.content-card-featured .content-tag {
+    background: rgba(93, 60, 242, 0.15);
+    border-color: rgba(93, 60, 242, 0.3);
+}
+
+.content-card-featured:hover .content-tag {
+    background: rgba(93, 60, 242, 0.25);
+    border-color: rgba(93, 60, 242, 0.55);
+}
+
+/* ============================================================
+   بخش هوش مصنوعی
+   ============================================================ */
+.ai-section {
+    position: relative;
+    padding: 2rem 0;
+    overflow: hidden;
+}
+
+/* ========== Badge & Title ========== */
+.ai-badge-animate {
+    animation: ai-badge-pulse 3s ease-in-out infinite;
+}
+
+@keyframes ai-badge-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(253, 86, 49, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 12px rgba(253, 86, 49, 0);
+    }
+}
+
+.ai-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.ai-gradient-text {
+    background: linear-gradient(135deg, var(--primary), var(--accent), var(--gold));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: ai-gradient-shift 4s linear infinite;
+}
+
+@keyframes ai-gradient-shift {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+.ai-subtitle {
+    max-width: 680px;
+    margin: 0 auto;
+    font-size: 1.05rem;
+    line-height: 1.9;
+}
+
+/* ========== Split Layout ========== */
+.ai-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    margin-top: 3rem;
+    margin-bottom: 4rem;
+}
+
+/* ========== Visual (Radar) ========== */
+.ai-visual-wrap {
+    position: relative;
+    height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-radar {
+    position: relative;
+    width: 380px;
+    height: 380px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(253, 86, 49, 0.08), transparent 70%);
+}
+
+/* ========== حلقه‌ها ========== */
+.ai-radar-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 1px solid rgba(253, 86, 49, 0.15);
+    transform: translate(-50%, -50%);
+    animation: ai-ring-pulse 4s ease-in-out infinite;
+}
+
+.ai-ring-1 {
+    width: 100%;
+    height: 100%;
+    animation-delay: 0s;
+}
+
+.ai-ring-2 {
+    width: 70%;
+    height: 70%;
+    animation-delay: 0.5s;
+}
+
+.ai-ring-3 {
+    width: 40%;
+    height: 40%;
+    animation-delay: 1s;
+}
+
+@keyframes ai-ring-pulse {
+    0%, 100% {
+        border-color: rgba(253, 86, 49, 0.15);
+        box-shadow: 0 0 0 0 rgba(253, 86, 49, 0);
+    }
+    50% {
+        border-color: rgba(253, 86, 49, 0.5);
+        box-shadow: 0 0 30px rgba(253, 86, 49, 0.2);
+    }
+}
+
+/* ========== Sweep چرخشی ========== */
+.ai-radar-sweep {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        transparent 300deg,
+        rgba(253, 86, 49, 0.4) 350deg,
+        rgba(253, 86, 49, 0.6) 360deg
+    );
+    animation: ai-sweep-rotate 4s linear infinite;
+    mask: radial-gradient(circle, transparent 25%, #000 25%);
+    -webkit-mask: radial-gradient(circle, transparent 25%, #000 25%);
+}
+
+@keyframes ai-sweep-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ========== مرکز رادار ========== */
+.ai-radar-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.2rem;
+    box-shadow:
+        0 0 0 8px rgba(253, 86, 49, 0.1),
+        0 0 40px rgba(253, 86, 49, 0.5),
+        inset 0 0 20px rgba(255, 255, 255, 0.2);
+    z-index: 2;
+    animation: ai-center-glow 3s ease-in-out infinite;
+}
+
+@keyframes ai-center-glow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 8px rgba(253, 86, 49, 0.1),
+            0 0 40px rgba(253, 86, 49, 0.5),
+            inset 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 0 16px rgba(253, 86, 49, 0.05),
+            0 0 60px rgba(253, 86, 49, 0.7),
+            inset 0 0 30px rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* ========== نقاط رصد ========== */
+.ai-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 12px var(--primary);
+    opacity: 0;
+    z-index: 1;
+}
+
+.ai-dot-1 { top: 15%; left: 30%; animation: ai-dot-blink 3s 0s infinite; }
+.ai-dot-2 { top: 70%; left: 15%; animation: ai-dot-blink 3s 0.5s infinite; }
+.ai-dot-3 { top: 30%; right: 20%; animation: ai-dot-blink 3s 1s infinite; }
+.ai-dot-4 { bottom: 20%; right: 30%; animation: ai-dot-blink 3s 1.5s infinite; }
+.ai-dot-5 { top: 50%; left: 10%; animation: ai-dot-blink 3s 2s infinite; }
+.ai-dot-6 { bottom: 35%; right: 10%; animation: ai-dot-blink 3s 2.5s infinite; }
+
+@keyframes ai-dot-blink {
+    0%, 90%, 100% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1.4); }
+}
+
+/* ========== کارت‌های شناور ========== */
+.ai-float-card {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.2rem;
+    background: rgba(20, 20, 35, 0.85);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5);
+    z-index: 5;
+}
+
+.ai-float-card-top {
+    top: 12%;
+    right: 0;
+    animation: ai-float-y 5s ease-in-out infinite;
+}
+
+.ai-float-card-bottom {
+    bottom: 12%;
+    left: 0;
+    animation: ai-float-y 5s ease-in-out infinite;
+    animation-delay: 2.5s;
+}
+
+@keyframes ai-float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+.ai-float-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.ai-icon-success {
+    background: linear-gradient(135deg, #07c98b, #05a06e);
+    box-shadow: 0 8px 20px -5px rgba(7, 201, 139, 0.5);
+}
+
+.ai-icon-accent {
+    background: linear-gradient(135deg, var(--accent), #7c5cf5);
+    box-shadow: 0 8px 20px -5px rgba(93, 60, 242, 0.5);
+}
+
+.ai-float-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.ai-float-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 2px;
+}
+
+/* ========== کارت‌های ویژگی (راست) ========== */
+.ai-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.ai-feature-card {
+    position: relative;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+}
+
+.ai-feature-card::before {
+    content: '';
+    width: 3px;
+    background: linear-gradient(180deg, var(--primary), var(--accent), var(--gold));
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.5s ease;
+}
+
+.ai-feature-card:hover::before {
+    transform: scaleY(1);
+}
+
+.ai-feature-card:hover {
+    transform: translateX(-8px);
+    border-color: rgba(253, 86, 49, 0.3);
+    box-shadow: 0 20px 40px -15px rgba(253, 86, 49, 0.25);
+}
+
+.ai-feature-num {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 1rem;
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.04);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* 🔧 آیکون حالا سمت راست کارت (چون RTL هستیم) */
+.ai-feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.4rem;
+    transition: transform 0.4s ease;
+    flex-shrink: 0;
+}
+
+.ai-feature-card:hover .ai-feature-icon {
+    transform: scale(1.1) rotate(-8deg);
+}
+
+.ai-icon-primary {
+    background: linear-gradient(135deg, var(--primary), #ff8c42);
+    box-shadow: 0 10px 25px -5px rgba(253, 86, 49, 0.5);
+}
+
+.ai-icon-gold {
+    background: linear-gradient(135deg, var(--gold), #ff9b3d);
+    box-shadow: 0 10px 25px -5px rgba(253, 188, 49, 0.5);
+}
+
+.ai-feature-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.ai-feature-desc {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.75;
+    margin-bottom: 0.85rem;
+}
+
+.ai-feature-tag {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ai-feature-tag span {
+    padding: 0.25rem 0.7rem;
+    background: rgba(253, 86, 49, 0.1);
+    border: 1px solid rgba(253, 86, 49, 0.2);
+    border-radius: 50px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* ========== نوار آمار ========== */
+.ai-stats-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.5rem 3rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.75rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-stats-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), var(--accent), var(--gold), transparent);
+    background-size: 200% 100%;
+    animation: shine 4s linear infinite;
+}
+
+.ai-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.ai-stat-value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    font-family: vazir-bold, sans-serif;
+}
+
+.ai-stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.ai-stat-divider {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    flex-shrink: 0;
+}
+
+/* ========== Marquee ========== */
+.ai-marquee {
+    overflow: hidden;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.ai-marquee-track {
+    display: flex;
+    gap: 3rem;
+    width: max-content;
+    animation: ai-marquee-scroll 30s linear infinite;
+    align-items: center;
+}
+
+.ai-marquee-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ai-marquee-item i {
+    color: var(--primary);
+    font-size: 1.05rem;
+}
+
+@keyframes ai-marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
 }

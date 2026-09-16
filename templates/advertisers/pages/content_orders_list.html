@@ -776,8 +776,20 @@
                                     {% endif %}
                                 </div>
                                 <div class="co-price-value">
-                                    {{ order.price|floatformat:0 }}
-                                    <small>تومان</small>
+                                    <div class="text-end d-flex align-items-center">
+                                        <div>
+                                            <div class="value fw-bold {% if order.discount_amount > 0 %}text-success{% else %}text-light{% endif %}">
+                                                {{ order.price|floatformat:0 }}
+                                            </div>
+                                            {% if order.discount_amount > 0 %}
+                                                <div class="small text-danger text-decoration-line-through">
+                                                    {{ order.original_price|floatformat:0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <img {% if order.discount_amount > 0 %} src="{% static 'core/svg/toman/toman-success.svg' %}" {% else %} src="{% static 'core/svg/toman/toman-light.svg' %}" {% endif %} alt="" class="ms-1"
+                                             style="width: 20px;">
+                                    </div>
                                 </div>
                             </div>
 
@@ -786,7 +798,7 @@
                                     <div class="co-price-label">کمیسیون تیم</div>
                                     <div class="co-price-sub" style="color: var(--co-warning); font-weight:700; font-size:.78rem;">
                                         {{ order.content_commission|floatformat:0 }}
-                                        <span style="font-weight:400;">تومان</span>
+                                        <img src="{% static 'core/svg/toman/toman-warning.svg' %}" alt="">
                                     </div>
                                 </div>
                             {% endif %}

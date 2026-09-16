@@ -611,11 +611,23 @@
                                     {% endwith %}
 
                                     {# قیمت #}
-                                    <div class="d-flex justify-content-between mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-muted small">هزینه محتوا</span>
                                         <span class="text-success fw-bold">
-                                            {{ order.price|floatformat:0 }}
-                                            <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                            <div class="text-end d-flex align-items-center">
+                                                <div>
+                                                    <div class="value fw-bold text-success">
+                                                        {{ order.price|floatformat:0|intcomma }}
+                                                    </div>
+                                                    {% if order.discount_amount > 0 %}
+                                                        <div class="small text-danger text-decoration-line-through">
+                                                            {{ order.original_price|floatformat:0|intcomma }}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                                     style="width: 20px;">
+                                            </div>
                                         </span>
                                     </div>
 
@@ -773,8 +785,20 @@
                                     <td>{{ ch.channel.platform.name }}</td>
                                     <td>{{ ch.channel.followers_formatted }}</td>
                                     <td class="text-success fw-semibold">
-                                        {{ ch.price }}
-                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                        <div class="text-end d-flex align-items-center">
+                                            <div>
+                                                <div class="value fw-bold text-success">
+                                                    {{ ch.price|floatformat:0|intcomma }}
+                                                </div>
+                                                {% if ch.discount_amount > 0 %}
+                                                    <div class="small text-danger text-decoration-line-through">
+                                                        {{ ch.original_price|floatformat:0|intcomma }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                                 style="width: 20px;">
+                                        </div>
                                     </td>
                                     <td>
                                         <span class="badge

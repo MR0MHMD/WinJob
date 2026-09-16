@@ -1,4 +1,4 @@
-from payment.services.create_invoice import create_wallet_invoice_for_payment, complete_wallet_payment
+from payment.services.create_invoice import complete_wallet_payment
 from django_iranian_payment.contrib.django import services
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
@@ -134,17 +134,9 @@ def wallet_deposit(request):
                 mobile=request.user.phone_number,
             )
 
-            # ========== ساخت فاکتور و پرداخت ==========
-            invoice, payment = create_wallet_invoice_for_payment(
-                user=request.user,
-                amount=amount,
-                authority=payment_result.authority,
-                description=f"شارژ کیف پول کاربر {request.user.phone_number} - مبلغ {amount:,} تومان"
-            )
-
-            # ذخیره در سشن
+            # ✅ فقط authority و مبلغ رو توی session نگه دار
+            # (فاکتور بعد از callback موفق ساخته میشه)
             request.session['payment_authority'] = payment_result.authority
-            request.session['payment_invoice_id'] = invoice.id
             request.session['payment_amount'] = amount
 
             return redirect(redirect_url)
@@ -160,6 +152,7 @@ def wallet_deposit(request):
 def payment_callback(request):
     """
     کالبک بازگشت از درگاه زرین‌پال
+    - فاکتور فقط بعد از پرداخت موفق ساخته میشه
     """
     authority = request.GET.get('Authority')
     status = request.GET.get('Status')
@@ -168,17 +161,16 @@ def payment_callback(request):
         messages.error(request, "اطلاعات پرداخت یافت نشد.")
         return redirect('payment:wallet_deposit')
 
-    invoice_id = request.session.get('payment_invoice_id')
+    # ✅ از session میخونیم (نه از دیتابیس)
+    session_authority = request.session.get('payment_authority')
     amount = request.session.get('payment_amount', 0)
 
-    if not invoice_id:
-        messages.error(request, "اطلاعات فاکتور یافت نشد.")
+    if not session_authority or session_authority != authority:
+        messages.error(request, "اطلاعات پرداخت معتبر نیست.")
         return redirect('payment:wallet_deposit')
 
-    try:
-        invoice = Invoice.objects.get(id=invoice_id, user=request.user, is_paid=False)
-    except Invoice.DoesNotExist:
-        messages.error(request, "فاکتور معتبر نیست.")
+    if not amount:
+        messages.error(request, "مبلغ پرداخت یافت نشد.")
         return redirect('payment:wallet_deposit')
 
     if status == 'OK':
@@ -190,11 +182,16 @@ def payment_callback(request):
 
             if result.status.lower() == 'complete':
 
-                # ========== تکمیل پرداخت ==========
-                complete_wallet_payment(invoice, result.reference_id)
+                # ✅ فاکتور فقط اینجا ساخته میشه (بعد از پرداخت موفق)
+                invoice = complete_wallet_payment(
+                    user=request.user,
+                    amount=amount,
+                    ref_id=result.reference_id,
+                    authority=authority,
+                )
 
                 # پاک کردن سشن
-                for key in ['payment_authority', 'payment_invoice_id', 'payment_amount']:
+                for key in ['payment_authority', 'payment_amount']:
                     if key in request.session:
                         del request.session[key]
 

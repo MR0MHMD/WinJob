@@ -198,6 +198,66 @@ body {
     backdrop-filter: blur(10px);
 }
 
+/* ========== بج سکشن — خط جداکننده با عنوان وسط ========== */
+.component-badge {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    backdrop-filter: none;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    direction: rtl;
+    text-align: center;
+}
+
+/* خط سمت راست (قبل از متن در RTL) */
+.component-badge::before {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(253, 86, 49, 0.15) 30%,
+        rgba(253, 86, 49, 0.5) 100%
+    );
+    margin-left: 1.5rem;
+    order: 1;  /* ← الان میاد راست */
+}
+
+/* خط سمت چپ (بعد از متن در RTL) */
+.component-badge::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+        270deg,
+        transparent 0%,
+        rgba(253, 86, 49, 0.15) 30%,
+        rgba(253, 86, 49, 0.5) 100%
+    );
+    margin-right: 1.5rem;
+    order: 3;  /* ← الان میاد چپ */
+}
+
+/* خود متن بج — وسط */
+.component-badge > * {
+    order: 2;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* ========== استار ریتینگ ========== */
 .rating-star {
     color: var(--gold);

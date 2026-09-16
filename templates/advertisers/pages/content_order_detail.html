@@ -1500,10 +1500,20 @@
 
                             <div class="sd-stat">
                                 <div class="sd-stat-label">قیمت پلن</div>
-                                <div class="sd-stat-value primary">
-                                    {{ order.price|floatformat:0 }} تومان
+                                <div class="text-end d-flex align-items-center">
+                                    <div>
+                                        <div class="value fw-bold {% if order.discount_amount > 0 %}text-success{% else %}text-primary{% endif %}">
+                                            {{ order.price|floatformat:0 }}
+                                        </div>
+                                        {% if order.discount_amount > 0 %}
+                                            <div class="small text-danger text-decoration-line-through">
+                                                {{ order.original_price|floatformat:0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <img {% if order.discount_amount > 0 %} src="{% static 'core/svg/toman/toman-success.svg' %}" {% else %} src="{% static 'core/svg/toman/toman-primary.svg' %}" {% endif %} alt="" class="ms-1"
+                                         style="width: 20px;">
                                 </div>
-                                <div class="sd-stat-sub">{{ order.plan.name }}</div>
                             </div>
 
                             <div class="sd-stat">
@@ -1881,7 +1891,7 @@
                                 {% if is_standalone %}
                                     خلاصه مالی سفارش
                                 {% else %}
-                                    هزینه‌های تیم محتوا
+                                    هزینه های تیم محتوا
                                 {% endif %}
                             </h2>
                         </div>

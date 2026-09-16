@@ -26,18 +26,34 @@
                     <span class="wj-sidebar-text">خانه</span>
                 </a>
             </li>
-    
-        {# ============ پنل پشتیبانی (بدون active) ============ #}
-        {% if request.user.is_authenticated and request.user.has_support_access %}
-            
+        
+            {% if not request.user.is_authenticated %}
                 <li class="wj-sidebar-item">
-                    <a href="{% url 'support:dashboard' %}" class="wj-sidebar-link">
-                        <span class="wj-sidebar-icon"><i class="bi bi-shield-lock-fill"></i></span>
-                        <span class="wj-sidebar-text">پنل پشتیبانی</span>
+                    <a href="{% url 'accounts:login' %}"
+                       class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'login' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-box-arrow-in-right"></i></span>
+                        <span class="wj-sidebar-text">ورود</span>
                     </a>
                 </li>
-            
-        {% endif %}
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'accounts:register' %}"
+                       class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'register' %}active{% endif %}">
+                        <span class="wj-sidebar-icon"><i class="bi bi-person-plus"></i></span>
+                        <span class="wj-sidebar-text">ثبت نام</span>
+                    </a>
+                </li>
+            {% endif %}
+    
+            {# ============ پنل پشتیبانی (بدون active) ============ #}
+            {% if request.user.is_authenticated and request.user.has_support_access %}
+                
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'support:dashboard' %}" class="wj-sidebar-link">
+                            <span class="wj-sidebar-icon"><i class="bi bi-shield-lock-fill"></i></span>
+                            <span class="wj-sidebar-text">پنل پشتیبانی</span>
+                        </a>
+                    </li>
+            {% endif %}
         </ul>
 
         {# ============ پنل من (فقط لاگین‌شده) ============ #}

@@ -125,11 +125,6 @@ class Campaign(models.Model):
         verbose_name=_("عام‌المنفعه")
     )
 
-    discount_amount = models.PositiveBigIntegerField(
-        default=0,
-        verbose_name="مقدار تخفیف"
-    )
-
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name="تاریخ ایجاد"

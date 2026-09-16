@@ -586,7 +586,7 @@ class ChannelBookingAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
     def channel_link(self, obj):
         """لینک به کانال اینفلوئنسر"""
-        url = reverse("admin:influencers_Channel_change", args=[obj.channel.id])
+        url = reverse("admin:influencers_channel_change", args=[obj.channel.id])
         return format_html('<a href="{}" target="_blank">{}</a>', url, obj.channel.channel_name)
 
     channel_link.short_description = "کانال"

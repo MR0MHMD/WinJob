@@ -230,3 +230,69 @@ if (particlesContainer) for (let i = 0; i < 50; i++) {
     p.style.animationDuration = Math.random() * 10 + 10 + 's';
     particlesContainer.appendChild(p);
 }
+
+// ========== Scroll Reveal کارت‌های تولید محتوا ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const contentCards = document.querySelectorAll('.content-card.scroll-reveal');
+    const revealContentCards = () => {
+        contentCards.forEach((card, i) => {
+            if (card.getBoundingClientRect().top < window.innerHeight - 100) {
+                setTimeout(() => card.classList.add('revealed'), i * 120);
+            }
+        });
+    };
+    window.addEventListener('scroll', revealContentCards);
+    window.addEventListener('load', revealContentCards);
+});
+
+// ========== انیمیشن بخش هوش مصنوعی ==========
+(function() {
+    'use strict';
+
+    // ────── Counter روی اعداد ──────
+    const aiCounters = document.querySelectorAll('[data-ai-count]');
+    if (aiCounters.length) {
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target = parseInt(el.dataset.aiCount);
+                const suffix = el.dataset.aiSuffix || '';
+                const prefix = el.dataset.aiPrefix || '';
+                if (!target || target <= 0) return;
+
+                let current = 0;
+                const step = Math.max(1, Math.ceil(target / 60));
+                const interval = setInterval(() => {
+                    current += step;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(interval);
+                    }
+                    el.textContent = prefix + current.toLocaleString('fa-IR') + suffix;
+                }, 25);
+                counterObserver.unobserve(el);
+            });
+        }, { threshold: 0.4 });
+        aiCounters.forEach(el => counterObserver.observe(el));
+    }
+
+    // ────── Reveal کارت‌ها با تأخیر ──────
+    const aiCards = document.querySelectorAll('.ai-feature-card[data-ai-delay]');
+    if (aiCards.length) {
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const delay = parseInt(el.dataset.aiDelay || 0);
+                setTimeout(() => el.classList.add('revealed'), delay);
+                cardObserver.unobserve(el);
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+        aiCards.forEach(el => cardObserver.observe(el));
+    }
+
+    // ────── اگه scroll-reveal از قبل داره کار می‌کنه، این رو skip کن ──────
+    // (این کد برای اطمینان از اجرای reveal توی این سکشنه)
+
+})();

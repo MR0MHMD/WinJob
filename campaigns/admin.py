@@ -100,7 +100,6 @@ class CampaignAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "content_cost_display",
                 "commission_display",
                 "invoice_total",
-                "discount_amount",
                 "payable_amount_readonly",
             ),
             "classes": ("collapse",)

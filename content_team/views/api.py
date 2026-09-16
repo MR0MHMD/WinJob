@@ -1,5 +1,5 @@
 from campaigns.services.raiting_service import submit_team_review_service
-from payment.services.create_invoice import create_standalone_invoice
+from payment.services.create_invoice import create_standalone_invoice, sync_discounts_to_standalone_order
 from content_team.models import ContentTeam, ContentOrder, TeamReview
 from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
@@ -113,6 +113,7 @@ def edit_team_review_ajax(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
+# noinspection PyUnusedLocal
 @require_POST
 @login_required
 def standalone_apply_discount(request):
@@ -174,7 +175,10 @@ def standalone_apply_discount(request):
 
         order.save(update_fields=[scope_field_map[scope]])
 
-        # ساخت فاکتور جدید
+        sync_discounts_to_standalone_order(order)
+
+        invoice = create_standalone_invoice(order)
+
         invoice = create_standalone_invoice(order)
 
         return JsonResponse({

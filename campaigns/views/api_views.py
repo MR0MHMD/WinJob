@@ -1,5 +1,5 @@
 from influencers.models import ChannelServiceRate, ChannelBooking
-from payment.services.create_invoice import create_campaign_invoice
+from payment.services.create_invoice import create_campaign_invoice, sync_discounts_to_bookings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -114,7 +114,6 @@ def apply_discount_code(request):
             'platform': 'platform_coupon_id'
         }
 
-        # ==== چک کردن کوپن‌های موجود در کل کمپین ====
         existing_coupon_in_scope = getattr(campaign, scope_field_map[scope])
         if existing_coupon_in_scope:
             return JsonResponse({
@@ -122,7 +121,6 @@ def apply_discount_code(request):
                 "message": f"شما قبلاً از یک کد تخفیف برای این بخش استفاده کرده‌اید."
             }, status=400)
 
-        # چک کردن اینکه این کوپن در هیچ اسکوپی قبلاً استفاده نشده باشد
         all_existing_coupons = [
             campaign.influencer_coupon_id,
             campaign.content_team_coupon_id,
@@ -134,7 +132,6 @@ def apply_discount_code(request):
         except Coupon.DoesNotExist:
             return JsonResponse({"success": False, "message": "کد تخفیف معتبر نیست."}, status=404)
 
-        # اگر کوپن قبلاً در یکی از سه فیلد دیگر استفاده شده، خطا بده
         if coupon.id in all_existing_coupons:
             return JsonResponse({
                 "success": False,
@@ -158,7 +155,7 @@ def apply_discount_code(request):
                 "message": "شما قبلاً در یک کمپین دیگر از این کد تخفیف استفاده کرده‌اید."
             }, status=400)
 
-        # اعمال کوپن
+        # ========== اعمال کوپن ==========
         if scope == 'influencer':
             campaign.influencer_coupon = coupon
         elif scope == 'content_team':
@@ -168,6 +165,10 @@ def apply_discount_code(request):
 
         campaign.save(update_fields=[scope_field_map[scope]])
 
+        # ✅ ۱. اول تخفیف‌ها رو روی رزروها/سفارشات sync کن
+        sync_discounts_to_bookings(campaign)
+
+        # ✅ ۲. بعد فاکتور بساز (از original_price و discount_amount استفاده میکنه)
         invoice = create_campaign_invoice(campaign)
 
         return JsonResponse({
@@ -178,7 +179,6 @@ def apply_discount_code(request):
             "discount_type": coupon.discount_type,
             "discount_value": float(coupon.value),
 
-            # ==== اطلاعات جدید ====
             "base_influencer_cost": invoice.base_influencer_cost,
             "base_content_cost": invoice.base_content_cost,
             "base_commission": invoice.base_commission,
@@ -202,7 +202,11 @@ def apply_discount_code(request):
 
     except Exception as e:
         traceback.print_exc()
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+        return JsonResponse({
+            "success": False,
+            "message": f"خطا در اعمال کد تخفیف: {str(e)}",
+            "error": str(e)
+        }, status=500)
 
 
 @login_required

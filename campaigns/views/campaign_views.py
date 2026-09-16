@@ -342,6 +342,7 @@ def campaign_create_step2(request):
                             channel=rate.channel,
                             service_rate=rate,
                             price=rate.price,
+                            original_price=rate.price,
                             status=ChannelBooking.Status.PENDING
                         )
 
@@ -450,7 +451,8 @@ def campaign_create_step2(request):
                             campaign=campaign,
                             channel=rate.channel,
                             service_rate=rate,
-                            price=rate.price
+                            price=rate.price,
+                            original_price=rate.price,
                         )
                     return redirect('campaigns:campaign_create_step3')
 
@@ -803,6 +805,7 @@ def campaign_create_step3_team(request):
                     team=selected_plan.team,
                     plan=selected_plan,
                     price=new_price,
+                    original_price=new_price,
                     selected_quantity=selected_plan.base_quantity,
                     status=ContentOrder.Status.PENDING
                 )
@@ -909,6 +912,7 @@ def campaign_create_step3_team(request):
                         "team": selected_plan.team,
                         "plan": selected_plan,
                         "price": final_price,
+                        "original_price": final_price,
                         "selected_quantity": selected_plan.base_quantity,
                         "status": ContentOrder.Status.PENDING,
                     }
@@ -917,6 +921,7 @@ def campaign_create_step3_team(request):
                     order.team = selected_plan.team
                     order.plan = selected_plan
                     order.price = final_price
+                    order.original_price = final_price
                     order.selected_quantity = selected_plan.base_quantity
                     order.save()
 
@@ -1047,6 +1052,11 @@ def campaign_create_step3_ready(request):
             if is_switch_mode:
                 # ========== ذخیره محتوا ==========
                 form.save()
+
+                # ✅ حذف کوپن تیم محتوا (چون سفارش محتوا حذف شده)
+                if campaign.content_team_coupon:
+                    campaign.content_team_coupon = None
+                    campaign.save(update_fields=['content_team_coupon'])
 
                 # ========== دریافت اطلاعات قبلی فاکتور ==========
                 old_content_cost = 0

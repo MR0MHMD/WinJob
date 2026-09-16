@@ -583,6 +583,19 @@ class ContentOrder(models.Model):
         help_text='قیمت نهایی از روی پلن کپی می‌شود'
     )
 
+    original_price = models.PositiveBigIntegerField(
+        verbose_name="قیمت اولیه (قبل از تخفیف)",
+        null=True,
+        blank=True,
+        help_text="قیمت اصلی قبل از اعمال کد تخفیف"
+    )
+
+    discount_amount = models.PositiveBigIntegerField(
+        verbose_name="مقدار تخفیف",
+        default=0,
+        help_text="مقداری که از قیمت اولیه کم شده"
+    )
+
     name = models.CharField(
         _('نام سفارش'),
         max_length=255,
@@ -690,15 +703,16 @@ class ContentOrder(models.Model):
         return f'سفارش #{self.id} - {self.team.name}'
 
     def save(self, *args, **kwargs):
-        """قیمت رو مستقیم از پلن میگیره"""
         if self.plan and not self.price:
             self.price = self.plan.price
 
-        # اگر is_standalone فعال باشه، مطمئن بشیم campaign خالی باشه
+        # ✅ همیشه original_price رو ست کن
+        if not self.original_price:
+            self.original_price = self.price
+
         if self.is_standalone:
             self.campaign = None
 
-        # ========== پر کردن خودکار name ==========
         if self.campaign and not self.name:
             self.name = self.campaign.name
         elif self.is_standalone and not self.name:

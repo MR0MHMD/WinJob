@@ -429,3 +429,70 @@ class FAQPageView(TemplateView):
         return context
 
 
+def content_production_landing(request):
+    """لندینگ اختصاصی سرویس تولید محتوا"""
+    from content_team.models import ContentTeam, ContentPortfolio, ContentServicePlan, ContentOrder
+    from core.models import ContentServiceType
+    from influencers.models import Channel
+
+    # ========== آمار ==========
+    total_teams = ContentTeam.objects.filter(is_active=True).count()
+    total_portfolios = ContentPortfolio.objects.filter(is_active=True).count()
+    completed_orders = ContentOrder.objects.filter(
+        status=ContentOrder.Status.COMPLETED
+    ).count()
+
+    # ========== تیم‌های برتر ==========
+    content_teams_raw = ContentTeam.objects.filter(is_active=True)
+    content_teams = sorted(content_teams_raw, key=lambda x: x.avg_rating or 0, reverse=True)[:5]
+
+    # ========== نمونه کارها ==========
+    portfolios = ContentPortfolio.objects.filter(
+        is_active=True,
+        media__isnull=False
+    ).select_related('team', 'service_type').order_by('-created_at')[:9]
+
+    # ========== انواع خدمات ==========
+    service_types = ContentServiceType.objects.filter(
+        is_active=True
+    ).order_by('display_order')[:6]
+
+    # ========== پلن‌های نمونه ==========
+    sample_plans = ContentServicePlan.objects.filter(
+        is_active=True
+    ).select_related('team', 'service_type').order_by('price')[:3]
+
+    # ========== نظرات (از ریویوهای تیم) ==========
+    from content_team.models import TeamReview
+    reviews = TeamReview.objects.select_related(
+        'team', 'advertiser__user'
+    ).filter(rating__gte=4).order_by('-created_at')[:6]
+
+    # ========== سوالات متداول ==========
+    faqs = [
+        {'q': 'چطور می‌تونم سفارش تولید محتوا بدم؟',
+         'a': 'کافیه روی دکمه «ثبت سفارش» کلیک کنی، نوع محتوا و تیم رو انتخاب کنی و اطلاعات بریف رو پر کنی. کل فرآیند کمتر از ۵ دقیقه طول می‌کشه.'},
+        {'q': 'چقدر طول می‌کشه تا محتوا تحویل داده بشه؟',
+         'a': 'بستگی به نوع پلن و تیم داره، ولی معمولاً بین ۳ تا ۷ روز کاری. توی صفحه هر پلن، زمان تحویل مشخص شده.'},
+        {'q': 'اگه کمپین تبلیغاتی نداشته باشم هم می‌تونم سفارش بدم؟',
+         'a': 'قطعاً! تولید محتوا یه سرویس مستقله. می‌تونی فقط محتوا سفارش بدی و هرجایی که خواستی ازش استفاده کنی.'},
+        {'q': 'اگه از محتوا راضی نبودم چی؟',
+         'a': 'تا ۲ بار می‌تونی درخواست ویرایش بدی و تیم موظفه اصلاحات رو انجام بده. اگه بعد از ویرایش هم راضی نبودی، تیم پشتیبانی بررسی می‌کنه.'},
+        {'q': 'امکان انتخاب چند گزینه برای تحویل هست؟',
+         'a': 'بله! بعضی پلن‌ها به صورت MULTI_CHOICE هستن، یعنی تیم چند نسخه می‌سازه و تو یکیش رو انتخاب می‌کنی.'},
+        {'q': 'هزینه‌ها چطوریه؟',
+         'a': 'هر تیم پلن‌های خودش رو با قیمت مشخص ارائه می‌ده. توی صفحه هر تیم می‌تونی همه پلن‌ها و قیمت‌هاشون رو ببینی.'},
+    ]
+
+    context = {
+        'total_teams': total_teams,
+        'total_portfolios': total_portfolios,
+        'completed_orders': completed_orders,
+        'content_teams': content_teams,
+        'portfolios': portfolios,
+        'service_types': service_types,
+        'sample_plans': sample_plans,
+        'reviews': reviews,
+        'faqs': faqs,
+    }
+    return render(request, 'core/pages/content_production_landing.html', context)

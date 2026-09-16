@@ -111,7 +111,7 @@
                             <div class="info-icon small">
                                 <i class="bi bi-rulers"></i>
                             </div>
-                            <div class="small text-muted mb-1">واحد قیمت‌گذاری</div>
+                            <div class="small text-muted mb-1">واحد قیمت گذاری</div>
                             <div class="fw-bold text-light">{{ order.plan.get_pricing_unit_display }}</div>
                         </div>
                         {% if order.plan.base_quantity %}
@@ -167,7 +167,20 @@
                                 <i class="fi-wallet"></i>
                             </div>
                             <div class="small text-muted mb-1">قیمت</div>
-                            <div class="fw-bold text-success fs-5">{{ order.price|floatformat:0 }} تومان</div>
+                            <div class="text-end d-flex align-items-center">
+                                <div>
+                                    <div class="value fs-5 fw-bold text-success">
+                                        {{ order.price|floatformat:0 }}
+                                    </div>
+                                    {% if order.discount_amount > 0 %}
+                                        <div class="small text-danger text-decoration-line-through">
+                                            {{ order.original_price|floatformat:0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                     style="width: 20px;">
+                            </div>
                         </div>
                         <div class="info-item">
                             <div class="info-icon small">
@@ -653,8 +666,9 @@
                             </div>
                             <h5 class="text-light mb-0">زمان باقی‌مانده تا تحویل</h5>
                         </div>
-                        <div class="deadline-timer" id="order-deadline-timer"
-                             data-deadline-timestamp="{{ order.deadline_timestamp|stringformat:'f' }}">
+                        
+                        <div class="deadline-timer" id="order-deadline-timer" data-deadline-timestamp="{{ order.deadline_timestamp|stringformat:'f' }}">
+                            <div class="d-flex justify-content-between align-items-center">
                             <div class="counter-box">
                                 <span class="counter-value seconds">0</span>
                                 <span class="counter-label">ثانیه</span>
@@ -672,6 +686,7 @@
                                 <span class="counter-label">روز</span>
                             </div>
                             <span class="remaining-badge">فرصت داری</span>
+                            </div>
                         </div>
                         <div class="d-flex flex-wrap gap-3 mt-2">
                             <div class="small text-muted">

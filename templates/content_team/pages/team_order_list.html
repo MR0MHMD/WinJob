@@ -385,11 +385,19 @@
                                             <div class="text-muted small"> پلن : <span class="text-light">{{ order.plan.name }}</span></div>
                                         </div>
                                     </div>
-                                    <div class="text-end">
-                                        <div class="text-success fw-bold fs-4" style="direction: ltr;">
-                                            {{ order.price|floatformat:0 }}
+                                    <div class="text-end d-flex align-items-center">
+                                        <div>
+                                            <div class="value fs-5 fw-bold text-success">
+                                                {{ order.price|floatformat:0 }}
+                                            </div>
+                                            {% if order.discount_amount > 0 %}
+                                                <div class="small text-danger text-decoration-line-through">
+                                                    {{ order.original_price|floatformat:0 }}
+                                                </div>
+                                            {% endif %}
                                         </div>
-                                        <div class="text-muted small">تومان</div>
+                                        <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                             style="width: 20px;">
                                     </div>
                                 </div>
                                 

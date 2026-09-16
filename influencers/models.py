@@ -284,6 +284,19 @@ class ChannelBooking(models.Model):
         verbose_name="قیمت نهایی"
     )
 
+    original_price = models.PositiveBigIntegerField(
+        verbose_name="قیمت اولیه (قبل از تخفیف)",
+        null=True,
+        blank=True,
+        help_text="قیمت اصلی قبل از اعمال کد تخفیف"
+    )
+
+    discount_amount = models.PositiveBigIntegerField(
+        verbose_name="مقدار تخفیف",
+        default=0,
+        help_text="مقداری که از قیمت اولیه کم شده"
+    )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -341,12 +354,14 @@ class ChannelBooking(models.Model):
         return reverse('influencers:order_detail', kwargs={'order_id': self.id})
 
     def save(self, *args, **kwargs):
-
         if not self.tracking_code:
             self.tracking_code = uuid.uuid4().hex[:8]
+
+        if not self.original_price:
+            self.original_price = self.price
+
         try:
             super().save(*args, **kwargs)
-
         except IntegrityError:
             self.tracking_code = uuid.uuid4().hex[:8]
             super().save(*args, **kwargs)

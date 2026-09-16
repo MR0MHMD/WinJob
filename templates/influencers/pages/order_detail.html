@@ -228,8 +228,21 @@
                         </div>
                     
                         <div class="info-row">
-                            <span class="info-label">قیمت نهایی</span>
-                            <span class="info-value text-success fs-5 fw-bold">{{ order.price|floatformat:0|default:"۰" }} تومان</span>
+                            <span class="info-label">قیمت</span>
+                            <div class="text-end d-flex align-items-center">
+                                <div>
+                                    <div class="value fs-5 fw-bold text-success">
+                                        {{ order.price|floatformat:0 }}
+                                    </div>
+                                    {% if order.discount_amount > 0 %}
+                                        <div class=" text-danger fs-7 text-decoration-line-through">
+                                            {{ order.original_price|floatformat:0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="" class="ms-1"
+                                     style="width: 25px;">
+                            </div>
                         </div>
                     
                         {% if campaign.discount_amount > 0 %}
