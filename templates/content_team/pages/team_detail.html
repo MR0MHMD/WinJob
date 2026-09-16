@@ -130,7 +130,7 @@
                                     <i class="fi-plus-circle me-2"></i> انتخاب این تیم
                                 </span>
                             </a>
-                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?selected_plan={{ select_plan_id }}&page={{ return_page }}" class="btn btn-primary rounded-pill w-100 w-md-auto text-center">
+                            <a href="{% url 'campaigns:campaign_create_step3_team' %}?page={{ return_page }}" class="btn btn-primary rounded-pill w-100 w-md-auto text-center">
                                 بازگشت به صفحه قبل<i class="fi-arrow-left ms-2"></i>
                             </a>
                         </div>
@@ -247,115 +247,7 @@
                     </div>
                 </div>
 
-                {% if portfolio_items %}
-                    <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="200">
-                        <div class="section-header collapse-header" data-bs-toggle="collapse"
-                             data-bs-target="#portfolioCollapse" role="button" aria-expanded="false">
-                            <div class="section-icon">
-                                <i class="fi-image"></i>
-                            </div>
-
-                            <h3 class="section-title">نمونه کارها</h3>
-                            <div class="section-line"></div>
-                            <span class="reviews-count-badge me-2">{{ portfolio_items|length }}</span>
-
-                            <div class="collapse-arrow">
-                                <i class="fi-chevron-down"></i>
-                            </div>
-                        </div>
-
-                        <div class="collapse" id="portfolioCollapse">
-                            <div class="portfolio-grid">
-                                {% for item in portfolio_items %}
-                                    <div class="portfolio-item-wrapper">
-                                        {% if item.external_link %}
-                                            <a href="{{ item.external_link }}" target="_blank" rel="noopener noreferrer"
-                                               class="portfolio-item has-link">
-                                        {% elif item.video_url %}
-                                            <a href="{{ item.video_url }}" target="_blank" rel="noopener noreferrer"
-                                               class="portfolio-item has-link">
-                                        {% elif item.media %}
-                                            <a href="{{ item.media.url }}" data-fancybox="portfolio"
-                                               data-caption="{{ item.title }}" class="portfolio-item has-link">
-                                        {% endif %}
-
-                                        {% if item.media %}
-                                            <img src="{{ item.media.url }}" alt="{{ item.title }}"
-                                                 class="portfolio-thumb">
-                                        {% else %}
-                                            <div class="portfolio-thumb portfolio-thumb-placeholder">
-                                                {% if item.video_url %}
-                                                    <i class="fi-video text-accent fs-2"></i>
-                                                {% elif item.external_link %}
-                                                    <i class="fi-external-link text-accent fs-2"></i>
-                                                {% else %}
-                                                    <i class="fi-image text-muted fs-2"></i>
-                                                {% endif %}
-                                            </div>
-                                        {% endif %}
-
-                                        <div class="portfolio-overlay">
-                                            {% if item.video_url %}
-                                                <div class="portfolio-overlay-icon">
-                                                    <i class="fi-play-filled"></i>
-                                                </div>
-                                                <span class="portfolio-overlay-text">مشاهده ویدیو</span>
-                                            {% elif item.external_link %}
-                                                <div class="portfolio-overlay-icon">
-                                                    <i class="fi-external-link"></i>
-                                                </div>
-                                                <span class="portfolio-overlay-text">مشاهده نمونه</span>
-                                            {% elif item.media %}
-                                                <div class="portfolio-overlay-icon">
-                                                    <i class="fi-zoom-in"></i>
-                                                </div>
-                                                <span class="portfolio-overlay-text">بزرگنمایی</span>
-                                            {% else %}
-                                                <span class="portfolio-overlay-text text-muted">بدون پیش‌نمایش</span>
-                                            {% endif %}
-
-                                            {% if item.service_type %}
-                                                <span class="portfolio-service-badge">{{ item.service_type.name }}</span>
-                                            {% endif %}
-                                        </div>
-
-                                        <div class="portfolio-info">
-                                            {% if item.title %}
-                                                <div class="portfolio-title">{{ item.title }}</div>
-                                            {% endif %}
-                                            {% if item.description %}
-                                                <div class="portfolio-desc">{{ item.description|truncatechars:60 }}</div>
-                                            {% endif %}
-                                            <div class="portfolio-meta">
-                                                {% if item.video_url %}
-                                                    <span class="portfolio-meta-item">
-                                                        <i class="fi-video"></i> ویدیو
-                                                    </span>
-                                                {% elif item.media %}
-                                                    <span class="portfolio-meta-item">
-                                                        <i class="fi-image"></i> تصویر
-                                                    </span>
-                                                {% endif %}
-
-                                                {% if item.external_link %}
-                                                    <span class="portfolio-meta-item"><i class="fi-external-link"></i> لینک خارجی</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-
-                                        {% if item.external_link or item.video_url or item.media %}
-                                            </a>
-                                        {% endif %}
-
-                                    </div>
-
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-
-                <!-- ===== بخش پلن‌ها ===== -->
+                <!-- ===== بخش پلن ها ===== -->
                 {% if service_plans_by_type %}
                     <div class="glass-card p-4 mb-4" data-aos="fade-up" data-aos-delay="150">
                         <!-- هدر اصلی -->
@@ -376,19 +268,16 @@
                             {% for group in service_plans_by_type %}
                                 <!-- هر گروه یک نوع خدمت -->
                                 <div class="service-type-group mb-4">
-                                    <div class="service-type-header collapse-header"
+                                    <div class="members-role-header collapse-header"
                                          data-bs-toggle="collapse"
                                          data-bs-target="#serviceCollapse{{ group.service_type.id }}"
                                          role="button" aria-expanded="false">
-                                        <div class="service-type-icon-wrapper">
-                                            {% if group.service_type.icon %}
-                                                <i class="{{ group.service_type.icon }}"></i>
-                                            {% else %}
-                                                <i class="fi-check-circle"></i>
-                                            {% endif %}
-                                        </div>
-                                        <span class="service-type-name">{{ group.service_type.name }}</span>
-                                        <span class="service-type-plan-count">{{ group.plans|length }} پلن</span>
+                                        
+                                        <h6 class="members-role-title mb-0">
+                                            <i class="{{ group.service_type.icon }} text-accent me-2"></i>
+                                            {{ group.service_type.name }}
+                                        </h6>
+                                        <span class="role-count-badge me-2">{{ group.plans|length }} پلن</span>
                                         <div class="collapse-arrow collapse-arrow-sm">
                                             <i class="fi-chevron-down"></i>
                                         </div>

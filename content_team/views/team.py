@@ -273,7 +273,6 @@ def team_detail_view(request, slug, id):
         campaign_id = request.session.get('campaign_draft_id')
         if campaign_id:
             back_url = reverse('campaigns:campaign_create_step3_team')
-            # اگر پلن هم انتخاب شده باشه، اونم برگردون
             if select_plan_id:
                 select_team_url = f"{back_url}?selected_team={team.id}&selected_plan={select_plan_id}&page={page}"
             else:
