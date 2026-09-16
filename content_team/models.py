@@ -1310,67 +1310,22 @@ class ContentDeliveryFile(models.Model):
 
 class ContentPortfolio(models.Model):
     """
-    نمونه کارهای تیم تولید محتوا
+    نمونه کارهای پلن تولید محتوا
+    فقط برای نمایش ۵ نمونه کار آخر توی صفحه جزئیات پلن
+    فایل فیزیکی کپی نمیشه — فقط به فایل تحویل اصلی ارجاع داده میشه
     """
 
-    team = models.ForeignKey(
-        'ContentTeam',
+    plan = models.ForeignKey(
+        'ContentServicePlan',
         on_delete=models.CASCADE,
         related_name='portfolio_items',
-        verbose_name=_('تیم')
+        verbose_name=_('پلن')
     )
 
-    title = models.CharField(
-        _('عنوان'),
-        max_length=200,
-        help_text=_('مثلاً: ویدیوی معرفی محصول ایکس')
-    )
-
-    description = models.TextField(
-        _('توضیحات'),
-        blank=True,
-        help_text=_('توضیح درباره این نمونه کار')
-    )
-
-    media = ResizedImageField(
-        _('تصویر نمونه کار'),
-        upload_to='team_portfolio/',
-        size=[800, 800],
-        scale=1,
-        crop=['middle', 'center'],
-        null=True,
-        blank=True
-    )
-
-    video_url = models.URLField(
-        _('لینک ویدیو'),
-        blank=True,
-        help_text=_('لینک آپارات، یوتیوب، ویمئو و...')
-    )
-
-    external_link = models.URLField(
-        _('لینک خارجی'),
-        blank=True,
-        help_text=_('لینک به نمونه کار در سایت دیگر')
-    )
-
-    service_type = models.ForeignKey(
-        'core.ContentServiceType',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='portfolio_items',
-        verbose_name=_('نوع خدمت')
-    )
-
-    display_order = models.PositiveSmallIntegerField(
-        _('ترتیب نمایش'),
-        default=0
-    )
-
-    is_active = models.BooleanField(
-        _('فعال'),
-        default=True
+    file = models.FileField(
+        _('فایل نمونه کار'),
+        max_length=500,
+        help_text=_('اشاره به فایل تحویل داده شده توسط تیم — بدون کپی فیزیکی')
     )
 
     created_at = jmodels.jDateTimeField(
@@ -1378,15 +1333,10 @@ class ContentPortfolio(models.Model):
         auto_now_add=True
     )
 
-    updated_at = jmodels.jDateTimeField(
-        _('تاریخ ویرایش'),
-        auto_now=True
-    )
-
     class Meta:
         verbose_name = _('نمونه کار')
         verbose_name_plural = _('نمونه کارها')
-        ordering = ['display_order', '-created_at']
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.team.name} - {self.title}"
+        return f"{self.plan.name} - نمونه کار #{self.id}"

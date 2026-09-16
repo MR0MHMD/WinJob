@@ -18,7 +18,7 @@ from content_team.models import (
     TeamReview,
     ContentTeamMember,
     ContentOrder,
-    ContentServicePlan
+    ContentServicePlan, ContentPortfolio
 )
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,6 @@ def team_list_view(request):
 
     teams = teams.prefetch_related(
         'service_plans__service_type',
-        'portfolio_items',
         Prefetch('reviews', queryset=TeamReview.objects.order_by('-created_at')),
         Prefetch('members', queryset=ContentTeamMember.objects.filter(is_active=True))
     ).annotate(
@@ -104,7 +103,6 @@ def team_detail_view(request, slug, id):
         ContentTeam.objects.filter(is_active=True).prefetch_related(
             'members',
             'service_plans__service_type',
-            'portfolio_items',
             Prefetch(
                 'reviews',
                 queryset=TeamReview.objects.select_related(
@@ -192,11 +190,6 @@ def team_detail_view(request, slug, id):
             'service_type': service_type,
             'plans': plan_list,
         })
-
-    # ========== نمونه کارها ==========
-    portfolio_items = team.portfolio_items.filter(
-        is_active=True
-    ).order_by('display_order', '-created_at')[:3]
 
     # ================================================================
     # ========== محاسبات کارت حرفه‌ای‌گری ==========
@@ -334,7 +327,6 @@ def team_detail_view(request, slug, id):
         'videographers': videographers,
         'other_members': other_members,
         'service_plans_by_type': service_plans_by_type,
-        'portfolio_items': portfolio_items,
         'stats': stats,
         'reviews': reviews,
         'recent_completed_orders': recent_completed_orders,
@@ -365,7 +357,8 @@ def plan_detail(request, plan_id):
     """
     plan = get_object_or_404(
         ContentServicePlan.objects.select_related('team', 'service_type'),
-        id=plan_id, is_active=True
+        id=plan_id,
+        is_active=True,
     )
     team = plan.team
 
@@ -373,7 +366,6 @@ def plan_detail(request, plan_id):
     # ========== 🆕 پشتیبانی از بازگشت به سفارش مستقل ==========
     # ================================================================
 
-    # پارامترهای بازگشت
     return_to = request.GET.get('return_to')
     service_type_id = request.GET.get('service_type_id')
     team_id = request.GET.get('team_id')
@@ -382,7 +374,6 @@ def plan_detail(request, plan_id):
     from_campaign = request.GET.get('from') == 'create_campaign'
     page = request.GET.get('page', '1')
 
-    # متغیرهای پیش‌فرض
     back_url = None
     select_plan_url = None
     from_standalone = False
@@ -392,8 +383,11 @@ def plan_detail(request, plan_id):
     if return_to == 'standalone_order' and service_type_id and team_id:
         from_standalone = True
         back_url = reverse('content_team:standalone_order_step1')
-        # 🔥 صفحه رو هم به URL اضافه کن
-        select_plan_url = f"{back_url}?selected_service={service_type_id}&selected_team={team_id}&selected_plan={plan.id}&return_to=plan_detail&page={page}"
+        select_plan_url = (
+            f"{back_url}?selected_service={service_type_id}"
+            f"&selected_team={team_id}&selected_plan={plan.id}"
+            f"&return_to=plan_detail&page={page}"
+        )
 
     # ====== ۲. حالت بازگشت به کمپین (استپ ۳) ======
     elif from_campaign or source == 'campaign':
@@ -401,63 +395,71 @@ def plan_detail(request, plan_id):
         campaign_id = request.session.get('campaign_draft_id')
         if campaign_id:
             back_url = reverse('campaigns:campaign_create_step3_team')
-            select_plan_url = f"{back_url}?selected_plan={plan.id}&selected_team={team.id}&page={page}"
+            select_plan_url = (
+                f"{back_url}?selected_plan={plan.id}"
+                f"&selected_team={team.id}&page={page}"
+            )
         else:
             back_url = reverse('campaigns:campaign_create_step1')
-            select_plan_url = None
 
     # ====== ۳. حالت عادی (لیست تیم‌ها) ======
     else:
         back_url = reverse('content_team:team_list')
-        select_plan_url = None
 
-    # ========== تعداد سفارش‌های موفق این پلن ==========
-    completed_orders_count = plan.orders.filter(
-        status=ContentOrder.Status.COMPLETED
-    ).count()
+    # ================================================================
+    # ========== آمار و اطلاعات پلن ==========
+    # ================================================================
 
-    # ========== میانگین امتیاز فقط برای سفارش‌های این پلن ==========
-    avg_rating = TeamReview.objects.filter(
-        order__plan=plan,
-        order__status=ContentOrder.Status.COMPLETED,
-    ).aggregate(avg=Avg('rating'))['avg']
+    # ---------- شمارش سفارش‌های موفق + میانگین امتیاز (یک کوئری) ----------
+    order_stats = ContentOrder.objects.filter(
+        plan=plan,
+        status=ContentOrder.Status.COMPLETED,
+    ).aggregate(
+        completed_count=Count('id'),
+        avg_rating=Avg('review__rating'),
+    )
 
+    completed_orders_count = order_stats['completed_count'] or 0
+    avg_rating = order_stats['avg_rating']
     if avg_rating:
         avg_rating = round(avg_rating, 1)
 
-    # ========== نظرات فقط برای سفارش‌های این پلن ==========
-    reviews = TeamReview.objects.filter(
+    # ---------- نظرات (۵ تای آخر) ----------
+    reviews_qs = TeamReview.objects.filter(
         order__plan=plan,
         order__status=ContentOrder.Status.COMPLETED,
     ).select_related(
         'advertiser__user', 'order'
+    ).order_by('-created_at')
+
+    reviews = reviews_qs[:5]
+    reviews_count = reviews_qs.count()
+
+    # ---------- 🆕 نمونه کارها (۵ تای آخر این پلن) ----------
+    portfolio_items = ContentPortfolio.objects.filter(
+        plan=plan,
+    ).only(
+        'id', 'file', 'created_at'  # فقط فیلدهای لازم
     ).order_by('-created_at')[:5]
 
-    # ========== تعداد کل نظرات این پلن ==========
-    reviews_count = TeamReview.objects.filter(
-        order__plan=plan,
-        order__status=ContentOrder.Status.COMPLETED,
-    ).count()
+    # ---------- اعضای تیم ----------
+    members = team.members.filter(is_active=True).only(
+        'id', 'user', 'role', 'revenue_share_percent'
+    ).select_related('user')
 
-    # ========== نمونه کارها ==========
-    portfolio_items = team.portfolio_items.filter(is_active=True)[:6]
-
-    # ========== اعضای تیم ==========
-    members = team.members.filter(is_active=True)
-
-    # ========== محبوب‌ترین پلن ==========
+    # ---------- محبوب‌ترین پلن ----------
     most_popular = ContentServicePlan.objects.filter(
         team=team,
         service_type=plan.service_type,
-        is_active=True
+        is_active=True,
     ).annotate(
         completed_count=Count(
             'orders',
-            filter=Q(orders__status=ContentOrder.Status.COMPLETED)
+            filter=Q(orders__status=ContentOrder.Status.COMPLETED),
         )
     ).filter(
         completed_count__gt=0
-    ).order_by('-completed_count').first()
+    ).order_by('-completed_count').only('id').first()
 
     is_most_popular = (most_popular and most_popular.id == plan.id)
 
@@ -468,13 +470,12 @@ def plan_detail(request, plan_id):
         'avg_rating': avg_rating,
         'reviews': reviews,
         'reviews_count': reviews_count,
-        'portfolio_items': portfolio_items,
+        'portfolio_items': portfolio_items,  # ✅ ۵ تای آخر
         'members': members,
         'from_campaign': is_from_campaign,
-        'from_standalone': from_standalone,  # ✅ اضافه شده
+        'from_standalone': from_standalone,
         'page': page,
         'is_most_popular': is_most_popular,
-        # ====== 🔥 اضافه شده برای بازگشت ======
         'back_url': back_url,
         'select_plan_url': select_plan_url,
         'service_type_id': service_type_id,

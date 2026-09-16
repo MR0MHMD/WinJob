@@ -1,6 +1,7 @@
 from campaigns.tasks import penalize_unaccepted_content_orders, auto_approve_campaign_after_rejection
 from campaigns.models import CampaignReport, CampaignContent, Campaign, CampaignTrackingLink
 from content_team.models import ContentOrderRevision, ContentDelivery, ContentOrder, ContentServicePlan
+from content_team.services import create_portfolio_from_order
 from payment.services.create_invoice import create_campaign_invoice
 from payment.services.payment_service import pay_influencer
 from payment.models import Wallet, Transaction
@@ -557,30 +558,21 @@ def respond_to_influencer_order_service(order, action):
 
                     # ✅ قدم ۳: برگردوندن مالیات قبلی به فاکتور جدید
                     if old_vat > 0:
-                        # محاسبه نسبت مالیات قبلی به کل
-                        # این کار رو می‌کنیم تا مالیات جدید رو با نسبت قبلی تنظیم کنیم
-
-                        # محاسبه مالیات جدیدی که create_campaign_invoice ساخته
                         new_influencer_vat = invoice.influencer_vat
                         new_content_vat = invoice.content_vat
                         new_commission_vat = invoice.commission_vat
                         new_total_vat = invoice.total_vat
 
-                        # محاسبه نسبت مالیات جدید به قبلی
-                        # اگه مالیات جدید صفر شد، از نسبت ۱ استفاده می‌کنیم
                         if new_total_vat > 0:
                             ratio = old_vat / new_total_vat
                         else:
                             ratio = 1
 
-                        # تنظیم مالیات‌ها با نسبت قبلی
                         invoice.influencer_vat = int(new_influencer_vat * ratio)
                         invoice.content_vat = int(new_content_vat * ratio)
                         invoice.commission_vat = int(new_commission_vat * ratio)
-                        invoice.total_vat = old_vat  # ✅ حفظ مالیات قبلی
+                        invoice.total_vat = old_vat
 
-
-                    # ✅ قدم ۴: حفظ کمیسیون قبلی (همون کاری که قبلاً میکردیم)
                     # ✅ قدم ۴: حفظ کمیسیون قبلی
                     if invoice.commission < old_commission:
                         invoice.commission = old_commission
@@ -601,10 +593,10 @@ def respond_to_influencer_order_service(order, action):
                 # ========== نوتیف به تبلیغ دهنده ==========
                 notify_advertiser_influencer_rejected(order)
 
-            # ========== تغییر وضعیت کمپین به REVISION_NEEDED ==========
+            # ========== تغییر وضعیت کمپین به REVISION_NEEDED (فقط برای کمپین‌های غیر رایگان) ==========
             campaign = order.campaign
 
-            if campaign.status == Campaign.Status.APPROVED:
+            if not campaign.is_free and campaign.status == Campaign.Status.APPROVED:
                 campaign.status = Campaign.Status.REVISION_NEEDED
                 campaign.replacement_mode = True
                 campaign.save(update_fields=['status', 'replacement_mode'])
@@ -617,6 +609,7 @@ def respond_to_influencer_order_service(order, action):
                         countdown=60 * 60 * 24
                     )
 
+            # ========== امتیازدهی ==========
             if not order.campaign.is_free:
                 update_score(order.channel, -40, 'رد کردن تبلیغ',
                              f'رد سفارش کمپین {order.campaign.name} در کانال {order.channel.channel_name} در {order.channel.platform.name}')
@@ -629,7 +622,6 @@ def respond_to_influencer_order_service(order, action):
                     related_object_id=order.id,
                     related_content_type='campaign_influencer'
                 )
-
 
 def approve_influencer_report_service(report):
     """سرویس تایید گزارش ناشر توسط ادمین و پرداخت مالی (+۵ امتیاز برای کانال)"""
@@ -917,6 +909,12 @@ def finalize_content_order(order, selected_file=None):
         # ---------- ۵.۱. علامت‌گذاری فایل نهایی ----------
         final_file.is_selected = True
         final_file.save(update_fields=['is_selected'])
+
+        # ---------- ۵.۱.۱. ساخت خودکار نمونه کار ----------
+        try:
+            create_portfolio_from_order(order, final_file)
+        except Exception as e:
+            logger.warning(f'ساخت نمونه کار برای سفارش #{order.id} ناموفق: {e}')
 
         # ---------- ۵.۲. تقسیم پول بین اعضای تیم ----------
         members_paid = 0

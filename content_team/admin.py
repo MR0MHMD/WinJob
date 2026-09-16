@@ -36,7 +36,6 @@ class ContentTeamAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         ContentTeamMemberInline,
         ContentServicePlanInline,
         TeamReviewInline,
-        ContentPortfolioInline
     ]
 
     actions = ['regenerate_qr']  # اکشن جدید
@@ -1665,153 +1664,241 @@ class ContentOrderRevisionAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(ContentPortfolio)
-class ContentPortfolioAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
+class ContentPortfolioAdmin(admin.ModelAdmin):
     """
-    ادمین نمونه کارهای تیم‌ها
+    ادمین نمونه کارهای پلن تولید محتوا
     """
+
+    # ========== لیست نمایش ==========
     list_display = (
-        "title_display",
-        "team_link",
-        "service_type",
-        "display_order",
-        "is_active_badge",
-        "media_preview",
-        "created_at",
+        'id',
+        'get_thumbnail',
+        'plan_link',
+        'team_link',
+        'service_type_display',
+        'file_preview_link',
+        'created_at',
     )
 
+    list_display_links = ('id', 'get_thumbnail')
+
     list_filter = (
-        "is_active",
-        "team",
-        "service_type",
-        "created_at",
+        'created_at',
+        'plan__service_type',
+        'plan__team',
     )
 
     search_fields = (
-        "title",
-        "description",
-        "team__name",
+        'plan__name',
+        'plan__team__name',
+        'plan__service_type__name',
     )
 
-    autocomplete_fields = (
-        "team",
-        "service_type",
-    )
+    ordering = ('-created_at',)
 
+    date_hierarchy = 'created_at'
+
+    list_per_page = 30
+
+    # ========== فیلدهای فقط خواندنی ==========
     readonly_fields = (
-        "created_at",
-        "updated_at",
-        "media_preview_large",
+        'created_at',
+        'file_path_display',
+        'file_preview_display',
+        'plan_link',
+        'team_link',
     )
 
+    # ========== فیلدست‌ها ==========
     fieldsets = (
-        ("اطلاعات نمونه کار", {
-            "fields": (
-                "team",
-                "title",
-                "description",
+        (_('اطلاعات اصلی'), {
+            'fields': (
+                'plan',
+                'file',
             )
         }),
-
-        ("محتوا", {
-            "fields": (
-                "media",
-                "media_preview_large",
-                "video_url",
-                "external_link",
-            )
-        }),
-
-        ("دسته‌بندی", {
-            "fields": (
-                "service_type",
-            )
-        }),
-
-        ("تنظیمات نمایش", {
-            "fields": (
-                "display_order",
-                "is_active",
-            )
-        }),
-
-        ("تاریخ‌ها", {
-            "fields": (
-                "created_at",
-                "updated_at",
+        (_('اطلاعات سیستم'), {
+            'fields': (
+                'created_at',
+                'file_path_display',
+                'file_preview_display',
             ),
-            "classes": ("collapse",)
+            'classes': ('collapse',),
         }),
     )
 
-    def title_display(self, obj):
-        if len(obj.title) > 40:
-            return obj.title[:40] + "..."
-        return obj.title
-
-    title_display.short_description = _("عنوان")
-
-    def team_link(self, obj):
-        url = reverse('admin:content_team_contentteam_change', args=[obj.team.id])
-        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.team.name)
-
-    team_link.short_description = _("تیم")
-
-    def is_active_badge(self, obj):
-        if obj.is_active:
-            return mark_safe('<span style="color: #28a745;">✓ فعال</span>')
-        return mark_safe('<span style="color: #dc3545;">✗ غیرفعال</span>')
-
-    is_active_badge.short_description = _("وضعیت")
-
-    def media_preview(self, obj):
-        """پیش‌نمایش کوچک در لیست"""
-        if obj.media:
-            return format_html(
-                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />',
-                obj.media.url
-            )
-        elif obj.video_url:
-            return mark_safe('<span style="color: #17a2b8;">🎬 ویدیو</span>')
-        return "-"
-
-    media_preview.short_description = _("پیش‌نمایش")
-
-    def media_preview_large(self, obj):
-        """پیش‌نمایش بزرگ در صفحه جزئیات"""
-        if obj.media:
-            return format_html(
-                '<img src="{}" style="max-width: 400px; max-height: 300px; border-radius: 12px; border: 1px solid #ddd;" />',
-                obj.media.url
-            )
-        elif obj.video_url:
-            video_html = f'''
-            <div style="margin-top: 10px;">
-                <strong>لینک ویدیو:</strong> 
-                <a href="{obj.video_url}" target="_blank" style="color: #007bff;">{obj.video_url}</a>
-            </div>
-            '''
-            return mark_safe(video_html)
-        return "-"
-
-    media_preview_large.short_description = _("پیش‌نمایش")
-
+    # ========== بهینه‌سازی کوئری ==========
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_regional_manager and request.user.province:
-            team_ids = []
-            for portfolio in qs:
-                province = get_team_province(portfolio.team)
-                if province and province.id == request.user.province.id:
-                    team_ids.append(portfolio.team_id)
-            return qs.filter(team_id__in=team_ids)
-        return qs
+        return qs.select_related(
+            'plan',
+            'plan__team',
+            'plan__service_type',
+        )
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'team' and request.user.is_regional_manager:
-            team_ids = []
-            for team in ContentTeam.objects.all():
-                province = get_team_province(team)
-                if province and province.id == request.user.province.id:
-                    team_ids.append(team.id)
-            kwargs['queryset'] = ContentTeam.objects.filter(id__in=team_ids)
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    # ========== متدهای نمایش ==========
+
+    @admin.display(description=_('پیش‌نمایش'))
+    def get_thumbnail(self, obj):
+        """نمایش thumbnail تصویر یا آیکون ویدیو"""
+        if not obj.file:
+            return format_html(
+                '<span style="color:#999;">—</span>'
+            )
+
+        file_name = obj.file.name.lower()
+        file_url = obj.file.url
+
+        # ویدیو
+        if file_name.endswith(('.mp4', '.mov', '.webm', '.mkv', '.avi')):
+            return format_html(
+                '<div style="position:relative;width:60px;height:60px;'
+                'background:#000;border-radius:6px;display:flex;'
+                'align-items:center;justify-content:center;">'
+                '<a href="{}" target="_blank" style="color:#fff;'
+                'font-size:24px;text-decoration:none;">▶</a>'
+                '</div>',
+                file_url
+            )
+
+        # تصویر
+        if file_name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
+            return format_html(
+                '<a href="{}" target="_blank">'
+                '<img src="{}" style="width:60px;height:60px;'
+                'object-fit:cover;border-radius:6px;border:1px solid #ddd;" />'
+                '</a>',
+                file_url,
+                file_url
+            )
+
+        # سایر
+        return format_html(
+            '<a href="{}" target="_blank" style="font-size:24px;">📎</a>',
+            file_url
+        )
+
+    @admin.display(description=_('پلن'), ordering='plan__name')
+    def plan_link(self, obj):
+        """لینک به پلن"""
+        if not obj.plan:
+            return '—'
+
+        url = reverse('admin:content_team_contentserviceplan_change', args=[obj.plan.id])
+        return format_html(
+            '<a href="{}" target="_blank">{}</a>',
+            url,
+            obj.plan.name
+        )
+
+    @admin.display(description=_('تیم'), ordering='plan__team__name')
+    def team_link(self, obj):
+        """لینک به تیم"""
+        if not obj.plan or not obj.plan.team:
+            return '—'
+
+        url = reverse('admin:content_team_contentteam_change', args=[obj.plan.team.id])
+        return format_html(
+            '<a href="{}" target="_blank">{}</a>',
+            url,
+            obj.plan.team.name
+        )
+
+    @admin.display(description=_('نوع خدمت'), ordering='plan__service_type__name')
+    def service_type_display(self, obj):
+        """نمایش نوع خدمت"""
+        if not obj.plan or not obj.plan.service_type:
+            return '—'
+        return obj.plan.service_type.name
+
+    @admin.display(description=_('لینک فایل'))
+    def file_preview_link(self, obj):
+        """لینک باز کردن فایل در تب جدید"""
+        if not obj.file:
+            return '—'
+
+        return format_html(
+            '<a href="{}" target="_blank" class="button" '
+            'style="padding:4px 10px;background:#417690;color:#fff;'
+            'border-radius:4px;text-decoration:none;font-size:12px;">'
+            'مشاهده فایل</a>',
+            obj.file.url
+        )
+
+    @admin.display(description=_('مسیر فایل'))
+    def file_path_display(self, obj):
+        """نمایش مسیر نسبی فایل (readonly)"""
+        if not obj.file:
+            return '—'
+
+        return format_html(
+            '<code style="background:#f5f5f5;padding:4px 8px;'
+            'border-radius:4px;font-size:12px;direction:ltr;'
+            'display:inline-block;">{}</code>',
+            obj.file.name
+        )
+
+    @admin.display(description=_('پیش‌نمایش کامل'))
+    def file_preview_display(self, obj):
+        """پیش‌نمایش بزرگ فایل توی صفحه جزئیات"""
+        if not obj.file:
+            return '—'
+
+        file_name = obj.file.name.lower()
+        file_url = obj.file.url
+
+        if file_name.endswith(('.mp4', '.mov', '.webm', '.mkv', '.avi')):
+            return format_html(
+                '<video src="{}" controls '
+                'style="max-width:500px;max-height:400px;'
+                'border-radius:8px;border:1px solid #ddd;"></video>',
+                file_url
+            )
+
+        if file_name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
+            return format_html(
+                '<img src="{}" '
+                'style="max-width:500px;max-height:400px;'
+                'border-radius:8px;border:1px solid #ddd;" />',
+                file_url
+            )
+
+        return format_html(
+            '<a href="{}" target="_blank">دانلود فایل</a>',
+            file_url
+        )
+
+    # ========== غیرفعال کردن افزودن دستی ==========
+    def has_add_permission(self, request):
+        """
+        جلوگیری از افزودن دستی — چون نمونه‌کارها خودکار ساخته میشن
+        """
+        return False
+
+    # ========== اکشن‌های گروهی ==========
+    actions = ['delete_selected_portfolios']
+
+    @admin.action(description=_('حذف نمونه‌کارهای انتخاب شده'))
+    def delete_selected_portfolios(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(
+            request,
+            f'{count} نمونه‌کار با موفقیت حذف شد.',
+            level='success'
+        )
+
+    # ========== نمایش آمار توی هدر ==========
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+
+        # آمار کلی
+        total = ContentPortfolio.objects.count()
+        total_plans = ContentPortfolio.objects.values('plan').distinct().count()
+
+        extra_context['portfolio_stats'] = {
+            'total': total,
+            'total_plans': total_plans,
+        }
+
+        return super().changelist_view(request, extra_context=extra_context)

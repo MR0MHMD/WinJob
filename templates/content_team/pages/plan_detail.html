@@ -259,28 +259,75 @@
             </div>
 
             <!-- نمونه کارها -->
-            {% if portfolio_items %}
-            <div class="glass-premium p-4 mb-5 slide-left delay-4">
-                <h3 class="h3 text-white mb-4"><i class="fi-image text-primary me-2"></i> نمونه کارهای تیم</h3>
-                <div class="portfolio-scroll">
-                    {% for item in portfolio_items %}
-                    <div class="portfolio-card">
-                        {% if item.media %}
-                            <img src="{{ item.media.url }}" class="portfolio-img" alt="{{ item.title }}">
-                        {% else %}
-                            <div class="portfolio-img bg-secondary d-flex align-items-center justify-content-center">
-                                <i class="fi-image fs-1 text-muted"></i>
+{% if portfolio_items %}
+<div class="glass-premium p-4 mb-5 slide-left delay-4">
+    <h3 class="h3 text-white mb-4">
+        <i class="fi-image text-primary me-2"></i> نمونه کارهای این پلن
+        <span class="badge bg-faded-primary rounded-pill ms-2">{{ portfolio_items|length }}</span>
+    </h3>
+    <div class="portfolio-scroll">
+        {% for item in portfolio_items %}
+        <div class="portfolio-card">
+            {% if item.file %}
+                {% with file_name=item.file.name|lower %}
+                    {% if '.mp4' in file_name or '.mov' in file_name or '.webm' in file_name or '.mkv' in file_name or '.avi' in file_name %}
+                        <!-- ویدیو — توی مدال باز میشه -->
+                        <div class="portfolio-media-wrapper portfolio-video-trigger"
+                             data-type="video"
+                             data-src="{{ item.file.url }}">
+                            <video 
+                                src="{{ item.file.url }}" 
+                                class="portfolio-img" 
+                                preload="metadata"
+                                muted
+                                playsinline
+                            ></video>
+                            <div class="portfolio-overlay">
+                                <i class="fi-play-circle"></i>
                             </div>
-                        {% endif %}
-                        <div class="p-3">
-                            <h6 class="text-white mb-1">{{ item.title|truncatechars:30 }}</h6>
-                            <p class="small text-muted mb-0">{{ item.description|truncatechars:45 }}</p>
+                            <div class="portfolio-badge">
+                                <i class="fi-video"></i> ویدیو
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
+                    {% else %}
+                        <!-- تصویر — توی مدال باز میشه -->
+                        <div class="portfolio-media-wrapper portfolio-image-trigger"
+                             data-type="image"
+                             data-src="{{ item.file.url }}">
+                            <img 
+                                src="{{ item.file.url }}" 
+                                class="portfolio-img" 
+                                alt="نمونه کار {{ plan.name }}"
+                                loading="lazy"
+                                onerror="this.onerror=null; this.src='{% static 'images/placeholder.png' %}';"
+                            >
+                            <div class="portfolio-overlay">
+                                <i class="fi-zoom-in"></i>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            {% else %}
+                <div class="portfolio-img bg-secondary d-flex align-items-center justify-content-center">
+                    <i class="fi-image fs-1 text-muted"></i>
                 </div>
-            </div>
             {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ========== Lightbox Modal ========== -->
+<div id="portfolioLightbox" class="lightbox-overlay" aria-hidden="true">
+    <button class="lightbox-close" aria-label="بستن">
+        <i class="fi-x"></i>
+    </button>
+    <div class="lightbox-content">
+        <img id="lightboxImage" src="" alt="نمونه کار" style="display:none;">
+        <video id="lightboxVideo" src="" controls playsinline style="display:none;"></video>
+    </div>
+</div>
+{% endif %}
 
             <!-- نظرات -->
             <div id="reviews" class="glass-premium p-4 slide-left delay-4">
@@ -437,5 +484,86 @@
             container.scrollLeft = scrollLeft - walk;
         });
     });
+    
+    // ========== Lightbox نمونه کارها ==========
+(function() {
+    const lightbox = document.getElementById('portfolioLightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const lightboxVideo = document.getElementById('lightboxVideo');
+    const closeBtn = lightbox ? lightbox.querySelector('.lightbox-close') : null;
+
+    if (!lightbox) return;
+
+    // ========== باز کردن lightbox ==========
+    function openLightbox(type, src) {
+        // پاک کردن قبلی
+        lightboxImage.style.display = 'none';
+        lightboxVideo.style.display = 'none';
+        lightboxImage.src = '';
+        lightboxVideo.src = '';
+
+        if (type === 'video') {
+            lightboxVideo.src = src;
+            lightboxVideo.style.display = 'block';
+            lightboxVideo.play().catch(() => {}); // autoplay (اگه ممکن باشه)
+        } else {
+            lightboxImage.src = src;
+            lightboxImage.style.display = 'block';
+        }
+
+        lightbox.classList.add('active');
+        lightbox.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('lightbox-open');
+    }
+
+    // ========== بستن lightbox ==========
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        lightbox.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('lightbox-open');
+
+        // توقف ویدیو
+        lightboxVideo.pause();
+        lightboxVideo.src = '';
+
+        // پاک کردن تصویر
+        lightboxImage.src = '';
+    }
+
+    // ========== کلیک روی تصاویر ==========
+    document.querySelectorAll('.portfolio-image-trigger').forEach(el => {
+        el.addEventListener('click', () => {
+            const src = el.dataset.src;
+            if (src) openLightbox('image', src);
+        });
+    });
+
+    // ========== کلیک روی ویدیوها ==========
+    document.querySelectorAll('.portfolio-video-trigger').forEach(el => {
+        el.addEventListener('click', () => {
+            const src = el.dataset.src;
+            if (src) openLightbox('video', src);
+        });
+    });
+
+    // ========== بستن با دکمه X ==========
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeLightbox);
+    }
+
+    // ========== بستن با کلیک روی پس‌زمینه ==========
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            closeLightbox();
+        }
+    });
+
+    // ========== بستن با کلید ESC ==========
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+            closeLightbox();
+        }
+    });
+})();
 </script>
 {% endblock %}

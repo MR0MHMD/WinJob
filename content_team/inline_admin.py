@@ -135,28 +135,6 @@ class ContentOrderFileInline(admin.TabularInline):
     classes = ['collapse']
 
 
-class ContentPortfolioInline(admin.TabularInline):
-    model = ContentPortfolio
-    extra = 0
-    fields = (
-        "title",
-        "media_preview",
-        "service_type",
-        "display_order",
-        "is_active",
-    )
-    readonly_fields = ("media_preview",)
-
-    def media_preview(self, obj):
-        if obj.media:
-            return format_html('<img src="{}" style="width: 40px; height: 40px; object-fit: cover;" />', obj.media.url)
-        return "-"
-
-    media_preview.short_description = _("پیش‌نمایش")
-
-    classes = ['collapse']
-
-
 class ContentDeliveryFileInline(admin.TabularInline):
     """فایل‌های یک تحویل"""
     model = ContentDeliveryFile
