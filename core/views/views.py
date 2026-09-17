@@ -103,9 +103,7 @@ class AboutView(TemplateView):
             status=ChannelBooking.Status.COMPLETED
         ).count()
 
-        context["portfolio_count"] = ContentPortfolio.objects.filter(
-            is_active=True
-        ).count()
+        context["portfolio_count"] = ContentPortfolio.objects.all().count()
 
         context["completed_content_orders"] = ContentOrder.objects.filter(
             status=ContentOrder.Status.COMPLETED

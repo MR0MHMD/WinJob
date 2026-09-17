@@ -18,7 +18,7 @@ def register_view(request):
 
     if request.method != 'POST':
         form = RegistrationForm()
-        return render(request, 'accounts/forms/register.html', {'register_form': form})
+        return render(request, 'accounts/forms/register.html', {'register_form': form , "noindex": True})
 
     form = RegistrationForm(request.POST)
 
@@ -67,7 +67,7 @@ def login_view(request):
 
     if request.method == 'GET':
         form = LoginForm()
-        return render(request, 'accounts/forms/login.html', {'login_form': form})
+        return render(request, 'accounts/forms/login.html', {'login_form': form, "noindex": True})
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 

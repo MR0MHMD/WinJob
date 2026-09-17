@@ -7,16 +7,34 @@
 
     <head>
         <meta charset="UTF-8">
-        <title>وینحاب |
+        <title>وینجاب |
             {% block title %}{% endblock %}
         </title>
-        <!-- SEO Meta Tags-->
-        <meta name="description" content="سفارش هوشمند و هدفدار تبلیغات">
-        <meta name="keywords" content="">
-        <meta name="author" content="MR_MHMD">
-        <!-- Viewport-->
+    
+        <!-- SEO Meta Tags -->
+        <meta name="description" content="{% block description %}سفارش هوشمند و هدفدار تبلیغات در وینجاب؛ پلتفرم اتصال کسب و کار ها به اینفلوئنسرها و کانال‌های تبلیغاتی{% endblock %}">
+        <meta name="author" content="Winjob">
+    
+        <!-- Canonical -->
+        <link rel="canonical" href="https://winjob.ir{{ request.get_full_path }}">
+    
+        <!-- Noindex برای صفحاتی که نباید ایندکس بشن -->
+        {% if noindex %}
+        <meta name="robots" content="noindex, follow">
+        {% endif %}
+    
+        <!-- Open Graph (برای اشتراک‌گذاری تو تلگرام/واتساپ/اینستاگرام) -->
+        <meta property="og:site_name" content="وینجاب">
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="{% block og_title %}وینجاب{% endblock %}">
+        <meta property="og:description" content="{% block og_description %}سفارش هوشمند و هدفدار تبلیغات در وینجاب{% endblock %}">
+        <meta property="og:url" content="https://winjob.ir{{ request.path }}">
+        {% block og_image %}{% endblock %}
+    
+        <!-- Viewport -->
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <!-- Favicon and Touch Icons-->
+    
+        <!-- Favicon and Touch Icons -->
         <link rel="apple-touch-icon" sizes="180x180" href="#">
         <link rel="icon" type="image/webp" sizes="32x32" href="{% static 'finder/img/icons/favicon.ico' %}">
         <link rel="icon" type="image/webp" sizes="16x16" href="#">
@@ -67,10 +85,7 @@
         <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090; direction: ltr;">
             <!-- Toasts به صورت داینامیک اینجا اضافه می‌شن -->
         </div>
-
-        <!-- Back to top button-->
-        <a class="btn-scroll-top" href="#" data-scroll><span class="btn-scroll-top-tooltip text-muted fs-sm ms-2">بالا</span><i class="btn-scroll-top-icon fi-chevron-up"> </i></a>
-
+        
         <!-- ==================== مودال نوتیفیکیشن جهانی ==================== -->
         <div class="modal fade notification-modal" id="globalNotificationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
             <div class="modal-dialog modal-dialog-centered">

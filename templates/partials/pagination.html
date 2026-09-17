@@ -1,4 +1,5 @@
 {% load static %}
+{% load seo_tags %}
 <link rel="stylesheet" href="{% static 'partials/css/pagination.css' %}">
 
 {% if page_obj.has_other_pages %}
@@ -8,7 +9,7 @@
             {% if page_obj.has_previous %}
                 <li class="page-item">
                     <a class="page-link nav-arrow"
-                       href="?page={{ page_obj.previous_page_number }}&{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                       href="?{% query_transform page=page_obj.previous_page_number %}"
                        aria-label="قبلی">
                         <i class="fi-arrow-right"></i>
                     </a>
@@ -26,8 +27,7 @@
                     </li>
                 {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                     <li class="page-item">
-                        <a class="page-link"
-                           href="?page={{ num }}&{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}">
+                        <a class="page-link" href="?{% query_transform page=num %}">
                             {{ num }}
                         </a>
                     </li>
@@ -37,7 +37,7 @@
             {% if page_obj.has_next %}
                 <li class="page-item">
                     <a class="page-link nav-arrow"
-                       href="?page={{ page_obj.next_page_number }}&{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                       href="?{% query_transform page=page_obj.next_page_number %}"
                        aria-label="بعدی">
                         <i class="fi-arrow-left"></i>
                     </a>
@@ -47,7 +47,7 @@
                     <span class="page-link nav-arrow"><i class="fi-arrow-left"></i></span>
                 </li>
             {% endif %}
-    
+
         </ul>
     </nav>
 {% endif %}

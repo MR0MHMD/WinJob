@@ -1,13 +1,42 @@
 {% extends 'parent/base.html' %}
 {% load static blog_tags %}
 
-{% block title %}پروفایل {{ channel.channel_name }}{% endblock %}
+{% block title %}پروفایل {{ channel.channel_name }} | {{ channel.platform.name }}{% endblock %}
 
-{% block extra_style %}
+{% block description %}{{ channel.channel_name }} یک {{ channel.platform.name }} با {{ channel.followers_formatted }} فالوور در وینجاب. امتیاز {{ avg_rating|default:"0" }} از ۵ با {{ total_reviews }} نظر. مشاهده نرخ تبلیغات و شروع همکاری.{% endblock %}
+
+{% block og_title %}{{ channel.channel_name }} | وینجاب{% endblock %}
+{% block og_description %}{{ channel.channel_name }} - {{ channel.platform.name }} با {{ channel.followers_formatted }} فالوور{% endblock %}
+{% block og_image %}
+    {% if channel.avatar %}
+        <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ channel.avatar.url }}">
+    {% endif %}
+{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/header.css' %}">
     <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/main.css' %}">
     <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/sidebar.css' %}">
     <link rel="stylesheet" href="{% static 'influencers/css/pages/channel_detail/modals.css' %}">
+
+    {% if total_reviews > 0 %}
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "{{ channel.channel_name|escapejs }}",
+            "provider": {
+                "@type": "Organization",
+                "name": "{{ channel.channel_name|escapejs }}"
+            },
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "{{ avg_rating }}",
+                "reviewCount": "{{ total_reviews }}"
+            }
+        }
+    </script>
+    {% endif %}
 {% endblock %}
 
 
