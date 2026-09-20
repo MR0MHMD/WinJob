@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from ..services.registration_service import RegistrationService
 from content_team.models import ContentTeam, TeamJoinRequest
 from ..services.otp_service import OTPGhasedakService, logger
@@ -210,7 +212,42 @@ def create_team_member(register_data):
 def cleanup_session(request):
     """پاکسازی session بعد از تکمیل فرآیند"""
     keys_to_remove = ['register_data', 'login_otp_data', 'otp_sent_at',
-                      'otp_remaining', 'verified_phone', 'verified_at']
+                      'otp_remaining', 'verified_phone', 'verified_at',
+                      'password_reset_data', 'password_reset_verified']
     for key in keys_to_remove:
         if key in request.session:
             del request.session[key]
+
+
+def handle_password_reset_verification(request, reset_data, code):
+    """
+    تایید OTP برای بازیابی رمز عبور
+    کاربر لاگین نمی‌شه؛ فقط یه فلگ توی session می‌ذاریم که توی reset_password_view چک بشه
+    """
+    phone = reset_data.get('phone_number')
+    user_id = reset_data.get('user_id')
+
+    service = OTPGhasedakService()
+    otp_obj, success, message = service.verify_otp(phone, code)
+
+    if not success:
+        return JsonResponse({'success': False, 'error': message})
+
+    # علامت‌گذاری که این کاربر اجازه‌ی تغییر رمز داره
+    request.session['password_reset_verified'] = {
+        'phone_number': phone,
+        'user_id': user_id,
+        'verified_at': timezone.now().isoformat(),
+    }
+
+    # پاک کردن دیتای OTP
+    if 'password_reset_data' in request.session:
+        del request.session['password_reset_data']
+    if 'otp_sent_at' in request.session:
+        del request.session['otp_sent_at']
+
+    return JsonResponse({
+        'success': True,
+        'message': 'کد تایید شد. لطفاً رمز جدید خود را وارد کنید.',
+        'redirect_url': '/accounts/reset-password/'
+    })

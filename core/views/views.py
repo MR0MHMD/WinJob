@@ -435,7 +435,7 @@ def content_production_landing(request):
 
     # ========== آمار ==========
     total_teams = ContentTeam.objects.filter(is_active=True).count()
-    total_portfolios = ContentPortfolio.objects.filter(is_active=True).count()
+    total_portfolios = ContentPortfolio.objects.all().count()
     completed_orders = ContentOrder.objects.filter(
         status=ContentOrder.Status.COMPLETED
     ).count()
@@ -446,8 +446,7 @@ def content_production_landing(request):
 
     # ========== نمونه کارها ==========
     portfolios = ContentPortfolio.objects.filter(
-        is_active=True,
-        media__isnull=False
+        file__isnull=False
     ).select_related('team', 'service_type').order_by('-created_at')[:9]
 
     # ========== انواع خدمات ==========

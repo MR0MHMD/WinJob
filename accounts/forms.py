@@ -303,3 +303,57 @@ class AdvertiserProfileForm(forms.ModelForm):
             'description': forms.Textarea(attrs={**COMMON_WIDGETS, 'rows': 4}),
             'website': forms.URLInput(attrs={**COMMON_WIDGETS, 'dir': 'ltr'}),
         }
+
+
+# ==================== فرم‌های بازیابی رمز عبور ====================
+
+class ForgotPasswordForm(forms.Form):
+    phone_number = forms.CharField(
+        label='تلفن همراه',
+        max_length=11,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-light',
+            'placeholder': '09123456789',
+            'required': True
+        })
+    )
+
+    def clean_phone_number(self):
+        phone = (self.cleaned_data.get("phone_number") or "").strip()
+        if not phone:
+            raise forms.ValidationError("شماره تلفن الزامی است")
+        if not CustomUser.objects.filter(phone_number=phone).exists():
+            raise forms.ValidationError("کاربری با این شماره یافت نشد")
+        return phone
+
+
+class ResetPasswordForm(forms.Form):
+    password = forms.CharField(
+        label='رمز عبور جدید',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control form-control-light',
+            'placeholder': 'رمز عبور جدید خود را وارد کنید',
+            'required': True
+        })
+    )
+    password_confirm = forms.CharField(
+        label='تکرار رمز عبور جدید',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control form-control-light',
+            'placeholder': 'تکرار رمز عبور جدید',
+            'required': True
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        confirm = cleaned_data.get("password_confirm")
+
+        if password and confirm and password != confirm:
+            raise forms.ValidationError("رمز عبور و تایید آن یکسان نیست")
+
+        if password and len(password) < 8:
+            raise forms.ValidationError("رمز عبور باید حداقل ۸ کاراکتر باشد")
+
+        return cleaned_data

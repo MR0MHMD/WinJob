@@ -1,4 +1,7 @@
 const phoneNumber = document.getElementById('phone-number').innerText;
+const otpCard = document.querySelector('.otp-card');
+const otpPurpose = otpCard ? otpCard.dataset.otpPurpose : 'register';
+
 let timeLeft = 0;
 let timerInterval = null;
 let canResend = false;
@@ -169,6 +172,13 @@ resendBtn.addEventListener('click', async () => {
     resendBtn.disabled = true;
 
     try {
+        // 👈 داینامیک: نوع رو از purpose می‌گیریم
+        const otpTypeMap = {
+            'login': 'login',
+            'register': 'register',
+            'reset_password': 'reset_password'
+        };
+
         const response = await fetch('/accounts/api/resend-otp/', {
             method: 'POST',
             headers: {
@@ -182,15 +192,12 @@ resendBtn.addEventListener('click', async () => {
 
         if (data.success) {
             showNotificationModal('کد جدید', 'کد تایید مجدداً برای شما ارسال شد', 'success');
-
             startTimer(data.remaining_time || 120);
             canResend = false;
-
             otpInputs.forEach(input => input.value = '');
             otpInputs[0].focus();
         } else {
             showNotificationModal('خطا', data.error || 'امکان ارسال مجدد وجود ندارد', 'error');
-
             if (data.remaining_time && data.remaining_time > 0) {
                 startTimer(data.remaining_time);
                 canResend = false;

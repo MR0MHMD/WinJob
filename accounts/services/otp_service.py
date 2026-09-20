@@ -19,7 +19,12 @@ class OTPGhasedakService:
         ارسال OTP جدید و ذخیره در دیتابیس
         فقط در صورت موفقیت آمیز بودن ارسال، تایمر شروع میشه
         """
-        template = settings.GHASEDAK_OTP_TEMPLATE
+
+        # انتخاب قالب بر اساس نوع OTP
+        if otp_type == OTPRequest.OTPType.RESET_PASSWORD:
+            template = settings.GHASEDAK_RESET_PASSWORD_TEMPLATE
+        else:
+            template = settings.GHASEDAK_OTP_TEMPLATE
 
         pending_otp = OTPRequest.objects.filter(
             phone_number=phone_number,

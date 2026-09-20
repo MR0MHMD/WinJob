@@ -22,4 +22,8 @@ urlpatterns = [
     path('api/check-phone/', auth_api_views.check_phone_api, name='check_phone_api'),
     path('api/verify-otp/', auth_api_views.verify_otp_api, name='verify_otp_api'),
     path('api/resend-otp/', auth_api_views.resend_otp_api, name='resend_otp_api'),
+    path('api/set-new-password/', auth_api_views.set_new_password_api, name='set_new_password_api'),
+
+    path('forgot-password/', auth_views.forgot_password_view, name='forgot_password'),
+    path('reset-password/', auth_views.reset_password_view, name='reset_password'),
 ]

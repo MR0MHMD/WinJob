@@ -245,6 +245,7 @@ class OTPRequest(models.Model):
         LOGIN = 'login', 'ورود'
         REGISTER = 'register', 'ثبت‌نام'
         VERIFY = 'verify', 'تایید عمومی'
+        RESET_PASSWORD = 'reset_password', 'بازیابی رمز'
 
     class OTPStatus(models.TextChoices):
         PENDING = 'pending', 'در انتظار'
@@ -253,7 +254,7 @@ class OTPRequest(models.Model):
 
     phone_number = models.CharField(max_length=11, db_index=True)
     code = models.CharField(max_length=6)
-    type = models.CharField(max_length=10, choices=OTPType.choices, default=OTPType.VERIFY)
+    type = models.CharField(max_length=20, choices=OTPType.choices, default=OTPType.VERIFY)
     status = models.CharField(max_length=10, choices=OTPStatus.choices, default=OTPStatus.PENDING)
     attempts = models.PositiveSmallIntegerField(default=0)
     request_id = models.CharField(max_length=100, blank=True, null=True)

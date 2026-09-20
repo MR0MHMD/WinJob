@@ -1,7 +1,9 @@
 {% extends 'parent/base.html' %}
 {% load static %}
 
-{% block title %}تایید شماره موبایل{% endblock %}
+{% block title %}
+    {% if otp_purpose == 'reset_password' %}تایید برای بازیابی رمز{% else %}تایید شماره موبایل{% endif %}
+{% endblock %}
 
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'accounts/css/forms/verify_otp.css' %}">
@@ -9,17 +11,27 @@
 
 {% block content %}
     <div class="otp-container">
-        <div class="otp-card">
+        <div class="otp-card" data-otp-purpose="{{ otp_purpose }}">
             <div class="text-center">
-                <i class="fi-mail" style="font-size: 3rem; color: #fd5631; margin-bottom: 1rem;"></i>
-                <h1 class="otp-title">تایید شماره موبایل</h1>
-                <p class="otp-subtitle">
-                    کد ۶ رقمی به شماره 
-                    <span class="phone-number" id="phone-number">{{ phone_number }}</span>
-                    ارسال شد
-                </p>
+                {% if otp_purpose == 'reset_password' %}
+                    <i class="fi-lock" style="font-size: 3rem; color: #fd5631; margin-bottom: 1rem;"></i>
+                    <h1 class="otp-title">بازیابی رمز عبور</h1>
+                    <p class="otp-subtitle">
+                        کد ۶ رقمی به شماره
+                        <span class="phone-number" id="phone-number">{{ phone_number }}</span>
+                        ارسال شد
+                    </p>
+                {% else %}
+                    <i class="fi-mail" style="font-size: 3rem; color: #fd5631; margin-bottom: 1rem;"></i>
+                    <h1 class="otp-title">تایید شماره موبایل</h1>
+                    <p class="otp-subtitle">
+                        کد ۶ رقمی به شماره
+                        <span class="phone-number" id="phone-number">{{ phone_number }}</span>
+                        ارسال شد
+                    </p>
+                {% endif %}
             </div>
-            
+
             <div class="otp-input-group" id="otp-group" dir="ltr">
                 <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-1" autofocus>
                 <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-2">
@@ -28,7 +40,7 @@
                 <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-5">
                 <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-input" id="otp-6">
             </div>
-            
+
             <div class="timer-container">
                 <div class="timer-wrapper" id="timerWrapper">
                     <div class="timer" id="timer">--:--</div>
@@ -40,17 +52,35 @@
                     </button>
                 </div>
             </div>
-            
+
             <button class="verify-btn" id="verify-btn">
                 <i class="fi-check-circle me-2"></i>
-                تایید و ثبت‌نام
+                {% if otp_purpose == 'reset_password' %}
+                    تایید و ادامه
+                {% elif otp_purpose == 'login' %}
+                    تایید و ورود
+                {% else %}
+                    تایید و ثبت‌نام
+                {% endif %}
             </button>
-            
+
             <div class="back-link">
-                <a href="{% url 'accounts:register' %}">
-                    <i class="fi-arrow-right me-1"></i>
-                    بازگشت به فرم ثبت‌نام
-                </a>
+                {% if otp_purpose == 'reset_password' %}
+                    <a href="{% url 'accounts:forgot_password' %}">
+                        <i class="fi-arrow-right me-1"></i>
+                        بازگشت به فراموشی رمز
+                    </a>
+                {% elif otp_purpose == 'login' %}
+                    <a href="{% url 'accounts:login' %}">
+                        <i class="fi-arrow-right me-1"></i>
+                        بازگشت به ورود
+                    </a>
+                {% else %}
+                    <a href="{% url 'accounts:register' %}">
+                        <i class="fi-arrow-right me-1"></i>
+                        بازگشت به فرم ثبت‌نام
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>

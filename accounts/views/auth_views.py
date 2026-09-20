@@ -86,29 +86,65 @@ def logout_view(request):
 
 def verify_otp_view(request):
     """
-    صفحه تایید کد OTP - هم برای ثبت ‌نامه و هم برای ورود
+    نمایش صفحه‌ی تایید OTP - پشتیبانی از سه حالت: login / register / reset_password
     """
-    if request.user.is_authenticated:
-        return redirect('core:home')
-
     login_data = request.session.get('login_otp_data')
     register_data = request.session.get('register_data')
-
-    if not login_data and not register_data:
-        messages.error(request, 'لطفاً ابتدا فرم مورد نظر را پر کنید')
-        return redirect('accounts:login')
+    reset_data = request.session.get('password_reset_data')
 
     if login_data:
-        phone_number = login_data.get('phone_number')
+        phone_number = login_data['phone_number']
+        otp_purpose = 'login'
+    elif register_data:
+        phone_number = register_data['phone_number']
+        otp_purpose = 'register'
+    elif reset_data:
+        phone_number = reset_data['phone_number']
+        otp_purpose = 'reset_password'
     else:
-        phone_number = register_data.get('phone_number')
-
-    service = OTPGhasedakService()
-    remaining_time = service.get_remaining_time(phone_number)
-    has_active = service.has_active_otp(phone_number)
+        messages.error(request, 'اطلاعات جلسه یافت نشد. لطفاً دوباره تلاش کنید.')
+        return redirect('accounts:login')
 
     return render(request, 'accounts/forms/verify_otp.html', {
         'phone_number': phone_number,
-        'remaining_time': remaining_time,
-        'has_active_otp': has_active
+        'otp_purpose': otp_purpose,
+    })
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from ..forms import ForgotPasswordForm, ResetPasswordForm
+
+
+def forgot_password_view(request):
+    """
+    صفحه‌ی ورود شماره موبایل برای بازیابی رمز
+    """
+    form = ForgotPasswordForm()
+
+    if request.method == 'POST':
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            phone_number = form.cleaned_data['phone_number']
+            # 👈 فقط اطلاعات رو توی session می‌ذاریم؛
+            # خودِ ارسال OTP از طریق AJAX به request_otp_api انجام می‌شه
+            request.session['forgot_password_phone'] = phone_number
+
+    return render(request, 'accounts/forms/forgot_password.html', {
+        'form': form,
+    })
+
+
+def reset_password_view(request):
+    """
+    صفحه‌ی وارد کردن رمز جدید (بعد از تایید OTP)
+    """
+    # فقط کاربری که OTP رو تایید کرده اجازه داره
+    if not request.session.get('password_reset_verified'):
+        messages.error(request, 'لطفاً ابتدا کد تایید را وارد کنید')
+        return redirect('accounts:forgot_password')
+
+    form = ResetPasswordForm()
+
+    return render(request, 'accounts/forms/reset_password.html', {
+        'form': form,
     })

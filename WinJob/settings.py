@@ -231,6 +231,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 GHASEDAK_OTP_API = os.getenv("GHASEDAK_OTP_API")
 GHASEDAK_OTP_TEMPLATE = os.getenv('GHASEDAK_OTP_TEMPLATE')
+GHASEDAK_RESET_PASSWORD_TEMPLATE = os.getenv('GHASEDAK_RESET_PASSWORD_TEMPLATE')
+
 BALE_BOT_TOKEN = os.environ.get("BALE_BOT_TOKEN")
 if not BALE_BOT_TOKEN:
     raise ValueError("متغیر BALE_BOT_TOKEN در فایل .env تنظیم نشده است!")
