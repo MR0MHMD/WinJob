@@ -63,13 +63,20 @@ def influencer_channels_view(request, pk=None):
         form = ChannelForm(instance=instance)
 
     channels = influencer.channels.select_related("platform").all()
+    bale_platform_id = Platform.objects.filter(
+        slug="bale",
+        is_active=True,
+    ).values_list("id", flat=True).first()
 
-    return render(request, "influencers/pages/channels.html", {
+    context = {
         "form": form,
         "channels": channels,
+        "bale_platform_id": bale_platform_id,
         "edit_mode": pk is not None,
         "instance": instance
-    })
+    }
+
+    return render(request, "influencers/pages/channels.html", context)
 
 
 @login_required

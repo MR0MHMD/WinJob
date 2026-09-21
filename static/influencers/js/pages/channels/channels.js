@@ -1,4 +1,3 @@
-// channels.js - نسخه اصلاح شده با پشتیبانی از bio
 (function () {
     'use strict';
 
@@ -8,348 +7,1342 @@
     const submitBtn = document.getElementById('modalSubmitBtn');
     const addBtn = document.getElementById('addChannelBtn');
 
-    const platformField = document.querySelector('#channelForm select[name="platform"]');
-    const channelIdField = document.querySelector('#channelForm input[name="channel_id"]');
-    const channelNameField = document.querySelector('#channelForm input[name="channel_name"]');
-    const followersField = document.querySelector('#channelForm input[name="followers_count"]');
-    const provinceField = document.querySelector('#channelForm select[name="province"]');
-    const cityField = document.querySelector('#channelForm select[name="city"]');
-    const categoryField = document.querySelector('#channelForm select[name="category"]');
-    const urlField = document.querySelector('#channelForm input[name="url"]');
-    const avatarInput = document.querySelector('#channelForm input[type="file"][name="avatar"]');
-    const bioField = document.querySelector('#channelForm textarea[name="bio"]'); // ✅ اضافه شد
+    if (!modal || !form || !submitBtn) {
+        return;
+    }
 
-    let currentMode = 'add';
+    // =====================================================
+    // فیلدهای اصلی فرم
+    // =====================================================
+
+    const platformField = form.querySelector(
+        'select[name="platform"]'
+    );
+
+    const channelIdField = form.querySelector(
+        'input[name="channel_id"]'
+    );
+
+    const channelNameField = form.querySelector(
+        'input[name="channel_name"]'
+    );
+
+    const followersField = form.querySelector(
+        'input[name="followers_count"]'
+    );
+
+    const provinceField = form.querySelector(
+        'select[name="province"]'
+    );
+
+    const categoryField = form.querySelector(
+        'select[name="category"]'
+    );
+
+    const urlField = form.querySelector(
+        'input[name="url"]'
+    );
+
+    const avatarInput = form.querySelector(
+        'input[type="file"][name="avatar"]'
+    );
+
+    const bioField = form.querySelector(
+        'textarea[name="bio"]'
+    );
+
+    // =====================================================
+    // عناصر انتخاب روش ثبت
+    // =====================================================
+
+    const registrationModeSection = document.getElementById(
+        'channelRegistrationMode'
+    );
+
+    const channelDetailsSection = document.getElementById(
+        'channelDetailsSection'
+    );
+
+    const quickRegistrationSection = document.getElementById(
+        'quickRegistrationSection'
+    );
+
+    const manualRegistrationMode = document.getElementById(
+        'manualRegistrationMode'
+    );
+
+    const quickRegistrationMode = document.getElementById(
+        'quickRegistrationMode'
+    );
+
+    // =====================================================
+    // عناصر بارگذاری سریع
+    // =====================================================
+
+    const quickChannelUrl = document.getElementById(
+        'quickChannelUrl'
+    );
+
+    const quickImportButton = document.getElementById(
+        'quickImportButton'
+    );
+
+    const quickImportFeedback = document.getElementById(
+        'quickImportFeedback'
+    );
+
+    const leaveBaleBotAfterImport = document.getElementById(
+        'leaveBaleBotAfterImport'
+    );
+
+    // =====================================================
+    // پنل اتصال بازوی بله
+    // =====================================================
+
+    const baleBotConnectionPanel = document.getElementById(
+        'baleBotConnectionPanel'
+    );
+
+    const baleBotUsername = document.getElementById(
+        'baleBotUsername'
+    );
+
+    const openBaleBotButton = document.getElementById(
+        'openBaleBotButton'
+    );
+
+    const copyBaleBotUsernameButton = document.getElementById(
+        'copyBaleBotUsernameButton'
+    );
+
+    const retryBaleImportButton = document.getElementById(
+        'retryBaleImportButton'
+    );
+
+    const baleBotCopyFeedback = document.getElementById(
+        'baleBotCopyFeedback'
+    );
+
+    // =====================================================
+    // عناصر تصویر
+    // =====================================================
+
+    const avatarPreviewImg = document.getElementById(
+        'avatar-preview-img'
+    );
+
+    const avatarPlaceholder = document.getElementById(
+        'avatar-placeholder'
+    );
+
+    const avatarRemoveBtn = document.getElementById(
+        'avatar-remove-btn'
+    );
+
+    const avatarFileName = document.getElementById(
+        'avatar-file-name'
+    );
+
+    const avatarWrapper = document.getElementById(
+        'avatar-upload-wrapper'
+    );
+
+    // =====================================================
+    // وضعیت داخلی
+    // =====================================================
+
+    const balePlatformId = String(
+        form.dataset.balePlatformId || ''
+    );
+
+    const baleImportUrl =
+        form.dataset.baleImportUrl ||
+        '/influencers/api/channel-import/bale/';
+
+    const hasServerErrors =
+        form.dataset.hasErrors === 'true';
+
+    let currentMode = hasServerErrors
+        ? 'validation'
+        : 'add';
+
     let currentChannelId = null;
+    let quickImportCompleted = false;
+    let quickImportInProgress = false;
+    let currentBaleBotInfo = null;
 
-    // ===== تابع به‌روزرسانی شمارش کاراکترهای bio =====
+    // =====================================================
+    // فرمت اعداد
+    // =====================================================
+
+    const NumberFormatter = {
+        cleanNumber(value) {
+            return String(value || '')
+                .replace(/,/g, '')
+                .replace(/\D/g, '');
+        },
+
+        formatWithCommas(value) {
+            const cleaned = this.cleanNumber(value);
+
+            if (!cleaned) {
+                return '';
+            }
+
+            return Number(cleaned).toLocaleString('en-US');
+        },
+
+        prepareForSubmit(value) {
+            return this.cleanNumber(value);
+        }
+    };
+
+    // =====================================================
+    // ابزارهای عمومی
+    // =====================================================
+
+    function showElement(element) {
+        element?.classList.remove('d-none');
+    }
+
+    function hideElement(element) {
+        element?.classList.add('d-none');
+    }
+
+    function getCsrfToken() {
+        const csrfInput = form.querySelector(
+            'input[name="csrfmiddlewaretoken"]'
+        );
+
+        return csrfInput?.value || '';
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+
+        if (!document.cookie) {
+            return cookieValue;
+        }
+
+        const cookies = document.cookie.split(';');
+
+        for (const rawCookie of cookies) {
+            const cookie = rawCookie.trim();
+
+            if (cookie.startsWith(`${name}=`)) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+
+                break;
+            }
+        }
+
+        return cookieValue;
+    }
+
     function updateBioCharCount() {
-        const charCount = document.getElementById('bioCharCount');
-        if (!bioField || !charCount) return;
+        const charCount = document.getElementById(
+            'bioCharCount'
+        );
+
+        if (!bioField || !charCount) {
+            return;
+        }
 
         const length = bioField.value.length;
-        charCount.textContent = length;
 
-        // تغییر رنگ بر اساس تعداد کاراکترها
+        charCount.textContent = String(length);
+
         if (length > 720) {
-            charCount.style.color = '#dc3545'; // قرمز برای نزدیک به حد مجاز
+            charCount.style.color = '#dc3545';
         } else if (length > 500) {
-            charCount.style.color = '#ffc107'; // زرد برای متوسط
+            charCount.style.color = '#ffc107';
         } else {
-            charCount.style.color = '#0ce110'; // سبز برای عالی
+            charCount.style.color = '#0ce110';
         }
     }
 
-    // ===== ریست فرم =====
-    function resetForm() {
-        form.reset();
-        const previewImg = document.getElementById('avatar-preview-img');
-        const placeholder = document.getElementById('avatar-placeholder');
-        const removeBtn = document.getElementById('avatar-remove-btn');
-        const fileNameSpan = document.getElementById('avatar-file-name');
-        const wrapper = document.getElementById('avatar-upload-wrapper');
+    // =====================================================
+    // پیام‌های بارگذاری سریع
+    // =====================================================
 
-        if (previewImg) {
-            previewImg.src = '';
-            previewImg.style.display = 'none';
+    function showQuickFeedback(type, message) {
+        if (!quickImportFeedback) {
+            return;
         }
-        if (placeholder) placeholder.style.display = 'flex';
-        if (removeBtn) removeBtn.style.display = 'none';
-        if (wrapper) wrapper.classList.remove('has-image');
-        if (fileNameSpan) fileNameSpan.textContent = '';
-        if (avatarInput) avatarInput.value = '';
 
-        // ریست bio
+        quickImportFeedback.className =
+            `alert alert-${type} mt-3 mb-0`;
+
+        quickImportFeedback.textContent = message;
+    }
+
+    function clearQuickFeedback() {
+        if (!quickImportFeedback) {
+            return;
+        }
+
+        quickImportFeedback.className =
+            'alert d-none mt-3 mb-0';
+
+        quickImportFeedback.textContent = '';
+    }
+
+    function setQuickImportLoading(isLoading) {
+        quickImportInProgress = isLoading;
+
+        if (quickImportButton) {
+            if (isLoading) {
+                quickImportButton.disabled = true;
+
+                quickImportButton.innerHTML = `
+                    <span
+                        class="spinner-border spinner-border-sm me-1"
+                        aria-hidden="true"
+                    ></span>
+                    در حال دریافت...
+                `;
+            } else {
+                quickImportButton.textContent =
+                    quickImportCompleted
+                        ? 'دریافت مجدد'
+                        : 'دریافت اطلاعات';
+            }
+        }
+
+        if (retryBaleImportButton) {
+            retryBaleImportButton.disabled = isLoading;
+
+            retryBaleImportButton.innerHTML = isLoading
+                ? `
+                    <span
+                        class="spinner-border spinner-border-sm me-1"
+                        aria-hidden="true"
+                    ></span>
+                    در حال بررسی...
+                `
+                : `
+                    <i class="fi-refresh-cw me-1"></i>
+                    عضو کردم؛ بررسی مجدد
+                `;
+        }
+
+        updateQuickImportButtonState();
+    }
+
+    function updateQuickImportButtonState() {
+        if (!quickImportButton || !quickChannelUrl) {
+            return;
+        }
+
+        const hasValue =
+            quickChannelUrl.value.trim().length > 0;
+
+        quickImportButton.disabled =
+            quickImportInProgress || !hasValue;
+    }
+
+    // =====================================================
+    // پنل اتصال بازو
+    // =====================================================
+
+    function hideBaleBotConnectionPanel() {
+        currentBaleBotInfo = null;
+
+        hideElement(baleBotConnectionPanel);
+        hideElement(baleBotCopyFeedback);
+
+        if (baleBotUsername) {
+            baleBotUsername.textContent = '';
+        }
+
+        if (openBaleBotButton) {
+            openBaleBotButton.href = '#';
+        }
+    }
+
+    function showBaleBotConnectionPanel(botInfo) {
+        currentBaleBotInfo = botInfo || null;
+
+        const username = String(
+            botInfo?.username || ''
+        ).replace(/^@/, '');
+
+        if (baleBotUsername) {
+            baleBotUsername.textContent = username
+                ? `@${username}`
+                : 'آیدی بازو در دسترس نیست';
+        }
+
+        if (openBaleBotButton) {
+            if (botInfo?.profile_url) {
+                openBaleBotButton.href =
+                    botInfo.profile_url;
+
+                showElement(openBaleBotButton);
+            } else {
+                hideElement(openBaleBotButton);
+            }
+        }
+
+        if (copyBaleBotUsernameButton) {
+            copyBaleBotUsernameButton.disabled =
+                !username;
+        }
+
+        hideElement(baleBotCopyFeedback);
+        showElement(baleBotConnectionPanel);
+    }
+
+    async function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const textarea = document.createElement(
+            'textarea'
+        );
+
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        document.execCommand('copy');
+        textarea.remove();
+    }
+
+    async function copyBaleBotUsername() {
+        const username = String(
+            currentBaleBotInfo?.username || ''
+        ).replace(/^@/, '');
+
+        if (!username) {
+            return;
+        }
+
+        try {
+            await copyText(`@${username}`);
+
+            showElement(baleBotCopyFeedback);
+
+            window.setTimeout(() => {
+                hideElement(baleBotCopyFeedback);
+            }, 2500);
+
+        } catch (error) {
+            showQuickFeedback(
+                'danger',
+                'کپی آیدی بازو انجام نشد. لطفاً آیدی را دستی کپی کنید.'
+            );
+        }
+    }
+
+    // =====================================================
+    // مدیریت تصویر
+    // =====================================================
+
+    function clearAvatarPreview() {
+        if (avatarInput) {
+            avatarInput.value = '';
+        }
+
+        if (avatarPreviewImg) {
+            avatarPreviewImg.src = '';
+            avatarPreviewImg.style.display = 'none';
+        }
+
+        if (avatarPlaceholder) {
+            avatarPlaceholder.style.display = 'flex';
+        }
+
+        if (avatarRemoveBtn) {
+            avatarRemoveBtn.style.display = 'none';
+        }
+
+        if (avatarWrapper) {
+            avatarWrapper.classList.remove('has-image');
+        }
+
+        if (avatarFileName) {
+            avatarFileName.textContent = '';
+        }
+    }
+
+    function showExistingAvatar(avatarUrl) {
+        if (!avatarUrl || !avatarPreviewImg) {
+            clearAvatarPreview();
+            return;
+        }
+
+        if (avatarInput) {
+            avatarInput.value = '';
+        }
+
+        avatarPreviewImg.src = avatarUrl;
+        avatarPreviewImg.style.display = 'block';
+
+        avatarPlaceholder?.style.setProperty(
+            'display',
+            'none'
+        );
+
+        avatarRemoveBtn?.style.setProperty(
+            'display',
+            'flex'
+        );
+
+        avatarWrapper?.classList.add('has-image');
+
+        if (avatarFileName) {
+            avatarFileName.textContent = 'تصویر فعلی';
+        }
+    }
+
+    async function dataUrlToFile(
+        dataUrl,
+        filename,
+        contentType
+    ) {
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+
+        return new File(
+            [blob],
+            filename,
+            {
+                type: contentType ||
+                    blob.type ||
+                    'image/jpeg'
+            }
+        );
+    }
+
+    async function applyImportedAvatar(avatarData) {
+        if (!avatarInput || !avatarData?.data_url) {
+            clearAvatarPreview();
+            return false;
+        }
+
+        try {
+            const file = await dataUrlToFile(
+                avatarData.data_url,
+                avatarData.filename ||
+                    'bale-channel-avatar.jpg',
+                avatarData.content_type ||
+                    'image/jpeg'
+            );
+
+            const dataTransfer = new DataTransfer();
+
+            dataTransfer.items.add(file);
+            avatarInput.files = dataTransfer.files;
+
+            avatarInput.dispatchEvent(
+                new Event('change', {
+                    bubbles: true
+                })
+            );
+
+            return true;
+
+        } catch (error) {
+            console.error(
+                'Unable to apply imported avatar:',
+                error
+            );
+
+            clearAvatarPreview();
+            return false;
+        }
+    }
+
+    // =====================================================
+    // پاک‌سازی فرم
+    // =====================================================
+
+    function clearChannelDetails() {
+        if (channelIdField) {
+            channelIdField.value = '';
+        }
+
+        if (channelNameField) {
+            channelNameField.value = '';
+        }
+
+        if (followersField) {
+            followersField.value = '';
+        }
+
+        if (provinceField) {
+            provinceField.value = '';
+        }
+
+        if (categoryField) {
+            categoryField.value = '';
+        }
+
+        if (urlField) {
+            urlField.value = '';
+        }
+
         if (bioField) {
             bioField.value = '';
-            updateBioCharCount(); // به‌روزرسانی شمارش
+        }
+
+        clearAvatarPreview();
+        updateBioCharCount();
+    }
+
+    function resetQuickImportState({
+        clearUrl = true
+    } = {}) {
+        quickImportCompleted = false;
+        quickImportInProgress = false;
+
+        if (clearUrl && quickChannelUrl) {
+            quickChannelUrl.value = '';
+        }
+
+        if (leaveBaleBotAfterImport) {
+            leaveBaleBotAfterImport.checked = true;
+        }
+
+        clearQuickFeedback();
+        hideBaleBotConnectionPanel();
+
+        if (quickImportButton) {
+            quickImportButton.textContent =
+                'دریافت اطلاعات';
+        }
+
+        updateQuickImportButtonState();
+    }
+
+    // =====================================================
+    // جریان نمایش فرم
+    // =====================================================
+
+    function updateRegistrationFlow() {
+        if (!platformField) {
+            return;
+        }
+
+        const selectedPlatformId = String(
+            platformField.value || ''
+        );
+
+        const isBalePlatform =
+            balePlatformId !== '' &&
+            selectedPlatformId === balePlatformId;
+
+        const registrationMode = form.querySelector(
+            'input[name="registration_mode"]:checked'
+        )?.value || '';
+
+        if (
+            currentMode === 'edit' ||
+            currentMode === 'validation'
+        ) {
+            hideElement(registrationModeSection);
+            hideElement(quickRegistrationSection);
+            showElement(channelDetailsSection);
+            showElement(submitBtn);
+
+            submitBtn.disabled = false;
+            return;
+        }
+
+        if (!selectedPlatformId) {
+            hideElement(registrationModeSection);
+            hideElement(quickRegistrationSection);
+            hideElement(channelDetailsSection);
+            hideElement(submitBtn);
+            return;
+        }
+
+        if (!isBalePlatform) {
+            hideElement(registrationModeSection);
+            hideElement(quickRegistrationSection);
+            showElement(channelDetailsSection);
+            showElement(submitBtn);
+
+            submitBtn.disabled = false;
+            return;
+        }
+
+        showElement(registrationModeSection);
+
+        if (registrationMode === 'manual') {
+            hideElement(quickRegistrationSection);
+            showElement(channelDetailsSection);
+            showElement(submitBtn);
+
+            submitBtn.disabled = false;
+            return;
+        }
+
+        if (registrationMode === 'quick') {
+            showElement(quickRegistrationSection);
+
+            if (quickImportCompleted) {
+                showElement(channelDetailsSection);
+                showElement(submitBtn);
+
+                submitBtn.disabled = false;
+            } else {
+                hideElement(channelDetailsSection);
+                hideElement(submitBtn);
+            }
+
+            updateQuickImportButtonState();
+            return;
+        }
+
+        hideElement(quickRegistrationSection);
+        hideElement(channelDetailsSection);
+        hideElement(submitBtn);
+    }
+
+    // =====================================================
+    // دریافت و تکمیل اطلاعات کانال
+    // =====================================================
+
+    async function populateImportedChannel(data) {
+        if (channelIdField) {
+            channelIdField.value =
+                data.channel_id || '';
+        }
+
+        if (channelNameField) {
+            channelNameField.value =
+                data.channel_name || '';
+        }
+
+        if (followersField) {
+            followersField.value =
+                NumberFormatter.formatWithCommas(
+                    data.followers_count
+                );
+        }
+
+        if (urlField) {
+            urlField.value = data.url || '';
+        }
+
+        if (bioField) {
+            bioField.value = data.bio || '';
+            updateBioCharCount();
+        }
+
+        return await applyImportedAvatar(
+            data.avatar
+        );
+    }
+
+    async function importBaleChannel() {
+        if (!quickChannelUrl) {
+            return;
+        }
+
+        const channelUrl =
+            quickChannelUrl.value.trim();
+
+        if (!channelUrl) {
+            showQuickFeedback(
+                'warning',
+                'لینک کانال بله را وارد کنید.'
+            );
+
+            return;
+        }
+
+        setQuickImportLoading(true);
+        hideBaleBotConnectionPanel();
+
+        showQuickFeedback(
+            'info',
+            'در حال دریافت اطلاعات کانال از بله...'
+        );
+
+        try {
+            const response = await fetch(
+                baleImportUrl,
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+
+                    headers: {
+                        'Content-Type':
+                            'application/json',
+
+                        'X-CSRFToken':
+                            getCsrfToken(),
+
+                        'X-Requested-With':
+                            'XMLHttpRequest'
+                    },
+
+                    body: JSON.stringify({
+                        url: channelUrl,
+
+                        leave_after_import: Boolean(
+                            leaveBaleBotAfterImport
+                                ?.checked
+                        )
+                    })
+                }
+            );
+
+            let result;
+
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error(
+                    'پاسخ نامعتبر از سرور دریافت شد.'
+                );
+            }
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                    result.message ||
+                    'دریافت اطلاعات کانال ناموفق بود.'
+                );
+            }
+
+            const importedData = result.data || {};
+
+            const avatarImported =
+                await populateImportedChannel(
+                    importedData
+                );
+
+            quickImportCompleted = true;
+            updateRegistrationFlow();
+
+            const warnings = Array.isArray(
+                result.warnings
+            )
+                ? [...result.warnings]
+                : [];
+
+            if (
+                importedData.avatar &&
+                !avatarImported
+            ) {
+                warnings.push(
+                    'تصویر دریافت شد، اما قرار دادن آن ' +
+                    'داخل فرم انجام نشد.'
+                );
+            }
+
+            const followersMissing =
+                importedData.followers_count === null ||
+                importedData.followers_count === undefined;
+
+            if (
+                importedData.requires_bot_membership ||
+                followersMissing
+            ) {
+                showQuickFeedback(
+                    'warning',
+                    'اطلاعات پایه کانال دریافت شد، اما ' +
+                    'برای دریافت تعداد دقیق اعضا باید ' +
+                    'بازوی وینجاب را عضو عادی کانال کنید.'
+                );
+
+                showBaleBotConnectionPanel(
+                    importedData.bot
+                );
+
+                return;
+            }
+
+            hideBaleBotConnectionPanel();
+
+            if (warnings.length) {
+                showQuickFeedback(
+                    'warning',
+                    [
+                        'اطلاعات کانال دریافت شد.',
+                        ...warnings
+                    ].join('\n')
+                );
+
+                return;
+            }
+
+            if (importedData.bot_left_channel) {
+                showQuickFeedback(
+                    'success',
+                    'اطلاعات کانال با موفقیت دریافت شد.\n' +
+                    'بازوی وینجاب نیز طبق انتخاب شما ' +
+                    'به‌صورت خودکار از کانال خارج شد.'
+                );
+            } else {
+                showQuickFeedback(
+                    'success',
+                    'اطلاعات کانال با موفقیت دریافت شد. ' +
+                    'لطفاً اطلاعات فرم را بررسی کنید.'
+                );
+            }
+
+        } catch (error) {
+            showQuickFeedback(
+                'danger',
+                error.message ||
+                'هنگام دریافت اطلاعات کانال خطایی رخ داد.'
+            );
+
+        } finally {
+            setQuickImportLoading(false);
+        }
+    }
+
+    // =====================================================
+    // ریست کامل فرم
+    // =====================================================
+
+    function resetForm() {
+        form.reset();
+
+        clearChannelDetails();
+        resetQuickImportState();
+
+        if (manualRegistrationMode) {
+            manualRegistrationMode.checked = false;
+        }
+
+        if (quickRegistrationMode) {
+            quickRegistrationMode.checked = false;
         }
 
         currentMode = 'add';
         currentChannelId = null;
+
         submitBtn.textContent = 'افزودن کانال';
-        modalTitle.textContent = 'افزودن کانال جدید';
+        submitBtn.disabled = false;
+
+        modalTitle.textContent =
+            'افزودن کانال جدید';
+
         form.action = '';
         form.method = 'POST';
 
-        // حذف هر گونه فیلد مخفی extra
-        document.querySelectorAll('#channelForm input[name="channel_id"]').forEach(el => {
-            if (el.type === 'hidden') el.remove();
+        form.querySelectorAll(
+            'input[name="channel_id"]'
+        ).forEach(element => {
+            if (element.type === 'hidden') {
+                element.remove();
+            }
         });
+
+        updateRegistrationFlow();
     }
 
-    // ===== لود کردن داده‌های کانال در فرم =====
-    function loadChannelDataFromButton(btn) {
-        const channelId = btn.dataset.id;
-        if (!channelId) return;
+    // =====================================================
+    // ویرایش کانال
+    // =====================================================
 
-        // دیباگ
-        console.log('Loading channel data for ID:', channelId);
+    function loadChannelDataFromButton(button) {
+        const channelId = button.dataset.id;
 
-        // ست کردن فیلدها
-        if (platformField) platformField.value = btn.dataset.platform || '';
-        if (channelIdField) channelIdField.value = btn.dataset.channelIdValue || '';
-        if (channelNameField) channelNameField.value = btn.dataset.name || '';
-
-        // فرمت کردن تعداد فالوور با کاما
-        if (followersField) {
-            const rawFollowers = btn.dataset.followers || '';
-            const formattedFollowers = NumberFormatter.formatWithCommas(rawFollowers);
-            followersField.value = formattedFollowers;
+        if (!channelId) {
+            return;
         }
 
-        if (provinceField) provinceField.value = btn.dataset.province || '';
-        if (cityField) cityField.value = btn.dataset.city || '';
-        if (categoryField) categoryField.value = btn.dataset.category || '';
-        if (urlField) urlField.value = btn.dataset.url || '';
+        platformField.value =
+            button.dataset.platform || '';
 
-        // ✅ ست کردن bio (مهمترین بخش)
+        channelIdField.value =
+            button.dataset.channelIdValue || '';
+
+        channelNameField.value =
+            button.dataset.name || '';
+
+        followersField.value =
+            NumberFormatter.formatWithCommas(
+                button.dataset.followers || ''
+            );
+
+        if (provinceField) {
+            provinceField.value =
+                button.dataset.province || '';
+        }
+
+        if (categoryField) {
+            categoryField.value =
+                button.dataset.category || '';
+        }
+
+        urlField.value =
+            button.dataset.url || '';
+
         if (bioField) {
-            const bioValue = btn.dataset.bio || '';
-            bioField.value = bioValue;
-            updateBioCharCount(); // به‌روزرسانی شمارش کاراکترها
-            console.log('Bio set to:', bioValue);
+            bioField.value =
+                button.dataset.bio || '';
+
+            updateBioCharCount();
         }
 
-        // ست کردن آواتار
-        const avatarUrl = btn.dataset.avatarUrl;
-        const previewImg = document.getElementById('avatar-preview-img');
-        const placeholder = document.getElementById('avatar-placeholder');
-        const removeBtn = document.getElementById('avatar-remove-btn');
-        const fileNameSpan = document.getElementById('avatar-file-name');
-        const wrapper = document.getElementById('avatar-upload-wrapper');
+        showExistingAvatar(
+            button.dataset.avatarUrl || ''
+        );
 
-        if (avatarUrl && previewImg) {
-            previewImg.src = avatarUrl;
-            previewImg.style.display = 'block';
-            placeholder.style.display = 'none';
-            removeBtn.style.display = 'flex';
-            wrapper.classList.add('has-image');
-            if (fileNameSpan) fileNameSpan.textContent = 'تصویر فعلی';
-        } else {
-            if (previewImg) previewImg.style.display = 'none';
-            if (placeholder) placeholder.style.display = 'flex';
-            if (removeBtn) removeBtn.style.display = 'none';
-            if (wrapper) wrapper.classList.remove('has-image');
-            if (fileNameSpan) fileNameSpan.textContent = '';
-        }
-        if (avatarInput) avatarInput.value = '';
-
-        // تنظیم حالت ویرایش
         currentMode = 'edit';
         currentChannelId = channelId;
-        submitBtn.textContent = 'ذخیره تغییرات';
-        modalTitle.textContent = 'ویرایش کانال';
-        form.action = `/influencers/my_channels/edit/${channelId}/`;
 
-        // اطمینان از اینکه متد POST هست
+        submitBtn.textContent =
+            'ذخیره تغییرات';
+
+        modalTitle.textContent =
+            'ویرایش کانال';
+
+        form.action =
+            `/influencers/my_channels/edit/${channelId}/`;
+
         form.method = 'POST';
 
-        // اضافه کردن CSRF token اگر وجود نداره
-        if (!form.querySelector('input[name="csrfmiddlewaretoken"]')) {
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfmiddlewaretoken';
-            csrfInput.value = getCookie('csrftoken');
-            form.appendChild(csrfInput);
-        }
+        updateRegistrationFlow();
     }
 
-    // ===== هندلر کلیک ویرایش =====
-    function editClickHandler(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const btn = e.currentTarget;
-        loadChannelDataFromButton(btn);
-        const modalInstance = bootstrap.Modal.getOrCreateInstance(modal);
-        modalInstance.show();
+    function editClickHandler(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        loadChannelDataFromButton(
+            event.currentTarget
+        );
+
+        bootstrap.Modal
+            .getOrCreateInstance(modal)
+            .show();
     }
 
-    // ===== بایند دکمه‌های ویرایش =====
     function bindEditButtons() {
-        document.querySelectorAll('.edit-channel-btn').forEach(btn => {
-            btn.removeEventListener('click', editClickHandler);
-            btn.addEventListener('click', editClickHandler);
+        document.querySelectorAll(
+            '.edit-channel-btn'
+        ).forEach(button => {
+            button.removeEventListener(
+                'click',
+                editClickHandler
+            );
+
+            button.addEventListener(
+                'click',
+                editClickHandler
+            );
         });
     }
 
-    // ===== هندلر کلیک حذف =====
-    function deleteClickHandler(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const btn = e.currentTarget;
-        const channelId = btn.dataset.id;
-        const channelName = btn.dataset.name;
-        if (!channelId) return;
+    // =====================================================
+    // حذف کانال
+    // =====================================================
 
-        const overlay = document.getElementById('confirm-overlay');
-        const confirmChannelName = document.getElementById('confirm-channel-name');
-        const confirmDeleteBtn = document.getElementById('confirm-delete');
-        const cancelBtn = document.getElementById('confirm-cancel');
+    function deleteClickHandler(event) {
+        event.preventDefault();
+        event.stopPropagation();
 
-        confirmChannelName.innerText = channelName;
+        const button = event.currentTarget;
+        const channelId = button.dataset.id;
+
+        if (!channelId) {
+            return;
+        }
+
+        const overlay = document.getElementById(
+            'confirm-overlay'
+        );
+
+        const channelNameElement =
+            document.getElementById(
+                'confirm-channel-name'
+            );
+
+        const confirmButton =
+            document.getElementById(
+                'confirm-delete'
+            );
+
+        const cancelButton =
+            document.getElementById(
+                'confirm-cancel'
+            );
+
+        if (
+            !overlay ||
+            !confirmButton ||
+            !cancelButton
+        ) {
+            return;
+        }
+
+        if (channelNameElement) {
+            channelNameElement.textContent =
+                button.dataset.name || '';
+        }
+
         overlay.classList.add('active');
 
-        function onConfirm() {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/influencers/my_channels/delete/${channelId}/`;
-            const csrf = document.createElement('input');
-            csrf.type = 'hidden';
-            csrf.name = 'csrfmiddlewaretoken';
-            csrf.value = getCookie('csrftoken');
-            form.appendChild(csrf);
-            document.body.appendChild(form);
-            form.submit();
-        }
+        confirmButton.onclick = function () {
+            const deleteForm =
+                document.createElement('form');
 
-        function onCancel() {
+            deleteForm.method = 'POST';
+
+            deleteForm.action =
+                `/influencers/my_channels/delete/${channelId}/`;
+
+            const csrfInput =
+                document.createElement('input');
+
+            csrfInput.type = 'hidden';
+            csrfInput.name =
+                'csrfmiddlewaretoken';
+
+            csrfInput.value =
+                getCookie('csrftoken');
+
+            deleteForm.appendChild(csrfInput);
+            document.body.appendChild(deleteForm);
+
+            deleteForm.submit();
+        };
+
+        cancelButton.onclick = function () {
             overlay.classList.remove('active');
-            confirmDeleteBtn.removeEventListener('click', onConfirm);
-            cancelBtn.removeEventListener('click', onCancel);
-        }
 
-        confirmDeleteBtn.removeEventListener('click', onConfirm);
-        cancelBtn.removeEventListener('click', onCancel);
-        confirmDeleteBtn.addEventListener('click', onConfirm);
-        cancelBtn.addEventListener('click', onCancel);
+            confirmButton.onclick = null;
+            cancelButton.onclick = null;
+        };
     }
 
-    // ===== بایند دکمه‌های حذف =====
     function bindDeleteButtons() {
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.removeEventListener('click', deleteClickHandler);
-            btn.addEventListener('click', deleteClickHandler);
+        document.querySelectorAll(
+            '.delete-btn'
+        ).forEach(button => {
+            button.removeEventListener(
+                'click',
+                deleteClickHandler
+            );
+
+            button.addEventListener(
+                'click',
+                deleteClickHandler
+            );
         });
     }
 
-    // ===== گرفتن Cookie =====
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+    // =====================================================
+    // فرمت تعداد اعضا
+    // =====================================================
+
+    function setupNumberFormatting() {
+        if (!followersField) {
+            return;
         }
-        return cookieValue;
+
+        followersField.addEventListener(
+            'input',
+            function () {
+                this.value =
+                    NumberFormatter.formatWithCommas(
+                        this.value
+                    );
+            }
+        );
+
+        followersField.addEventListener(
+            'blur',
+            function () {
+                this.value =
+                    NumberFormatter.formatWithCommas(
+                        this.value
+                    );
+            }
+        );
+
+        followersField.value =
+            NumberFormatter.formatWithCommas(
+                followersField.value
+            );
     }
 
-    // ===== ری‌بایند همه دکمه‌ها =====
+    // =====================================================
+    // رویدادها
+    // =====================================================
+
+    platformField?.addEventListener(
+        'change',
+        function () {
+            if (
+                currentMode === 'edit' ||
+                currentMode === 'validation'
+            ) {
+                updateRegistrationFlow();
+                return;
+            }
+
+            if (manualRegistrationMode) {
+                manualRegistrationMode.checked = false;
+            }
+
+            if (quickRegistrationMode) {
+                quickRegistrationMode.checked = false;
+            }
+
+            clearChannelDetails();
+            resetQuickImportState();
+            updateRegistrationFlow();
+        }
+    );
+
+    manualRegistrationMode?.addEventListener(
+        'change',
+        updateRegistrationFlow
+    );
+
+    quickRegistrationMode?.addEventListener(
+        'change',
+        function () {
+            updateRegistrationFlow();
+            quickChannelUrl?.focus();
+        }
+    );
+
+    quickChannelUrl?.addEventListener(
+        'input',
+        function () {
+            if (quickImportCompleted) {
+                quickImportCompleted = false;
+
+                hideElement(channelDetailsSection);
+                hideElement(submitBtn);
+            }
+
+            clearQuickFeedback();
+            hideBaleBotConnectionPanel();
+            updateQuickImportButtonState();
+        }
+    );
+
+    quickChannelUrl?.addEventListener(
+        'keydown',
+        function (event) {
+            if (
+                event.key === 'Enter' &&
+                !quickImportButton?.disabled
+            ) {
+                event.preventDefault();
+                importBaleChannel();
+            }
+        }
+    );
+
+    quickImportButton?.addEventListener(
+        'click',
+        importBaleChannel
+    );
+
+    retryBaleImportButton?.addEventListener(
+        'click',
+        importBaleChannel
+    );
+
+    copyBaleBotUsernameButton?.addEventListener(
+        'click',
+        copyBaleBotUsername
+    );
+
+    bioField?.addEventListener(
+        'input',
+        updateBioCharCount
+    );
+
+    form.addEventListener(
+        'submit',
+        function () {
+            if (followersField) {
+                followersField.value =
+                    NumberFormatter.prepareForSubmit(
+                        followersField.value
+                    );
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent =
+                'در حال ذخیره...';
+        }
+    );
+
+    modal.addEventListener(
+        'hidden.bs.modal',
+        resetForm
+    );
+
+    modal.addEventListener(
+        'shown.bs.modal',
+        function () {
+            updateBioCharCount();
+            updateRegistrationFlow();
+        }
+    );
+
+    addBtn?.addEventListener(
+        'click',
+        resetForm
+    );
+
+    // =====================================================
+    // اتصال مجدد دکمه‌های کارت‌ها
+    // =====================================================
+
     function rebindAll() {
         bindEditButtons();
         bindDeleteButtons();
     }
 
-    // ===== رویدادهای مودال =====
-    modal.addEventListener('hidden.bs.modal', function () {
-        resetForm();
-    });
+    const channelsContainer =
+        document.getElementById(
+            'channelsContainer'
+        );
 
-    if (addBtn) {
-        addBtn.addEventListener('click', function () {
-            resetForm();
-        });
-    }
-
-    // ===== Observer برای تغییرات DOM =====
-    const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-            if (mutation.addedNodes.length) {
-                rebindAll();
-            }
-        });
-    });
-
-    const channelsContainer = document.getElementById('channelsContainer');
     if (channelsContainer) {
-        observer.observe(channelsContainer, {childList: true, subtree: true});
+        const observer = new MutationObserver(
+            function (mutations) {
+                const changed = mutations.some(
+                    mutation =>
+                        mutation.addedNodes.length > 0
+                );
+
+                if (changed) {
+                    rebindAll();
+                }
+            }
+        );
+
+        observer.observe(
+            channelsContainer,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
     }
 
-    // ===== بایند اولیه =====
+    // =====================================================
+    // اجرای اولیه
+    // =====================================================
+
+    setupNumberFormatting();
+    updateBioCharCount();
+    updateQuickImportButtonState();
+    updateRegistrationFlow();
     rebindAll();
-    window.addEventListener('load', rebindAll);
-
-    // ===== رویدادهای bio =====
-    document.addEventListener('DOMContentLoaded', function() {
-        if (bioField) {
-            // رویداد input برای به‌روزرسانی شمارش
-            bioField.addEventListener('input', updateBioCharCount);
-            // شمارش اولیه
-            updateBioCharCount();
-        }
-    });
-
-    // ===== وقتی مودال نمایش داده میشه، دوباره شمارش رو به‌روز کن =====
-    modal.addEventListener('shown.bs.modal', function () {
-        updateBioCharCount();
-        setupNumberFormatting();
-    });
 
 })();
-
-// ===== Utility Functions for Number Formatting =====
-const NumberFormatter = {
-    cleanNumber: function (value) {
-        return value.replace(/,/g, '').replace(/\D/g, '');
-    },
-    formatWithCommas: function (value) {
-        const cleaned = this.cleanNumber(value);
-        if (!cleaned) return '';
-        return Number(cleaned).toLocaleString('en-US');
-    },
-    prepareForSubmit: function (value) {
-        return this.cleanNumber(value);
-    }
-};
-
-// ===== ست کردن فرمت‌کننده روی فیلد فالوور =====
-function setupNumberFormatting() {
-    const followersInput = document.querySelector('#channelForm input[name="followers_count"]');
-    if (!followersInput) return;
-
-    followersInput.addEventListener('input', function () {
-        const cursorPos = this.selectionStart;
-        const formatted = NumberFormatter.formatWithCommas(this.value);
-        if (formatted !== this.value) {
-            this.value = formatted;
-            const newPos = Math.min(cursorPos, formatted.length);
-            this.setSelectionRange(newPos, newPos);
-        }
-    });
-
-    followersInput.addEventListener('blur', function () {
-        this.value = NumberFormatter.formatWithCommas(this.value);
-    });
-}
-
-// ===== قبل از submit، کاماها رو حذف کن =====
-function prepareFormForSubmit() {
-    const form = document.getElementById('channelForm');
-    if (form) {
-        form.addEventListener('submit', function () {
-            const input = document.querySelector('#channelForm input[name="followers_count"]');
-            if (input) {
-                input.value = NumberFormatter.prepareForSubmit(input.value);
-            }
-        });
-    }
-}
-
-// ===== اجرای توابع =====
-document.addEventListener('DOMContentLoaded', function () {
-    setupNumberFormatting();
-    prepareFormForSubmit();
-});
-
-// ===== وقتی مودال بسته میشه =====
-const modal = document.getElementById('channelModal');
-if (modal) {
-    modal.addEventListener('hidden.bs.modal', function () {
-        // هیچ کاری لازم نیست چون resetForm قبلاً انجام شده
-    });
-}

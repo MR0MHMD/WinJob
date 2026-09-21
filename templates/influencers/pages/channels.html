@@ -147,66 +147,315 @@
                 <h5 class="modal-title text-light" id="channelModalLabel">افزودن کانال جدید</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="بستن"></button>
             </div>
-            <form method="post" enctype="multipart/form-data" id="channelForm">
+            <form method="post" enctype="multipart/form-data" id="channelForm" data-bale-platform-id="{{ bale_platform_id|default:'' }}" data-bale-import-url="{% url 'influencers:import_bale_channel' %}" data-has-errors="{% if form.errors %}true{% else %}false{% endif %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-12 d-flex justify-content-center">
-                            <div style="width: 250px;">
-                                <label class="form-label text-light">تصویر پروفایل کانال</label>
-                                <div id="avatar-upload-wrapper" class="avatar-uploader bg-dark border-light position-relative overflow-hidden">
-                                    {{ form.avatar }}
-                                    <div id="avatar-placeholder" class="d-flex flex-column align-items-center justify-content-center h-100">
-                                        <i class="fi-camera-plus fs-2 text-muted mb-2"></i>
-                                        <span class="text-light opacity-70">انتخاب تصویر</span>
-                                    </div>
-                                    <img id="avatar-preview-img" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: cover; display: none;" alt="پیش‌نمایش">
-                                    <button type="button" id="avatar-remove-btn" class="btn btn-icon btn-xs btn-danger position-absolute top-0 end-0 m-2" style="display: none; z-index: 10;" title="حذف تصویر">
-                                        <i class="fi-x"></i>
-                                    </button>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <small id="avatar-file-name" class="text-muted" style="font-size: 0.8rem;"></small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
+                
+                        <!-- انتخاب پلتفرم -->
+                        <div class="col-12">
                             <label class="form-label text-light">پلتفرم</label>
                             {{ form.platform }}
                             {{ form.platform.errors }}
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">آیدی کانال</label>
-                            {{ form.channel_id }}
+                
+                        <!-- انتخاب روش ثبت؛ فقط برای پلتفرم‌های دارای بارگذاری سریع -->
+                        <div class="col-12 d-none" id="channelRegistrationMode">
+                            <label class="form-label text-light mb-3">
+                                روش ثبت اطلاعات کانال
+                            </label>
+                
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input
+                                        type="radio"
+                                        class="btn-check"
+                                        name="registration_mode"
+                                        id="manualRegistrationMode"
+                                        value="manual"
+                                        autocomplete="off"
+                                    >
+                
+                                    <label
+                                        class="btn btn-outline-light w-100 text-start p-3"
+                                        for="manualRegistrationMode"
+                                    >
+                                        <span class="d-block fw-bold mb-1">
+                                            <i class="fi-edit me-1"></i>
+                                            ثبت دستی
+                                        </span>
+                
+                                        <small class="text-muted">
+                                            اطلاعات کانال را خودم وارد می‌کنم.
+                                        </small>
+                                    </label>
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <input
+                                        type="radio"
+                                        class="btn-check"
+                                        name="registration_mode"
+                                        id="quickRegistrationMode"
+                                        value="quick"
+                                        autocomplete="off"
+                                    >
+                
+                                    <label
+                                        class="btn btn-outline-primary w-100 text-start p-3"
+                                        for="quickRegistrationMode"
+                                    >
+                                        <span class="d-block fw-bold mb-1">
+                                            <i class="fi-bolt me-1"></i>
+                                            بارگذاری سریع
+                                        </span>
+                
+                                        <small class="text-muted">
+                                            اطلاعات کانال از روی لینک دریافت می‌شود.
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">نام کانال</label>
-                            {{ form.channel_name }}
+                
+                        <!-- بخش بارگذاری سریع -->
+                        <div class="col-12 d-none" id="quickRegistrationSection">
+                            <div class="border border-primary rounded-3 p-3">
+                                <label for="quickChannelUrl" class="form-label text-light">
+                                    لینک کانال بله
+                                </label>
+                        
+                                <div class="input-group">
+                                    <input
+                                        type="url"
+                                        class="form-control bg-dark text-light border-light"
+                                        id="quickChannelUrl"
+                                        dir="ltr"
+                                        placeholder="https://ble.ir/channel_username"
+                                        autocomplete="off"
+                                    >
+                        
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary"
+                                        id="quickImportButton"
+                                        disabled
+                                    >
+                                        دریافت اطلاعات
+                                    </button>
+                                </div>
+                        
+                                <small class="text-muted d-block mt-2">
+                                    نام، آیدی، بیو، تعداد اعضا و تصویر کانال
+                                    به‌صورت خودکار دریافت می‌شود.
+                                </small>
+                        
+                                <!-- تنظیم خروج خودکار بازو -->
+                                <div class="form-check mt-3">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="leaveBaleBotAfterImport"
+                                        checked
+                                    >
+                        
+                                    <label
+                                        class="form-check-label text-light"
+                                        for="leaveBaleBotAfterImport"
+                                    >
+                                        بازو پس از دریافت اطلاعات از کانال خارج شود
+                                    </label>
+                        
+                                    <small class="text-muted d-block mt-1">
+                                        اگر این گزینه را بردارید، بازو داخل کانال باقی می‌ماند.
+                                    </small>
+                                </div>
+                        
+                                <!-- پیام نتیجه دریافت -->
+                                <div
+                                    id="quickImportFeedback"
+                                    class="alert d-none mt-3 mb-0"
+                                    role="alert"
+                                    style="white-space: pre-line;"
+                                ></div>
+                        
+                                <!-- راهنمای عضویت بازو -->
+                                <div
+                                    id="baleBotConnectionPanel"
+                                    class="d-none border border-warning rounded-3 p-3 mt-3"
+                                >
+                                    <div class="d-flex align-items-start gap-2 mb-3">
+                                        <i class="fi-info-circle text-warning fs-5 mt-1"></i>
+                        
+                                        <div>
+                                            <h6 class="text-light mb-1">
+                                                دریافت تعداد دقیق اعضا
+                                            </h6>
+                        
+                                            <p class="text-muted mb-0">
+                                                بازوی وینجاب را به‌عنوان عضو عادی کانال اضافه کنید.
+                                                نیازی به دسترسی مدیریت نیست.
+                                            </p>
+                                        </div>
+                                    </div>
+                        
+                                    <div class="bg-dark border border-light rounded-3 p-2 mb-3">
+                                        <small class="text-muted d-block mb-1">
+                                            آیدی بازوی وینجاب
+                                        </small>
+                        
+                                        <code
+                                            id="baleBotUsername"
+                                            class="text-light"
+                                            dir="ltr"
+                                        ></code>
+                                    </div>
+                        
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a
+                                            href="#"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="btn btn-outline-light btn-sm"
+                                            id="openBaleBotButton"
+                                        >
+                                            <i class="fi-external-link me-1"></i>
+                                            بازکردن بازو در بله
+                                        </a>
+                        
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-light btn-sm"
+                                            id="copyBaleBotUsernameButton"
+                                        >
+                                            <i class="fi-copy me-1"></i>
+                                            کپی آیدی بازو
+                                        </button>
+                        
+                                        <button
+                                            type="button"
+                                            class="btn btn-warning btn-sm"
+                                            id="retryBaleImportButton"
+                                        >
+                                            <i class="fi-refresh-cw me-1"></i>
+                                            عضو کردم؛ بررسی مجدد
+                                        </button>
+                                    </div>
+                        
+                                    <small
+                                        id="baleBotCopyFeedback"
+                                        class="text-success d-none mt-2"
+                                    >
+                                        آیدی بازو کپی شد.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">تعداد فالوور</label>
-                            {{ form.followers_count }}
+                
+                        <!-- فرم اصلی و فعلی کانال -->
+                        <div class="col-12 d-none" id="channelDetailsSection">
+                            <div class="row g-3">
+                
+                                <div class="col-12 d-flex justify-content-center">
+                                    <div style="width: 250px;">
+                                        <label class="form-label text-light">
+                                            تصویر پروفایل کانال
+                                        </label>
+                
+                                        <div
+                                            id="avatar-upload-wrapper"
+                                            class="avatar-uploader bg-dark border-light position-relative overflow-hidden"
+                                        >
+                                            {{ form.avatar }}
+                
+                                            <div
+                                                id="avatar-placeholder"
+                                                class="d-flex flex-column align-items-center justify-content-center h-100"
+                                            >
+                                                <i class="fi-camera-plus fs-2 text-muted mb-2"></i>
+                                                <span class="text-light opacity-70">
+                                                    انتخاب تصویر
+                                                </span>
+                                            </div>
+                
+                                            <img
+                                                id="avatar-preview-img"
+                                                class="position-absolute top-0 start-0 w-100 h-100"
+                                                style="object-fit: cover; display: none;"
+                                                alt="پیش‌نمایش"
+                                            >
+                
+                                            <button
+                                                type="button"
+                                                id="avatar-remove-btn"
+                                                class="btn btn-icon btn-xs btn-danger position-absolute top-0 end-0 m-2"
+                                                style="display: none; z-index: 10;"
+                                                title="حذف تصویر"
+                                            >
+                                                <i class="fi-x"></i>
+                                            </button>
+                                        </div>
+                
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <small
+                                                id="avatar-file-name"
+                                                class="text-muted"
+                                                style="font-size: 0.8rem;"
+                                            ></small>
+                                        </div>
+                                    </div>
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">آیدی کانال</label>
+                                    {{ form.channel_id }}
+                                    {{ form.channel_id.errors }}
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">نام کانال</label>
+                                    {{ form.channel_name }}
+                                    {{ form.channel_name.errors }}
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">تعداد فالوور</label>
+                                    {{ form.followers_count }}
+                                    {{ form.followers_count.errors }}
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">استان</label>
+                                    {{ form.province }}
+                                    {{ form.province.errors }}
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">دسته‌بندی</label>
+                                    {{ form.category }}
+                                    {{ form.category.errors }}
+                                </div>
+                
+                                <div class="col-md-6">
+                                    <label class="form-label text-light">لینک کانال</label>
+                                    {{ form.url }}
+                                    {{ form.url.errors }}
+                                </div>
+                
+                                <div class="col-12">
+                                    <label class="form-label text-light">درباره کانال</label>
+                                    {{ form.bio }}
+                
+                                    <small class="text-muted d-block mt-1">
+                                        <span id="bioCharCount">0</span> / 800 کاراکتر
+                                    </small>
+                
+                                    {{ form.bio.errors }}
+                                </div>
+                
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">استان</label>
-                            {{ form.province }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">دسته‌بندی</label>
-                            {{ form.category }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-light">لینک کانال</label>
-                            {{ form.url }}
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label text-light">درباره کانال</label>
-                            {{ form.bio }}
-                            <small class="text-muted d-block mt-1">
-                                <span id="bioCharCount">0</span> / 500 کاراکتر
-                            </small>
-                            {{ form.bio.errors }}
-                        </div>
+                
                     </div>
                 </div>
                 <div class="modal-footer border-top border-light">

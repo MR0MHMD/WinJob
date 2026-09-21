@@ -9,6 +9,7 @@ urlpatterns = [
     path('my_channels/', views.influencer_channels_view, name='influencer_channels'),
     path('my_channels/edit/<int:pk>/', views.influencer_channels_view, name='edit_channel'),
     path('my_channels/delete/<int:pk>/', views.delete_channel_view, name='delete_channel'),
+    path("api/channel-import/bale/", api_views.import_bale_channel, name="import_bale_channel"),
     path('service-rates/', views.service_rates_view, name='service_rates'),
     path('service-rates/edit/<int:channel_id>/<int:ad_type_id>/', api_views.rate_inline_edit, name='rate_inline_edit'),
     path('order_list/', views.order_list, name="order_list"),

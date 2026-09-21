@@ -1,4 +1,5 @@
 from campaigns.services.campaigns_notifications import approve_influencer_report_service, reject_influencer_report_service
+from .services.channel_importers import BaleChannelImportError, BaleChannelImportService
 from campaigns.services.raiting_service import submit_influencer_review_service
 from .models import ChannelServiceRate, ChannelReview, Channel, ChannelBooking
 from .services.verification_service import VerificationService
@@ -9,12 +10,143 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from decimal import InvalidOperation, Decimal
 from campaigns.models import CampaignReport
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.conf import settings
 from django.urls import reverse
 from core.models import AdType
 import requests
 import json
+
+
+@login_required
+@require_POST
+def import_bale_channel(request):
+    """
+    دریافت اطلاعات کانال بله برای پیش‌نمایش فرم.
+
+    این View هیچ کانالی را در دیتابیس ذخیره نمی‌کند.
+    """
+
+    if not hasattr(
+        request.user,
+        "influencer_profile",
+    ):
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "influencer_profile_required",
+                "message": (
+                    "برای استفاده از این قابلیت "
+                    "باید حساب ناشر داشته باشید."
+                ),
+            },
+            status=403,
+        )
+
+    rate_limit_key = (
+        f"bale-channel-import:"
+        f"{request.user.pk}"
+    )
+
+    if not cache.add(
+        rate_limit_key,
+        True,
+        timeout=3,
+    ):
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "too_many_requests",
+                "message": (
+                    "لطفاً چند ثانیه صبر کنید "
+                    "و دوباره تلاش کنید."
+                ),
+            },
+            status=429,
+        )
+
+    try:
+        payload = json.loads(
+            request.body or b"{}"
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "invalid_json",
+                "message": "اطلاعات ارسال‌شده معتبر نیست.",
+            },
+            status=400,
+        )
+
+    if not isinstance(payload, dict):
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "invalid_payload",
+                "message": "ساختار درخواست معتبر نیست.",
+            },
+            status=400,
+        )
+
+    leave_after_import = (
+            payload.get("leave_after_import") is True
+    )
+
+    channel_url = str(
+        payload.get("url") or ""
+    ).strip()
+
+    if not channel_url:
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "channel_url_required",
+                "message": "لینک کانال بله را وارد کنید.",
+            },
+            status=400,
+        )
+
+    try:
+        result = (
+            BaleChannelImportService.fetch_channel(
+                channel_url,
+                leave_after_import=leave_after_import,
+            )
+        )
+
+    except BaleChannelImportError as error:
+        return JsonResponse(
+            {
+                "success": False,
+                "code": error.code,
+                "message": error.message,
+            },
+            status=error.status_code,
+        )
+
+    except Exception:
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "unexpected_error",
+                "message": (
+                    "هنگام دریافت اطلاعات کانال "
+                    "خطای پیش‌بینی‌نشده‌ای رخ داد."
+                ),
+            },
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            **result,
+        },
+        status=200,
+    )
 
 
 @login_required
