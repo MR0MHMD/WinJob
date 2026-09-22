@@ -5387,7 +5387,7 @@ moment = (() => {
                             sameElse: "L"
                         },
                         relativeTime: {
-                            future: "wonten ing %s",
+                            future: "wonten img %s",
                             past: "%s ingkang kepengker",
                             s: "sawetawis detik",
                             ss: "%d detik",

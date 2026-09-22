@@ -80,7 +80,7 @@ def login_view(request):
 def logout_view(request):
     """خروج از حساب کاربری"""
     logout(request)
-    messages.success(request, 'با موفقیت از حساب خود خارج شدید. 👋')
+    messages.success(request, 'با موفقیت از حساب خود خارج شدید. ')
     return redirect('core:home')
 
 

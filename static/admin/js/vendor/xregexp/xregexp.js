@@ -232,9 +232,9 @@ module.exports = function(XRegExp) {
      * @example
      *
      * // Basic usage
-     * var str = '(t((e))s)t()(ing)';
+     * var str = '(t((e))s)t()(img)';
      * XRegExp.matchRecursive(str, '\\(', '\\)', 'g');
-     * // -> ['t((e))s', '', 'ing']
+     * // -> ['t((e))s', '', 'img']
      *
      * // Extended information mode with valueNames
      * str = 'Here is <div> <div>an</div></div> example';
