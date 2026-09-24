@@ -7,7 +7,7 @@ from accounts.models import CustomUser
 
 def post_list(request):
     hot_post = Post.published.first()
-    latest_post = Post.published.all().order_by('-created_at').exclude(id=hot_post.id)[:4]
+    latest_post = Post.published.all().order_by('-created_at').exclude(id=hot_post.id if hot_post else None)[:4]
     Controversial_post = Post.published.annotate(comment_count=Count('comments')).order_by('-comment_count')[:5]
     categories = BlogCategory.objects.all()
 
@@ -21,7 +21,7 @@ def post_list(request):
 
 
 def post_detail(request, id, slug):
-    post = get_object_or_404(Post, id=id, slug=slug)
+    post = get_object_or_404(Post.published, id=id, slug=slug)
     comments = post.comments.filter(parent_comment=None)
     latest_post = Post.published.all().order_by('-created_at').exclude(id=post.id)[:3]
     Controversial_post = Post.published.annotate(comment_count=Count('comments')).order_by('-comment_count').exclude(id=post.id)[:3]
@@ -39,11 +39,11 @@ def post_detail(request, id, slug):
 
 def post_comment(request, id, slug, parent_id=None):
     if request.method == 'POST':
-        post = get_object_or_404(Post, id=id, slug=slug)
+        post = get_object_or_404(Post.published, id=id, slug=slug)
 
         parent_comment = None
         if parent_id:
-            parent_comment = get_object_or_404(PostComments, id=parent_id)
+            parent_comment = get_object_or_404(PostComments, id=parent_id, post=post)
 
         if request.user.is_authenticated:
             user = request.user
@@ -72,7 +72,7 @@ def post_comment(request, id, slug, parent_id=None):
 
 def person_posts(request, id):
     user = get_object_or_404(CustomUser, id=id)
-    posts = user.posts.all()
+    posts = user.posts.filter(status=Post.Status.PUBLISHED)
 
     context = {
         "user": user,

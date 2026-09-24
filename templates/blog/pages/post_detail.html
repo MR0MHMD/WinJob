@@ -18,6 +18,16 @@
             height: 65px;
             object-fit: cover;
         }
+        .blog-content { overflow-wrap: anywhere; }
+        .blog-content h1, .blog-content h2, .blog-content h3,
+        .blog-content h4, .blog-content h5, .blog-content h6 {
+            color: inherit; font-family: inherit; margin: 1.5rem 0 .75rem;
+        }
+        .blog-content img { max-width: 100%; height: auto; border-radius: .5rem; }
+        .blog-content pre { direction: ltr; text-align: left; overflow-x: auto; }
+        .blog-content table { display: block; max-width: 100%; overflow-x: auto; }
+        .blog-content th, .blog-content td { padding: .5rem; border: 1px solid #777; }
+        .blog-content blockquote { border-inline-start: 3px solid #888; padding-inline-start: 1rem; }
     </style>
 {% endblock %}
 {% block content %}
@@ -37,7 +47,7 @@
         <!-- Page title-->
         <h1 class="h4 font-vazir text-light pb-3">{{ post.title }}</h1>
         {% if post.image %}
-            <img class="rounded-3" src="{{ post.image.url }}" alt="Image">
+            <img class="rounded-3" src="{{ post.image.url }}" alt="{{ post.title }}">
         {% else %}
             <img class="rounded-3"
                  src="{% static 'finder/img/car-finder/blog/10.jpg' %}"
@@ -60,7 +70,7 @@
                        data-scroll><i
                             class="fi-chat-circle opacity-70 me-2"></i><span>{{ post.comment_count }} نظر</span></a>
                 </div>
-                <div class="text-light opacity-70 line-h18">{{ post.content|linebreaks }}</div>
+                <div class="blog-content text-light line-h18" dir="rtl">{{ post.content|markdown }}</div>
                 <!-- Tags + Sharing-->
                 <div class="pt-4 pb-5 mb-md-3">
                     <div class="d-md-flex align-items-center justify-content-between border-top border-light pt-4">
