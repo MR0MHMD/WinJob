@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     "tickets.apps.TicketsConfig",
     "gamification.apps.GamificationConfig",
     "support.apps.SupportConfig",
-    "payment.apps.PaymentConfig"
+    "payment.apps.PaymentConfig",
+    "social_manager.apps.SocialManagerConfig",
 ]
 
 DAISY_SETTINGS = {
