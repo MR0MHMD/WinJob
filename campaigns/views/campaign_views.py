@@ -4,6 +4,7 @@ from django.db.models import Prefetch, Count, Sum, Q, F, Case, When, Value, Inte
 from notifications.utils import notify_influencer_new_campaign_orders
 from payment.services.tax_calculator import calculate_replacement_tax
 from payment.services.create_invoice import create_campaign_invoice
+from payment.services.zarinpal_flow import callback_url, prepare_gateway_bridge
 from ..services.free_campaign import create_free_campaign_bookings
 from influencers.models import ChannelServiceRate, ChannelBooking
 from django.shortcuts import redirect, get_object_or_404, render
@@ -1299,9 +1300,7 @@ def campaign_create_step4(request):
                 payment_result, redirect_url = services.start_payment(
                     slug="zarinpal",
                     amount=invoice.payable_amount,
-                    callback_url=request.build_absolute_uri(
-                        reverse('payment:campaign_payment_callback')
-                    ),
+                    callback_url=callback_url('payment:campaign_payment_callback'),
                     order_id=f"campaign_{campaign.id}_{int(timezone.now().timestamp())}",
                     description=f"پرداخت کمپین {campaign.name} - مبلغ {invoice.payable_amount:,} تومان",
                     mobile=request.user.phone_number,
@@ -1314,8 +1313,8 @@ def campaign_create_step4(request):
                 request.session['campaign_payment_amount'] = invoice.payable_amount
                 request.session['campaign_payment_invoice_id'] = invoice.id
 
-                # ========== هدایت مستقیم به درگاه ==========
-                return redirect(redirect_url)
+                # ========== هدایت از صفحه واسط روی دامنه رسمی ==========
+                return redirect(prepare_gateway_bridge(request, redirect_url))
 
             except Exception as e:
                 messages.error(request, f"خطا در اتصال به درگاه پرداخت: {str(e)}")

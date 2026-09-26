@@ -1,70 +1,707 @@
-<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}اتصال اینترنت قطع است | WinJob{% endblock %}
+
+{% block extra_head %}
     <meta name="theme-color" content="#1f1b2d">
-    <title>اتصال برقرار نیست | وینجاب</title>
-    <style>
-        * {
-            box-sizing: border-box
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    :root {
+        --wj-bg: #1f1b2d;
+        --wj-orange: #fd5631;
+        --wj-purple: #5d3cf2;
+        --wj-white: #ffffff;
+        --wj-muted: #9994a8;
+    }
+
+    html,
+    body {
+        background: var(--wj-bg) !important;
+    }
+
+    /* Hide base layout elements completely */
+    header,
+    nav,
+    aside,
+    .navbar,
+    .header,
+    .sidebar,
+    .side-bar,
+    .main-sidebar,
+    .app-sidebar,
+    .footer,
+    footer,
+    .footer-guest-wrapper {
+        display: none !important;
+    }
+
+    .page-wrapper,
+    .main-content,
+    .content-wrapper,
+    .content,
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .wj-offline {
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+        isolation: isolate;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 70px 24px;
+        background:
+            radial-gradient(circle at 68% 45%, rgba(93, 60, 242, .075), transparent 35%),
+            radial-gradient(circle at 28% 65%, rgba(253, 86, 49, .045), transparent 32%),
+            var(--wj-bg);
+    }
+
+    .wj-offline__grid {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        opacity: .17;
+        background-image:
+            linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
+    }
+
+    .wj-offline__container {
+        width: 100%;
+        max-width: 1180px;
+        display: grid;
+        grid-template-columns: minmax(0, .92fr) minmax(420px, 1.08fr);
+        align-items: center;
+        gap: 55px;
+    }
+
+    .wj-offline__content {
+        direction: rtl;
+        text-align: right;
+    }
+
+    .wj-offline__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.025);
+        color: #aaa5b7;
+        font-family: monospace;
+        font-size: 10px;
+        letter-spacing: 1.4px;
+        margin-bottom: 22px;
+    }
+
+    .wj-offline__eyebrow-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--wj-orange);
+        box-shadow:
+            0 0 0 3px rgba(253,86,49,.08),
+            0 0 12px rgba(253,86,49,.45);
+        animation: wjOfflineDot 1.6s ease-in-out infinite;
+    }
+
+    .wj-offline__title {
+        margin: 0;
+        color: var(--wj-white);
+        font-family: "vazir-bold", "IRANSans", sans-serif;
+        font-size: clamp(2.15rem, 4vw, 3.6rem);
+        line-height: 1.35;
+        font-weight: 800;
+        letter-spacing: -1.4px;
+    }
+
+    .wj-offline__title-highlight {
+        display: block;
+        background: linear-gradient(
+            100deg,
+            var(--wj-orange) 0%,
+            #ff7255 38%,
+            var(--wj-purple) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .wj-offline__description {
+        max-width: 540px;
+        margin: 20px 0 0;
+        color: var(--wj-muted);
+        font-family: "IRANSans", "vazir", sans-serif;
+        font-size: 14px;
+        line-height: 2.2;
+    }
+
+    .wj-offline__actions {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-top: 31px;
+    }
+
+    .wj-offline__button {
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        padding: 0 21px;
+        border: 0;
+        cursor: pointer;
+        font-family: "IRANSans", "vazir", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition:
+            transform .2s ease,
+            border-color .2s ease,
+            background .2s ease,
+            box-shadow .2s ease;
+    }
+
+    .wj-offline__button--primary {
+        color: #fff;
+        background: linear-gradient(110deg, var(--wj-orange), var(--wj-purple));
+        box-shadow: 0 9px 25px rgba(93,60,242,.13);
+    }
+
+    .wj-offline__button--primary:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 13px 30px rgba(93,60,242,.20);
+    }
+
+    .wj-offline__button--secondary {
+        color: #d8d4df;
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.025);
+    }
+
+    .wj-offline__button--secondary:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        border-color: rgba(253,86,49,.28);
+        background: rgba(255,255,255,.045);
+    }
+
+    .wj-offline__status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 30px;
+        direction: ltr;
+        color: rgba(153,148,168,.48);
+        font-family: monospace;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+    }
+
+    .wj-offline__status-line {
+        width: 34px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--wj-orange), transparent);
+    }
+
+    .wj-offline__visual {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .wj-offline__art {
+        position: relative;
+        width: min(100%, 590px);
+        aspect-ratio: 1 / 1;
+    }
+
+    .wj-offline__svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+    }
+
+    .wj-offline__data {
+        stroke-dasharray: 5 13;
+        animation: wjOfflineData 4.5s linear infinite;
+    }
+
+    .wj-offline__pulse {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wjOfflinePulse 3.8s ease-in-out infinite;
+    }
+
+    .wj-offline__signal {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: wjOfflineSignal 2.2s ease-in-out infinite;
+    }
+
+    .wj-offline__signal:nth-child(2) {
+        animation-delay: .18s;
+    }
+
+    .wj-offline__signal:nth-child(3) {
+        animation-delay: .36s;
+    }
+
+    @keyframes wjOfflineData {
+        to {
+            stroke-dashoffset: -72;
+        }
+    }
+
+    @keyframes wjOfflinePulse {
+        0%, 100% {
+            opacity: .42;
+            transform: scale(.97);
         }
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background: #1f1b2d;
-            color: #fff;
-            font-family: Tahoma, sans-serif;
-            padding: 24px
+        50% {
+            opacity: .75;
+            transform: scale(1.025);
+        }
+    }
+
+    @keyframes wjOfflineSignal {
+        0%, 100% {
+            opacity: .15;
+            transform: scale(.96);
         }
 
-        main {
-            max-width: 480px;
-            padding: 32px;
-            border: 1px solid #645974;
-            border-radius: 24px;
-            background: #292338;
-            text-align: center
+        50% {
+            opacity: .82;
+            transform: scale(1.02);
+        }
+    }
+
+    @keyframes wjOfflineDot {
+        0%, 100% {
+            opacity: .35;
         }
 
-        h1 {
-            font-size: 24px
+        50% {
+            opacity: 1;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .wj-offline__data,
+        .wj-offline__pulse,
+        .wj-offline__signal,
+        .wj-offline__eyebrow-dot {
+            animation: none !important;
         }
 
-        p {
+        .wj-offline__button {
+            transition: none;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .wj-offline {
+            padding-top: 55px;
+            padding-bottom: 55px;
+        }
+
+        .wj-offline__container {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            max-width: 680px;
+        }
+
+        .wj-offline__visual {
+            order: 1;
+        }
+
+        .wj-offline__content {
+            order: 2;
+            text-align: center;
+        }
+
+        .wj-offline__description {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .wj-offline__actions,
+        .wj-offline__status {
+            justify-content: center;
+        }
+
+        .wj-offline__art {
+            width: min(88vw, 500px);
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .wj-offline {
+            padding: 45px 15px;
+        }
+
+        .wj-offline__container {
+            gap: 0;
+        }
+
+        .wj-offline__art {
+            width: 100%;
+        }
+
+        .wj-offline__eyebrow {
+            margin-bottom: 16px;
+        }
+
+        .wj-offline__title {
+            font-size: 2rem;
+        }
+
+        .wj-offline__description {
+            font-size: 12px;
             line-height: 2;
-            color: #ddd
         }
 
-        a {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #b9a9ff;
-            color: #20162f;
-            border-radius: 12px;
-            text-decoration: none
+        .wj-offline__actions {
+            flex-direction: column;
+            width: 100%;
         }
 
-        small {
-            display: block;
-            margin-top: 24px;
-            line-height: 1.9;
-            color: #ccc
+        .wj-offline__button {
+            width: 100%;
         }
-    </style>
-</head>
-<body>
-<main>
-    <strong>WINJOB · وینجاب</strong>
-    <h1>ارتباط با وینجاب برقرار نیست</h1>
-    <p>اتصال اینترنت را بررسی کنید و دوباره تلاش کنید. اطلاعات حساب، سفارش‌ها و پرداخت‌ها برای نمایش به اتصال اینترنت
-        نیاز دارند.</p>
-    <a href="">تلاش دوباره</a>
-    <small>اگر پیش از قطع اتصال عملیاتی فرستاده‌اید، ابتدا وضعیت آن را بررسی کنید؛ قطع اتصال به معنی لغو عملیات
-        نیست.</small>
-</main>
-</body>
-</html>
+
+        .wj-offline__status {
+            font-size: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wj-offline" aria-labelledby="wj-offline-title">
+
+    <div class="wj-offline__grid" aria-hidden="true"></div>
+
+    <div class="wj-offline__container">
+
+        <div class="wj-offline__content">
+
+            <div class="wj-offline__eyebrow">
+                <span class="wj-offline__eyebrow-dot"></span>
+                NETWORK OFFLINE / CONNECTION LOST
+            </div>
+
+            <h1 id="wj-offline-title" class="wj-offline__title">
+                اتصال اینترنت
+                <span class="wj-offline__title-highlight">
+                    در دسترس نیست.
+                </span>
+            </h1>
+
+            <p class="wj-offline__description">
+                ارتباط دستگاه شما با شبکه قطع شده است.
+                اتصال اینترنت را بررسی کنید و پس از برقراری ارتباط،
+                دوباره برای ادامه کار در WinJob تلاش کنید.
+            </p>
+
+{#            <div class="wj-offline__actions">#}
+                <button
+                    type="button"
+                    class="wj-offline__button wj-offline__button--primary"
+                    onclick="retryWinJobConnection()"
+                >
+                    تلاش دوباره
+                </button>
+{#            </div>#}
+
+            <div class="wj-offline__status" id="offline-status">
+                <span class="wj-offline__status-line"></span>
+                WINJOB NETWORK
+                <span>•</span>
+                CONNECTION LOST
+            </div>
+
+        </div>
+
+
+        <div class="wj-offline__visual">
+
+            <div class="wj-offline__art">
+
+                <svg
+                    class="wj-offline__svg"
+                    viewBox="0 0 600 600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    role="img"
+                    aria-label="WinJob Offline Network"
+                >
+
+                    <defs>
+
+                        <linearGradient id="wjOfflineMain" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#5d3cf2"/>
+                            <stop offset=".48" stop-color="#8061f5"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <linearGradient id="wjOfflinePurple" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#a08cff"/>
+                            <stop offset="1" stop-color="#5d3cf2"/>
+                        </linearGradient>
+
+                        <linearGradient id="wjOfflineOrange" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ff8068"/>
+                            <stop offset="1" stop-color="#fd5631"/>
+                        </linearGradient>
+
+                        <radialGradient id="wjOfflineCenter" cx="50%" cy="50%" r="50%">
+                            <stop offset="0" stop-color="#5d3cf2" stop-opacity=".14"/>
+                            <stop offset=".7" stop-color="#5d3cf2" stop-opacity=".035"/>
+                            <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"/>
+                        </radialGradient>
+
+                    </defs>
+
+
+                    <!-- atmosphere -->
+                    <circle cx="300" cy="300" r="250"
+                            fill="none"
+                            stroke="rgba(255,255,255,.025)"
+                            stroke-width="1"/>
+
+                    <circle cx="300" cy="300" r="232"
+                            fill="none"
+                            stroke="rgba(255,255,255,.035)"
+                            stroke-width="1"
+                            stroke-dasharray="1 13"/>
+
+                    <circle cx="300" cy="300" r="185"
+                            fill="url(#wjOfflineCenter)"/>
+
+
+                    <!-- tech frame -->
+                    <g fill="none"
+                       stroke="url(#wjOfflineMain)"
+                       stroke-width="1"
+                       opacity=".55">
+
+                        <path d="M82 145 V102 H125"/>
+                        <path d="M475 102 H518 V145"/>
+                        <path d="M82 455 V498 H125"/>
+                        <path d="M475 498 H518 V455"/>
+
+                    </g>
+
+
+                    <!-- network structure -->
+                    <g fill="none"
+                       stroke-linecap="round"
+                       stroke-linejoin="round">
+
+                        <path d="M65 214 L116 166 L174 184 L213 145 L255 162"
+                              stroke="rgba(255,255,255,.07)"/>
+
+                        <path d="M65 214 L92 300 L63 386 L124 438 L182 421"
+                              stroke="rgba(255,255,255,.06)"/>
+
+                        <path d="M345 162 L387 145 L426 184 L484 166 L535 214"
+                              stroke="rgba(255,255,255,.07)"/>
+
+                        <path d="M535 214 L508 300 L537 386 L476 438 L418 421"
+                              stroke="rgba(255,255,255,.06)"/>
+
+
+                        <path
+                            class="wj-offline__data"
+                            d="M65 214 L116 166 L174 184 L213 145"
+                            stroke="url(#wjOfflinePurple)"
+                            stroke-width="2"
+                            opacity=".75"
+                        />
+
+                        <path
+                            class="wj-offline__data"
+                            d="M535 214 L484 166 L426 184"
+                            stroke="url(#wjOfflineOrange)"
+                            stroke-width="2"
+                            opacity=".75"
+                        />
+
+                    </g>
+
+
+                    <!-- nodes -->
+                    <g>
+                        <circle cx="65" cy="214" r="4" fill="#5d3cf2"/>
+                        <circle cx="116" cy="166" r="2.5" fill="#a08cff"/>
+                        <circle cx="174" cy="184" r="3.5" fill="#fff"/>
+                        <circle cx="213" cy="145" r="4" fill="#5d3cf2"/>
+
+                        <circle cx="535" cy="214" r="4" fill="#fd5631"/>
+                        <circle cx="484" cy="166" r="2.5" fill="#ff8068"/>
+                        <circle cx="426" cy="184" r="3.5" fill="#fff"/>
+
+                        <circle cx="63" cy="386" r="3.5" fill="#5d3cf2"/>
+                        <circle cx="124" cy="438" r="4" fill="#fd5631"/>
+                        <circle cx="476" cy="438" r="4" fill="#5d3cf2"/>
+                        <circle cx="537" cy="386" r="3.5" fill="#fd5631"/>
+                    </g>
+
+
+                    <!-- central gateway -->
+                    <circle cx="300" cy="300" r="153"
+                            fill="none"
+                            stroke="rgba(255,255,255,.035)"/>
+
+                    <circle cx="300" cy="300" r="145"
+                            fill="#1f1b2d"
+                            stroke="rgba(255,255,255,.065)"/>
+
+                    <circle cx="300" cy="300" r="134"
+                            fill="none"
+                            stroke="url(#wjOfflineMain)"
+                            stroke-width="1"
+                            stroke-dasharray="2 10"
+                            opacity=".7"/>
+
+
+                    <!-- wifi -->
+                    <g
+                        fill="none"
+                        stroke-linecap="round"
+                        stroke="url(#wjOfflineMain)"
+                    >
+
+                        <path class="wj-offline__signal"
+                              d="M235 270 Q300 210 365 270"
+                              stroke-width="7"/>
+
+                        <path class="wj-offline__signal"
+                              d="M258 300 Q300 262 342 300"
+                              stroke-width="7"/>
+
+                        <path class="wj-offline__signal"
+                              d="M282 330 Q300 314 318 330"
+                              stroke-width="7"/>
+
+                    </g>
+
+                    <circle cx="300" cy="350" r="8" fill="#fd5631"/>
+
+
+                    <!-- broken link -->
+                    <g fill="none" stroke-linecap="round">
+
+                        <path d="M386 300 H431"
+                              stroke="url(#wjOfflineOrange)"
+                              stroke-width="2"/>
+
+                        <path d="M455 300 H502"
+                              stroke="rgba(253,86,49,.25)"
+                              stroke-width="1"
+                              stroke-dasharray="2 7"/>
+
+                        <circle cx="443"
+                                cy="300"
+                                r="9"
+                                stroke="#fd5631"
+                                stroke-width="1"
+                                opacity=".5"/>
+
+                        <path d="M438 295 L448 305 M448 295 L438 305"
+                              stroke="#fd5631"
+                              stroke-width="2"/>
+
+                    </g>
+
+
+                    <!-- pulse -->
+                    <circle
+                        class="wj-offline__pulse"
+                        cx="300"
+                        cy="300"
+                        r="92"
+                        fill="none"
+                        stroke="url(#wjOfflineMain)"
+                        stroke-width="1"
+                        opacity=".35"
+                    />
+
+
+                    <!-- labels -->
+                    <g
+                        font-family="monospace"
+                        font-size="8"
+                        letter-spacing="1"
+                        fill="rgba(255,255,255,.27)"
+                    >
+                        <text x="53" y="202">NODE_01</text>
+                        <text x="448" y="202">NODE_08</text>
+                        <text x="430" y="287">NO_SIGNAL</text>
+                        <text x="230" y="491">WINJOB://OFFLINE</text>
+                        <text x="250" y="112">NETWORK_LOST</text>
+                    </g>
+
+                </svg>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<script>
+    function retryWinJobConnection() {
+        if (navigator.onLine) {
+            window.location.reload();
+            return;
+        }
+
+        const status = document.getElementById('offline-status');
+
+        if (status) {
+            status.innerHTML = `
+                <span class="wj-offline__status-line"></span>
+                WINJOB NETWORK
+                <span>•</span>
+                STILL OFFLINE
+            `;
+        }
+    }
+
+    window.addEventListener('online', function () {
+        const status = document.getElementById('offline-status');
+
+        if (status) {
+            status.innerHTML = `
+                <span class="wj-offline__status-line"></span>
+                WINJOB NETWORK
+                <span>•</span>
+                CONNECTION RESTORED
+            `;
+        }
+
+        setTimeout(function () {
+            window.location.reload();
+        }, 850);
+    });
+</script>
+{% endblock %}

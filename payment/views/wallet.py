@@ -1,4 +1,5 @@
 from payment.services.create_invoice import complete_wallet_payment
+from payment.services.zarinpal_flow import callback_url, prepare_gateway_bridge
 from django_iranian_payment.contrib.django import services
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
@@ -126,9 +127,7 @@ def wallet_deposit(request):
             payment_result, redirect_url = services.start_payment(
                 slug="zarinpal",
                 amount=amount,
-                callback_url=request.build_absolute_uri(
-                    reverse('payment:payment_callback')
-                ),
+                callback_url=callback_url('payment:payment_callback'),
                 order_id=f"wallet_{request.user.id}_{int(timezone.now().timestamp())}",
                 description=f"شارژ کیف پول کاربر {request.user.phone_number} - مبلغ {amount:,} تومان",
                 mobile=request.user.phone_number,
@@ -139,7 +138,8 @@ def wallet_deposit(request):
             request.session['payment_authority'] = payment_result.authority
             request.session['payment_amount'] = amount
 
-            return redirect(redirect_url)
+            # Always enter StartPay from a page on the registered canonical domain.
+            return redirect(prepare_gateway_bridge(request, redirect_url))
 
         except Exception as e:
             messages.error(request, f"خطا در اتصال به درگاه پرداخت: {str(e)}")

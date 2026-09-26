@@ -1,0 +1,551 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}انتقال به درگاه پرداخت | WinJob{% endblock %}
+
+{% block extra_head %}
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="#1f1b2d">
+{% endblock %}
+
+{% block extra_style %}
+    <style>
+        :root {
+            --wj-bg: #1f1b2d;
+            --wj-orange: #fd5631;
+            --wj-purple: #5d3cf2;
+            --wj-white: #ffffff;
+            --wj-muted: #9994a8;
+        }
+    
+        html,
+        body {
+            background: var(--wj-bg) !important;
+        }
+    
+        header,
+        nav,
+        aside,
+        .navbar,
+        .header,
+        .sidebar,
+        .side-bar,
+        .main-sidebar,
+        .app-sidebar,
+        .footer,
+        footer,
+        .footer-guest-wrapper {
+            display: none !important;
+        }
+    
+        .page-wrapper,
+        .main-content,
+        .content-wrapper,
+        .content,
+        main {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+    
+        .wj-payment {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+            isolation: isolate;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 70px 24px;
+            background:
+                radial-gradient(circle at 68% 45%, rgba(93,60,242,.075), transparent 35%),
+                radial-gradient(circle at 28% 65%, rgba(253,86,49,.045), transparent 32%),
+                var(--wj-bg);
+        }
+    
+        .wj-payment__grid {
+            position: absolute;
+            inset: 0;
+            z-index: -2;
+            opacity: .17;
+            background-image:
+                linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
+        }
+    
+        .wj-payment__container {
+            width: 100%;
+            max-width: 1180px;
+            display: grid;
+            grid-template-columns: minmax(0, .92fr) minmax(420px, 1.08fr);
+            align-items: center;
+            gap: 55px;
+        }
+    
+        .wj-payment__content {
+            direction: rtl;
+            text-align: right;
+        }
+    
+        .wj-payment__eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            height: 32px;
+            padding: 0 12px;
+            border: 1px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.025);
+            color: #aaa5b7;
+            font-family: monospace;
+            font-size: 10px;
+            letter-spacing: 1.4px;
+            margin-bottom: 22px;
+        }
+    
+        .wj-payment__eyebrow-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #5d3cf2;
+            box-shadow:
+                0 0 0 3px rgba(93,60,242,.10),
+                0 0 12px rgba(93,60,242,.55);
+            animation: wjPaymentDot 1.5s ease-in-out infinite;
+        }
+    
+        .wj-payment__title {
+            margin: 0;
+            color: var(--wj-white);
+            font-family: "vazir-bold", "IRANSans", sans-serif;
+            font-size: clamp(2.15rem, 4vw, 3.6rem);
+            line-height: 1.35;
+            font-weight: 800;
+            letter-spacing: -1.4px;
+        }
+    
+        .wj-payment__title-highlight {
+            display: block;
+            background: linear-gradient(
+                100deg,
+                var(--wj-orange) 0%,
+                #ff7255 38%,
+                var(--wj-purple) 100%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    
+        .wj-payment__description {
+            max-width: 540px;
+            margin: 20px 0 0;
+            color: var(--wj-muted);
+            font-family: "IRANSans", "vazir", sans-serif;
+            font-size: 14px;
+            line-height: 2.2;
+        }
+    
+        .wj-payment__actions {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-top: 31px;
+        }
+    
+        .wj-payment__button {
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            padding: 0 21px;
+            border: 0;
+            cursor: pointer;
+            font-family: "IRANSans", "vazir", sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition:
+                transform .2s ease,
+                border-color .2s ease,
+                background .2s ease,
+                box-shadow .2s ease;
+        }
+    
+        .wj-payment__button--primary {
+            color: #fff;
+            background: linear-gradient(110deg, var(--wj-orange), var(--wj-purple));
+            box-shadow: 0 9px 25px rgba(93,60,242,.13);
+        }
+    
+        .wj-payment__button--primary:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 13px 30px rgba(93,60,242,.20);
+        }
+    
+        .wj-payment__button--secondary {
+            color: #d8d4df;
+            border: 1px solid rgba(255,255,255,.09);
+            background: rgba(255,255,255,.025);
+        }
+    
+        .wj-payment__button--secondary:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            border-color: rgba(253,86,49,.28);
+            background: rgba(255,255,255,.045);
+        }
+    
+        .wj-payment__status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+            direction: ltr;
+            color: rgba(153,148,168,.48);
+            font-family: monospace;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+        }
+    
+        .wj-payment__status-line {
+            width: 34px;
+            height: 1px;
+            background: linear-gradient(90deg, var(--wj-orange), transparent);
+        }
+    
+        .wj-payment__visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    
+        .wj-payment__art {
+            position: relative;
+            width: min(100%, 590px);
+            aspect-ratio: 1 / 1;
+        }
+    
+        .wj-payment__svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            overflow: visible;
+        }
+    
+        .wj-payment__data {
+            stroke-dasharray: 5 13;
+            animation: wjPaymentData 3.3s linear infinite;
+        }
+    
+        .wj-payment__pulse {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: wjPaymentPulse 3s ease-in-out infinite;
+        }
+    
+        .wj-payment__core {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: wjPaymentCore 4.5s linear infinite;
+        }
+    
+        .wj-payment__token {
+            animation: wjPaymentToken 2.3s ease-in-out infinite;
+        }
+    
+        @keyframes wjPaymentData {
+            to {
+                stroke-dashoffset: -72;
+            }
+        }
+    
+        @keyframes wjPaymentPulse {
+            0%, 100% {
+                opacity: .35;
+                transform: scale(.97);
+            }
+    
+            50% {
+                opacity: .78;
+                transform: scale(1.03);
+            }
+        }
+    
+        @keyframes wjPaymentCore {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    
+        @keyframes wjPaymentToken {
+            0%, 100% {
+                transform: translateX(0);
+                opacity: .55;
+            }
+    
+            50% {
+                transform: translateX(24px);
+                opacity: 1;
+            }
+        }
+    
+        @keyframes wjPaymentDot {
+            0%, 100% {
+                opacity: .35;
+            }
+    
+            50% {
+                opacity: 1;
+            }
+        }
+    
+        @media (prefers-reduced-motion: reduce) {
+            .wj-payment__data,
+            .wj-payment__pulse,
+            .wj-payment__core,
+            .wj-payment__token,
+            .wj-payment__eyebrow-dot {
+                animation: none !important;
+            }
+        }
+    
+        @media (max-width: 992px) {
+            .wj-payment {
+                padding-top: 55px;
+                padding-bottom: 55px;
+            }
+    
+            .wj-payment__container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                max-width: 680px;
+            }
+    
+            .wj-payment__visual {
+                order: 1;
+            }
+    
+            .wj-payment__content {
+                order: 2;
+                text-align: center;
+            }
+    
+            .wj-payment__description {
+                margin-left: auto;
+                margin-right: auto;
+            }
+    
+            .wj-payment__actions,
+            .wj-payment__status {
+                justify-content: center;
+            }
+    
+            .wj-payment__art {
+                width: min(88vw, 500px);
+            }
+        }
+    
+        @media (max-width: 575.98px) {
+            .wj-payment {
+                padding: 45px 15px;
+            }
+    
+            .wj-payment__container {
+                gap: 0;
+            }
+    
+            .wj-payment__art {
+                width: 100%;
+            }
+    
+            .wj-payment__title {
+                font-size: 2rem;
+            }
+    
+            .wj-payment__description {
+                font-size: 12px;
+                line-height: 2;
+            }
+    
+            .wj-payment__actions {
+                flex-direction: column;
+                width: 100%;
+            }
+    
+            .wj-payment__button {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <section class="wj-payment" aria-labelledby="wj-payment-title">
+        <div class="wj-payment__grid" aria-hidden="true"></div>
+        <div class="wj-payment__container">
+            <div class="wj-payment__content">
+                <div class="wj-payment__eyebrow">
+                    <span class="wj-payment__eyebrow-dot"></span>
+                    SECURE PAYMENT / REDIRECTING
+                </div>
+    
+                <h1 id="wj-payment-title" class="wj-payment__title">
+                    در حال اتصال به
+                    <span class="wj-payment__title-highlight">
+                        درگاه امن پرداخت.
+                    </span>
+                </h1>
+    
+                <p class="wj-payment__description">
+                    درخواست پرداخت شما با موفقیت ایجاد شده است.
+                    چند لحظه صبر کنید تا ارتباط امن بین WinJob
+                    و درگاه پرداخت برقرار شود.
+                    این صفحه به‌صورت خودکار شما را منتقل می‌کند.
+                </p>
+    
+                <div class="wj-payment__actions">
+                    <a id="wj-payment-manual-link" href="{{ gateway_url }}" class="wj-payment__button wj-payment__button--primary" >
+                        ادامه پرداخت
+                    </a>
+    
+                    <a href="/" class="wj-payment__button wj-payment__button--secondary" >
+                        انصراف
+                    </a>
+                </div>
+    
+                <div class="wj-payment__status">
+                    <span class="wj-payment__status-line"></span>
+                    WINJOB PAYMENT GATEWAY
+                    <span>•</span>
+                    SECURE CONNECTION
+                </div>
+            </div>
+    
+            <div class="wj-payment__visual">
+                <div class="wj-payment__art">
+                    <svg class="wj-payment__svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WinJob Secure Payment Gateway">
+                        <defs>
+                            <linearGradient id="wjPaymentMain" x1="90" y1="100" x2="510" y2="500" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stop-color="#5d3cf2"></stop>
+                                <stop offset=".48" stop-color="#8061f5"></stop>
+                                <stop offset="1" stop-color="#fd5631"></stop>
+                            </linearGradient>
+    
+                            <linearGradient id="wjPaymentPurple" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#a08cff"></stop>
+                                <stop offset="1" stop-color="#5d3cf2"></stop>
+                            </linearGradient>
+    
+                            <linearGradient id="wjPaymentOrange" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#ff8068"></stop>
+                                <stop offset="1" stop-color="#fd5631"></stop>
+                            </linearGradient>
+    
+                            <radialGradient id="wjPaymentCenter" cx="50%" cy="50%" r="50%">
+                                <stop offset="0" stop-color="#5d3cf2" stop-opacity=".14"></stop>
+                                <stop offset=".7" stop-color="#5d3cf2" stop-opacity=".035"></stop>
+                                <stop offset="1" stop-color="#5d3cf2" stop-opacity="0"></stop>
+                            </radialGradient>
+                        </defs>
+    
+                        <!-- atmosphere -->
+                        <circle cx="300" cy="300" r="250" fill="none" stroke="rgba(255,255,255,.025)"></circle>
+                        <circle cx="300" cy="300" r="232" fill="none" stroke="rgba(255,255,255,.035)" stroke-dasharray="1 13"></circle>
+                        <circle cx="300" cy="300" r="185" fill="url(#wjPaymentCenter)"></circle>
+                        
+                        <!-- outer tech frame -->
+                        <g fill="none" stroke="url(#wjPaymentMain)" stroke-width="1" opacity=".55">
+                            <path d="M82 145 V102 H125"></path>
+                            <path d="M475 102 H518 V145"></path>
+                            <path d="M82 455 V498 H125"></path>
+                            <path d="M475 498 H518 V455"></path>
+                        </g>
+                        
+                        <!-- payment routes -->
+                        <g fill="none" stroke-linecap="round">
+                            <path d="M68 300 H205" stroke="rgba(255,255,255,.07)" ></path>
+                            <path class="wj-payment__data" d="M68 300 H205" stroke="url(#wjPaymentPurple)" stroke-width="2" ></path>
+                            <path d="M395 300 H532" stroke="rgba(255,255,255,.07)" ></path>
+                            <path class="wj-payment__data" d="M395 300 H532" stroke="url(#wjPaymentOrange)" stroke-width="2" ></path>
+                        </g>
+    
+                        <!-- left terminal -->
+                        <g>
+                            <rect x="86" y="240" width="92" height="120" rx="6" fill="none" stroke="rgba(255,255,255,.09)"></rect>
+                            <rect x="102" y="260" width="60" height="12" rx="2" fill="#5d3cf2" opacity=".75"></rect>
+                            <rect x="102" y="288" width="42" height="5" rx="2.5" fill="rgba(255,255,255,.17)"></rect>
+                            <rect x="102" y="302" width="50" height="5" rx="2.5" fill="rgba(255,255,255,.10)"></rect>
+                            <circle cx="132" cy="332" r="9" fill="#fd5631"></circle>
+                        </g>
+    
+                        <!-- right bank terminal -->
+                        <g>
+                            <path d="M422 259 L468 230 L514 259 Z" fill="none" stroke="url(#wjPaymentOrange)" stroke-width="1.5"></path>
+                            <rect x="430" y="260" width="76" height="86" fill="none" stroke="rgba(255,255,255,.09)"></rect>
+                            <path d="M447 275 V327" stroke="rgba(255,255,255,.16)" stroke-width="5"></path>
+                            <path d="M468 275 V327" stroke="rgba(255,255,255,.16)" stroke-width="5"></path>
+                            <path d="M489 275 V327" stroke="rgba(255,255,255,.16)" stroke-width="5"></path>
+                            <path d="M422 346 H514" stroke="url(#wjPaymentOrange)" stroke-width="2"></path>
+                        </g>
+    
+    
+                        <!-- central payment core -->
+                        <circle cx="300" cy="300" r="153" fill="none" stroke="rgba(255,255,255,.035)"></circle>
+                        <circle cx="300" cy="300" r="145" fill="#1f1b2d" stroke="rgba(255,255,255,.065)"></circle>
+                        <circle cx="300" cy="300" r="134" fill="none" stroke="url(#wjPaymentMain)" stroke-width="1" stroke-dasharray="2 10" opacity=".7"></circle>
+    
+                        <!-- rotating core -->
+                        <g class="wj-payment__core" fill="none" stroke-linejoin="round">
+                            <path d="M300 184 L400 242 L400 358 L300 416 L200 358 L200 242 Z" stroke="url(#wjPaymentMain)" stroke-width="1.5"  opacity=".78"></path>
+                            <path d="M300 208 L379 254 L379 346 L300 392 L221 346 L221 254 Z" stroke="rgba(255,255,255,.075)"></path>
+                        </g>
+                        
+                        <!-- lock -->
+                        <g>
+                            <rect x="262" y="285" width="76" height="64" rx="7" fill="none" stroke="url(#wjPaymentMain)" stroke-width="2"></rect>
+                            <path d="M277 285 V268 C277 237 323 237 323 268 V285" fill="none" stroke="url(#wjPaymentPurple)" stroke-width="4" stroke-linecap="round"></path>
+                            <circle cx="300" cy="315" r="6" fill="#fd5631"></circle>
+                            <path d="M300 321 V333" stroke="#fd5631" stroke-width="3" stroke-linecap="round"></path>
+                        </g>
+    
+                        <!-- transfer token -->
+                        <g class="wj-payment__token">
+                            <circle cx="214" cy="300" r="8" fill="#ffffff"></circle>
+                            <circle cx="214" cy="300" r="15" fill="none" stroke="#5d3cf2" opacity=".35"></circle>
+                        </g>
+    
+                        <!-- pulse -->
+                        <circle class="wj-payment__pulse" cx="300" cy="300" r="92" fill="none" stroke="url(#wjPaymentMain)" stroke-width="1" opacity=".35"></circle>
+                        
+                        <!-- labels -->
+                        <g font-family="monospace" font-size="8" letter-spacing="1" fill="rgba(255,255,255,.27)">
+                            <text x="72" y="220">WINJOB_CLIENT</text>
+                            <text x="430" y="220">BANK_GATEWAY</text>
+                            <text x="230" y="491">WINJOB://PAYMENT</text>
+                            <text x="252" y="112">SECURE_TRANSFER</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <script>
+        (function () {
+            const target = "{{ gateway_url|escapejs }}";
+    
+            if (!target) {
+                return;
+            }
+    
+            setTimeout(function () {
+                window.location.assign(target);
+            }, 1300);
+        })();
+    </script>
+{% endblock %}

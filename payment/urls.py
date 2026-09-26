@@ -4,6 +4,9 @@ from .views import *
 app_name = 'payment'
 
 urlpatterns = [
+    # Same-domain bridge required by Shaparak/Zarinpal domain matching rules
+    path('gateway/zarinpal/', zarinpal_gateway_bridge, name='zarinpal_gateway_bridge'),
+
     # Wallet
     path('wallet/', wallet_dashboard, name='wallet_dashboard'),
     path('wallet/deposit/', wallet.wallet_deposit, name='wallet_deposit'),

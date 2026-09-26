@@ -571,9 +571,7 @@ def standalone_order_step3(request):
                 payment_result, redirect_url = services.start_payment(
                     slug="zarinpal",
                     amount=invoice.payable_amount,
-                    callback_url=request.build_absolute_uri(
-                        reverse('payment:standalone_order_payment_callback')
-                    ),
+                    callback_url=callback_url('payment:standalone_order_payment_callback'),
                     order_id=f"standalone_{order.id}_{int(timezone.now().timestamp())}",
                     description=f"پرداخت سفارش تولید محتوا #{order.id} - مبلغ {invoice.payable_amount:,} تومان",
                     mobile=request.user.phone_number,
