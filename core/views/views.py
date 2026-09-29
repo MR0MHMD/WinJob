@@ -77,6 +77,11 @@ def home(request):
     return render(request, 'core/pages/index.html', context)
 
 
+def windirect_landing(request):
+    """صفحهٔ معرفی عمومی وین دایرکت را نمایش می‌دهد."""
+    return render(request, 'core/pages/windirect_landing.html')
+
+
 class AboutView(TemplateView):
     template_name = "core/pages/about.html"
 

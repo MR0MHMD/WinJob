@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     # packages
     'django_jalali',
     "django_resized",
@@ -33,13 +34,14 @@ INSTALLED_APPS = [
     "advertisers.apps.AdvertisersConfig",
     "influencers.apps.InfluencersConfig",
     "campaigns.apps.CampaignsConfig",
+    "windirect.apps.WindirectConfig",
     "blog.apps.BlogConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
     "tickets.apps.TicketsConfig",
     "gamification.apps.GamificationConfig",
     "support.apps.SupportConfig",
-    "payment.apps.PaymentConfig"
+    "payment.apps.PaymentConfig",
 ]
 
 DAISY_SETTINGS = {
@@ -85,6 +87,11 @@ DAISY_SETTINGS = {
         'campaigns': {
             'icon': 'bi bi-megaphone-fill',
             'name': 'کمپین ها',
+            'hide': None,
+        },
+        'windirect': {
+            'icon': 'bi bi-chat-dots-fill',
+            'name': 'وین دایرکت',
             'hide': None,
         },
         'blog': {
