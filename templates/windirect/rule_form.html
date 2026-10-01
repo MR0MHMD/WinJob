@@ -1,0 +1,18 @@
+{% extends 'windirect/base.html' %}
+{% block windirect_title %}{% if editing %}ویرایش قانون{% else %}ساخت قانون{% endif %} | وین دایرکت{% endblock %}
+{% block panel_heading %}{% if editing %}ویرایش قانون{% else %}ساخت قانون جدید{% endif %}{% endblock %}
+{% block panel_intro %}شرط تطبیق کامنت و متن پاسخ آزمایشی را تنظیم کنید{% endblock %}
+{% block panel_content %}
+{% if not connections_count %}<div class="alert alert-warning bg-faded-warning border-0">برای ساخت قانون، ابتدا <a href="{% url 'windirect:connections' %}">یک حساب آزمایشی ثبت کنید</a>.</div>{% endif %}
+<div class="row g-4"><div class="col-lg-8"><section class="card wd-card"><div class="card-body p-4">
+    <form method="post" novalidate>{% csrf_token %}
+        {% for error in form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+        <div class="row g-3"><div class="col-md-6">{% include 'windirect/partials/field.html' with field=form.connection %}</div><div class="col-md-6">{% include 'windirect/partials/field.html' with field=form.name %}</div></div>
+        {% include 'windirect/partials/field.html' with field=form.media_id %}
+        <div class="row g-3"><div class="col-md-7">{% include 'windirect/partials/field.html' with field=form.keyword %}</div><div class="col-md-5">{% include 'windirect/partials/field.html' with field=form.match_type %}</div></div>
+        {% include 'windirect/partials/field.html' with field=form.reply_text %}
+        {% include 'windirect/partials/field.html' with field=form.is_active %}
+        <div class="d-flex flex-wrap gap-2 mt-4"><button type="submit" class="btn btn-primary rounded-pill" {% if not connections_count %}disabled{% endif %}>ذخیرهٔ قانون</button><a href="{% url 'windirect:rules' %}" class="btn btn-outline-light rounded-pill">بازگشت</a></div>
+    </form>
+</div></section></div><div class="col-lg-4"><div class="card wd-card"><div class="card-body p-4"><h2 class="h6 text-white">راهنمای قانون</h2><ul class="text-muted wd-help-list"><li>شناسهٔ پست خالی: بررسی همهٔ پست‌های همین حساب.</li><li>«شامل»: حضور کلیدواژه در متن کامنت.</li><li>«برابر»: یکسان بودن کل متن کامنت با کلیدواژه.</li><li>فقط قوانین فعال در شبیه‌سازی بررسی می‌شوند.</li></ul><a href="{% url 'windirect:simulation' %}" class="btn btn-outline-primary btn-sm">رفتن به آزمایش قانون</a></div></div></div></div>
+{% endblock %}

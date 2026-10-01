@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from windirect.models import InstagramConnection
@@ -22,7 +23,7 @@ class Command(BaseCommand):
             )
         except InstagramConnection.DoesNotExist as exc:
             raise CommandError("حساب آزمایشی پیدا نشد.") from exc
-        except ValueError as exc:
+        except (ValueError, ValidationError) as exc:
             raise CommandError(str(exc)) from exc
 
         self.stdout.write(f"{len(executions)} قانون اجرا شد (فقط شبیه‌سازی؛ هیچ دایرکتی ارسال نشد).")

@@ -139,3 +139,14 @@ class AutomationExecution(models.Model):
 
     def __str__(self):
         return f"{self.automation.name} - {self.event.external_comment_id}"
+
+# مدل‌های ابزارهای پنل در ماژول جدا نگه‌داری می‌شوند و به همین اپ تعلق دارند.
+from .features_models import (  # noqa: E402,F401
+    Showcase, ShowcaseCard, ConversationForm, FormQuestion,
+    DirectRule, FormSubmission, DirectMessageEvent,
+)
+
+from .subscription_models import (  # noqa: E402,F401
+    SubscriptionPlan, SubscriptionOffer, SubscriptionAccount, ReferralCode,
+    SubscriptionOrder, UserSubscription, ReferralRedemption, SubscriptionGift,
+)

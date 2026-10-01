@@ -142,6 +142,7 @@ class CustomUserAdmin(UserAdmin):
             'ceo':              ('👑 مدیرعامل',                '#9C27B0', 'bold'),
             'developer':        ('💻 توسعه‌دهنده',              '#2196F3', 'bold'),
             'content_manager':  ('📝 مدیر تولید محتوا',         '#4CAF50', 'bold'),
+            'human_media_manager': ('📱 مدیر انسان رسانه', '#9C27B0', 'bold'),
             'publish_manager':  ('📢 مدیر نشر',                 '#FF9800', 'bold'),
             'regional_manager': ('🏛️ مدیر استانی',              '#FF5722', 'bold'),
             'none':             ('—',                          '#9E9E9E', 'normal'),
@@ -343,6 +344,7 @@ class CustomUserAdmin(UserAdmin):
         'assign_role_developer',
         'assign_role_content_manager',
         'assign_role_publish_manager',
+        'assign_role_human_media_manager',
         'clear_role',
         'delete_profiles',
     ]
@@ -376,6 +378,11 @@ class CustomUserAdmin(UserAdmin):
         self.message_user(request, f'✅ {updated} کاربر به عنوان مدیر تولید محتوا تعیین شدند.', messages.SUCCESS)
 
     assign_role_content_manager.short_description = 'تبدیل به مدیر تولید محتوا'
+
+    @admin.action(description='تبدیل به مدیر انسان رسانه')
+    def assign_role_human_media_manager(self, request, queryset):
+        updated = queryset.update(role=CustomUser.Role.HUMAN_MEDIA_MANAGER)
+        self.message_user(request, f'{updated} کاربر به عنوان مدیر انسان رسانه تعیین شدند.', messages.SUCCESS)
 
     def assign_role_publish_manager(self, request, queryset):
         updated = queryset.update(role=CustomUser.Role.PUBLISH_MANAGER)

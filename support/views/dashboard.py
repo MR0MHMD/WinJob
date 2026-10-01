@@ -5,6 +5,7 @@
 - DashboardView: همه نقش‌ها (با فیلتر Regional Manager)
 """
 
+from support.utils import scope_support_queryset
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Sum, Q
 from django.utils import timezone
@@ -187,6 +188,8 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
             ceo=Sum('ceo_amount'),
             developer=Sum('developer_amount'),
             publish=Sum('publish_manager_amount'),
+            human_media=Sum('publish_manager_amount', filter=Q(
+                snapshot__publishing_manager_role='human_media_manager')),
             content_mgr=Sum('content_manager_amount'),
             regional=Sum('regional_manager_amount'),
             site=Sum('site_maintenance_amount'),
@@ -194,14 +197,15 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
 
         ceo_amount = split_agg['ceo'] or 0
         developer_amount = split_agg['developer'] or 0
-        publish_manager_amount = split_agg['publish'] or 0
+        human_media_manager_amount = split_agg['human_media'] or 0
+        publish_manager_amount = (split_agg['publish'] or 0) - human_media_manager_amount
         content_manager_amount = split_agg['content_mgr'] or 0
         regional_manager_amount = split_agg['regional'] or 0
         site_maintenance = split_agg['site'] or 0
 
         commission_paid_to_roles = (
                 ceo_amount + developer_amount +
-                publish_manager_amount + content_manager_amount +
+                publish_manager_amount + human_media_manager_amount + content_manager_amount +
                 regional_manager_amount
         )
 
@@ -210,6 +214,7 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
             'commission_ceo': {'label': 'مدیرعامل', 'amount': ceo_amount},
             'commission_developer': {'label': 'توسعه‌دهنده', 'amount': developer_amount},
             'commission_publish_manager': {'label': 'مدیر نشر', 'amount': publish_manager_amount},
+            'commission_human_media_manager': {'label': 'مدیر انسان رسانه', 'amount': human_media_manager_amount},
             'commission_content_manager': {'label': 'مدیر محتوا', 'amount': content_manager_amount},
             'commission_regional_manager': {'label': 'مدیر استانی', 'amount': regional_manager_amount},
             'site_maintenance': {'label': 'هزینه نگهداری سایت', 'amount': site_maintenance},
@@ -448,6 +453,8 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
             ceo=Sum('ceo_amount'),
             developer=Sum('developer_amount'),
             publish=Sum('publish_manager_amount'),
+            human_media=Sum('publish_manager_amount', filter=Q(
+                snapshot__publishing_manager_role='human_media_manager')),
             content_mgr=Sum('content_manager_amount'),
             regional=Sum('regional_manager_amount'),
             site=Sum('site_maintenance_amount'),
@@ -464,7 +471,11 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
             },
             'commission_publish_manager': {
                 'label': 'مدیر نشر',
-                'amount': split_total_agg['publish'] or 0,
+                'amount': (split_total_agg['publish'] or 0) - (split_total_agg['human_media'] or 0),
+            },
+            'commission_human_media_manager': {
+                'label': 'مدیر انسان رسانه',
+                'amount': split_total_agg['human_media'] or 0,
             },
             'commission_content_manager': {
                 'label': 'مدیر محتوا',
@@ -651,9 +662,9 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۱. آمار کاربران
         # ============================================================
-        users_qs = User.objects.all()
-        advertisers_qs = User.objects.filter(advertiser_profile__isnull=False)
-        influencers_qs = User.objects.filter(influencer_profile__isnull=False)
+        users_qs = scope_support_queryset(self.request.user, User.objects.all())
+        advertisers_qs = scope_support_queryset(self.request.user, User.objects.all()).filter(advertiser_profile__isnull=False)
+        influencers_qs = scope_support_queryset(self.request.user, User.objects.all()).filter(influencer_profile__isnull=False)
 
         if is_regional:
             users_qs = users_qs.filter(province=regional_province)
@@ -667,7 +678,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۲. آمار تیم‌های محتوا
         # ============================================================
-        teams_qs = ContentTeam.objects.all()
+        teams_qs = scope_support_queryset(self.request.user, ContentTeam.objects.all())
         if is_regional:
             teams_qs = teams_qs.filter(province=regional_province)
         total_teams = teams_qs.count()
@@ -675,7 +686,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۳. آمار کمپین‌ها
         # ============================================================
-        campaigns_qs = Campaign.objects.all()
+        campaigns_qs = scope_support_queryset(self.request.user, Campaign.objects.all())
         if is_regional:
             campaigns_qs = campaigns_qs.filter(
                 advertiser__user__province=regional_province
@@ -689,7 +700,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۴. آمار کانال‌ها
         # ============================================================
-        channels_qs = Channel.objects.all()
+        channels_qs = scope_support_queryset(self.request.user, Channel.objects.all())
         if is_regional:
             channels_qs = channels_qs.filter(province=regional_province)
 
@@ -700,7 +711,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۵. آمار سفارشات محتوا
         # ============================================================
-        orders_qs = ContentOrder.objects.all()
+        orders_qs = scope_support_queryset(self.request.user, ContentOrder.objects.all())
         if is_regional:
             orders_qs = orders_qs.filter(
                 Q(campaign__advertiser__user__province=regional_province) |
@@ -715,7 +726,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۶. آمار تیکت‌ها
         # ============================================================
-        tickets_qs = Ticket.objects.all()
+        tickets_qs = scope_support_queryset(self.request.user, Ticket.objects.all())
         if is_regional:
             tickets_qs = tickets_qs.filter(user__province=regional_province)
 
@@ -727,7 +738,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۷. آمار نوتیفیکیشن‌ها
         # ============================================================
-        notifications_qs = Notification.objects.all()
+        notifications_qs = scope_support_queryset(self.request.user, Notification.objects.all())
         if is_regional:
             notifications_qs = notifications_qs.filter(user__province=regional_province)
 
@@ -737,11 +748,11 @@ class DashboardView(BaseSupportMixin, TemplateView):
         # ============================================================
         #  ۸. آمار مالی
         # ============================================================
-        tx_qs = Transaction.objects.filter(
+        tx_qs = scope_support_queryset(self.request.user, Transaction.objects.all()).filter(
             status='success',
             type__in=['influencer_payment', 'team_payment']
         )
-        deposit_qs = Transaction.objects.filter(status='success', type='deposit')
+        deposit_qs = scope_support_queryset(self.request.user, Transaction.objects.all()).filter(status='success', type='deposit')
 
         if is_regional:
             tx_qs = tx_qs.filter(user__province=regional_province)
@@ -832,7 +843,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
             })
 
         # گزارشات در انتظار تایید
-        reports_qs = CampaignReport.objects.filter(status='pending')
+        reports_qs = scope_support_queryset(self.request.user, CampaignReport.objects.all()).filter(status='pending')
         if is_regional:
             reports_qs = reports_qs.filter(
                 campaign_influencer__channel__province=regional_province
@@ -928,6 +939,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
             'can_see_campaigns': (
                 user.is_top_manager or
                 user.is_publish_manager or
+                user.is_human_media_manager or
                 user.is_regional_manager
             ),
 
@@ -935,6 +947,7 @@ class DashboardView(BaseSupportMixin, TemplateView):
             'can_see_channels': (
                 user.is_top_manager or
                 user.is_publish_manager or
+                user.is_human_media_manager or
                 user.is_regional_manager
             ),
 
@@ -963,7 +976,9 @@ class DashboardView(BaseSupportMixin, TemplateView):
             # برچسب دامنه دسترسی
             'scope_label': (
                 f'استان {user.province.name}'
-                if is_regional else 'کل پلتفرم'
+                if is_regional else ('فقط اینستاگرام' if user.is_human_media_manager
+                                    else 'همه پلتفرم‌ها به جز اینستاگرام' if user.is_publish_manager
+                                    else 'کل پلتفرم')
             ),
 
             # آیا کاربر محدود به استان خودشه؟

@@ -7,6 +7,7 @@ API Views پنل Support
 اگه کاربر به آبجکت دسترسی نداشت، 404 می‌گیره.
 """
 
+from support.utils import scope_support_queryset
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth import get_user_model
 from django.views.generic import CreateView
@@ -42,8 +43,8 @@ def check_regional_access(request, province):
     اگه Regional Manager باشه و استان فرق کنه → 404 می‌ده.
     """
     user = request.user
-    if user.is_regional_manager and user.province_id:
-        if province is None or province.id != user.province_id:
+    if user.is_regional_manager:
+        if not user.province_id or province is None or province.id != user.province_id:
             from django.http import Http404
             raise Http404("این آبجکت برای شما وجود ندارد.")
 
@@ -63,7 +64,7 @@ class TicketReplyView(BaseSupportMixin, CreateView):
     http_method_names = ['post']
 
     def form_valid(self, form):
-        ticket = get_object_or_404(Ticket, pk=self.kwargs['pk'])
+        ticket = get_object_or_404(scope_support_queryset(self.request.user, Ticket.objects.all()), pk=self.kwargs['pk'])
 
         # ========== چک دسترسی Regional ==========
         check_regional_access(self.request, ticket.user.province)
@@ -99,7 +100,7 @@ class ChannelApproveView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        channel = get_object_or_404(Channel, pk=pk)
+        channel = get_object_or_404(scope_support_queryset(self.request.user, Channel.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         check_regional_access(request, channel.province)
@@ -130,7 +131,7 @@ class ChannelRejectView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        channel = get_object_or_404(Channel, pk=pk)
+        channel = get_object_or_404(scope_support_queryset(self.request.user, Channel.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         check_regional_access(request, channel.province)
@@ -161,7 +162,7 @@ class CampaignApproveView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        campaign = get_object_or_404(Campaign, pk=pk)
+        campaign = get_object_or_404(scope_support_queryset(self.request.user, Campaign.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         check_regional_access(request, campaign.advertiser.user.province)
@@ -184,7 +185,7 @@ class CampaignRejectView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        campaign = get_object_or_404(Campaign, pk=pk)
+        campaign = get_object_or_404(scope_support_queryset(self.request.user, Campaign.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         check_regional_access(request, campaign.advertiser.user.province)
@@ -212,7 +213,7 @@ class ReportApproveView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        report = get_object_or_404(CampaignReport, pk=pk)
+        report = get_object_or_404(scope_support_queryset(self.request.user, CampaignReport.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         channel_province = report.campaign_influencer.channel.province
@@ -245,7 +246,7 @@ class ReportRejectView(PublishManagerRequiredMixin, View):
     """
 
     def post(self, request, pk):
-        report = get_object_or_404(CampaignReport, pk=pk)
+        report = get_object_or_404(scope_support_queryset(self.request.user, CampaignReport.objects.all()), pk=pk)
 
         # ========== چک دسترسی Regional ==========
         channel_province = report.campaign_influencer.channel.province

@@ -421,6 +421,7 @@
                 <option value="{% url 'payment:invoice_list' %}" {% if not type_filter %}selected{% endif %}>همه</option>
                 <option value="{% url 'payment:invoice_list' %}?type=campaign" {% if type_filter == 'campaign' %}selected{% endif %}>کمپین</option>
                 <option value="{% url 'payment:invoice_list' %}?type=wallet" {% if type_filter == 'wallet' %}selected{% endif %}>شارژ کیف پول</option>
+                <option value="{% url 'payment:invoice_list' %}?type=windirect" {% if type_filter == 'windirect' %}selected{% endif %}>اشتراک وین دایرکت</option>
             </select>
             {% if type_filter %}
                 <a href="{% url 'payment:invoice_list' %}" class="btn-clear">
@@ -480,6 +481,8 @@
                                         <span class="type-badge wallet">
                                             <i class="fi-wallet me-1"></i> کیف پول
                                         </span>
+                                    {% elif invoice.type == 'windirect' %}
+                                        <span class="text-primary">اشتراک وین دایرکت</span>
                                     {% elif invoice.type == 'content_order' %}
                                         <span class="type-badge content-order">
                                             <i class="fi-video me-1"></i> سفارش محتوا
@@ -499,6 +502,8 @@
                                                 سفارش #{{ invoice.content_order.id }} - {{ invoice.content_order.team.name }}
                                             </a>
                                         </span>
+                                    {% elif invoice.type == 'windirect' %}
+                                        <a href="{% url 'windirect:subscription_order' invoice.subscription_order_id %}">{{ invoice.subscription_order.quote.plan_name }}</a>
                                     {% else %}
                                         <span class="campaign-name">شارژ کیف پول</span>
                                     {% endif %}
@@ -508,7 +513,7 @@
                                 </td>
                                 <td data-label="مبلغ">
                                     <span class="price-amount text-info">
-                                        {% if invoice.type == 'campaign' or invoice.type == 'content_order' %}
+                                        {% if invoice.type == 'campaign' or invoice.type == 'content_order' or invoice.type == 'windirect' %}
                                             {{ invoice.payable_amount|floatformat:0|intcomma }}
                                         {% else %}
                                             {{ invoice.wallet_deposit_amount|floatformat:0|intcomma }}

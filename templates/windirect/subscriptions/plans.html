@@ -1,0 +1,80 @@
+{% extends 'windirect/base.html' %}
+{% load humanize %}
+{% block windirect_title %}پلن‌های وین دایرکت{% endblock %}
+{% block panel_heading %}انتخاب اشتراک وین دایرکت{% endblock %}
+{% block panel_intro %}یک اشتراک برای کاربر؛ امکانات نامحدود با سقف پیج مشخص{% endblock %}
+{% block panel_action %}
+    <a class="btn btn-outline-primary rounded-pill"
+       href="{% url 'windirect:subscription' %}">اشتراک و سوابق من</a>
+{% endblock %}
+{% block panel_content %}
+    <div class="row g-4">
+        {% for plan in plans %}
+            <div class="col-lg-4">
+                <article class="card wd-card h-100">
+                    <div class="card-body p-4">
+                        {% if plan.is_featured %}
+                            <span class="badge bg-faded-primary text-primary mb-3">پیشنهاد وین دایرکت</span>
+                        {% endif %}
+                        <h2 class="h4 text-white">{{ plan.name }}</h2>
+                        <p class="text-muted">{{ plan.description }}</p>
+                        <p class="text-light">
+                            <strong class="text-primary">{{ plan.max_pages }}</strong> پیج مجاز
+                        </p>
+                        <ul class="wd-help-list text-light mb-4">
+                            <li>کامنت هوشمند: {% if plan.smart_comments %}دارد{% else %}ندارد{% endif %}</li>
+                            <li>دایرکت هوشمند: {% if plan.smart_direct %}دارد{% else %}ندارد{% endif %}</li>
+                            <li>ویترین‌ساز: {% if plan.showcases %}دارد{% else %}ندارد{% endif %}</li>
+                            <li>فرم‌ساز و اکسل: {% if plan.forms %}دارد{% else %}ندارد{% endif %}</li>
+                        </ul>
+                        {% for offer in plan.offers.all %}
+                            {% if offer.is_active %}
+                                <div class="border-top border-light pt-3 mt-3">
+                                    <p class="text-light mb-2">{{ offer.get_duration_days_display }} · <strong>{{ offer.price|intcomma }}</strong> تومان {% if not plan.is_trial %}
+                                        <small class="text-muted">پیش از مالیات</small>
+                            {% endif %}
+                            </p>
+                        {% if plan.is_trial %}
+                            {% if account.trial_used_at or account.first_paid_at %}
+                                <span class="text-muted">رایگان قبلاً استفاده شده یا خرید پولی انجام شده است.</span>
+                            {% else %}
+                                <form method="post" action="{% url 'windirect:trial_activate' offer.pk %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-outline-primary w-100">فعال‌سازی رایگان ۳۰ روزه</button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            {% if plan.level < account.highest_level %}
+                                <span class="text-muted">کاهش پلن مجاز نیست.</span>
+                            {% elif paid_reference and plan.level > paid_reference.capabilities.level %}
+                                {% if offer.duration_days == paid_reference.duration_days %}
+                                    <a href="{% url 'windirect:subscribe' offer.pk %}?kind=upgrade"
+                                       class="btn btn-primary w-100">محاسبهٔ ارتقا</a>
+                                {% else %}
+                                    <span class="text-muted">برای ارتقا گزینهٔ {{ paid_reference.duration_days }} روزه را انتخاب کنید.</span>
+                                {% endif %}
+                            {% else %}
+                                <a href="{% url 'windirect:subscribe' offer.pk %}"
+                                   class="btn btn-primary w-100">
+                                    {% if account.first_paid_at %}خرید / تمدید{% else %}انتخاب پلن{% endif %}
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                            </div>
+                    {% endif %}
+        {% endfor %}
+    </div>
+    </article>
+    </div>
+{% empty %}
+    <div class="col-12 wd-empty">پلن قابل عرضه‌ای ثبت نشده است.</div>
+{% endfor %}
+</div>
+<div class="card wd-card mt-4">
+    <div class="card-body p-4">
+        <h2 class="h5 text-white">شرایط اشتراک</h2>
+        <p class="text-light">دورهٔ رایگان فقط با انتخاب شما فعال می‌شود و یک بار قابل استفاده است. خرید در دورهٔ رایگان از پایان آن شروع می‌شود. تمدید همان پلن روزهای باقی‌مانده را حفظ می‌کند.</p>
+        <p class="text-muted mb-0">کد معرف در اولین خرید موفق، ۳۰٪ تخفیف و ۵ روز هدیه دارد. پایان اشتراک داده‌های قبلی را حذف نمی‌کند؛ مشاهدهٔ سابقه و دریافت اکسل قبلی همچنان باز است.</p>
+    </div>
+</div>
+{% endblock %}

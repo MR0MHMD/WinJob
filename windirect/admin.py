@@ -251,3 +251,8 @@ class AutomationExecutionAdmin(ReadOnlyLogAdmin):
     def formatted_created_at(self, obj):
         """زمان اجرای قانون را با قالب پنل نمایش می‌دهد."""
         return format_datetime(obj.created_at)
+
+# ثبت ادمین ابزارهای جدید در همان اپ وین دایرکت.
+from . import features_admin  # noqa: E402,F401
+
+from .subscriptions import admin as subscription_admin  # noqa: E402,F401

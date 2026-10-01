@@ -1,0 +1,85 @@
+{% extends 'windirect/base.html' %}
+{% load static %}
+{% block windirect_title %}
+    {% if obj.pk %}ویرایش{% else %}ساخت{% endif %} {{ singular }} | وین دایرکت{% endblock %}
+{% block panel_heading %}
+    {% if obj.pk %}ویرایش{% else %}ساخت{% endif %} {{ singular }}{% endblock %}
+{% block panel_intro %}{{ intro }}{% endblock %}
+{% block panel_content %}
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <form method="post" class="card wd-card" id="wd-tool-editor">
+                {% csrf_token %}
+                <div class="card-body p-4">
+                    {% if form.errors or children.errors or children.non_form_errors %}
+                        <div class="alert alert-danger" role="alert">اطلاعات ذخیره نشد. خطاهای مشخص‌شده را اصلاح کنید. {{ form.non_field_errors }} {{ children.non_form_errors }}</div>
+                    {% endif %}
+                    {% for field in form %}
+                        {% include 'windirect/partials/field.html' %}
+                    {% endfor %}
+                    {% if children %}
+                        <hr class="border-light my-4">
+                        <h2 class="h5 text-white">{% if kind == 'showcases' %}کارت‌های ویترین{% else %}سؤال‌های فرم{% endif %}</h2>
+                        <p class="small text-muted">حداقل یک و حداکثر {{ child_limit }} مورد. ترتیب‌ها باید متفاوت باشند. برای حذف موارد ذخیره‌شده، گزینهٔ حذف را علامت بزنید و ذخیره کنید.</p>
+                        {{ children.management_form }}
+                        <div data-formset data-limit="{{ child_limit }}">
+                            <div data-items>
+                                {% for child in children %}
+                                    <fieldset class="wd-child border border-light rounded-3 p-3 mb-3">
+                                        <legend class="float-none w-auto px-2 h6 text-light">مورد {{ forloop.counter }}</legend>
+                                        {{ child.non_field_errors }}{% for hidden in child.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}
+                                        {% for field in child.visible_fields %}
+                                            {% include 'windirect/partials/field.html' %}
+                                        {% endfor %}
+                                    </fieldset>
+                                {% endfor %}
+                            </div>
+                            <template data-empty>
+                                <fieldset class="wd-child border border-light rounded-3 p-3 mb-3">
+                                    <legend class="float-none w-auto px-2 h6 text-light">مورد جدید</legend>
+                                    {% for hidden in children.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    {% for field in children.empty_form.visible_fields %}
+                                        {% include 'windirect/partials/field.html' %}
+                                    {% endfor %}
+                                </fieldset>
+                            </template>
+                            <button type="button" class="btn btn-outline-primary mb-3" data-add>افزودن {% if kind == 'showcases' %}کارت{% else %}سؤال{% endif %}
+                            </button>
+                            <p class="small text-muted" role="status" data-formset-status></p>
+                        </div>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <button class="btn btn-primary rounded-pill">ذخیرهٔ {{ singular }}</button>
+                        <a class="btn btn-outline-light rounded-pill"
+                           href="{% url 'windirect:asset_list' kind %}">بازگشت</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <aside class="col-lg-4">
+            <div class="card wd-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 text-white">راهنمای {{ singular }}</h2>
+                    {% if kind == 'direct' %}
+                        <p class="text-light">اولین قانون فعال منطبق با پیام اجرا می‌شود. عدد اولویت کمتر، زودتر بررسی می‌شود.</p>
+                        <p class="text-muted">برای پاسخ ویترینی یا شروع فرم، ابتدا ابزار را برای همان حساب بسازید. هنگام تکمیل فرم، پیام‌های مخاطب پاسخ سؤال محسوب می‌شوند.</p>
+                        <p class="text-muted">پاسخ متنی در این نسخه بر پایهٔ قانون است؛ تولید پاسخ با هوش مصنوعی هنوز متصل نیست.</p>
+                    {% elif kind == 'showcases' %}
+                        <p class="text-light">هر کارت شامل عنوان، توضیح کوتاه، تصویر و یک دکمه است.</p>
+                        <p class="text-muted">پیوندها باید HTTPS باشند. پس از ذخیره، یک قانون دایرکت با نوع پاسخ «نمایش ویترین» بسازید.</p>
+                        <p class="text-muted">پیش‌نمایش در شبیه‌ساز نمایش داده می‌شود؛ ظاهر نهایی در اینستاگرام به اتصال متا وابسته است.</p>
+                    {% else %}
+                        <p class="text-light">همهٔ سؤال‌ها الزامی هستند. برای شمارهٔ تماس، نوع «شماره همراه ایران» را انتخاب کنید.</p>
+                        <p class="text-muted">برای سؤال انتخابی، هر گزینه را در یک خط وارد کنید. مخاطب متن گزینه را پاسخ می‌دهد.</p>
+                        <p class="text-muted">ویرایش سؤال‌ها روی فرم‌های تازه اثر دارد. فرم‌های شروع‌شده نسخهٔ قبلی را ادامه می‌دهند؛ غیرفعال‌سازی فقط شروع جدید را متوقف می‌کند.</p>
+                        <p class="text-muted">بعد از ذخیره، قانون دایرکت با نوع پاسخ «شروع فرم» و کلمه‌ای مثل «فرم» بسازید.</p>
+                    {% endif %}
+                    <a href="{% url 'windirect:connections' %}" class="d-block mb-3">مدیریت حساب‌های آزمایشی</a>
+                    <a href="{% url 'windirect:direct_simulation' %}"
+                       class="btn btn-outline-primary w-100">آزمایش مکالمه</a>
+                </div>
+            </div>
+        </aside>
+    </div>
+    <script src="{% static 'windirect/js/builder.js' %}" defer></script>
+{% endblock %}

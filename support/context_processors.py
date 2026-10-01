@@ -96,6 +96,7 @@ def support_menu(request):
         CustomUser.Role.CEO,
         CustomUser.Role.DEVELOPER,
         CustomUser.Role.PUBLISH_MANAGER,
+        CustomUser.Role.HUMAN_MEDIA_MANAGER,
     ]:
         menu.append({
             'title': 'کمپین‌ها',

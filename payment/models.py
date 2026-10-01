@@ -37,6 +37,7 @@ class Invoice(models.Model):
     class Type(models.TextChoices):
         CAMPAIGN = 'campaign', 'فاکتور کمپین'
         WALLET = 'wallet', 'فاکتور شارژ کیف پول'
+        WINDIRECT = 'windirect', 'فاکتور اشتراک وین دایرکت'
         CONTENT_ORDER = 'content_order', 'فاکتور سفارش محتوا'  # ✅ جدید
 
     # ========== فیلدهای اصلی ==========
@@ -75,6 +76,15 @@ class Invoice(models.Model):
         null=True,
         blank=True
     )
+
+    subscription_order = models.OneToOneField(
+        'windirect.SubscriptionOrder', on_delete=models.PROTECT,
+        related_name='invoice', null=True, blank=True, verbose_name=_("سفارش اشتراک وین دایرکت"),
+    )
+    base_plan_cost = models.PositiveBigIntegerField(_("قیمت اولیهٔ پلن"), null=True, blank=True)
+    plan_discount_amount = models.PositiveBigIntegerField(_("تخفیف پلن"), null=True, blank=True)
+    plan_cost = models.PositiveBigIntegerField(_("قیمت نهایی پلن پیش از مالیات"), default=0)
+    plan_vat = models.PositiveBigIntegerField(_("مالیات پلن"), default=0)
 
     invoice_number = models.CharField(
         max_length=20,
@@ -224,6 +234,7 @@ class Invoice(models.Model):
         month = str(created_at.month).zfill(2)
         day = str(created_at.day).zfill(2)
         prefix_map = {
+            cls.Type.WINDIRECT: 'WDR',
             cls.Type.CAMPAIGN: 'CMP',
             cls.Type.WALLET: 'WAL',
             cls.Type.CONTENT_ORDER: 'CTO',
@@ -504,6 +515,8 @@ class Payment(models.Model):
 
 class Transaction(models.Model):
     class Type(models.TextChoices):
+        SUBSCRIPTION_PAYMENT = "subscription_payment", _("پرداخت اشتراک از کیف پول")
+        SUBSCRIPTION_GATEWAY = "subscription_gateway", _("پرداخت اشتراک از درگاه")
         # کیف پول
         DEPOSIT = "deposit", "شارژ کیف پول"
         WITHDRAW = "withdraw", "برداشت از کیف پول"
@@ -528,6 +541,7 @@ class Transaction(models.Model):
         COMMISSION_CEO = 'commission_ceo', _('کمیسیون مدیرعامل')
         COMMISSION_DEVELOPER = 'commission_developer', _('کمیسیون توسعه‌دهنده')
         COMMISSION_PUBLISH_MANAGER = 'commission_publish_manager', _('کمیسیون مدیر نشر')
+        COMMISSION_HUMAN_MEDIA_MANAGER = 'commission_human_media_manager', _('کمیسیون مدیر انسان رسانه')
         COMMISSION_CONTENT_MANAGER = 'commission_content_manager', _('کمیسیون مدیر محتوا')
         COMMISSION_REGIONAL_MANAGER = 'commission_regional_manager', _('کمیسیون مدیر استانی')
 
@@ -640,6 +654,7 @@ class Transaction(models.Model):
             self.Type.COMMISSION_CEO,
             self.Type.COMMISSION_DEVELOPER,
             self.Type.COMMISSION_PUBLISH_MANAGER,
+            self.Type.COMMISSION_HUMAN_MEDIA_MANAGER,
             self.Type.COMMISSION_CONTENT_MANAGER,
             self.Type.COMMISSION_REGIONAL_MANAGER,
         ]
@@ -649,7 +664,7 @@ class Transaction(models.Model):
         """آیا این تراکنش خروجی است؟"""
         if not self.type:
             return True
-        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT]
+        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT, self.Type.SUBSCRIPTION_PAYMENT, self.Type.SUBSCRIPTION_GATEWAY]
 
     @property
     def sign_display(self):
@@ -871,3 +886,5 @@ class WithdrawalRequest(models.Model):
         self.completed_at = timezone.now()
         self.transaction = transaction
         self.save()
+
+from .subscription_models import SubscriptionPaymentAttempt  # noqa: E402,F401

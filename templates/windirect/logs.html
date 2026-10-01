@@ -1,0 +1,15 @@
+{% extends 'windirect/base.html' %}
+{% block windirect_title %}گزارش اجرای وین دایرکت{% endblock %}
+{% block panel_heading %}گزارش کامنت‌ها و اجراها{% endblock %}
+{% block panel_intro %}سابقهٔ آزمایش‌ها، قوانین تطبیق‌یافته و پاسخ‌های آماده{% endblock %}
+{% block panel_content %}
+<form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-4"><div><label for="wd-connection-filter" class="form-label text-light">فیلتر حساب</label><select name="connection" id="wd-connection-filter" class="form-select bg-dark text-light border-light"><option value="">همهٔ حساب‌ها</option>{% for connection in connections %}<option value="{{ connection.pk }}" {% if selected_connection == connection.pk|stringformat:'s' %}selected{% endif %}>@{{ connection.username }}</option>{% endfor %}</select></div><button type="submit" class="btn btn-outline-primary">اعمال فیلتر</button></form>
+{% for event in events %}
+    <article class="card wd-card mb-3"><div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><strong class="text-white" dir="ltr">@{{ event.connection.username }}</strong><span class="text-muted small"> · پست <bdi>{{ event.media_id }}</bdi></span></div><time class="text-muted small">{{ event.created_at|date:'Y/m/d H:i' }}</time></div>
+        <p class="text-light mb-3">{{ event.text|linebreaksbr }}</p>
+        {% for execution in event.executions.all %}<div class="wd-result mb-2"><div class="d-flex flex-wrap justify-content-between gap-2"><strong class="text-white">{{ execution.automation.name }}</strong><span class="badge bg-faded-warning text-warning">{{ execution.get_status_display }}</span></div><p class="text-muted mb-0 mt-2">پاسخ آماده: {{ execution.response_text|linebreaksbr }}</p></div>{% empty %}<span class="text-muted small">هیچ قانونی با این کامنت تطبیق پیدا نکرد.</span>{% endfor %}
+    </div></article>
+{% empty %}<div class="card wd-card"><div class="wd-empty p-5"><i class="bi bi-clock-history"></i><p>هنوز گزارشی برای نمایش وجود ندارد.</p><a class="btn btn-outline-primary" href="{% url 'windirect:simulation' %}">ثبت یک آزمایش</a></div></div>{% endfor %}
+{% if events.has_other_pages %}<nav class="mt-4" aria-label="صفحات گزارش"><ul class="pagination justify-content-center"><li class="page-item {% if not events.has_previous %}disabled{% endif %}">{% if events.has_previous %}<a class="page-link" href="?connection={{ selected_connection }}&amp;page={{ events.previous_page_number }}">قبلی</a>{% else %}<span class="page-link">قبلی</span>{% endif %}</li><li class="page-item disabled"><span class="page-link">{{ events.number }} از {{ events.paginator.num_pages }}</span></li><li class="page-item {% if not events.has_next %}disabled{% endif %}">{% if events.has_next %}<a class="page-link" href="?connection={{ selected_connection }}&amp;page={{ events.next_page_number }}">بعدی</a>{% else %}<span class="page-link">بعدی</span>{% endif %}</li></ul></nav>{% endif %}
+{% endblock %}

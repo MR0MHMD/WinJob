@@ -1,3 +1,4 @@
+from .test_utils import enable_test_trial
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -11,6 +12,7 @@ class SimulationTests(TestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(phone_number="09120000000", password="test")
+        enable_test_trial(self.user)
         self.connection = InstagramConnection.objects.create(owner=self.user, username="winjob_test")
         self.rule = Automation.objects.create(
             connection=self.connection, name="قیمت", keyword="قیمت", media_id="post-1",

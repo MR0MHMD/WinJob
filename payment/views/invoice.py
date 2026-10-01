@@ -28,8 +28,8 @@ def invoice_list(request):
     type_filter = request.GET.get('type')
     if type_filter == 'campaign':
         invoices = invoices.filter(type=Invoice.Type.CAMPAIGN)
-    elif type_filter == 'wallet':
-        invoices = invoices.filter(type=Invoice.Type.WALLET)
+    elif type_filter in ('wallet', 'windirect', 'content_order'):
+        invoices = invoices.filter(type=type_filter)
 
     # فیلتر بر اساس وضعیت پرداخت
     status_filter = request.GET.get('status')
@@ -67,6 +67,12 @@ def invoice_detail(request, invoice_id):
         id=invoice_id,
         user=request.user
     )
+
+    if invoice.type == Invoice.Type.WINDIRECT:
+        return render(request, 'payment/invoices/windirect_invoice.html', {
+            'invoice': invoice, 'order': invoice.subscription_order, 'noindex': True,
+            'transactions': Transaction.objects.filter(invoice=invoice, user=request.user).order_by('-created_at'),
+        })
 
     # دریافت تراکنش‌های مرتبط
     transactions = Transaction.objects.filter(
@@ -130,6 +136,11 @@ def invoice_print(request, invoice_id):
     # ============================================================
     # ۱. فاکتور کیف پول
     # ============================================================
+    if invoice.type == Invoice.Type.WINDIRECT:
+        return render(request, 'payment/invoices/windirect_invoice.html', {
+            'invoice': invoice, 'order': invoice.subscription_order, 'noindex': True, 'printing': True,
+        })
+
     if invoice.type == Invoice.Type.WALLET:
         payable_amount_rial = invoice.wallet_deposit_amount * 10  # تبدیل به ریال
         payable_amount_words = number_to_words(payable_amount_rial, 'ریال')

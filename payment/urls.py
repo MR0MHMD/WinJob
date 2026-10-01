@@ -33,3 +33,9 @@ urlpatterns = [
     path('bank-accounts/<int:account_id>/delete/', bank_account_delete, name='bank_account_delete'),
     path('bank-accounts/<int:account_id>/set-default/', bank_account_set_default, name='bank_account_set_default'),
 ]
+from .views.subscription import subscription_callback, subscription_reverify
+
+urlpatterns += [
+    path('windirect/callback/', subscription_callback, name='subscription_callback'),
+    path('windirect/attempts/<int:pk>/verify/', subscription_reverify, name='subscription_reverify'),
+]

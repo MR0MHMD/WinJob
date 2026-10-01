@@ -7,6 +7,7 @@ DetailView های پنل Support
 اگه کاربر به آبجکت دسترسی نداشت، 404 می‌گیره.
 """
 
+from support.utils import scope_support_queryset
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Prefetch, Sum, Q
 from django.views.generic import DetailView
@@ -111,7 +112,7 @@ class ChannelDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detail
             ),
             Prefetch(
                 'campaign_bookings',
-                queryset=ChannelBooking.objects.select_related(
+                queryset=scope_support_queryset(self.request.user, ChannelBooking.objects.all()).select_related(
                     'campaign',
                     'campaign__advertiser',
                     'service_rate__ad_type'
@@ -141,18 +142,18 @@ class ChannelDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detail
         context['influencer'] = channel.influencer
         context['service_rates'] = channel.service_rates.filter(is_active=True)
 
-        all_bookings = channel.campaign_bookings.all().order_by('-created_at')
+        all_bookings = scope_support_queryset(self.request.user, channel.campaign_bookings.all()).order_by('-created_at')
         context['recent_bookings'] = all_bookings[:5]
         context['bookings_count'] = all_bookings.count()
 
-        context['completed_bookings'] = channel.campaign_bookings.filter(status='completed').count()
-        context['pending_bookings'] = channel.campaign_bookings.filter(status='pending').count()
-        context['accepted_bookings'] = channel.campaign_bookings.filter(status='accepted').count()
-        context['rejected_bookings'] = channel.campaign_bookings.filter(status='rejected').count()
+        context['completed_bookings'] = scope_support_queryset(self.request.user, channel.campaign_bookings.filter(status='completed')).count()
+        context['pending_bookings'] = scope_support_queryset(self.request.user, channel.campaign_bookings.filter(status='pending')).count()
+        context['accepted_bookings'] = scope_support_queryset(self.request.user, channel.campaign_bookings.filter(status='accepted')).count()
+        context['rejected_bookings'] = scope_support_queryset(self.request.user, channel.campaign_bookings.filter(status='rejected')).count()
 
-        total_revenue = channel.campaign_bookings.filter(
+        total_revenue = scope_support_queryset(self.request.user, channel.campaign_bookings.filter(
             status='completed'
-        ).aggregate(total=Sum('price'))['total'] or 0
+        )).aggregate(total=Sum('price'))['total'] or 0
         context['total_revenue'] = total_revenue
 
         all_reviews = channel.reviews.all().order_by('-created_at')
@@ -201,7 +202,7 @@ class CampaignDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detai
         ).prefetch_related(
             Prefetch(
                 'influencer_bookings',
-                queryset=ChannelBooking.objects.select_related(
+                queryset=scope_support_queryset(self.request.user, ChannelBooking.objects.all()).select_related(
                     'channel',
                     'channel__platform',
                     'channel__influencer',
@@ -213,7 +214,7 @@ class CampaignDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detai
             ),
             Prefetch(
                 'content_orders',
-                queryset=ContentOrder.objects.select_related(
+                queryset=scope_support_queryset(self.request.user, ContentOrder.objects.all()).select_related(
                     'team',
                     'plan',
                     'plan__service_type'
@@ -235,7 +236,7 @@ class CampaignDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detai
             ),
             Prefetch(
                 'transactions',
-                queryset=Transaction.objects.select_related('user').all()
+                queryset=scope_support_queryset(self.request.user, Transaction.objects.all()).select_related('user').all()
             ),
         )
 
@@ -298,7 +299,7 @@ class CampaignDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, Detai
             order._selected_file = selected_file
 
         # ===== گزارشات =====
-        reports = CampaignReport.objects.filter(
+        reports = scope_support_queryset(self.request.user, CampaignReport.objects.all()).filter(
             campaign_influencer__campaign=campaign
         ).select_related(
             'campaign_influencer',
@@ -381,7 +382,7 @@ class ReportDetailView(PublishManagerRequiredMixin, RegionalFilterMixin, DetailV
 
         context['overall_score'] = auto_details.get('overall_score') if auto_details else None
 
-        context['transactions'] = Transaction.objects.filter(
+        context['transactions'] = scope_support_queryset(self.request.user, Transaction.objects.all()).filter(
             campaign=booking.campaign,
             user=booking.channel.influencer.user
         ).order_by('-created_at')[:5]
@@ -401,7 +402,7 @@ class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
     """
     model = User
     template_name = 'support/users/user_detail.html'
-    context_object_name = 'user'
+    context_object_name = 'user_obj'
 
     province_field_path = 'province'
 
@@ -409,8 +410,8 @@ class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
         qs = super().get_queryset().select_related(
             'province', 'wallet'
         ).prefetch_related(
-            Prefetch('transactions', queryset=Transaction.objects.order_by('-created_at')),
-            Prefetch('tickets', queryset=Ticket.objects.order_by('-created_at')),
+            Prefetch('transactions', queryset=scope_support_queryset(self.request.user, Transaction.objects.all()).order_by('-created_at')),
+            Prefetch('tickets', queryset=scope_support_queryset(self.request.user, Ticket.objects.all()).order_by('-created_at')),
         )
 
         # ========== فیلتر Regional ==========
@@ -425,17 +426,17 @@ class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
         user_obj = self.object
 
         # کیف پول
-        context['wallet'] = getattr(user_obj, 'wallet', None)
+        context['wallet'] = None if self.request.user.has_platform_scope else getattr(user_obj, 'wallet', None)
 
         # تراکنش‌ها
-        all_transactions = user_obj.transactions.all().order_by('-created_at')
+        all_transactions = scope_support_queryset(self.request.user, user_obj.transactions.all()).order_by('-created_at')
         context['transactions'] = all_transactions[:5]
         context['transactions_count'] = all_transactions.count()
 
         # پروفایل تبلیغ دهنده
         if hasattr(user_obj, 'advertiser_profile'):
             context['advertiser_profile'] = user_obj.advertiser_profile
-            campaigns_qs = user_obj.advertiser_profile.campaigns.all().order_by('-created_at')
+            campaigns_qs = scope_support_queryset(self.request.user, user_obj.advertiser_profile.campaigns.all()).order_by('-created_at')
             context['campaigns'] = campaigns_qs[:5]
             context['campaigns_count'] = campaigns_qs.count()
         else:
@@ -446,11 +447,11 @@ class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
         # پروفایل اینفلوئنسر
         if hasattr(user_obj, 'influencer_profile'):
             context['influencer_profile'] = user_obj.influencer_profile
-            channels_qs = user_obj.influencer_profile.channels.all().order_by('-created_at')
+            channels_qs = scope_support_queryset(self.request.user, user_obj.influencer_profile.channels.all()).order_by('-created_at')
             context['channels'] = channels_qs[:5]
             context['channels_count'] = channels_qs.count()
 
-            bookings_qs = ChannelBooking.objects.filter(
+            bookings_qs = scope_support_queryset(self.request.user, ChannelBooking.objects.all()).filter(
                 channel__influencer=user_obj.influencer_profile
             ).order_by('-created_at')
             context['campaign_bookings'] = bookings_qs[:5]
@@ -463,18 +464,18 @@ class UserDetailView(BaseSupportMixin, RegionalFilterMixin, DetailView):
             context['bookings_count'] = 0
 
         # عضو تیم
-        context['team_member'] = getattr(user_obj, 'team_member', None)
+        context['team_member'] = None if self.request.user.has_platform_scope else getattr(user_obj, 'team_member', None)
 
         # تیکت‌ها
-        all_tickets = user_obj.tickets.all().order_by('-created_at')
+        all_tickets = scope_support_queryset(self.request.user, user_obj.tickets.all()).order_by('-created_at')
         context['tickets'] = all_tickets[:5]
         context['tickets_count'] = all_tickets.count()
 
         # نوتیفیکیشن‌ها
-        all_notifications = user_obj.notifications.all().order_by('-created_at')
+        all_notifications = scope_support_queryset(self.request.user, user_obj.notifications.all()).order_by('-created_at')
         context['notifications'] = all_notifications[:5]
         context['notifications_count'] = all_notifications.count()
-        context['unread_notifications_count'] = user_obj.notifications.filter(is_read=False).count()
+        context['unread_notifications_count'] = scope_support_queryset(self.request.user, user_obj.notifications.filter(is_read=False)).count()
         context['user_obj'] = user_obj
 
         return context
@@ -503,7 +504,7 @@ class TeamDetailView(ContentManagerRequiredMixin, RegionalFilterMixin, DetailVie
         ).prefetch_related(
             Prefetch(
                 'members',
-                queryset=ContentTeamMember.objects.select_related('user').filter(is_active=True)
+                queryset=scope_support_queryset(self.request.user, ContentTeamMember.objects.all()).select_related('user').filter(is_active=True)
             ),
             Prefetch(
                 'service_plans',
@@ -511,7 +512,7 @@ class TeamDetailView(ContentManagerRequiredMixin, RegionalFilterMixin, DetailVie
             ),
             Prefetch(
                 'orders',
-                queryset=ContentOrder.objects.select_related('campaign', 'plan').order_by('-created_at')
+                queryset=scope_support_queryset(self.request.user, ContentOrder.objects.all()).select_related('campaign', 'plan').order_by('-created_at')
             ),
             Prefetch(
                 'reviews',
@@ -663,7 +664,7 @@ class ContentOrderDetailView(ContentManagerRequiredMixin, RegionalFilterComplexM
         context['reviews_count'] = team_reviews.count()
 
         # ===== تراکنش‌های مرتبط =====
-        transactions = Transaction.objects.filter(
+        transactions = scope_support_queryset(self.request.user, Transaction.objects.all()).filter(
             campaign=order.campaign
         ).select_related('user').order_by('-created_at')
         context['transactions'] = transactions[:10]

@@ -1,0 +1,46 @@
+{% extends 'windirect/base.html' %}
+{% block panel_heading %}سفارش اشتراک #{{ order.pk }}{% endblock %}
+{% block panel_content %}
+    <div class="card wd-card">
+        <div class="card-body p-4">
+            <h2 class="h5 text-white">{{ order.quote.plan_name }}</h2>
+            <p class="text-light">{{ order.get_status_display }}</p>
+            {% if order.status == 'credited' %}
+                <p class="text-warning">وجه تأییدشده به کیف پول شما افزوده شده است. برای خرید اشتراک، سفارش تازه بسازید.</p>
+            {% endif %}
+            {% include 'windirect/subscriptions/amounts.html' %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn btn-outline-primary"
+                   href="{% url 'payment:invoice_detail' invoice.pk %}">فاکتور</a>
+                <a class="btn btn-outline-light"
+                   href="{% url 'windirect:subscription' %}">اشتراک من</a>
+                {% if order.status == 'pending' %}
+                    <a class="btn btn-primary"
+                       href="{% url 'windirect:subscription_checkout' order.pk %}">ادامهٔ پرداخت</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card wd-card mt-4">
+        <div class="card-body p-4">
+            <h2 class="h5 text-white">تلاش‌های پرداخت درگاه</h2>
+            {% for attempt in attempts %}
+                <div class="wd-list-row">
+                    <div>
+                        <span class="text-light">{{ attempt.payment.get_status_display }}</span>
+                        <small class="d-block text-muted">{{ attempt.created_at|date:'Y/m/d H:i' }} · پیگیری {{ attempt.payment.ref_id|default:'—' }}</small>
+                    </div>
+                    {% if attempt.authority and not attempt.verified_at %}
+                        <form method="post"
+                              action="{% url 'payment:subscription_reverify' attempt.pk %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-primary btn-sm">بررسی دوباره</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="text-muted">پرداخت درگاهی ثبت نشده است.</p>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

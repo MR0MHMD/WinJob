@@ -5,7 +5,6 @@ from django.conf.urls.static import static
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from core import pwa
-from core.sitemaps import PublicPagesSitemap
 
 handler404 = 'core.views.errors.custom_404'
 handler502 = 'core.views.errors.custom_502'
@@ -16,11 +15,11 @@ handler429 = 'core.views.errors.custom_429'
 handler503 = 'core.views.errors.custom_503'
 
 urlpatterns = [
-    path('sitemap.xml', sitemap, {'sitemaps': {'public': PublicPagesSitemap}}, name='sitemap'),
     path('manifest.webmanifest', pwa.manifest, name='pwa_manifest'),
     path('service-worker.js', pwa.service_worker, name='pwa_service_worker'),
     path('offline/', pwa.offline, name='pwa_offline'),
     path('admin/', admin.site.urls),
+    path('windirect/panel/', include("windirect.urls", namespace="windirect")),
     path('accounts/', include("accounts.urls", namespace="accounts")),
     path('notifications/', include("notifications.urls", namespace="notifications")),
     path('advertisers/', include("advertisers.urls", namespace="advertisers")),

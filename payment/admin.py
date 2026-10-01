@@ -95,6 +95,7 @@ class InvoiceTypeFilter(SimpleListFilter):
         return (
             ('campaign', 'فاکتور کمپین'),
             ('wallet', 'فاکتور شارژ کیف پول'),
+            ('windirect', 'فاکتور اشتراک وین دایرکت'),
             ('content_order', 'فاکتور سفارش محتوا'),  # ✅ جدید
         )
 
@@ -147,6 +148,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         "user",
         "campaign",
         "content_order",
+        "subscription_order", "base_plan_cost", "plan_discount_amount", "plan_cost", "plan_vat",
         "base_content_cost",
         "base_commission",
         "content_discount_amount",
@@ -208,6 +210,10 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 "total_amount",
                 "payable_amount",
             )
+        }),
+        ("اشتراک وین دایرکت", {
+            "fields": ("subscription_order", "base_plan_cost", "plan_discount_amount", "plan_cost", "plan_vat"),
+            "classes": ("collapse",),
         }),
         ("💳 شارژ کیف پول", {
             "fields": ("wallet_deposit_amount",),
@@ -274,6 +280,12 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         return "-"
     user_display.short_description = "کاربر"
     user_display.admin_order_field = "user__phone_number"
+
+    def get_readonly_fields(self, request, obj=None):
+        """پرداخت اشتراک فقط از سرویس تأیید و فعال‌سازی تغییر می‌کند."""
+        if obj and obj.type == Invoice.Type.WINDIRECT:
+            return self.readonly_fields + ('is_paid', 'paid_at')
+        return self.readonly_fields
 
     def campaign_or_order_link(self, obj):
         """نمایش لینک کمپین یا سفارش محتوا به صورت هوشمند"""
@@ -1376,3 +1388,67 @@ class WithdrawalRequestAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             self.message_user(request, msg, messages.SUCCESS)
 
         return super().response_change(request, obj)
+
+from payment.models import CommissionSplit, SubscriptionPaymentAttempt
+
+
+@admin.register(CommissionSplit)
+class CommissionSplitAdmin(admin.ModelAdmin):
+    """دفتر تسهیم موجود را نمایش می‌دهد و تسویهٔ در انتظار را قابل تکرار می‌کند."""
+    list_display = ('invoice', 'ceo_amount', 'developer_amount', 'site_maintenance_amount', 'settled')
+    list_filter = ('invoice__type', ('created_at', JDateFieldListFilter))
+    search_fields = ('invoice__invoice_number', 'invoice__user__phone_number')
+    list_select_related = ('invoice',)
+    actions = ('retry_payout',)
+
+    @admin.display(description='واریز انجام شده', boolean=True)
+    def settled(self, obj):
+        """وضعیت واریز فاکتور را نمایش می‌دهد."""
+        return obj.invoice.commission_paid_at is not None
+
+    @admin.action(description='واریز دوبارهٔ سهم‌های در انتظار وین دایرکت', permissions=['payout'])
+    def retry_payout(self, request, queryset):
+        """فقط تسهیم‌های وین دایرکت را با تابع موجود و محافظت تکرار می‌کند."""
+        from payment.services.payout import payout_commission, PayoutError
+        for split in queryset.select_related('invoice').filter(invoice__type='windirect'):
+            try:
+                result = payout_commission(split.invoice)
+                self.message_user(request, result.message, messages.SUCCESS if result.success else messages.INFO)
+            except PayoutError as error:
+                self.message_user(request, str(error), messages.ERROR)
+
+    def has_payout_permission(self, request):
+        """تسویه فقط برای مدیر دارای مجوز تغییر دفتر تسهیم قابل انجام است."""
+        return request.user.has_perm('payment.change_commissionsplit')
+
+    def has_add_permission(self, request):
+        """ثبت دستی سهم مجاز نیست."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """ویرایش دستی سهم مجاز نیست."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """حذف دفتر تسهیم مجاز نیست."""
+        return False
+
+
+@admin.register(SubscriptionPaymentAttempt)
+class SubscriptionPaymentAttemptAdmin(admin.ModelAdmin):
+    """مرور تلاش‌های پرداخت اشتراک بدون تغییر سوابق."""
+    list_display = ('order', 'payment', 'authority', 'verified_at', 'created_at')
+    search_fields = ('authority', 'order__user__phone_number')
+    list_select_related = ('order', 'payment')
+
+    def has_add_permission(self, request):
+        """تلاش توسط سرویس ثبت می‌شود."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """تلاش قابل ویرایش دستی نیست."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """حذف سابقه مجاز نیست."""
+        return False

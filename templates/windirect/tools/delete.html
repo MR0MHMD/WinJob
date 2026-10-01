@@ -1,0 +1,16 @@
+{% extends 'windirect/base.html' %}
+{% block panel_heading %}حذف {{ singular }}{% endblock %}
+{% block panel_content %}
+    <div class="card wd-card">
+        <div class="card-body p-4">
+            <h2 class="h5 text-white">«{{ obj.name }}» حذف شود؟</h2>
+            <p class="text-light">موارد دارای پاسخ‌نامه، سابقهٔ اجرا یا قانون وابسته قابل حذف نیستند؛ آن‌ها را غیرفعال کنید.</p>
+            <form method="post" class="d-flex gap-2">
+                {% csrf_token %}
+                <button class="btn btn-danger">تأیید حذف</button>
+                <a class="btn btn-outline-light"
+                   href="{% url 'windirect:asset_list' kind %}">انصراف</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

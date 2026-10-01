@@ -1,0 +1,45 @@
+{% extends 'parent/base.html' %}
+{% load static subscription_tags %}
+{% block title %}{% block windirect_title %}پنل وین دایرکت{% endblock %}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block extra_style %}<link rel="stylesheet" href="{% static 'windirect/css/panel.css' %}">{% endblock %}
+{% block content %}
+<div class="container py-5 wd-panel">
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item active" aria-current="page">پنل مدیریت</li>
+    </ol>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <span class="wd-panel-eyebrow"><i class="bi bi-chat-square-dots ms-1"></i> وین دایرکت</span>
+            <h1 class="h2 text-white mb-2">{% block panel_heading %}پنل مدیریت{% endblock %}</h1>
+            <p class="text-muted mb-0">{% block panel_intro %}مدیریت حساب‌ها و قوانین پاسخ‌گویی آزمایشی{% endblock %}</p>
+        </div>
+        {% block panel_action %}{% endblock %}
+    </div>
+    <nav class="wd-panel-nav mb-4" aria-label="بخش‌های وین دایرکت">
+        <a href="{% url 'windirect:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"><i class="bi bi-grid ms-1"></i> نمای کلی</a>
+        <a href="{% url 'windirect:connections' %}" class="{% if request.resolver_match.url_name == 'connections' %}is-active{% endif %}"><i class="bi bi-instagram ms-1"></i> حساب‌ها</a>
+        <a href="{% url 'windirect:rules' %}" class="{% if request.resolver_match.url_name == 'rules' or request.resolver_match.url_name == 'rule_create' or request.resolver_match.url_name == 'rule_edit' %}is-active{% endif %}"><i class="bi bi-lightning-charge ms-1"></i> کامنت هوشمند</a>
+        <a href="{% url 'windirect:asset_list' 'direct' %}" class="{% if section == 'direct' %}is-active{% endif %}"><i class="bi bi-chat-dots ms-1"></i> دایرکت هوشمند</a>
+        <a href="{% url 'windirect:asset_list' 'showcases' %}" class="{% if section == 'showcases' %}is-active{% endif %}"><i class="bi bi-collection ms-1"></i> ویترین‌ساز</a>
+        <a href="{% url 'windirect:asset_list' 'forms' %}" class="{% if section == 'forms' %}is-active{% endif %}"><i class="bi bi-ui-checks ms-1"></i> فرم‌ساز</a>
+        <a href="{% url 'windirect:simulation' %}" class="{% if request.resolver_match.url_name == 'simulation' %}is-active{% endif %}"><i class="bi bi-play-circle ms-1"></i> آزمایش کامنت</a>
+        <a href="{% url 'windirect:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}is-active{% endif %}"><i class="bi bi-clock-history ms-1"></i> گزارش کامنت</a>
+        <a href="{% url 'windirect:direct_simulation' %}" class="{% if section == 'simulation' %}is-active{% endif %}">آزمایش دایرکت</a>
+        <a href="{% url 'windirect:direct_logs' %}" class="{% if section == 'direct_logs' %}is-active{% endif %}">گزارش دایرکت</a>
+        <a href="{% url 'windirect:plans' %}">خرید اشتراک</a>
+        <a href="{% url 'windirect:subscription' %}" class="{% if section == 'subscription' %}is-active{% endif %}">اشتراک من</a>
+    </nav>
+    {% windirect_active_subscription request.user as panel_subscription %}
+    <div class="card wd-card mb-4"><div class="card-body d-flex flex-wrap gap-3 justify-content-between align-items-center">
+        <span class="text-light">{% if panel_subscription %}{{ panel_subscription.plan_name }} · {{ panel_subscription.capabilities.max_pages }} پیج · تا {{ panel_subscription.ends_at|date:'Y/m/d H:i' }}{% else %}اشتراک فعالی ندارید؛ مشاهدهٔ سوابق و خروجی اکسل قبلی باز است.{% endif %}</span>
+        <a href="{% url 'windirect:plans' %}" class="btn btn-outline-primary btn-sm">انتخاب یا تمدید پلن</a>
+    </div></div>
+    <div class="alert alert-info bg-faded-info border-0 rounded-3 wd-panel-notice mb-4" role="status">
+        <i class="bi bi-info-circle ms-2"></i> این بخش فعلاً برای ساخت و آزمایش قوانین است. حساب اینستاگرام متصل نمی‌شود و هیچ پاسخ یا دایرکتی ارسال نمی‌شود.
+    </div>
+    {% block panel_content %}{% endblock %}
+</div>
+{% endblock %}

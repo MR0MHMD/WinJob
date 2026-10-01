@@ -36,3 +36,11 @@ COMMISSION_SETTINGS = {
     # سهم مدیر استانی
     'regional_manager_share': 5,      # 5%
 }
+
+# تسهیم درآمد خالص اشتراک وین دایرکت؛ مالیات وارد استخر تقسیم نمی‌شود.
+WINDIRECT_MAINTENANCE_PERCENT = 10
+WINDIRECT_CEO_POOL_PERCENT = 60
+WINDIRECT_DEVELOPER_POOL_PERCENT = 40
+WINDIRECT_REFERRAL_DISCOUNT_PERCENT = 30
+WINDIRECT_BUYER_GIFT_DAYS = 5
+WINDIRECT_REFERRER_GIFT_DAYS = 1

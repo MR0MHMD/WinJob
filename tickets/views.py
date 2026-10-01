@@ -4,7 +4,7 @@ from django.db.models import Q, Count, Prefetch
 from django.views.generic import DetailView
 from django.views.generic import CreateView
 from django.views.generic import ListView
-from support.utils import is_support_user
+from support.utils import is_support_user, scope_support_queryset
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.urls import reverse_lazy
@@ -33,6 +33,8 @@ class TicketListView(LoginRequiredMixin, ListView):
         # کاربر عادی فقط تیکت‌های خودش
         if not is_support_user(self.request.user):
             queryset = queryset.filter(user=self.request.user)
+
+        queryset = scope_support_queryset(self.request.user, queryset)
 
         # اعمال فیلترها
         queryset = self.apply_filters(queryset)
@@ -92,7 +94,9 @@ class TicketListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # آمار و شمارش‌ها
-        base_qs = Ticket.objects if self.request.user.is_staff else Ticket.objects.filter(user=self.request.user)
+        base_qs = scope_support_queryset(self.request.user, Ticket.objects.all())
+        if not is_support_user(self.request.user):
+            base_qs = base_qs.filter(user=self.request.user)
 
         context.update({
             # آمار کلی
@@ -114,8 +118,7 @@ class TicketListView(LoginRequiredMixin, ListView):
 
             # دسته‌بندی‌های فعال برای فیلتر
             'categories': TicketCategory.objects.filter(is_active=True).annotate(
-                ticket_count=Count('tickets', filter=Q(
-                    tickets__user=self.request.user)) if not self.request.user.is_staff else Count('tickets')
+                ticket_count=Count('tickets', filter=Q(tickets__in=base_qs))
             ).order_by('order', 'name'),
         })
 
@@ -287,10 +290,10 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
         )
 
         # کاربر عادی فقط تیکت خودش رو ببینه
-        if not self.request.user.is_staff:
+        if not is_support_user(self.request.user):
             qs = qs.filter(user=self.request.user)
 
-        return qs
+        return scope_support_queryset(self.request.user, qs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

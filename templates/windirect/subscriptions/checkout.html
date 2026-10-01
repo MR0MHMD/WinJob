@@ -1,0 +1,46 @@
+{% extends 'windirect/base.html' %}
+{% block panel_heading %}تأیید خرید و پرداخت{% endblock %}
+{% block panel_content %}
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card wd-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 text-white">{{ order.quote.plan_name }} · {{ order.get_kind_display }}</h2>
+                    <p class="text-muted">فاکتور {{ invoice.invoice_number }} · اعتبار سفارش تا {{ order.expires_at|date:'Y/m/d H:i' }}</p>
+                    {% include 'windirect/subscriptions/amounts.html' %}
+                    {% if order.referral_id %}
+                        <p class="text-light">کد {{ order.referral.code }} · {{ order.quote.buyer_gift_days }} روز هدیه پس از دورهٔ خرید</p>
+                    {% endif %}
+                    <a href="{% url 'payment:invoice_detail' invoice.pk %}">مشاهدهٔ فاکتور در بخش مالی سایت</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card wd-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 text-white">پرداخت</h2>
+                    {% if expired or order.status != 'pending' %}
+                        <p class="text-light">این سفارش قابل شروع پرداخت نیست؛ وضعیت و سوابق را بررسی کنید.</p>
+                        <a class="btn btn-outline-primary"
+                           href="{% url 'windirect:subscription_order' order.pk %}">جزئیات سفارش</a>
+                        <a class="btn btn-outline-light" href="{% url 'windirect:plans' %}">انتخاب پلن</a>
+                    {% else %}
+                        {% if sandbox %}
+                            <p class="text-warning">محیط توسعه؛ زرین‌پال سندباکس است. پرداخت آزمایشی هم در همین دیتابیس اشتراک و تسهیم می‌سازد.</p>
+                        {% endif %}
+                        <form method="post">
+                            {% csrf_token %}{{ form.non_field_errors }}{% include 'windirect/partials/field.html' with field=form.method %}
+                            <button class="btn btn-primary w-100">پرداخت مبلغ فاکتور</button>
+                        </form>
+                        <form class="mt-3"
+                              method="post"
+                              action="{% url 'windirect:subscription_cancel' order.pk %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-light w-100">لغو سفارش</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

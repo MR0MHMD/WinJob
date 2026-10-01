@@ -1,0 +1,23 @@
+{% extends 'windirect/base.html' %}
+{% block windirect_title %}قوانین وین دایرکت{% endblock %}
+{% block panel_heading %}قوانین پاسخ{% endblock %}
+{% block panel_intro %}برای هر حساب، پست و کلیدواژه پاسخ مناسب آماده کنید{% endblock %}
+{% block panel_action %}<a href="{% url 'windirect:rule_create' %}" class="btn btn-primary rounded-pill"><i class="bi bi-plus-lg ms-1"></i> ساخت قانون</a>{% endblock %}
+{% block panel_content %}
+<section class="card wd-card"><div class="card-body p-0">
+    {% for rule in rules %}
+        <article class="wd-rule-row p-4">
+            <div class="wd-rule-main"><div class="d-flex flex-wrap align-items-center gap-2 mb-2"><h2 class="h5 text-white mb-0">{{ rule.name }}</h2><span class="badge {% if rule.is_active %}bg-faded-success text-success{% else %}bg-faded-light text-muted{% endif %}">{% if rule.is_active %}فعال{% else %}غیرفعال{% endif %}</span></div>
+                <div class="text-muted small mb-2"><span dir="ltr">@{{ rule.connection.username }}</span> · {% if rule.media_id %}پست <bdi>{{ rule.media_id }}</bdi>{% else %}همهٔ پست‌ها{% endif %} · {{ rule.execution_count }} اجرا</div>
+                <p class="mb-0 text-light">اگر کامنت «{{ rule.get_match_type_display }} {{ rule.keyword }}» بود، پاسخ آماده شود.</p>
+            </div>
+            <div class="wd-rule-actions">
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'windirect:rule_edit' rule.pk %}">ویرایش</a>
+                <form method="post" action="{% url 'windirect:rule_toggle' rule.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-light btn-sm">{% if rule.is_active %}غیرفعال‌کردن{% else %}فعال‌کردن{% endif %}</button></form>
+                {% if not rule.execution_count %}<form method="post" action="{% url 'windirect:rule_delete' rule.pk %}" onsubmit="return confirm('این قانون حذف شود؟')">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm">حذف</button></form>{% endif %}
+            </div>
+        </article>
+    {% empty %}<div class="wd-empty p-5"><i class="bi bi-lightning-charge"></i><p>هنوز قانونی ثبت نکرده‌اید.</p><a href="{% url 'windirect:rule_create' %}" class="btn btn-primary">ساخت اولین قانون</a></div>{% endfor %}
+</div></section>
+{% if rules.has_other_pages %}<nav class="mt-4" aria-label="صفحات قوانین"><ul class="pagination justify-content-center"><li class="page-item {% if not rules.has_previous %}disabled{% endif %}">{% if rules.has_previous %}<a class="page-link" href="?page={{ rules.previous_page_number }}">قبلی</a>{% else %}<span class="page-link">قبلی</span>{% endif %}</li><li class="page-item disabled"><span class="page-link">{{ rules.number }} از {{ rules.paginator.num_pages }}</span></li><li class="page-item {% if not rules.has_next %}disabled{% endif %}">{% if rules.has_next %}<a class="page-link" href="?page={{ rules.next_page_number }}">بعدی</a>{% else %}<span class="page-link">بعدی</span>{% endif %}</li></ul></nav>{% endif %}
+{% endblock %}

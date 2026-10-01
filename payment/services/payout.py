@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -19,6 +20,7 @@ from accounts.models import CustomUser
 from payment.models import Transaction, Wallet, Invoice, CommissionSplit
 from payment.services.commission import (
     calculate_commission_breakdown,
+    calculate_subscription_breakdown,
     CommissionCalculationError,
 )
 
@@ -122,8 +124,7 @@ def _create_commission_transaction(
     )
 
     wallet, _ = Wallet.objects.get_or_create(user=user)
-    wallet.balance += amount
-    wallet.save(update_fields=['balance', 'updated_at'])
+    Wallet.objects.filter(pk=wallet.pk).update(balance=F('balance') + amount, updated_at=timezone.now())
 
     return tx
 
@@ -151,6 +152,12 @@ def payout_commission(
     """
     result = PayoutResult()
 
+    # قفل فاکتور ذخیره‌شده برای جلوگیری از تسویه تکراری، حتی با نمونه قدیمی فاکتور.
+    invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
+    if campaign is not None and campaign.pk != invoice.campaign_id:
+        raise PayoutError('کمپین ورودی با کمپین فاکتور مطابقت ندارد.')
+    campaign = invoice.campaign if invoice.campaign_id else None
+
     # ===== ۱. چک دوبار واریز =====
     if invoice.is_commission_paid:
         result.success = False
@@ -160,7 +167,9 @@ def payout_commission(
     # ===== ۲. محاسبه breakdown =====
     try:
         # تشخیص نوع منبع
-        if invoice.campaign_id:
+        if invoice.type == Invoice.Type.WINDIRECT:
+            breakdown = calculate_subscription_breakdown(invoice)
+        elif invoice.campaign_id:
             breakdown = calculate_commission_breakdown(
                 source_id=invoice.campaign_id,
                 source_type='campaign',
@@ -213,19 +222,29 @@ def payout_commission(
 
     # ===== ۵. مدیر نشر (اجباری - اگه سهم داشته باشه) =====
     if breakdown.publish_manager_amount > 0:
-        publish_user = _require_user_by_role(CustomUser.Role.PUBLISH_MANAGER, 'مدیر نشر')
+        is_instagram = campaign is not None and campaign.platform.slug.lower() == 'instagram'
+        publish_role = (CustomUser.Role.HUMAN_MEDIA_MANAGER if is_instagram
+                        else CustomUser.Role.PUBLISH_MANAGER)
+        publish_label = str(CustomUser.Role(publish_role).label)
+        publish_user = _require_user_by_role(publish_role, publish_label)
+        breakdown.setting_snapshot.update({
+            'publishing_manager_role': publish_role,
+            'publishing_manager_user_id': publish_user.pk,
+            'campaign_platform_slug': campaign.platform.slug if campaign else None,
+        })
         tx = _create_commission_transaction(
             user=publish_user,
             amount=breakdown.publish_manager_amount,
-            transaction_type=Transaction.Type.COMMISSION_PUBLISH_MANAGER,
-            reference_id=f"{reference_base}-publish",
+            transaction_type=(Transaction.Type.COMMISSION_HUMAN_MEDIA_MANAGER if is_instagram
+                              else Transaction.Type.COMMISSION_PUBLISH_MANAGER),
+            reference_id=f"{reference_base}-{publish_role}",
             description=_(
-                f"سهم مدیر نشر از کمیسیون فاکتور {invoice.invoice_number}"
+                f"سهم {publish_label} از کمیسیون فاکتور {invoice.invoice_number}"
             ),
             campaign=campaign,
             invoice=invoice,
         )
-        result.add_transaction(tx, 'publish_manager')
+        result.add_transaction(tx, publish_role)
 
     # ===== ۶. مدیر محتوا (اجباری - اگه سهم داشته باشه) =====
     if breakdown.content_manager_amount > 0:
@@ -286,15 +305,20 @@ def payout_commission(
         )
 
     # ===== ۱۰. ذخیره تسهیم کمیسیون =====
-    CommissionSplit.objects.create(
+    CommissionSplit.objects.update_or_create(
         invoice=invoice,
-        ceo_amount=breakdown.ceo_amount,
-        developer_amount=breakdown.developer_amount,
-        publish_manager_amount=breakdown.publish_manager_amount,
-        content_manager_amount=breakdown.content_manager_amount,
-        regional_manager_amount=breakdown.regional_manager_amount,
-        site_maintenance_amount=site_maintenance_final,
-        snapshot=breakdown.setting_snapshot,
+        defaults={
+            'ceo_amount': breakdown.ceo_amount,
+            'developer_amount': breakdown.developer_amount,
+            'publish_manager_amount': breakdown.publish_manager_amount,
+            'content_manager_amount': breakdown.content_manager_amount,
+            'regional_manager_amount': (
+                0 if any(item['role'] == 'regional_manager' for item in result.skipped_roles)
+                else breakdown.regional_manager_amount
+            ),
+            'site_maintenance_amount': site_maintenance_final,
+            'snapshot': breakdown.setting_snapshot,
+        },
     )
 
     # ===== ۱۱. علامت‌گذاری فاکتور =====

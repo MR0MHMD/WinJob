@@ -24,6 +24,8 @@ def _matches(automation, text):
 @transaction.atomic
 def simulate_comment(*, connection, comment_id, media_id, text):
     """کامنت و اجرای آزمایشی قوانین را بدون ارسال پیام ثبت می‌کند."""
+    from .subscriptions.access import require_connection
+    require_connection(connection, 'smart_comments')
     if connection.status != InstagramConnection.Status.SIMULATED:
         raise ValueError("شبیه‌سازی فقط برای حساب آزمایشی مجاز است.")
     if not comment_id or not media_id or not text:

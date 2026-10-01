@@ -423,3 +423,25 @@ def complete_wallet_payment(user, amount, ref_id, authority=None):
         )
 
     return invoice
+
+
+def create_subscription_invoice(order):
+    """فاکتور اشتراک را از قیمت قطعی سفارش می‌سازد؛ مبلغ از مرورگر دریافت نمی‌شود."""
+    quote = order.quote
+    invoice, created = Invoice.objects.get_or_create(
+        subscription_order=order,
+        defaults={
+            'type': Invoice.Type.WINDIRECT, 'user': order.user,
+            'base_plan_cost': quote['base'], 'plan_discount_amount': quote['discount'],
+            'plan_cost': quote['net'], 'plan_vat': quote['vat'],
+            'discount_amount': quote['discount'], 'total_amount': quote['base'],
+            'payable_amount': quote['total'], 'total_vat': quote['vat'],
+            # درآمد خالص اشتراک، مبنای همان دفتر تسهیم موجود پروژه است.
+            'base_commission': quote['base'], 'commission': quote['net'],
+            'description': f"{order.get_kind_display()} {quote['plan_name']}؛ دورهٔ مبنا {quote['duration_days']} روز",
+        },
+    )
+    if created:
+        invoice.invoice_number = Invoice.generate_invoice_number(invoice.pk, invoice.created_at, Invoice.Type.WINDIRECT)
+        invoice.save(update_fields=['invoice_number'])
+    return invoice

@@ -135,13 +135,19 @@ DAISY_SETTINGS = {
 # ========== درگاه پرداخت زرین پال ==========
 ZARINPAL_MERCHANT_CODE = os.getenv('ZARINPAL_MERCHANT_CODE', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 
+# محیط درگاه صریح است؛ در توسعه حتی با شناسهٔ واقعی، سندباکس استفاده می‌شود.
+PAYMENT_ENV = os.getenv('PAYMENT_ENV', 'development' if DEBUG else 'production').lower()
+if PAYMENT_ENV not in ('development', 'production'):
+    raise ValueError('PAYMENT_ENV باید development یا production باشد.')
+PAYMENT_SANDBOX = PAYMENT_ENV == 'development'
+
 IRANIAN_PAYMENT = {
-    "sandbox": True if ZARINPAL_MERCHANT_CODE == "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" else False,
+    "sandbox": PAYMENT_SANDBOX,
     "currency": "toman",
     "gateways": {
         "zarinpal": {
             "merchant_id": ZARINPAL_MERCHANT_CODE,
-            "sandbox": True if ZARINPAL_MERCHANT_CODE == "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" else False,
+            "sandbox": PAYMENT_SANDBOX,
         },
     },
 }
@@ -158,6 +164,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'support.utils.PlatformManagerAdminGuard',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

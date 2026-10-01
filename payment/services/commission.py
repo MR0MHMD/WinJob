@@ -30,7 +30,7 @@ from payment.models import Invoice
 
 # ==================== Enums & Constants ====================
 
-CampaignType = Literal['publish_only', 'content_only', 'mixed']
+CampaignType = Literal['publish_only', 'content_only', 'mixed', 'windirect']
 SourceType = Literal['campaign', 'content_order']
 
 
@@ -350,3 +350,19 @@ def _calculate_shares(
         )
 
     return breakdown
+
+def calculate_subscription_breakdown(invoice):
+    """درآمد خالص اشتراک را بدون مالیات بین نگهداری و دو مدیر تقسیم می‌کند."""
+    if invoice.type != Invoice.Type.WINDIRECT or not invoice.is_paid:
+        raise CommissionCalculationError('فاکتور اشتراک باید پرداخت شده باشد.')
+    quote = invoice.subscription_order.quote
+    total = int(invoice.plan_cost)
+    maintenance = total * int(quote['maintenance_percent']) // 100
+    pool = total - maintenance
+    ceo = pool * int(quote['ceo_pool_percent']) // 100
+    developer = pool - ceo
+    return CommissionBreakdown(total_commission=total, campaign_type='windirect', advertiser_province_id=None,
+        ceo_amount=ceo, developer_amount=developer, site_maintenance_amount=maintenance,
+        setting_snapshot={'source': 'windirect', 'net': total, 'excluded_vat': invoice.plan_vat,
+            'maintenance_percent': quote['maintenance_percent'], 'ceo_pool_percent': quote['ceo_pool_percent'],
+            'developer_pool_percent': quote['developer_pool_percent'], 'rounding': 'remainder_to_developer'})

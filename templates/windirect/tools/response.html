@@ -1,0 +1,25 @@
+<p class="text-light mb-2 wd-message-text">{{ response.text }}</p>
+{% if response.kind == 'showcase' %}
+    <div class="row g-3">
+        {% for card in response.cards %}
+            <div class="col-md-6">
+                <div class="card wd-card h-100">
+                    <img class="card-img-top wd-product-image"
+                         src="{{ card.image_url }}"
+                         alt="{{ card.title }}"
+                         loading="lazy"
+                         referrerpolicy="no-referrer">
+                    <div class="card-body">
+                        <h3 class="h6 text-white">{{ card.title }}</h3>
+                        <p class="text-light">{{ card.subtitle }}</p>
+                        <a class="btn btn-outline-primary btn-sm"
+                           href="{{ card.button_url }}"
+                           target="_blank"
+                           rel="noopener noreferrer">{{ card.button_title }} <span class="visually-hidden">(در پنجرهٔ جدید)</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}

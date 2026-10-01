@@ -1,0 +1,1958 @@
+diff --git a/static/windirect/css/panel.css b/static/windirect/css/panel.css
+index 8b13e99..33a4125 100644
+--- a/static/windirect/css/panel.css
++++ b/static/windirect/css/panel.css
+@@ -161,3 +161,13 @@
+         white-space: nowrap;
+     }
+ }
++
++/* ابزارها همان زمینه و مؤلفه‌های پنل را به ارث می‌برند. */
++.wd-panel .wd-message-text { white-space: pre-wrap; overflow-wrap: anywhere; }
++.wd-panel .wd-product-image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
++.wd-panel .errorlist { color: var(--fi-danger, #f23c49); padding-right: 1.25rem; }
++.wd-panel .wd-child legend { font-size: 1rem; }
++.wd-panel .wd-list-row > div { min-width: 0; overflow-wrap: anywhere; }
++@media (prefers-reduced-motion: reduce) {
++    .wd-panel *, .wd-panel *::before, .wd-panel *::after { transition: none !important; }
++}
+diff --git a/static/windirect/js/builder.js b/static/windirect/js/builder.js
+new file mode 100644
+index 0000000..7fdf986
+--- /dev/null
++++ b/static/windirect/js/builder.js
+@@ -0,0 +1,36 @@
++/* افزودن امن ردیف‌های فرم‌ست؛ اعتبارسنجی اصلی در سرور انجام می‌شود. */
++document.querySelectorAll('[data-formset]').forEach((root) => {
++    const total = document.getElementById('id_items-TOTAL_FORMS');
++    const add = root.querySelector('[data-add]');
++    root.addEventListener('change', (event) => {
++        if (!event.target.matches('[name$="-DELETE"]')) return;
++        event.target.closest('fieldset').querySelectorAll('input, textarea, select').forEach((field) => {
++            if (field === event.target || field.type === 'hidden') return;
++            if (event.target.checked) {
++                field.dataset.wasRequired = String(field.required);
++                field.required = false;
++            } else {
++                field.required = field.dataset.wasRequired === 'true';
++            }
++        });
++    });
++    add.addEventListener('click', () => {
++        const index = Number(total.value);
++        const limit = Number(root.dataset.limit);
++        if (index >= limit) {
++            root.querySelector('[data-formset-status]').textContent = 'به سقف موارد رسیدید. حذف‌ها را ذخیره کنید و سپس مورد جدید اضافه کنید.';
++            return;
++        }
++        const template = root.querySelector('[data-empty]');
++        const holder = document.createElement('template');
++        holder.innerHTML = template.innerHTML.replaceAll('__prefix__', String(index));
++        const position = holder.content.querySelector('[name$="-position"]');
++        const positions = [...root.querySelectorAll('[name$="-position"]')].map((field) => Number(field.value) || 0);
++        if (position) position.value = Math.max(0, ...positions) + 1;
++        root.querySelector('[data-items]').append(holder.content);
++        total.value = index + 1;
++        const last = root.querySelector('[data-items]').lastElementChild;
++        last.querySelector('input:not([type="hidden"]), textarea, select')?.focus();
++        root.querySelector('[data-formset-status]').textContent = 'مورد جدید اضافه شد.';
++    });
++});
+diff --git a/templates/windirect/base.html b/templates/windirect/base.html
+index d075a18..7f3d2f0 100644
+--- a/templates/windirect/base.html
++++ b/templates/windirect/base.html
+@@ -21,9 +21,14 @@
+     <nav class="wd-panel-nav mb-4" aria-label="بخش‌های وین دایرکت">
+         <a href="{% url 'windirect:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"><i class="bi bi-grid ms-1"></i> نمای کلی</a>
+         <a href="{% url 'windirect:connections' %}" class="{% if request.resolver_match.url_name == 'connections' %}is-active{% endif %}"><i class="bi bi-instagram ms-1"></i> حساب‌ها</a>
+-        <a href="{% url 'windirect:rules' %}" class="{% if request.resolver_match.url_name == 'rules' or request.resolver_match.url_name == 'rule_create' or request.resolver_match.url_name == 'rule_edit' %}is-active{% endif %}"><i class="bi bi-lightning-charge ms-1"></i> قوانین</a>
+-        <a href="{% url 'windirect:simulation' %}" class="{% if request.resolver_match.url_name == 'simulation' %}is-active{% endif %}"><i class="bi bi-play-circle ms-1"></i> آزمایش قانون</a>
+-        <a href="{% url 'windirect:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}is-active{% endif %}"><i class="bi bi-clock-history ms-1"></i> گزارش اجرا</a>
++        <a href="{% url 'windirect:rules' %}" class="{% if request.resolver_match.url_name == 'rules' or request.resolver_match.url_name == 'rule_create' or request.resolver_match.url_name == 'rule_edit' %}is-active{% endif %}"><i class="bi bi-lightning-charge ms-1"></i> کامنت هوشمند</a>
++        <a href="{% url 'windirect:asset_list' 'direct' %}" class="{% if section == 'direct' %}is-active{% endif %}"><i class="bi bi-chat-dots ms-1"></i> دایرکت هوشمند</a>
++        <a href="{% url 'windirect:asset_list' 'showcases' %}" class="{% if section == 'showcases' %}is-active{% endif %}"><i class="bi bi-collection ms-1"></i> ویترین‌ساز</a>
++        <a href="{% url 'windirect:asset_list' 'forms' %}" class="{% if section == 'forms' %}is-active{% endif %}"><i class="bi bi-ui-checks ms-1"></i> فرم‌ساز</a>
++        <a href="{% url 'windirect:simulation' %}" class="{% if request.resolver_match.url_name == 'simulation' %}is-active{% endif %}"><i class="bi bi-play-circle ms-1"></i> آزمایش کامنت</a>
++        <a href="{% url 'windirect:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}is-active{% endif %}"><i class="bi bi-clock-history ms-1"></i> گزارش کامنت</a>
++        <a href="{% url 'windirect:direct_simulation' %}" class="{% if section == 'simulation' %}is-active{% endif %}">آزمایش دایرکت</a>
++        <a href="{% url 'windirect:direct_logs' %}" class="{% if section == 'direct_logs' %}is-active{% endif %}">گزارش دایرکت</a>
+     </nav>
+     <div class="alert alert-info bg-faded-info border-0 rounded-3 wd-panel-notice mb-4" role="status">
+         <i class="bi bi-info-circle ms-2"></i> این بخش فعلاً برای ساخت و آزمایش قوانین است. حساب اینستاگرام متصل نمی‌شود و هیچ پاسخ یا دایرکتی ارسال نمی‌شود.
+diff --git a/templates/windirect/dashboard.html b/templates/windirect/dashboard.html
+index 2e3c11b..f41c760 100644
+--- a/templates/windirect/dashboard.html
++++ b/templates/windirect/dashboard.html
+@@ -2,31 +2,137 @@
+ {% block windirect_title %}نمای کلی وین دایرکت{% endblock %}
+ {% block panel_heading %}داشبورد وین دایرکت{% endblock %}
+ {% block panel_intro %}حساب‌های آزمایشی، قوانین و آخرین نتیجه‌ها در یک نگاه{% endblock %}
+-{% block panel_action %}<a class="btn btn-primary rounded-pill" href="{% url 'windirect:rule_create' %}"><i class="bi bi-plus-lg ms-1"></i> قانون جدید</a>{% endblock %}
++{% block panel_action %}
++    <a class="btn btn-primary rounded-pill"
++       href="{% url 'windirect:rule_create' %}">
++        <i class="bi bi-plus-lg ms-1">
++        </i> قانون جدید</a>
++{% endblock %}
+ {% block panel_content %}
+-<div class="row g-3 mb-4">
+-    <div class="col-md-4"><a class="wd-stat card border-light h-100 text-decoration-none" href="{% url 'windirect:connections' %}"><div class="card-body"><i class="bi bi-instagram text-primary fs-3"></i><strong>{{ connections_count }}</strong><span>حساب آزمایشی</span></div></a></div>
+-    <div class="col-md-4"><a class="wd-stat card border-light h-100 text-decoration-none" href="{% url 'windirect:rules' %}"><div class="card-body"><i class="bi bi-lightning-charge text-warning fs-3"></i><strong>{{ rules_count }}</strong><span>قانون ثبت‌شده</span></div></a></div>
+-    <div class="col-md-4"><a class="wd-stat card border-light h-100 text-decoration-none" href="{% url 'windirect:logs' %}"><div class="card-body"><i class="bi bi-chat-left-text text-accent fs-3"></i><strong>{{ events_count }}</strong><span>کامنت نمونه</span></div></a></div>
+-</div>
+-<div class="row g-4">
+-    <div class="col-lg-7">
+-        <section class="card wd-card h-100"><div class="card-body p-4">
+-            <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 text-white mb-0">حساب‌های من</h2><a href="{% url 'windirect:connections' %}">مدیریت حساب‌ها</a></div>
+-            {% for connection in connections %}
+-                <div class="wd-list-row"><div><strong class="text-white" dir="ltr">@{{ connection.username }}</strong><small class="d-block text-muted">{{ connection.rule_count }} قانون · {{ connection.get_status_display }}</small></div><a class="btn btn-outline-primary btn-sm" href="{% url 'windirect:rules' %}">قوانین</a></div>
+-            {% empty %}
+-                <div class="wd-empty"><i class="bi bi-instagram"></i><p>هنوز حساب آزمایشی ثبت نکرده‌اید.</p><a class="btn btn-primary" href="{% url 'windirect:connections' %}">افزودن حساب آزمایشی</a></div>
+-            {% endfor %}
+-        </div></section>
++    <div class="row g-3 mb-4">
++        <div class="col-md-4">
++            <a class="card wd-card h-100 text-decoration-none"
++               href="{% url 'windirect:asset_list' 'direct' %}">
++                <div class="card-body p-4">
++                    <i class="bi bi-chat-dots text-primary fs-3">
++                    </i>
++                    <h2 class="h5 text-white mt-3">دایرکت هوشمند</h2>
++                    <p class="text-muted mb-0">محرک، پاسخ متنی و اتصال به ابزارها</p>
++                </div>
++            </a>
++        </div>
++        <div class="col-md-4">
++            <a class="card wd-card h-100 text-decoration-none"
++               href="{% url 'windirect:asset_list' 'showcases' %}">
++                <div class="card-body p-4">
++                    <i class="bi bi-collection text-primary fs-3">
++                    </i>
++                    <h2 class="h5 text-white mt-3">ویترین‌ساز</h2>
++                    <p class="text-muted mb-0">کارت‌های تصویری محصول با دکمه</p>
++                </div>
++            </a>
++        </div>
++        <div class="col-md-4">
++            <a class="card wd-card h-100 text-decoration-none"
++               href="{% url 'windirect:asset_list' 'forms' %}">
++                <div class="card-body p-4">
++                    <i class="bi bi-ui-checks text-primary fs-3">
++                    </i>
++                    <h2 class="h5 text-white mt-3">فرم‌ساز</h2>
++                    <p class="text-muted mb-0">سؤال‌های مرحله‌ای و خروجی اکسل</p>
++                </div>
++            </a>
++        </div>
++    </div>
++    <div class="row g-3 mb-4">
++        <div class="col-md-4">
++            <a class="wd-stat card border-light h-100 text-decoration-none"
++               href="{% url 'windirect:connections' %}">
++                <div class="card-body">
++                    <i class="bi bi-instagram text-primary fs-3">
++                    </i>
++                    <strong>{{ connections_count }}</strong>
++                    <span>حساب آزمایشی</span>
++                </div>
++            </a>
++        </div>
++        <div class="col-md-4">
++            <a class="wd-stat card border-light h-100 text-decoration-none"
++               href="{% url 'windirect:rules' %}">
++                <div class="card-body">
++                    <i class="bi bi-lightning-charge text-warning fs-3">
++                    </i>
++                    <strong>{{ rules_count }}</strong>
++                    <span>قانون ثبت‌شده</span>
++                </div>
++            </a>
++        </div>
++        <div class="col-md-4">
++            <a class="wd-stat card border-light h-100 text-decoration-none"
++               href="{% url 'windirect:logs' %}">
++                <div class="card-body">
++                    <i class="bi bi-chat-left-text text-accent fs-3">
++                    </i>
++                    <strong>{{ events_count }}</strong>
++                    <span>کامنت نمونه</span>
++                </div>
++            </a>
++        </div>
+     </div>
+-    <div class="col-lg-5">
+-        <section class="card wd-card h-100"><div class="card-body p-4">
+-            <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 text-white mb-0">آخرین اجراها</h2><a href="{% url 'windirect:logs' %}">همهٔ گزارش‌ها</a></div>
+-            {% for execution in executions %}
+-                <div class="wd-list-row"><div><strong class="text-white">{{ execution.automation.name }}</strong><small class="d-block text-muted">@{{ execution.automation.connection.username }} · {{ execution.created_at|date:'Y/m/d H:i' }}</small></div><span class="badge bg-faded-warning text-warning">{{ execution.get_status_display }}</span></div>
+-            {% empty %}<div class="wd-empty"><i class="bi bi-clock-history"></i><p>هنوز اجرایی ثبت نشده است.</p><a class="btn btn-outline-primary" href="{% url 'windirect:simulation' %}">آزمایش قانون</a></div>{% endfor %}
+-        </div></section>
++    <div class="row g-4">
++        <div class="col-lg-7">
++            <section class="card wd-card h-100">
++                <div class="card-body p-4">
++                    <div class="d-flex justify-content-between align-items-center mb-3">
++                        <h2 class="h5 text-white mb-0">حساب‌های من</h2>
++                        <a href="{% url 'windirect:connections' %}">مدیریت حساب‌ها</a>
++                    </div>
++                    {% for connection in connections %}
++                        <div class="wd-list-row">
++                            <div>
++                                <strong class="text-white" dir="ltr">@{{ connection.username }}</strong>
++                                <small class="d-block text-muted">{{ connection.rule_count }} قانون · {{ connection.get_status_display }}</small>
++                            </div>
++                            <a class="btn btn-outline-primary btn-sm"
++                               href="{% url 'windirect:rules' %}">قوانین</a>
++                        </div>
++                    {% empty %}
++                        <div class="wd-empty">
++                            <i class="bi bi-instagram">
++                            </i>
++                            <p>هنوز حساب آزمایشی ثبت نکرده‌اید.</p>
++                            <a class="btn btn-primary" href="{% url 'windirect:connections' %}">افزودن حساب آزمایشی</a>
++                        </div>
++                    {% endfor %}
++                </div>
++            </section>
++        </div>
++        <div class="col-lg-5">
++            <section class="card wd-card h-100">
++                <div class="card-body p-4">
++                    <div class="d-flex justify-content-between align-items-center mb-3">
++                        <h2 class="h5 text-white mb-0">آخرین اجراها</h2>
++                        <a href="{% url 'windirect:logs' %}">همهٔ گزارش‌ها</a>
++                    </div>
++                    {% for execution in executions %}
++                        <div class="wd-list-row">
++                            <div>
++                                <strong class="text-white">{{ execution.automation.name }}</strong>
++                                <small class="d-block text-muted">@{{ execution.automation.connection.username }} · {{ execution.created_at|date:'Y/m/d H:i' }}</small>
++                            </div>
++                            <span class="badge bg-faded-warning text-warning">{{ execution.get_status_display }}</span>
++                        </div>
++                    {% empty %}
++                        <div class="wd-empty">
++                            <i class="bi bi-clock-history">
++                            </i>
++                            <p>هنوز اجرایی ثبت نشده است.</p>
++                            <a class="btn btn-outline-primary"
++                               href="{% url 'windirect:simulation' %}">آزمایش قانون</a>
++                        </div>
++                    {% endfor %}
++                </div>
++            </section>
++        </div>
+     </div>
+-</div>
+ {% endblock %}
+diff --git a/templates/windirect/partials/field.html b/templates/windirect/partials/field.html
+index 886d370..5395746 100644
+--- a/templates/windirect/partials/field.html
++++ b/templates/windirect/partials/field.html
+@@ -1,5 +1,5 @@
+-<div class="{% if field.name == 'is_active' %}form-check form-switch{% else %}mb-3{% endif %}">
+-    {% if field.name == 'is_active' %}
++<div class="{% if field.name == 'is_active' or field.name == 'DELETE' %}form-check form-switch{% else %}mb-3{% endif %}">
++    {% if field.name == 'is_active' or field.name == 'DELETE' %}
+         {{ field }}<label class="form-check-label text-light" for="{{ field.id_for_label }}">{{ field.label }}</label>
+     {% else %}
+         <label class="form-label text-light" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-primary" aria-hidden="true">*</span>{% endif %}</label>
+diff --git a/templates/windirect/tools/delete.html b/templates/windirect/tools/delete.html
+new file mode 100644
+index 0000000..4ae8b14
+--- /dev/null
++++ b/templates/windirect/tools/delete.html
+@@ -0,0 +1,16 @@
++{% extends 'windirect/base.html' %}
++{% block panel_heading %}حذف {{ singular }}{% endblock %}
++{% block panel_content %}
++    <div class="card wd-card">
++        <div class="card-body p-4">
++            <h2 class="h5 text-white">«{{ obj.name }}» حذف شود؟</h2>
++            <p class="text-light">موارد دارای پاسخ‌نامه، سابقهٔ اجرا یا قانون وابسته قابل حذف نیستند؛ آن‌ها را غیرفعال کنید.</p>
++            <form method="post" class="d-flex gap-2">
++                {% csrf_token %}
++                <button class="btn btn-danger">تأیید حذف</button>
++                <a class="btn btn-outline-light"
++                   href="{% url 'windirect:asset_list' kind %}">انصراف</a>
++            </form>
++        </div>
++    </div>
++{% endblock %}
+diff --git a/templates/windirect/tools/editor.html b/templates/windirect/tools/editor.html
+new file mode 100644
+index 0000000..0dfb1b8
+--- /dev/null
++++ b/templates/windirect/tools/editor.html
+@@ -0,0 +1,85 @@
++{% extends 'windirect/base.html' %}
++{% load static %}
++{% block windirect_title %}
++    {% if obj.pk %}ویرایش{% else %}ساخت{% endif %} {{ singular }} | وین دایرکت{% endblock %}
++{% block panel_heading %}
++    {% if obj.pk %}ویرایش{% else %}ساخت{% endif %} {{ singular }}{% endblock %}
++{% block panel_intro %}{{ intro }}{% endblock %}
++{% block panel_content %}
++    <div class="row g-4">
++        <div class="col-lg-8">
++            <form method="post" class="card wd-card" id="wd-tool-editor">
++                {% csrf_token %}
++                <div class="card-body p-4">
++                    {% if form.errors or children.errors or children.non_form_errors %}
++                        <div class="alert alert-danger" role="alert">اطلاعات ذخیره نشد. خطاهای مشخص‌شده را اصلاح کنید. {{ form.non_field_errors }} {{ children.non_form_errors }}</div>
++                    {% endif %}
++                    {% for field in form %}
++                        {% include 'windirect/partials/field.html' %}
++                    {% endfor %}
++                    {% if children %}
++                        <hr class="border-light my-4">
++                        <h2 class="h5 text-white">{% if kind == 'showcases' %}کارت‌های ویترین{% else %}سؤال‌های فرم{% endif %}</h2>
++                        <p class="small text-muted">حداقل یک و حداکثر {{ child_limit }} مورد. ترتیب‌ها باید متفاوت باشند. برای حذف موارد ذخیره‌شده، گزینهٔ حذف را علامت بزنید و ذخیره کنید.</p>
++                        {{ children.management_form }}
++                        <div data-formset data-limit="{{ child_limit }}">
++                            <div data-items>
++                                {% for child in children %}
++                                    <fieldset class="wd-child border border-light rounded-3 p-3 mb-3">
++                                        <legend class="float-none w-auto px-2 h6 text-light">مورد {{ forloop.counter }}</legend>
++                                        {{ child.non_field_errors }}{% for hidden in child.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}
++                                        {% for field in child.visible_fields %}
++                                            {% include 'windirect/partials/field.html' %}
++                                        {% endfor %}
++                                    </fieldset>
++                                {% endfor %}
++                            </div>
++                            <template data-empty>
++                                <fieldset class="wd-child border border-light rounded-3 p-3 mb-3">
++                                    <legend class="float-none w-auto px-2 h6 text-light">مورد جدید</legend>
++                                    {% for hidden in children.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
++                                    {% for field in children.empty_form.visible_fields %}
++                                        {% include 'windirect/partials/field.html' %}
++                                    {% endfor %}
++                                </fieldset>
++                            </template>
++                            <button type="button" class="btn btn-outline-primary mb-3" data-add>افزودن {% if kind == 'showcases' %}کارت{% else %}سؤال{% endif %}
++                            </button>
++                            <p class="small text-muted" role="status" data-formset-status></p>
++                        </div>
++                    {% endif %}
++                    <div class="d-flex flex-wrap gap-2 mt-4">
++                        <button class="btn btn-primary rounded-pill">ذخیرهٔ {{ singular }}</button>
++                        <a class="btn btn-outline-light rounded-pill"
++                           href="{% url 'windirect:asset_list' kind %}">بازگشت</a>
++                    </div>
++                </div>
++            </form>
++        </div>
++        <aside class="col-lg-4">
++            <div class="card wd-card">
++                <div class="card-body p-4">
++                    <h2 class="h5 text-white">راهنمای {{ singular }}</h2>
++                    {% if kind == 'direct' %}
++                        <p class="text-light">اولین قانون فعال منطبق با پیام اجرا می‌شود. عدد اولویت کمتر، زودتر بررسی می‌شود.</p>
++                        <p class="text-muted">برای پاسخ ویترینی یا شروع فرم، ابتدا ابزار را برای همان حساب بسازید. هنگام تکمیل فرم، پیام‌های مخاطب پاسخ سؤال محسوب می‌شوند.</p>
++                        <p class="text-muted">پاسخ متنی در این نسخه بر پایهٔ قانون است؛ تولید پاسخ با هوش مصنوعی هنوز متصل نیست.</p>
++                    {% elif kind == 'showcases' %}
++                        <p class="text-light">هر کارت شامل عنوان، توضیح کوتاه، تصویر و یک دکمه است.</p>
++                        <p class="text-muted">پیوندها باید HTTPS باشند. پس از ذخیره، یک قانون دایرکت با نوع پاسخ «نمایش ویترین» بسازید.</p>
++                        <p class="text-muted">پیش‌نمایش در شبیه‌ساز نمایش داده می‌شود؛ ظاهر نهایی در اینستاگرام به اتصال متا وابسته است.</p>
++                    {% else %}
++                        <p class="text-light">همهٔ سؤال‌ها الزامی هستند. برای شمارهٔ تماس، نوع «شماره همراه ایران» را انتخاب کنید.</p>
++                        <p class="text-muted">برای سؤال انتخابی، هر گزینه را در یک خط وارد کنید. مخاطب متن گزینه را پاسخ می‌دهد.</p>
++                        <p class="text-muted">ویرایش سؤال‌ها روی فرم‌های تازه اثر دارد. فرم‌های شروع‌شده نسخهٔ قبلی را ادامه می‌دهند؛ غیرفعال‌سازی فقط شروع جدید را متوقف می‌کند.</p>
++                        <p class="text-muted">بعد از ذخیره، قانون دایرکت با نوع پاسخ «شروع فرم» و کلمه‌ای مثل «فرم» بسازید.</p>
++                    {% endif %}
++                    <a href="{% url 'windirect:connections' %}" class="d-block mb-3">مدیریت حساب‌های آزمایشی</a>
++                    <a href="{% url 'windirect:direct_simulation' %}"
++                       class="btn btn-outline-primary w-100">آزمایش مکالمه</a>
++                </div>
++            </div>
++        </aside>
++    </div>
++    <script src="{% static 'windirect/js/builder.js' %}" defer></script>
++{% endblock %}
+diff --git a/templates/windirect/tools/list.html b/templates/windirect/tools/list.html
+new file mode 100644
+index 0000000..ad502da
+--- /dev/null
++++ b/templates/windirect/tools/list.html
+@@ -0,0 +1,78 @@
++{% extends 'windirect/base.html' %}
++{% block windirect_title %}{{ heading }} | وین دایرکت{% endblock %}
++{% block panel_heading %}{{ heading }}{% endblock %}
++{% block panel_intro %}{{ intro }}{% endblock %}
++{% block panel_action %}
++    <a class="btn btn-primary rounded-pill"
++       href="{% url 'windirect:asset_create' kind %}">
++        <i class="bi bi-plus-lg ms-2">
++        </i>{{ singular }} جدید</a>
++{% endblock %}
++{% block panel_content %}
++    <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
++        <form method="get" class="d-flex gap-2">
++            <label class="visually-hidden" for="tool-search">جست‌وجوی عنوان</label>
++            <input id="tool-search"
++                   class="form-control bg-dark text-light border-light"
++                   name="q"
++                   value="{{ query }}"
++                   placeholder="جست‌وجوی عنوان…"
++                   maxlength="150">
++            <button class="btn btn-outline-primary">جست‌وجو</button>
++        </form>
++        <a href="{% url 'windirect:direct_simulation' %}"
++           class="btn btn-outline-light rounded-pill">آزمایش در شبیه‌ساز</a>
++    </div>
++    <div class="row g-4">
++        {% for item in page_obj %}
++            <div class="col-lg-6">
++                <article class="card wd-card h-100">
++                    <div class="card-body p-4">
++                        <div class="d-flex justify-content-between gap-2 mb-3">
++                            <h2 class="h5 text-white mb-0">{{ item.name }}</h2>
++                            <span class="badge {% if item.is_active %}bg-faded-success text-success{% else %}bg-faded-warning text-warning{% endif %}">
++                                {% if item.is_active %}فعال{% else %}غیرفعال{% endif %}
++                            </span>
++                        </div>
++                        <p class="text-muted">
++                            <span dir="ltr">@{{ item.connection.username }}</span> · آزمایشی
++                        </p>
++                        {% if kind == 'direct' %}
++                            <p class="text-light">«{{ item.keyword }}» ← {{ item.get_response_type_display }}</p>
++                            <p class="small text-muted">تطبیق {{ item.get_match_type_display }} · اولویت {{ item.priority }}</p>
++                        {% endif %}
++                        <div class="d-flex flex-wrap gap-2 mt-4">
++                            <a class="btn btn-outline-primary btn-sm"
++                               href="{% url 'windirect:asset_edit' kind item.pk %}">ویرایش</a>
++                            {% if kind == 'forms' %}
++                                <a class="btn btn-outline-light btn-sm"
++                                   href="{% url 'windirect:submissions' item.pk %}">پاسخ‌ها و اکسل</a>
++                            {% endif %}
++                            <form method="post"
++                                  action="{% url 'windirect:asset_toggle' kind item.pk %}">
++                                {% csrf_token %}
++                                <button class="btn btn-outline-light btn-sm">{% if item.is_active %}غیرفعال کردن{% else %}فعال کردن{% endif %}</button>
++                            </form>
++                            <a class="btn btn-outline-danger btn-sm"
++                               href="{% url 'windirect:asset_delete' kind item.pk %}">حذف</a>
++                        </div>
++                    </div>
++                </article>
++            </div>
++        {% empty %}
++            <div class="col-12">
++                <div class="card wd-card wd-empty">
++                    <i class="bi bi-inboxes">
++                    </i>
++                    <h2 class="h5 text-light">{% if query %}نتیجه‌ای پیدا نشد{% else %}اولین {{ singular }} را بسازید{% endif %}</h2>
++                    <p>{{ intro }}</p>
++                    <div>
++                        <a class="btn btn-primary"
++                           href="{% url 'windirect:asset_create' kind %}">ساخت {{ singular }}</a>
++                    </div>
++                </div>
++            </div>
++        {% endfor %}
++    </div>
++    {% include 'windirect/tools/pagination.html' %}
++{% endblock %}
+diff --git a/templates/windirect/tools/logs.html b/templates/windirect/tools/logs.html
+new file mode 100644
+index 0000000..5b98d8b
+--- /dev/null
++++ b/templates/windirect/tools/logs.html
+@@ -0,0 +1,21 @@
++{% extends 'windirect/base.html' %}
++{% block panel_heading %}گزارش دایرکت{% endblock %}
++{% block panel_intro %}پیام‌های آزمایشی و خروجی ثبت‌شدهٔ هر پیام{% endblock %}
++{% block panel_content %}
++    {% for event in page_obj %}
++        <article class="card wd-card mb-3">
++            <div class="card-body p-4">
++                <h2 class="h6 text-white">@{{ event.connection.username }} · {{ event.sender_id }}</h2>
++                <p class="small text-muted">{{ event.created_at|date:'Y/m/d H:i' }} · {% if event.rule %}{{ event.rule.name }}{% else %}ادامهٔ فرم / بدون تطبیق{% endif %}
++                </p>
++                <p class="text-light wd-message-text">{{ event.text }}</p>
++                <div class="wd-result">{% include 'windirect/tools/response.html' with response=event.response %}</div>
++                <a class="btn btn-outline-primary btn-sm mt-3"
++                   href="{% url 'windirect:direct_simulation' %}?event={{ event.pk }}">ادامه در شبیه‌ساز</a>
++            </div>
++        </article>
++    {% empty %}
++        <div class="wd-empty">هنوز پیام آزمایشی ثبت نشده است.</div>
++    {% endfor %}
++    {% include 'windirect/tools/pagination.html' %}
++{% endblock %}
+diff --git a/templates/windirect/tools/pagination.html b/templates/windirect/tools/pagination.html
+new file mode 100644
+index 0000000..0c431a4
+--- /dev/null
++++ b/templates/windirect/tools/pagination.html
+@@ -0,0 +1,14 @@
++{% if page_obj.has_other_pages %}
++    <nav class="d-flex justify-content-center align-items-center gap-3 mt-4"
++         aria-label="صفحه‌بندی">
++        {% if page_obj.has_previous %}
++            <a class="btn btn-outline-light btn-sm"
++               href="?page={{ page_obj.previous_page_number }}&q={{ query|urlencode }}&status={{ status|urlencode }}">قبلی</a>
++        {% endif %}
++        <span class="text-light">{{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
++        {% if page_obj.has_next %}
++            <a class="btn btn-outline-light btn-sm"
++               href="?page={{ page_obj.next_page_number }}&q={{ query|urlencode }}&status={{ status|urlencode }}">بعدی</a>
++        {% endif %}
++    </nav>
++{% endif %}
+diff --git a/templates/windirect/tools/response.html b/templates/windirect/tools/response.html
+new file mode 100644
+index 0000000..2c906b2
+--- /dev/null
++++ b/templates/windirect/tools/response.html
+@@ -0,0 +1,25 @@
++<p class="text-light mb-2 wd-message-text">{{ response.text }}</p>
++{% if response.kind == 'showcase' %}
++    <div class="row g-3">
++        {% for card in response.cards %}
++            <div class="col-md-6">
++                <div class="card wd-card h-100">
++                    <img class="card-img-top wd-product-image"
++                         src="{{ card.image_url }}"
++                         alt="{{ card.title }}"
++                         loading="lazy"
++                         referrerpolicy="no-referrer">
++                    <div class="card-body">
++                        <h3 class="h6 text-white">{{ card.title }}</h3>
++                        <p class="text-light">{{ card.subtitle }}</p>
++                        <a class="btn btn-outline-primary btn-sm"
++                           href="{{ card.button_url }}"
++                           target="_blank"
++                           rel="noopener noreferrer">{{ card.button_title }} <span class="visually-hidden">(در پنجرهٔ جدید)</span>
++                        </a>
++                    </div>
++                </div>
++            </div>
++        {% endfor %}
++    </div>
++{% endif %}
+diff --git a/templates/windirect/tools/simulation.html b/templates/windirect/tools/simulation.html
+new file mode 100644
+index 0000000..1639d0a
+--- /dev/null
++++ b/templates/windirect/tools/simulation.html
+@@ -0,0 +1,49 @@
++{% extends 'windirect/base.html' %}
++{% block panel_heading %}آزمایش مکالمهٔ دایرکت{% endblock %}
++{% block panel_intro %}محرک را بفرستید، ویترین را ببینید یا سؤال‌های فرم را یکی‌یکی پاسخ دهید.{% endblock %}
++{% block panel_content %}
++    <div class="row g-4">
++        <div class="col-lg-4">
++            <div class="card wd-card">
++                <div class="card-body p-4">
++                    <h2 class="h5 text-white">پیام مخاطب</h2>
++                    <form method="post">
++                        {% csrf_token %}{{ form.non_field_errors }}{% for hidden in form.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}
++                        {% for field in form.visible_fields %}
++                            {% include 'windirect/partials/field.html' %}
++                        {% endfor %}
++                        <button class="btn btn-primary w-100">ارسال پیام آزمایشی</button>
++                    </form>
++                    <p class="small text-muted mt-3 mb-0">برای مخاطب جدید شناسه را تغییر دهید. هنگام تکمیل فرم، با کلمهٔ لغو تعیین‌شده می‌توانید انصراف دهید.</p>
++                </div>
++            </div>
++        </div>
++        <div class="col-lg-8">
++            <section class="card wd-card">
++                <div class="card-body p-4">
++                    <h2 class="h5 text-white mb-4">۳۰ پیام آخر همین مخاطب</h2>
++                    {% for event in history %}
++                        <article class="border-bottom border-light pb-4 mb-4">
++                            <p class="small text-muted">{{ event.created_at|date:'Y/m/d H:i' }} · {% if event.rule %}{{ event.rule.name }}{% else %}ادامهٔ فرم / بدون تطبیق{% endif %}
++                            </p>
++                            <p class="text-light wd-message-text">
++                                <strong class="text-primary">مخاطب:</strong> {{ event.text }}
++                            </p>
++                            <div class="wd-result">
++                                <span class="small text-muted d-block mb-2">خروجی شبیه‌سازی</span>
++                                {% include 'windirect/tools/response.html' with response=event.response %}
++                            </div>
++                        </article>
++                    {% empty %}
++                        <div class="wd-empty">
++                            <i class="bi bi-chat-dots">
++                            </i>
++                            <p>یک قانون بسازید و کلمهٔ فعال‌کنندهٔ آن را ارسال کنید.</p>
++                            <a href="{% url 'windirect:asset_create' 'direct' %}">ساخت قانون دایرکت</a>
++                        </div>
++                    {% endfor %}
++                </div>
++            </section>
++        </div>
++    </div>
++{% endblock %}
+diff --git a/templates/windirect/tools/submission_detail.html b/templates/windirect/tools/submission_detail.html
+new file mode 100644
+index 0000000..e795273
+--- /dev/null
++++ b/templates/windirect/tools/submission_detail.html
+@@ -0,0 +1,17 @@
++{% extends 'windirect/base.html' %}
++{% block panel_heading %}پاسخ‌نامهٔ {{ obj.sender_id }}{% endblock %}
++{% block panel_intro %}{{ obj.form.name }} · {{ obj.get_status_display }} · {{ obj.created_at|date:'Y/m/d H:i' }}{% endblock %}
++{% block panel_content %}
++    <div class="card wd-card">
++        <div class="card-body p-4">
++            {% for row in rows %}
++                <div class="border-bottom border-light mb-3 pb-3">
++                    <h2 class="h6 text-white">{{ forloop.counter }}. {{ row.prompt }}</h2>
++                    <p class="text-light wd-message-text">{{ row.answer }}</p>
++                </div>
++            {% endfor %}
++            <a class="btn btn-outline-primary"
++               href="{% url 'windirect:submissions' obj.form_id %}">بازگشت به پاسخ‌ها</a>
++        </div>
++    </div>
++{% endblock %}
+diff --git a/templates/windirect/tools/submissions.html b/templates/windirect/tools/submissions.html
+new file mode 100644
+index 0000000..1f31acd
+--- /dev/null
++++ b/templates/windirect/tools/submissions.html
+@@ -0,0 +1,42 @@
++{% extends 'windirect/base.html' %}
++{% block panel_heading %}پاسخ‌های {{ obj.name }}{% endblock %}
++{% block panel_intro %}پاسخ‌نامه‌های آزمایشی این فرم؛ خروجی اکسل همهٔ نتایج فیلتر فعلی را شامل می‌شود.{% endblock %}
++{% block panel_action %}
++    <a class="btn btn-primary rounded-pill"
++       href="{% url 'windirect:export_submissions' obj.pk %}?status={{ status|urlencode }}">
++        <i class="bi bi-file-earmark-spreadsheet ms-2">
++        </i>دریافت اکسل</a>
++{% endblock %}
++{% block panel_content %}
++    <form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
++        <label for="response-status" class="text-light">وضعیت پاسخ‌ها</label>
++        <select id="response-status"
++                name="status"
++                class="form-select bg-dark text-light border-light w-auto">
++            <option value="">همه</option>
++            {% for value,label in statuses %}
++                <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
++            {% endfor %}
++        </select>
++        <button class="btn btn-outline-primary">اعمال فیلتر</button>
++        <a class="btn btn-outline-light"
++           href="{% url 'windirect:asset_list' 'forms' %}">همهٔ فرم‌ها</a>
++    </form>
++    <div class="card wd-card">
++        <div class="card-body p-4">
++            {% for item in page_obj %}
++                <div class="wd-list-row">
++                    <div>
++                        <strong class="text-white">{{ item.sender_id }}</strong>
++                        <p class="small text-muted mb-0">{{ item.created_at|date:'Y/m/d H:i' }} · {{ item.get_status_display }} · {{ item.answers|length }} پاسخ</p>
++                    </div>
++                    <a class="btn btn-outline-primary btn-sm"
++                       href="{% url 'windirect:submission_detail' item.pk %}">مشاهدهٔ پاسخ‌ها</a>
++                </div>
++            {% empty %}
++                <div class="wd-empty">پاسخ‌نامه‌ای برای این فیلتر وجود ندارد.</div>
++            {% endfor %}
++        </div>
++    </div>
++    {% include 'windirect/tools/pagination.html' %}
++{% endblock %}
+diff --git a/windirect/README-tools.fa.md b/windirect/README-tools.fa.md
+new file mode 100644
+index 0000000..16f8d5b
+--- /dev/null
++++ b/windirect/README-tools.fa.md
+@@ -0,0 +1,69 @@
++# ابزارهای جدید پنل وین دایرکت
++
++این تغییر ادامهٔ پنل فعلی وین دایرکت است و وجود migrationهای `0001_initial` و `0002_alter_automation_options_and_more` و صفحات پنل قبلی را پیش‌فرض می‌گیرد.
++
++## امکانات
++
++- بخش کامنت هوشمند قبلی حفظ شده است.
++- دایرکت: محرک دقیق/شامل، اولویت، پاسخ متنی، نمایش ویترین یا شروع فرم؛ اولین قانون فعال منطبق اجرا می‌شود.
++- ویترین: ۱ تا ۱۰ کارت مرتب، عنوان و توضیح، تصویر HTTPS و یک دکمهٔ پیوند برای هر کارت.
++- فرم: ۱ تا ۲۰ سؤال الزامی با انواع متن، عدد صحیح، ایمیل، همراه ایران و انتخاب از گزینه‌ها؛ تنظیم پیام پایان و کلمهٔ لغو.
++- پاسخ‌نامه: مشاهدهٔ پاسخ‌های کامل، نیمه‌تمام و لغوشده، صفحهٔ جزئیات و خروجی واقعی XLSX با فیلتر وضعیت.
++- شبیه‌ساز مکالمه با حفظ مخاطب، نمایش ۳۰ پیام آخر و گزارش جداگانهٔ پیام‌ها.
++- ادمین فارسی، تاریخ شمسی، فیلتر و جست‌وجو؛ سوابق فقط قابل مشاهده‌اند.
++
++تمام صفحات از `windirect/base.html` و در نهایت `parent/base.html` استفاده می‌کنند. فایل اصلی تم و زمینهٔ سایت حفظ شده‌اند. کلاس‌ها و استایل افزوده‌شده فقط در محدودهٔ پنل هستند.
++
++## اعمال پچ
++
++فایل `windirect-tools.patch` را کنار `manage.py` قرار دهید. این پچ افزایشی است؛ پچ‌های قبلی پنل باید قبلاً اعمال شده باشند.
++
++```powershell
++git apply --check windirect-tools.patch
++git apply windirect-tools.patch
++python manage.py migrate
++python manage.py check
++python manage.py test windirect
++```
++
++در استقرار با سرویس‌دهی فایل‌های استاتیک توسط وب‌سرور:
++
++```powershell
++python manage.py collectstatic --noinput
++```
++
++`openpyxl==3.1.5` از قبل در requirements پروژه هست. اگر محیط فعلی آن را ندارد، وابستگی‌های پروژه را نصب کنید. migration جدید فقط جدول‌های ابزارهای جدید را اضافه می‌کند؛ نیازی به حذف دیتابیس یا اجرای `--fake` نیست.
++
++## آزمایش فرم از ابتدا تا اکسل
++
++1. وارد `/windirect/panel/` شوید و یک حساب **آزمایشی** ثبت کنید.
++2. در فرم‌ساز، فرمی برای همان حساب بسازید: سؤال اول «نام شما؟» از نوع متن و ترتیب ۱؛ سؤال دوم «شمارهٔ همراه؟» از نوع همراه ایران و ترتیب ۲.
++3. در دایرکت هوشمند یک قانون با کلمهٔ «فرم»، تطبیق برابر، نوع پاسخ «شروع فرم» و فرم ساخته‌شده ثبت کنید.
++4. در آزمایش دایرکت، حساب را انتخاب و شناسهٔ مخاطب را مثلاً `visitor-1` قرار دهید. پیام «فرم» را ارسال کنید.
++5. در همان حساب و شناسه، نام و سپس شماره را در پیام‌های جدا وارد کنید. شمارهٔ نامعتبر نباید سؤال را جلو ببرد. در هر مرحله کلمهٔ لغو، فرم را لغو می‌کند.
++6. به فرم‌ساز ← پاسخ‌ها و اکسل بروید. جزئیات پاسخ‌نامه و خروجی اکسل را بررسی کنید. صفر ابتدای شماره حفظ می‌شود.
++7. برای آزمایش مخاطب جدید شناسه را عوض کنید. برای شروع فرم جدید پس از تکمیل یا لغو، کلمهٔ محرک را دوباره بفرستید.
++
++## آزمایش ویترین
++
++ویترین و کارت‌ها را برای همان حساب بسازید؛ یک قانون با کلمهٔ «محصولات» و پاسخ «نمایش ویترین» ایجاد کنید. در شبیه‌ساز، «محصولات» را بفرستید. پیوند تصویر باید عمومی و HTTPS باشد؛ سرور وینجاب تصویر را دانلود نمی‌کند. تصویر و دکمه در مرورگر نمایش داده می‌شوند.
++
++## رفتارهای مهم
++
++- حساب/ابزار کاربران دیگر در فرم‌ها و درخواست‌های دست‌کاری‌شده پذیرفته نمی‌شود. ابزار پاسخ باید متعلق به همان حساب قانون باشد.
++- حساب ابزار پس از ساخت در پنل قابل انتقال نیست.
++- در فرم فعال، پیام بعدی جواب سؤال جاری است، نه محرک قانون دیگر. کلمهٔ لغو استثناست.
++- سؤال‌ها و تنظیمات هنگام شروع فرم نسخه‌برداری می‌شوند. ویرایش و حذف سؤال‌ها سابقهٔ قبلی را تغییر نمی‌دهد.
++- غیرفعال‌سازی فرم شروع‌های جدید را متوقف می‌کند؛ فرم‌های شروع‌شده ادامه پیدا می‌کنند.
++- شناسهٔ پیام تکراری همان خروجی قبلی را برمی‌گرداند و فرم را جلو نمی‌برد. استفادهٔ دوباره از شناسه با متن یا مخاطب متفاوت رد می‌شود.
++- در اولویت برابر، قانون قدیمی‌تر زودتر بررسی می‌شود. ابزار پاسخ غیرفعال یا خالی از مسیر اجرا کنار گذاشته می‌شود.
++- ابزار دارای قانون وابسته یا سابقه حذف نمی‌شود؛ از غیرفعال‌سازی استفاده کنید.
++- خروجی اکسل همهٔ صفحات فیلتر فعلی را شامل می‌شود. ستون‌ها از نسخه‌های تاریخی سؤال‌ها ساخته می‌شوند؛ با تغییر عنوان/نوع سؤال ستون تاریخی جدا حفظ می‌شود. مقادیر متنی به فرمول Excel تبدیل نمی‌شوند.
++
++## مرز این مرحله
++
++این نسخه **بستر محلی و آزمایشی** است: اتصال OAuth متا، وب‌هوک، ارسال واقعی دایرکت، پنجرهٔ مجاز پیام‌رسانی، محدودیت نرخ، صف ارسال و مدل هوش مصنوعی هنوز پیاده‌سازی نشده‌اند. نمایش موفق در شبیه‌ساز به معنای ارسال به اینستاگرام نیست. پاسخ دایرکت فعلاً مبتنی بر قانون است.
++
++سرویس `simulate_direct` عمداً فقط حساب آزمایشی را می‌پذیرد. برای نسخهٔ عملیاتی باید ورودی تأییدشدهٔ وب‌هوک، نگاشت مخاطب متا، بررسی مجوز ارسال، صف خروجی و سیاست تکرار ارسال جداگانه افزوده شوند. شناسه‌های مخاطب این مرحله نمونه هستند.
++
++موتور آزمون از تراکنش و قفل حساب و محدودیت‌های یکتایی استفاده می‌کند. آزمون‌ها روی SQLite اجرا شده‌اند؛ رفتار هم‌زمانی زیر بار، ارسال واقعی متا و خروجی اکسل با حجم بسیار بزرگ در این مرحله آزموده نشده‌اند. برای داده‌های حجیم، خروجی باید به کار پس‌زمینه منتقل شود.
+diff --git a/windirect/admin.py b/windirect/admin.py
+index 82e385c..3fc4967 100644
+--- a/windirect/admin.py
++++ b/windirect/admin.py
+@@ -251,3 +251,6 @@ class AutomationExecutionAdmin(ReadOnlyLogAdmin):
+     def formatted_created_at(self, obj):
+         """زمان اجرای قانون را با قالب پنل نمایش می‌دهد."""
+         return format_datetime(obj.created_at)
++
++# ثبت ادمین ابزارهای جدید در همان اپ وین دایرکت.
++from . import features_admin  # noqa: E402,F401
+diff --git a/windirect/direct_services.py b/windirect/direct_services.py
+new file mode 100644
+index 0000000..679545d
+--- /dev/null
++++ b/windirect/direct_services.py
+@@ -0,0 +1,113 @@
++"""اجرای محلی مکالمه؛ بدون فراخوانی متا یا سرویس هوش مصنوعی."""
++import re
++from django.core.exceptions import ValidationError
++from django.core.validators import validate_email
++from django.db import transaction
++from django.utils import timezone
++from .models import (InstagramConnection, DirectRule, DirectMessageEvent, FormSubmission)
++from .services import _normalize, _matches
++
++
++def _question(schema, index):
++    """متن سؤال را همراه گزینه‌های احتمالی آماده می‌کند."""
++    question = schema['questions'][index]
++    options = question['options']
++    return question['prompt'] + ('\n' + '\n'.join(options) if options else '')
++
++
++def _answer(question, text):
++    """پاسخ را بر اساس نوع سؤال اعتبارسنجی و ارقام را یکسان می‌کند."""
++    value = text.strip()
++    digits = value.translate(str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789'))
++    kind = question['kind']
++    if kind == 'number':
++        if not re.fullmatch(r'-?[0-9]{1,18}', digits):
++            raise ValidationError('لطفاً یک عدد صحیح (حداکثر ۱۸ رقم) وارد کنید.')
++        return digits
++    if kind == 'phone':
++        if not re.fullmatch(r'09[0-9]{9}', digits):
++            raise ValidationError('شمارهٔ همراه را با ۰۹ و در ۱۱ رقم وارد کنید.')
++        return digits
++    if kind == 'email':
++        try:
++            validate_email(value)
++        except ValidationError:
++            raise ValidationError('لطفاً یک نشانی ایمیل معتبر وارد کنید.')
++    if kind == 'choice':
++        for option in question['options']:
++            if _normalize(option) == _normalize(value):
++                return option
++        raise ValidationError('لطفاً یکی از گزینه‌های نمایش‌داده‌شده را بنویسید.')
++    return value
++
++
++@transaction.atomic
++def simulate_direct(*, connection, sender_id, message_id, text):
++    """یک پیام نمونه را یک‌بار پردازش می‌کند و پیشرفت فرم را نگه می‌دارد."""
++    connection = InstagramConnection.objects.select_for_update().get(pk=connection.pk)
++    if connection.status != InstagramConnection.Status.SIMULATED:
++        raise ValidationError('آزمایش فقط برای حساب آزمایشی مجاز است.')
++    if not sender_id.strip() or not message_id.strip() or not text.strip():
++        raise ValidationError('حساب، شناسهٔ مخاطب، شناسهٔ پیام و متن لازم هستند.')
++    if len(sender_id) > 100 or len(message_id) > 100 or len(text) > 2000:
++        raise ValidationError('طول ورودی بیشتر از حد مجاز است.')
++    existing = DirectMessageEvent.objects.filter(connection=connection, external_message_id=message_id).first()
++    if existing:
++        if existing.sender_id != sender_id or existing.text != text:
++            raise ValidationError('شناسهٔ پیام قبلاً برای ورودی دیگری استفاده شده است.')
++        return existing, False
++    event = DirectMessageEvent(connection=connection, external_message_id=message_id, sender_id=sender_id, text=text)
++    active = FormSubmission.objects.select_for_update().filter(connection=connection, sender_id=sender_id, status='active').first()
++    if active:
++        if _normalize(text) == _normalize(active.schema['cancel_keyword']):
++            active.status = 'cancelled'
++            response = {'kind': 'text', 'text': 'تکمیل فرم لغو شد. برای شروع دوباره کلمهٔ فعال‌کننده را بنویسید.'}
++        else:
++            index = len(active.answers)
++            try:
++                value = _answer(active.schema['questions'][index], text)
++            except ValidationError as error:
++                response = {'kind': 'text', 'text': error.messages[0] + '\n' + _question(active.schema, index)}
++            else:
++                active.answers.append(value)
++                if len(active.answers) == len(active.schema['questions']):
++                    active.status = 'completed'
++                    active.completed_at = timezone.now()
++                    response = {'kind': 'text', 'text': active.schema['completion_text']}
++                else:
++                    response = {'kind': 'text', 'text': _question(active.schema, len(active.answers))}
++        active.save()
++        response['submission_id'] = active.pk
++    else:
++        response = {'kind': 'unmatched', 'text': 'هیچ قانون فعالی با این پیام مطابقت نداشت.'}
++        for rule in DirectRule.objects.filter(connection=connection, is_active=True).select_related('showcase', 'form'):
++            if not _matches(rule, text):
++                continue
++            if rule.response_type == 'showcase':
++                if not rule.showcase or rule.showcase.connection_id != connection.pk or not rule.showcase.is_active:
++                    continue
++                cards = list(rule.showcase.cards.values('title', 'subtitle', 'image_url', 'button_title', 'button_url'))
++                if not 1 <= len(cards) <= 10:
++                    continue
++                response = {'kind': 'showcase', 'text': rule.showcase.name, 'cards': cards}
++            elif rule.response_type == 'form':
++                if not rule.form or rule.form.connection_id != connection.pk or not rule.form.is_active:
++                    continue
++                questions = [{'id': q.pk, 'prompt': q.prompt, 'kind': q.kind,
++                              'options': q.options.splitlines() if q.kind == 'choice' else []}
++                             for q in rule.form.questions.all()]
++                if not 1 <= len(questions) <= 20:
++                    continue
++                schema = {'questions': questions, 'completion_text': rule.form.completion_text,
++                          'cancel_keyword': rule.form.cancel_keyword}
++                submission = FormSubmission.objects.create(form=rule.form, connection=connection,
++                    sender_id=sender_id, schema=schema)
++                response = {'kind': 'text', 'text': _question(schema, 0) + '\nبرای انصراف: ' + schema['cancel_keyword'],
++                            'submission_id': submission.pk}
++            else:
++                response = {'kind': 'text', 'text': rule.reply_text}
++            event.rule = rule
++            break
++    event.response = response
++    event.save()
++    return event, True
+diff --git a/windirect/features_admin.py b/windirect/features_admin.py
+new file mode 100644
+index 0000000..e9132c1
+--- /dev/null
++++ b/windirect/features_admin.py
+@@ -0,0 +1,120 @@
++"""مدیریت ابزارها و سوابق مکالمه با الگوی ادمین پروژه."""
++from django.contrib import admin
++from django_jalali.admin.filters import JDateFieldListFilter
++from core.utils.admin_utils import format_datetime
++from .models import Showcase, ShowcaseCard, ConversationForm, FormQuestion, DirectRule, FormSubmission, DirectMessageEvent
++
++
++class ToolAdmin(admin.ModelAdmin):
++    """نمای مشترک ابزارها با جست‌وجو، فیلتر و تاریخ شمسی."""
++    list_display = ('name', 'connection', 'is_active', 'created_display')
++    list_filter = ('is_active', ('created_at', JDateFieldListFilter))
++    search_fields = ('name', 'connection__username', 'connection__owner__phone_number')
++    autocomplete_fields = ('connection',)
++    list_select_related = ('connection',)
++    readonly_fields = ('created_display', 'updated_display')
++    list_per_page = 25
++
++    @admin.display(description='تاریخ ایجاد', ordering='created_at')
++    def created_display(self, obj):
++        """تاریخ ایجاد را با قالب مشترک ادمین نمایش می‌دهد."""
++        return format_datetime(obj.created_at) if obj.pk else '—'
++
++    @admin.display(description='آخرین ویرایش', ordering='updated_at')
++    def updated_display(self, obj):
++        """تاریخ ویرایش را با قالب مشترک ادمین نمایش می‌دهد."""
++        return format_datetime(obj.updated_at) if obj.pk else '—'
++
++    def get_readonly_fields(self, request, obj=None):
++        """از انتقال ابزار دارای سابقه به حساب دیگری جلوگیری می‌کند."""
++        return self.readonly_fields + (('connection',) if obj else ())
++
++
++class CardsInline(admin.StackedInline):
++    """کارت‌ها را به ترتیب نمایش در صفحهٔ ویترین ویرایش می‌کند."""
++    model = ShowcaseCard
++    extra = 0
++    min_num = 1
++    max_num = 10
++    fields = ('title', 'subtitle', 'image_url', ('button_title', 'button_url'), 'position')
++
++
++class QuestionsInline(admin.StackedInline):
++    """سؤال‌ها را کنار تنظیمات فرم در دسترس قرار می‌دهد."""
++    model = FormQuestion
++    extra = 0
++    min_num = 1
++    max_num = 20
++    fields = ('prompt', 'kind', 'options', 'position')
++
++
++@admin.register(Showcase)
++class ShowcaseAdmin(ToolAdmin):
++    """مدیریت ویترین‌ها و کارت‌های وابسته."""
++    inlines = (CardsInline,)
++    fieldsets = (('ویترین', {'fields': ('connection', 'name', 'is_active')}),
++                 ('تاریخچه', {'fields': ('created_display', 'updated_display'), 'classes': ('collapse',)}))
++
++
++@admin.register(ConversationForm)
++class ConversationFormAdmin(ToolAdmin):
++    """مدیریت تنظیمات پرسش‌نامه و سؤال‌ها."""
++    inlines = (QuestionsInline,)
++    fieldsets = (('فرم', {'fields': ('connection', 'name', 'is_active')}),
++                 ('مکالمه', {'fields': ('completion_text', 'cancel_keyword')}),
++                 ('تاریخچه', {'fields': ('created_display', 'updated_display'), 'classes': ('collapse',)}))
++
++
++@admin.register(DirectRule)
++class DirectRuleAdmin(ToolAdmin):
++    """مدیریت اولویت و مقصد پاسخ قوانین دایرکت."""
++    list_display = ('name', 'connection', 'keyword', 'response_type', 'priority', 'is_active', 'created_display')
++    list_filter = ToolAdmin.list_filter + ('response_type', 'match_type')
++    search_fields = ToolAdmin.search_fields + ('keyword',)
++    autocomplete_fields = ('connection', 'showcase', 'form')
++    fieldsets = (('قانون', {'fields': ('connection', 'name', 'is_active', 'priority')}),
++                 ('محرک', {'fields': ('keyword', 'match_type')}),
++                 ('پاسخ', {'fields': ('response_type', 'reply_text', 'showcase', 'form')}),
++                 ('تاریخچه', {'fields': ('created_display', 'updated_display'), 'classes': ('collapse',)}))
++
++
++class ImmutableRecordAdmin(admin.ModelAdmin):
++    """سوابق را فقط برای مشاهده، جست‌وجو و بررسی نمایش می‌دهد."""
++    list_per_page = 25
++
++    def has_add_permission(self, request):
++        """ثبت دستی سوابق مجاز نیست."""
++        return False
++
++    def has_change_permission(self, request, obj=None):
++        """تغییر دستی سابقه مجاز نیست."""
++        return False
++
++    def has_delete_permission(self, request, obj=None):
++        """حذف سابقه از ادمین مجاز نیست."""
++        return False
++
++    @admin.display(description='تاریخ ثبت', ordering='created_at')
++    def created_display(self, obj):
++        """زمان ثبت را با قالب مشترک نمایش می‌دهد."""
++        return format_datetime(obj.created_at)
++
++
++@admin.register(FormSubmission)
++class FormSubmissionAdmin(ImmutableRecordAdmin):
++    """مرور پاسخ‌نامه‌ها با تفکیک وضعیت و تاریخ."""
++    list_display = ('form', 'connection', 'sender_id', 'status', 'created_display')
++    list_filter = ('status', ('created_at', JDateFieldListFilter))
++    search_fields = ('form__name', 'connection__username', 'sender_id')
++    list_select_related = ('form', 'connection')
++    readonly_fields = ('form', 'connection', 'sender_id', 'status', 'schema', 'answers', 'created_display', 'updated_at', 'completed_at')
++
++
++@admin.register(DirectMessageEvent)
++class DirectMessageEventAdmin(ImmutableRecordAdmin):
++    """مرور پیام‌های نمونه و خروجی ثبت‌شدهٔ آن‌ها."""
++    list_display = ('external_message_id', 'connection', 'sender_id', 'rule', 'created_display')
++    list_filter = (('created_at', JDateFieldListFilter),)
++    search_fields = ('external_message_id', 'sender_id', 'connection__username', 'text')
++    list_select_related = ('rule', 'connection')
++    readonly_fields = ('external_message_id', 'connection', 'sender_id', 'text', 'rule', 'response', 'created_display')
+diff --git a/windirect/features_forms.py b/windirect/features_forms.py
+new file mode 100644
+index 0000000..e62aeeb
+--- /dev/null
++++ b/windirect/features_forms.py
+@@ -0,0 +1,112 @@
++"""فرم‌های پنل ابزارهای وین دایرکت با دسترسی محدود به مالک."""
++from django import forms
++from django.core.exceptions import ValidationError
++from django.forms import BaseInlineFormSet, inlineformset_factory
++from .models import (InstagramConnection, DirectRule, Showcase, ShowcaseCard, ConversationForm, FormQuestion)
++
++
++def style_fields(form):
++    """کلاس‌های مشترک تم سایت را به ورودی‌ها اضافه می‌کند."""
++    for field in form.fields.values():
++        widget = field.widget
++        if isinstance(widget, forms.CheckboxInput):
++            widget.attrs['class'] = 'form-check-input'
++        elif isinstance(widget, forms.Select):
++            widget.attrs['class'] = 'form-select bg-dark text-light border-light'
++        else:
++            widget.attrs['class'] = 'form-control bg-dark text-light border-light'
++        if isinstance(widget, forms.Textarea):
++            widget.attrs['rows'] = 3
++
++
++class AssetForm(forms.ModelForm):
++    """فقط حساب‌های آزمایشی مالک را در دسترس فرم قرار می‌دهد."""
++    def __init__(self, *args, owner, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.fields['connection'].queryset = InstagramConnection.objects.filter(owner=owner, status='simulated')
++        if self.instance.pk:
++            self.fields['connection'].disabled = True
++        style_fields(self)
++
++
++class ShowcaseForm(AssetForm):
++    """تنظیمات عمومی ویترین."""
++    class Meta:
++        model = Showcase
++        fields = ['connection', 'name', 'is_active']
++
++
++class ConversationFormEditor(AssetForm):
++    """تنظیمات پرسش‌نامه و پیام پایان آن."""
++    class Meta:
++        model = ConversationForm
++        fields = ['connection', 'name', 'completion_text', 'cancel_keyword', 'is_active']
++
++
++class DirectRuleForm(AssetForm):
++    """تعریف محرک و پاسخ با جلوگیری از انتخاب ابزار کاربر دیگر."""
++    class Meta:
++        model = DirectRule
++        fields = ['connection', 'name', 'keyword', 'match_type', 'priority', 'response_type', 'reply_text', 'showcase', 'form', 'is_active']
++
++    def __init__(self, *args, owner, **kwargs):
++        super().__init__(*args, owner=owner, **kwargs)
++        self.fields['showcase'].queryset = Showcase.objects.filter(connection__owner=owner, is_active=True)
++        self.fields['form'].queryset = ConversationForm.objects.filter(connection__owner=owner, is_active=True)
++        self.fields['reply_text'].help_text = 'برای پاسخ متنی تکمیل کنید. ویترین یا فرم را فقط برای همان نوع پاسخ انتخاب کنید.'
++
++    def clean(self):
++        """فقط ابزار مربوط به نوع پاسخ انتخاب‌شده را ذخیره می‌کند."""
++        data = super().clean()
++        if data.get('response_type') != 'showcase':
++            data['showcase'] = None
++        if data.get('response_type') != 'form':
++            data['form'] = None
++        if data.get('response_type') != 'text':
++            data['reply_text'] = ''
++        return data
++
++
++class StyledChildForm(forms.ModelForm):
++    """ورودی‌های کارت و سؤال را با تم سایت هماهنگ می‌کند."""
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        style_fields(self)
++
++
++class OrderedChildren(BaseInlineFormSet):
++    """ترتیب‌های تکراری را رد می‌کند تا جریان سؤال و کارت روشن باشد."""
++    def clean(self):
++        super().clean()
++        if any(self.errors):
++            return
++        allowed_ids = set(self.get_queryset().values_list('pk', flat=True))
++        for form in self.forms:
++            child = form.cleaned_data.get('id')
++            if child is not None and child.pk not in allowed_ids:
++                raise ValidationError('یکی از موارد ارسالی متعلق به این ابزار نیست. صفحه را دوباره باز کنید.')
++        positions = [f.cleaned_data.get('position') for f in self.forms
++                     if f.cleaned_data and not f.cleaned_data.get('DELETE')]
++        if len(set(positions)) != len(positions):
++            raise ValidationError('ترتیب‌ها باید غیرتکراری باشند.')
++
++
++CardFormSet = inlineformset_factory(Showcase, ShowcaseCard, form=StyledChildForm,
++    formset=OrderedChildren, fields=['title', 'subtitle', 'image_url', 'button_title', 'button_url', 'position'],
++    extra=0, min_num=1, max_num=10, validate_min=True, validate_max=True, absolute_max=20, can_delete=True)
++QuestionFormSet = inlineformset_factory(ConversationForm, FormQuestion, form=StyledChildForm,
++    formset=OrderedChildren, fields=['prompt', 'kind', 'options', 'position'],
++    extra=0, min_num=1, max_num=20, validate_min=True, validate_max=True, absolute_max=30, can_delete=True)
++
++
++class DirectSimulationForm(forms.Form):
++    """پیام ورودی برای یک مخاطب ثابت در شبیه‌ساز مکالمه."""
++    connection = forms.ModelChoiceField(label='حساب آزمایشی', queryset=InstagramConnection.objects.none())
++    sender_id = forms.CharField(label='شناسهٔ مخاطب آزمایشی', max_length=100, initial='visitor-1', help_text='برای ادامهٔ فرم، همین حساب و شناسه را نگه دارید.')
++    text = forms.CharField(label='پیام مخاطب', max_length=2000, widget=forms.Textarea)
++    message_id = forms.UUIDField(widget=forms.HiddenInput)
++
++    def __init__(self, *args, owner, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.fields['connection'].queryset = InstagramConnection.objects.filter(owner=owner, status='simulated')
++        style_fields(self)
+diff --git a/windirect/features_models.py b/windirect/features_models.py
+new file mode 100644
+index 0000000..a2d6d55
+--- /dev/null
++++ b/windirect/features_models.py
+@@ -0,0 +1,174 @@
++"""مدل‌های دایرکت، ویترین و فرم‌های مکالمه‌ای وین دایرکت."""
++from django.core.exceptions import ValidationError
++from django.core.validators import URLValidator, MinValueValidator, MaxValueValidator
++from django.db import models
++from django.utils.translation import gettext_lazy as _
++from django_jalali.db import models as jmodels
++
++
++class PanelAsset(models.Model):
++    """اطلاعات مشترک ابزارهای قابل استفاده در قوانین دایرکت."""
++    connection = models.ForeignKey('InstagramConnection', on_delete=models.PROTECT, verbose_name=_("حساب اینستاگرام"))
++    name = models.CharField(_("عنوان"), max_length=150)
++    is_active = models.BooleanField(_("فعال"), default=True)
++    created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True)
++    updated_at = jmodels.jDateTimeField(_("تاریخ ویرایش"), auto_now=True)
++
++    class Meta:
++        abstract = True
++        ordering = ['-pk']
++
++    def __str__(self):
++        return self.name
++
++
++class Showcase(PanelAsset):
++    """مجموعهٔ مرتب کارت‌ها برای پاسخ به دایرکت."""
++    class Meta(PanelAsset.Meta):
++        verbose_name = _("ویترین")
++        verbose_name_plural = _("ویترین‌ها")
++
++
++class ShowcaseCard(models.Model):
++    """کارت تصویری ویترین با یک دکمهٔ پیوند."""
++    showcase = models.ForeignKey(Showcase, on_delete=models.CASCADE, related_name='cards', verbose_name=_("ویترین"))
++    title = models.CharField(_("عنوان کارت"), max_length=80)
++    subtitle = models.CharField(_("توضیحات"), max_length=80, blank=True)
++    image_url = models.URLField(_("پیوند تصویر"), max_length=1000, validators=[URLValidator(schemes=['https'])], help_text=_("نشانی عمومی HTTPS تصویر محصول"))
++    button_title = models.CharField(_("عنوان دکمه"), max_length=20)
++    button_url = models.URLField(_("پیوند دکمه"), max_length=1000, validators=[URLValidator(schemes=['https'])])
++    position = models.PositiveSmallIntegerField(_("ترتیب نمایش"), default=1, validators=[MinValueValidator(1), MaxValueValidator(100)])
++
++    class Meta:
++        verbose_name = _("کارت ویترین")
++        verbose_name_plural = _("کارت‌های ویترین")
++        ordering = ['position', 'pk']
++
++    def __str__(self):
++        return self.title
++
++
++class ConversationForm(PanelAsset):
++    """تعریف پرسش‌نامه‌ای که پاسخ‌ها را مرحله‌به‌مرحله دریافت می‌کند."""
++    completion_text = models.TextField(_("پیام پایان فرم"), max_length=1000, default='پاسخ‌های شما با موفقیت ثبت شد. همکاران ما با شما تماس می‌گیرند.')
++    cancel_keyword = models.CharField(_("کلمهٔ لغو فرم"), max_length=50, default='لغو')
++
++    class Meta(PanelAsset.Meta):
++        verbose_name = _("فرم مکالمه‌ای")
++        verbose_name_plural = _("فرم‌های مکالمه‌ای")
++
++
++class FormQuestion(models.Model):
++    """پرسش و نوع اعتبارسنجی پاسخ در یک فرم."""
++    class Kind(models.TextChoices):
++        TEXT = 'text', _("متن")
++        NUMBER = 'number', _("عدد صحیح")
++        EMAIL = 'email', _("ایمیل")
++        PHONE = 'phone', _("شماره همراه ایران")
++        CHOICE = 'choice', _("انتخاب از گزینه‌ها")
++
++    form = models.ForeignKey(ConversationForm, on_delete=models.CASCADE, related_name='questions', verbose_name=_("فرم"))
++    prompt = models.CharField(_("متن سؤال"), max_length=500)
++    kind = models.CharField(_("نوع پاسخ"), max_length=15, choices=Kind.choices, default=Kind.TEXT)
++    options = models.TextField(_("گزینه‌ها"), blank=True, max_length=1000, help_text=_("فقط برای سؤال انتخابی؛ هر گزینه در یک خط (۲ تا ۱۰ گزینه)."))
++    position = models.PositiveSmallIntegerField(_("ترتیب سؤال"), default=1, validators=[MinValueValidator(1), MaxValueValidator(100)])
++
++    class Meta:
++        verbose_name = _("سؤال فرم")
++        verbose_name_plural = _("سؤال‌های فرم")
++        ordering = ['position', 'pk']
++
++    def clean(self):
++        """گزینه‌های پرسش انتخابی را پیش از ذخیره بررسی می‌کند."""
++        super().clean()
++        if self.kind == self.Kind.CHOICE:
++            values = [v.strip() for v in self.options.splitlines() if v.strip()]
++            if not 2 <= len(values) <= 10 or len(set(values)) != len(values):
++                raise ValidationError({'options': '۲ تا ۱۰ گزینهٔ غیرتکراری وارد کنید.'})
++            self.options = '\n'.join(values)
++
++    def __str__(self):
++        return self.prompt
++
++
++class DirectRule(PanelAsset):
++    """قانون پاسخ به پیام ورودی؛ اولین قانون منطبق اجرا می‌شود."""
++    class ResponseType(models.TextChoices):
++        TEXT = 'text', _("پاسخ متنی")
++        SHOWCASE = 'showcase', _("نمایش ویترین")
++        FORM = 'form', _("شروع فرم")
++
++    keyword = models.CharField(_("کلمهٔ فعال‌کننده"), max_length=100)
++    match_type = models.CharField(_("نوع تطبیق"), max_length=20, choices=[('exact', 'برابر'), ('contains', 'شامل')], default='exact')
++    priority = models.PositiveSmallIntegerField(_("اولویت"), default=10, help_text=_("عدد کمتر زودتر بررسی می‌شود؛ در تساوی، قانون قدیمی‌تر."))
++    response_type = models.CharField(_("نوع پاسخ"), max_length=15, choices=ResponseType.choices, default=ResponseType.TEXT)
++    reply_text = models.TextField(_("متن پاسخ"), max_length=1000, blank=True)
++    showcase = models.ForeignKey(Showcase, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_("ویترین"))
++    form = models.ForeignKey(ConversationForm, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_("فرم"))
++
++    class Meta(PanelAsset.Meta):
++        verbose_name = _("قانون دایرکت")
++        verbose_name_plural = _("قوانین دایرکت")
++        ordering = ['priority', 'pk']
++        indexes = [models.Index(fields=['connection', 'is_active', 'priority'], name='wd_direct_route_idx')]
++
++    def clean(self):
++        """پاسخ انتخابی و تعلق ابزار به همان حساب را کنترل می‌کند."""
++        super().clean()
++        if not self.keyword.strip():
++            raise ValidationError({'keyword': 'کلمهٔ فعال‌کننده خالی است.'})
++        if self.response_type == self.ResponseType.TEXT and not self.reply_text.strip():
++            raise ValidationError({'reply_text': 'متن پاسخ را وارد کنید.'})
++        for field, kind in [('showcase', 'showcase'), ('form', 'form')]:
++            asset = getattr(self, field, None)
++            if self.response_type == kind and asset is None:
++                raise ValidationError({field: 'ابزار پاسخ را انتخاب کنید.'})
++            if asset and asset.connection_id != self.connection_id:
++                raise ValidationError({field: 'ابزار باید متعلق به همین حساب باشد.'})
++
++
++class FormSubmission(models.Model):
++    """نسخهٔ ثابت سؤال‌ها و جواب‌های یک مخاطب؛ مستقل از ویرایش بعدی فرم."""
++    class Status(models.TextChoices):
++        ACTIVE = 'active', _("در حال تکمیل")
++        COMPLETED = 'completed', _("تکمیل‌شده")
++        CANCELLED = 'cancelled', _("لغوشده")
++
++    form = models.ForeignKey(ConversationForm, on_delete=models.PROTECT, related_name='submissions', verbose_name=_("فرم"))
++    connection = models.ForeignKey('InstagramConnection', on_delete=models.PROTECT, verbose_name=_("حساب"))
++    sender_id = models.CharField(_("شناسهٔ مخاطب آزمایشی"), max_length=100)
++    status = models.CharField(_("وضعیت"), max_length=15, choices=Status.choices, default=Status.ACTIVE)
++    schema = models.JSONField(_("نسخهٔ سؤال‌ها و تنظیمات"), default=dict)
++    answers = models.JSONField(_("پاسخ‌ها"), default=list)
++    created_at = jmodels.jDateTimeField(_("تاریخ شروع"), auto_now_add=True)
++    updated_at = jmodels.jDateTimeField(_("آخرین پاسخ"), auto_now=True)
++    completed_at = jmodels.jDateTimeField(_("تاریخ تکمیل"), null=True, blank=True)
++
++    class Meta:
++        verbose_name = _("پاسخ‌نامه")
++        verbose_name_plural = _("پاسخ‌نامه‌ها")
++        ordering = ['-pk']
++        constraints = [models.UniqueConstraint(fields=['connection', 'sender_id'], condition=models.Q(status='active'), name='wd_one_active_form')]
++
++    def __str__(self):
++        return f'{self.form} — {self.sender_id}'
++
++
++class DirectMessageEvent(models.Model):
++    """پیام نمونه و خروجی ثبت‌شده برای جلوگیری از اجرای تکراری."""
++    connection = models.ForeignKey('InstagramConnection', on_delete=models.PROTECT, verbose_name=_("حساب"))
++    external_message_id = models.CharField(_("شناسهٔ پیام"), max_length=100)
++    sender_id = models.CharField(_("شناسهٔ مخاطب آزمایشی"), max_length=100)
++    text = models.TextField(_("متن ورودی"), max_length=2000)
++    rule = models.ForeignKey(DirectRule, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_("قانون اجراشده"))
++    response = models.JSONField(_("خروجی شبیه‌سازی"), default=dict)
++    created_at = jmodels.jDateTimeField(_("تاریخ دریافت"), auto_now_add=True)
++
++    class Meta:
++        verbose_name = _("پیام آزمایشی دایرکت")
++        verbose_name_plural = _("پیام‌های آزمایشی دایرکت")
++        ordering = ['-pk']
++        constraints = [models.UniqueConstraint(fields=['connection', 'external_message_id'], name='wd_unique_direct_message')]
++
++    def __str__(self):
++        return self.external_message_id
+diff --git a/windirect/features_views.py b/windirect/features_views.py
+new file mode 100644
+index 0000000..be39bd7
+--- /dev/null
++++ b/windirect/features_views.py
+@@ -0,0 +1,200 @@
++"""صفحات خصوصی ابزارهای دایرکت و گزارش پاسخ‌نامه‌ها."""
++from io import BytesIO
++from uuid import uuid4
++from django.contrib import messages
++from django.contrib.auth.decorators import login_required
++from django.core.exceptions import ValidationError
++from django.core.paginator import Paginator
++from django.db import transaction
++from django.db.models import ProtectedError
++from django.http import Http404, HttpResponse
++from django.shortcuts import get_object_or_404, redirect, render
++from django.urls import reverse
++from django.views.decorators.http import require_POST
++from openpyxl import Workbook
++from openpyxl.styles import Font, PatternFill
++from openpyxl.cell import WriteOnlyCell
++from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
++from .models import (DirectRule, Showcase, ConversationForm, FormSubmission, DirectMessageEvent)
++from .features_forms import (DirectRuleForm, ShowcaseForm, ConversationFormEditor, CardFormSet, QuestionFormSet, DirectSimulationForm)
++from .direct_services import simulate_direct
++
++TOOLS = {
++    'direct': (DirectRule, DirectRuleForm, None, 'دایرکت هوشمند', 'قانون دایرکت', 'کلمهٔ فعال‌کننده را به پاسخ متنی، ویترین یا فرم متصل کنید. قوانین به ترتیب اولویت بررسی می‌شوند.'),
++    'showcases': (Showcase, ShowcaseForm, CardFormSet, 'ویترین‌ساز', 'ویترین', 'کارت‌های تصویری محصولات را بسازید؛ سپس در یک قانون دایرکت از ویترین استفاده کنید.'),
++    'forms': (ConversationForm, ConversationFormEditor, QuestionFormSet, 'فرم‌ساز', 'فرم', 'سؤال‌ها را مرتب کنید؛ پاسخ‌ها مرحله‌به‌مرحله ثبت می‌شوند و خروجی اکسل دارند.'),
++}
++
++
++def _tool(kind):
++    """نوع ابزار را فقط از فهرست ثابت بخش‌های پنل می‌پذیرد."""
++    if kind not in TOOLS:
++        raise Http404
++    model, form, formset, title, singular, intro = TOOLS[kind]
++    return model, form, formset, {'section': kind, 'kind': kind, 'heading': title, 'singular': singular, 'intro': intro, 'noindex': True}
++
++
++@login_required(login_url='accounts:login')
++def asset_list(request, kind):
++    """فهرست و جست‌وجوی ابزارهای حساب‌های مالک."""
++    model, _, _, context = _tool(kind)
++    items = model.objects.filter(connection__owner=request.user).select_related('connection')
++    query = request.GET.get('q', '').strip()[:150]
++    if query:
++        items = items.filter(name__icontains=query)
++    context.update(page_obj=Paginator(items, 12).get_page(request.GET.get('page')), query=query)
++    return render(request, 'windirect/tools/list.html', context)
++
++
++@login_required(login_url='accounts:login')
++def asset_edit(request, kind, pk=None):
++    """ابزار و فرزندانش را به صورت یک تراکنش ذخیره می‌کند."""
++    model, form_class, formset_class, context = _tool(kind)
++    obj = get_object_or_404(model, pk=pk, connection__owner=request.user) if pk else model()
++    form = form_class(request.POST if request.method == 'POST' else None, owner=request.user, instance=obj)
++    children = formset_class(request.POST if request.method == 'POST' else None, instance=obj, prefix='items') if formset_class else None
++    if request.method == 'POST':
++        valid = form.is_valid()
++        children_valid = children.is_valid() if children is not None else True
++        if valid and children_valid:
++            with transaction.atomic():
++                form.save()
++                if children is not None:
++                    children.save()
++            messages.success(request, 'تغییرات با موفقیت ذخیره شد.')
++            return redirect('windirect:asset_list', kind=kind)
++    context.update(form=form, children=children, obj=obj, child_limit=10 if kind == 'showcases' else 20)
++    return render(request, 'windirect/tools/editor.html', context)
++
++
++@login_required(login_url='accounts:login')
++@require_POST
++def asset_toggle(request, kind, pk):
++    """وضعیت ابزار متعلق به کاربر را تغییر می‌دهد."""
++    model, _, _, _ = _tool(kind)
++    with transaction.atomic():
++        obj = get_object_or_404(model.objects.select_for_update(), pk=pk, connection__owner=request.user)
++        obj.is_active = not obj.is_active
++        obj.save(update_fields=['is_active', 'updated_at'])
++    messages.success(request, 'وضعیت تغییر کرد. فرم‌های از قبل شروع‌شده تا پایان قابل تکمیل هستند.')
++    return redirect('windirect:asset_list', kind=kind)
++
++
++@login_required(login_url='accounts:login')
++def asset_delete(request, kind, pk):
++    """حذف ابزار بدون سابقه را پس از نمایش صفحهٔ تأیید انجام می‌دهد."""
++    model, _, _, context = _tool(kind)
++    obj = get_object_or_404(model, pk=pk, connection__owner=request.user)
++    if request.method == 'POST':
++        try:
++            obj.delete()
++        except ProtectedError:
++            messages.error(request, 'این مورد سابقه یا قانون وابسته دارد؛ برای حفظ اطلاعات، به جای حذف غیرفعالش کنید.')
++        else:
++            messages.success(request, 'مورد انتخاب‌شده حذف شد.')
++        return redirect('windirect:asset_list', kind=kind)
++    context['obj'] = obj
++    return render(request, 'windirect/tools/delete.html', context)
++
++
++@login_required(login_url='accounts:login')
++def direct_simulation(request):
++    """آزمایش پیوستهٔ پیام‌ها با جلوگیری از ارسال مجدد پس از تازه‌سازی."""
++    selected = None
++    if request.GET.get('event', '').isdigit():
++        selected = get_object_or_404(DirectMessageEvent, pk=request.GET['event'], connection__owner=request.user)
++    initial = {'message_id': uuid4()}
++    if selected:
++        initial.update(connection=selected.connection_id, sender_id=selected.sender_id)
++    form = DirectSimulationForm(request.POST if request.method == 'POST' else None, owner=request.user, initial=initial)
++    if request.method == 'POST' and form.is_valid():
++        data = form.cleaned_data
++        try:
++            event, _ = simulate_direct(connection=data['connection'], sender_id=data['sender_id'], message_id=str(data['message_id']), text=data['text'])
++        except ValidationError as error:
++            form.add_error(None, error)
++        else:
++            return redirect(reverse('windirect:direct_simulation') + f'?event={event.pk}')
++    history = []
++    if selected:
++        history = list(DirectMessageEvent.objects.filter(connection=selected.connection, sender_id=selected.sender_id).select_related('rule')[:30])[::-1]
++    return render(request, 'windirect/tools/simulation.html', {'form': form, 'history': history, 'section': 'simulation', 'noindex': True})
++
++
++@login_required(login_url='accounts:login')
++def direct_logs(request):
++    """گزارش پیام‌های نمونه و نتیجهٔ مسیریابی آن‌ها."""
++    items = DirectMessageEvent.objects.filter(connection__owner=request.user).select_related('connection', 'rule')
++    return render(request, 'windirect/tools/logs.html', {'page_obj': Paginator(items, 20).get_page(request.GET.get('page')), 'section': 'direct_logs', 'noindex': True})
++
++
++def _submissions(request, pk):
++    """فیلتر مشترک صفحهٔ پاسخ‌ها و خروجی اکسل را اعمال می‌کند."""
++    form = get_object_or_404(ConversationForm, pk=pk, connection__owner=request.user)
++    status = request.GET.get('status', '')
++    items = form.submissions.filter(connection__owner=request.user)
++    if status in FormSubmission.Status.values:
++        items = items.filter(status=status)
++    else:
++        status = ''
++    return form, items, status
++
++
++@login_required(login_url='accounts:login')
++def submissions(request, pk):
++    """نمایش پاسخ‌نامه‌های کامل، ناقص و لغوشدهٔ فرم."""
++    form, items, status = _submissions(request, pk)
++    return render(request, 'windirect/tools/submissions.html', {'obj': form, 'page_obj': Paginator(items, 20).get_page(request.GET.get('page')), 'status': status, 'statuses': FormSubmission.Status.choices, 'section': 'forms', 'noindex': True})
++
++
++@login_required(login_url='accounts:login')
++def submission_detail(request, pk):
++    """سؤال‌های زمان شروع فرم را کنار پاسخ‌های ثبت‌شده نمایش می‌دهد."""
++    obj = get_object_or_404(FormSubmission.objects.select_related('form'), pk=pk, connection__owner=request.user)
++    rows = [{'prompt': q['prompt'], 'answer': obj.answers[i] if i < len(obj.answers) else 'بدون پاسخ'} for i, q in enumerate(obj.schema['questions'])]
++    return render(request, 'windirect/tools/submission_detail.html', {'obj': obj, 'rows': rows, 'section': 'forms', 'noindex': True})
++
++
++@login_required(login_url='accounts:login')
++def export_submissions(request, pk):
++    """خروجی واقعی اکسل با متن امن و حفظ صفر ابتدای شماره‌ها ایجاد می‌کند."""
++    form, items, _ = _submissions(request, pk)
++    # کران شناسه مانع تغییر مجموعهٔ ردیف‌ها با ثبت پاسخ‌نامهٔ جدید هنگام خروجی می‌شود.
++    last = items.order_by('-pk').values_list('pk', flat=True).first() or 0
++    items = items.filter(pk__lte=last).order_by('pk')
++    columns = {}
++    for item in items.only('schema').iterator(chunk_size=500):
++        for question in item.schema['questions']:
++            key = (question['id'], question['prompt'], question['kind'])
++            columns.setdefault(key, f"{question['prompt']} [#{question['id']} / {question['kind']}]")
++    book = Workbook(write_only=True)
++    sheet = book.create_sheet('پاسخ‌های آزمایشی')
++    sheet.sheet_view.rightToLeft = True
++    sheet.freeze_panes = 'F2'
++    sheet.column_dimensions['B'].width = 24
++    sheet.column_dimensions['C'].width = 20
++    sheet.column_dimensions['D'].width = 26
++    sheet.column_dimensions['E'].width = 26
++
++    def append(values, header=False):
++        """ورودی کاربر هرگز به فرمول اکسل تبدیل نمی‌شود."""
++        cells = []
++        for value in values:
++            cell = WriteOnlyCell(sheet, value=ILLEGAL_CHARACTERS_RE.sub('', str(value or '')))
++            cell.data_type = 's'
++            if header:
++                cell.font = Font(bold=True, color='FFFFFF')
++                cell.fill = PatternFill('solid', fgColor='FD5631')
++            cells.append(cell)
++        sheet.append(cells)
++
++    append(['شناسه', 'مخاطب آزمایشی', 'وضعیت', 'تاریخ شروع', 'تاریخ تکمیل', *columns.values()], header=True)
++    for item in items.iterator(chunk_size=500):
++        answers = {(q['id'], q['prompt'], q['kind']): item.answers[i] for i, q in enumerate(item.schema['questions']) if i < len(item.answers)}
++        append([item.pk, item.sender_id, item.get_status_display(), item.created_at, item.completed_at or '', *[answers.get(key, '') for key in columns]])
++    output = BytesIO()
++    book.save(output)
++    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
++    response['Content-Disposition'] = f'attachment; filename="windirect-form-{form.pk}.xlsx"'
++    response['Cache-Control'] = 'private, no-store'
++    return response
+diff --git a/windirect/migrations/0003_direct_showcase_forms.py b/windirect/migrations/0003_direct_showcase_forms.py
+new file mode 100644
+index 0000000..c178678
+--- /dev/null
++++ b/windirect/migrations/0003_direct_showcase_forms.py
+@@ -0,0 +1,154 @@
++# Generated by Django 6.0.8 on 2026-09-30 19:03
++
++import django.core.validators
++import django.db.models.deletion
++import django_jalali.db.models
++from django.db import migrations, models
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ('windirect', '0002_alter_automation_options_and_more'),
++    ]
++
++    operations = [
++        migrations.CreateModel(
++            name='ConversationForm',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('name', models.CharField(max_length=150, verbose_name='عنوان')),
++                ('is_active', models.BooleanField(default=True, verbose_name='فعال')),
++                ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')),
++                ('updated_at', django_jalali.db.models.jDateTimeField(auto_now=True, verbose_name='تاریخ ویرایش')),
++                ('completion_text', models.TextField(default='پاسخ\u200cهای شما با موفقیت ثبت شد. همکاران ما با شما تماس می\u200cگیرند.', max_length=1000, verbose_name='پیام پایان فرم')),
++                ('cancel_keyword', models.CharField(default='لغو', max_length=50, verbose_name='کلمهٔ لغو فرم')),
++                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='windirect.instagramconnection', verbose_name='حساب اینستاگرام')),
++            ],
++            options={
++                'verbose_name': 'فرم مکالمه\u200cای',
++                'verbose_name_plural': 'فرم\u200cهای مکالمه\u200cای',
++                'ordering': ['-pk'],
++                'abstract': False,
++            },
++        ),
++        migrations.CreateModel(
++            name='FormQuestion',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('prompt', models.CharField(max_length=500, verbose_name='متن سؤال')),
++                ('kind', models.CharField(choices=[('text', 'متن'), ('number', 'عدد صحیح'), ('email', 'ایمیل'), ('phone', 'شماره همراه ایران'), ('choice', 'انتخاب از گزینه\u200cها')], default='text', max_length=15, verbose_name='نوع پاسخ')),
++                ('options', models.TextField(blank=True, help_text='فقط برای سؤال انتخابی؛ هر گزینه در یک خط (۲ تا ۱۰ گزینه).', max_length=1000, verbose_name='گزینه\u200cها')),
++                ('position', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(100)], verbose_name='ترتیب سؤال')),
++                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='questions', to='windirect.conversationform', verbose_name='فرم')),
++            ],
++            options={
++                'verbose_name': 'سؤال فرم',
++                'verbose_name_plural': 'سؤال\u200cهای فرم',
++                'ordering': ['position', 'pk'],
++            },
++        ),
++        migrations.CreateModel(
++            name='Showcase',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('name', models.CharField(max_length=150, verbose_name='عنوان')),
++                ('is_active', models.BooleanField(default=True, verbose_name='فعال')),
++                ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')),
++                ('updated_at', django_jalali.db.models.jDateTimeField(auto_now=True, verbose_name='تاریخ ویرایش')),
++                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='windirect.instagramconnection', verbose_name='حساب اینستاگرام')),
++            ],
++            options={
++                'verbose_name': 'ویترین',
++                'verbose_name_plural': 'ویترین\u200cها',
++                'ordering': ['-pk'],
++                'abstract': False,
++            },
++        ),
++        migrations.CreateModel(
++            name='DirectRule',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('name', models.CharField(max_length=150, verbose_name='عنوان')),
++                ('is_active', models.BooleanField(default=True, verbose_name='فعال')),
++                ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')),
++                ('updated_at', django_jalali.db.models.jDateTimeField(auto_now=True, verbose_name='تاریخ ویرایش')),
++                ('keyword', models.CharField(max_length=100, verbose_name='کلمهٔ فعال\u200cکننده')),
++                ('match_type', models.CharField(choices=[('exact', 'برابر'), ('contains', 'شامل')], default='exact', max_length=20, verbose_name='نوع تطبیق')),
++                ('priority', models.PositiveSmallIntegerField(default=10, help_text='عدد کمتر زودتر بررسی می\u200cشود؛ در تساوی، قانون قدیمی\u200cتر.', verbose_name='اولویت')),
++                ('response_type', models.CharField(choices=[('text', 'پاسخ متنی'), ('showcase', 'نمایش ویترین'), ('form', 'شروع فرم')], default='text', max_length=15, verbose_name='نوع پاسخ')),
++                ('reply_text', models.TextField(blank=True, max_length=1000, verbose_name='متن پاسخ')),
++                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='windirect.instagramconnection', verbose_name='حساب اینستاگرام')),
++                ('form', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='windirect.conversationform', verbose_name='فرم')),
++                ('showcase', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='windirect.showcase', verbose_name='ویترین')),
++            ],
++            options={
++                'verbose_name': 'قانون دایرکت',
++                'verbose_name_plural': 'قوانین دایرکت',
++                'ordering': ['priority', 'pk'],
++                'abstract': False,
++            },
++        ),
++        migrations.CreateModel(
++            name='ShowcaseCard',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('title', models.CharField(max_length=80, verbose_name='عنوان کارت')),
++                ('subtitle', models.CharField(blank=True, max_length=80, verbose_name='توضیحات')),
++                ('image_url', models.URLField(help_text='نشانی عمومی HTTPS تصویر محصول', max_length=1000, validators=[django.core.validators.URLValidator(schemes=['https'])], verbose_name='پیوند تصویر')),
++                ('button_title', models.CharField(max_length=20, verbose_name='عنوان دکمه')),
++                ('button_url', models.URLField(max_length=1000, validators=[django.core.validators.URLValidator(schemes=['https'])], verbose_name='پیوند دکمه')),
++                ('position', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(100)], verbose_name='ترتیب نمایش')),
++                ('showcase', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cards', to='windirect.showcase', verbose_name='ویترین')),
++            ],
++            options={
++                'verbose_name': 'کارت ویترین',
++                'verbose_name_plural': 'کارت\u200cهای ویترین',
++                'ordering': ['position', 'pk'],
++            },
++        ),
++        migrations.CreateModel(
++            name='DirectMessageEvent',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('external_message_id', models.CharField(max_length=100, verbose_name='شناسهٔ پیام')),
++                ('sender_id', models.CharField(max_length=100, verbose_name='شناسهٔ مخاطب آزمایشی')),
++                ('text', models.TextField(max_length=2000, verbose_name='متن ورودی')),
++                ('response', models.JSONField(default=dict, verbose_name='خروجی شبیه\u200cسازی')),
++                ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ دریافت')),
++                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='windirect.instagramconnection', verbose_name='حساب')),
++                ('rule', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='windirect.directrule', verbose_name='قانون اجراشده')),
++            ],
++            options={
++                'verbose_name': 'پیام آزمایشی دایرکت',
++                'verbose_name_plural': 'پیام\u200cهای آزمایشی دایرکت',
++                'ordering': ['-pk'],
++                'constraints': [models.UniqueConstraint(fields=('connection', 'external_message_id'), name='wd_unique_direct_message')],
++            },
++        ),
++        migrations.CreateModel(
++            name='FormSubmission',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('sender_id', models.CharField(max_length=100, verbose_name='شناسهٔ مخاطب آزمایشی')),
++                ('status', models.CharField(choices=[('active', 'در حال تکمیل'), ('completed', 'تکمیل\u200cشده'), ('cancelled', 'لغوشده')], default='active', max_length=15, verbose_name='وضعیت')),
++                ('schema', models.JSONField(default=dict, verbose_name='نسخهٔ سؤال\u200cها و تنظیمات')),
++                ('answers', models.JSONField(default=list, verbose_name='پاسخ\u200cها')),
++                ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ شروع')),
++                ('updated_at', django_jalali.db.models.jDateTimeField(auto_now=True, verbose_name='آخرین پاسخ')),
++                ('completed_at', django_jalali.db.models.jDateTimeField(blank=True, null=True, verbose_name='تاریخ تکمیل')),
++                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='windirect.instagramconnection', verbose_name='حساب')),
++                ('form', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='submissions', to='windirect.conversationform', verbose_name='فرم')),
++            ],
++            options={
++                'verbose_name': 'پاسخ\u200cنامه',
++                'verbose_name_plural': 'پاسخ\u200cنامه\u200cها',
++                'ordering': ['-pk'],
++                'constraints': [models.UniqueConstraint(condition=models.Q(('status', 'active')), fields=('connection', 'sender_id'), name='wd_one_active_form')],
++            },
++        ),
++        migrations.AddIndex(
++            model_name='directrule',
++            index=models.Index(fields=['connection', 'is_active', 'priority'], name='wd_direct_route_idx'),
++        ),
++    ]
+diff --git a/windirect/models.py b/windirect/models.py
+index 705114b..0389791 100644
+--- a/windirect/models.py
++++ b/windirect/models.py
+@@ -139,3 +139,9 @@ class AutomationExecution(models.Model):
+ 
+     def __str__(self):
+         return f"{self.automation.name} - {self.event.external_comment_id}"
++
++# مدل‌های ابزارهای پنل در ماژول جدا نگه‌داری می‌شوند و به همین اپ تعلق دارند.
++from .features_models import (  # noqa: E402,F401
++    Showcase, ShowcaseCard, ConversationForm, FormQuestion,
++    DirectRule, FormSubmission, DirectMessageEvent,
++)
+diff --git a/windirect/tests_features.py b/windirect/tests_features.py
+new file mode 100644
+index 0000000..4e4ebc0
+--- /dev/null
++++ b/windirect/tests_features.py
+@@ -0,0 +1,246 @@
++"""آزمون مرزبندی کاربران و جریان ابزارهای جدید وین دایرکت."""
++from io import BytesIO
++from uuid import uuid4
++from django.contrib.auth import get_user_model
++from django.core.exceptions import ValidationError
++from django.test import TestCase
++from django.urls import reverse
++from openpyxl import load_workbook
++from .models import (InstagramConnection, DirectRule, Showcase, ShowcaseCard, ConversationForm, FormQuestion, FormSubmission, DirectMessageEvent)
++from .features_forms import DirectRuleForm
++from .direct_services import simulate_direct
++
++
++class FeatureTests(TestCase):
++    """رفتار واقعی سرویس، فرم‌ها و خروجی اکسل را بررسی می‌کند."""
++    def setUp(self):
++        self.user = get_user_model().objects.create_user(phone_number='09120002001', password='test')
++        self.other = get_user_model().objects.create_user(phone_number='09120002002', password='test')
++        self.connection = InstagramConnection.objects.create(owner=self.user, username='mine')
++        self.foreign = InstagramConnection.objects.create(owner=self.other, username='foreign')
++        self.form = ConversationForm.objects.create(connection=self.connection, name='تماس')
++        self.name = FormQuestion.objects.create(form=self.form, prompt='نام شما؟', position=1)
++        self.phone = FormQuestion.objects.create(form=self.form, prompt='شمارهٔ همراه؟', kind='phone', position=2)
++        self.rule = DirectRule.objects.create(connection=self.connection, name='شروع تماس', keyword='فرم', response_type='form', form=self.form)
++        self.client.force_login(self.user)
++
++    def send(self, text, sender='visitor', message_id=None):
++        """یک پیام مستقل را برای مخاطب نمونه پردازش می‌کند."""
++        return simulate_direct(connection=self.connection, sender_id=sender, message_id=message_id or str(uuid4()), text=text)[0]
++
++    def test_form_validation_completion_and_idempotency(self):
++        self.assertIn('نام شما', self.send('فرم').response['text'])
++        event = self.send('محمد', message_id='same-message')
++        again, created = simulate_direct(connection=self.connection, sender_id='visitor', message_id='same-message', text='محمد')
++        self.assertFalse(created)
++        self.assertEqual(event.pk, again.pk)
++        self.assertIn('۱۱ رقم', self.send('اشتباه').response['text'])
++        self.assertEqual(FormSubmission.objects.get().answers, ['محمد'])
++        self.send('۰۹۱۲۳۴۵۶۷۸۹')
++        submission = FormSubmission.objects.get()
++        self.assertEqual(submission.status, 'completed')
++        self.assertEqual(submission.answers, ['محمد', '09123456789'])
++        self.assertIsNotNone(submission.completed_at)
++
++    def test_snapshot_survives_question_edits_and_deactivation(self):
++        self.send('فرم')
++        self.name.prompt = 'عنوان جدید'
++        self.name.save()
++        self.phone.delete()
++        self.form.is_active = False
++        self.form.save()
++        self.assertIn('شماره', self.send('علی').response['text'])
++        self.send('09123456789')
++        self.assertEqual(FormSubmission.objects.get().status, 'completed')
++        self.assertEqual(self.send('فرم', sender='new').response['kind'], 'unmatched')
++
++    def test_cancel_and_sender_isolation(self):
++        self.send('فرم', sender='one')
++        self.send('فرم', sender='two')
++        self.send('لغو', sender='one')
++        self.assertEqual(FormSubmission.objects.get(sender_id='one').status, 'cancelled')
++        self.assertEqual(FormSubmission.objects.get(sender_id='two').answers, [])
++        self.send('فرم', sender='one')
++        self.assertEqual(FormSubmission.objects.filter(sender_id='one').count(), 2)
++
++    def test_priority_and_exact_matching(self):
++        DirectRule.objects.create(connection=self.connection, name='اول', keyword='قيمت', reply_text='پاسخ اول', match_type='contains', priority=1)
++        DirectRule.objects.create(connection=self.connection, name='دوم', keyword='قیمت', reply_text='پاسخ دوم', priority=2)
++        self.assertEqual(self.send('قیمت').response['text'], 'پاسخ اول')
++        self.assertEqual(self.send('لطفا فرم بده').response['kind'], 'unmatched')
++
++    def test_showcase_snapshot_and_disabled_asset(self):
++        showcase = Showcase.objects.create(connection=self.connection, name='محصولات')
++        card = ShowcaseCard.objects.create(showcase=showcase, title='محصول', image_url='https://example.com/p.jpg', button_title='خرید', button_url='https://example.com/buy')
++        DirectRule.objects.create(connection=self.connection, name='ویترین', keyword='خرید', response_type='showcase', showcase=showcase)
++        event = self.send('خرید')
++        card.title = 'نام جدید'
++        card.save()
++        event.refresh_from_db()
++        self.assertEqual(event.response['cards'][0]['title'], 'محصول')
++        showcase.is_active = False
++        showcase.save()
++        self.assertEqual(self.send('خرید').response['kind'], 'unmatched')
++
++    def test_connection_and_message_identity_validation(self):
++        self.send('سلام', message_id='id')
++        with self.assertRaises(ValidationError):
++            self.send('متفاوت', message_id='id')
++        self.connection.status = 'connected'
++        self.connection.save()
++        with self.assertRaises(ValidationError):
++            self.send('فرم')
++
++    def test_rule_form_rejects_foreign_and_wrong_account_assets(self):
++        foreign_form = ConversationForm.objects.create(connection=self.foreign, name='خصوصی')
++        data = {'connection': self.connection.pk, 'name': 'قانون', 'keyword': 'شروع', 'match_type': 'exact', 'priority': 10, 'response_type': 'form', 'form': foreign_form.pk, 'is_active': 'on'}
++        editor = DirectRuleForm(data, owner=self.user)
++        self.assertFalse(editor.is_valid())
++        own_second = InstagramConnection.objects.create(owner=self.user, username='second')
++        wrong_form = ConversationForm.objects.create(connection=own_second, name='حساب دوم')
++        data['form'] = wrong_form.pk
++        self.assertFalse(DirectRuleForm(data, owner=self.user).is_valid())
++        data['form'] = self.form.pk
++        self.assertTrue(DirectRuleForm(data, owner=self.user).is_valid())
++
++    def test_private_routes_and_foreign_ids(self):
++        foreign_form = ConversationForm.objects.create(connection=self.foreign, name='خصوصی')
++        foreign_submission = FormSubmission.objects.create(form=foreign_form, connection=self.foreign, sender_id='secret', schema={'questions': []})
++        for name, args in [('asset_edit', ['forms', foreign_form.pk]), ('asset_delete', ['forms', foreign_form.pk]), ('submissions', [foreign_form.pk]), ('export_submissions', [foreign_form.pk]), ('submission_detail', [foreign_submission.pk])]:
++            self.assertEqual(self.client.get(reverse('windirect:' + name, args=args)).status_code, 404)
++        self.assertEqual(self.client.post(reverse('windirect:asset_toggle', args=['forms', foreign_form.pk])).status_code, 404)
++        self.client.logout()
++        for name, args in [('asset_list', ['direct']), ('asset_create', ['forms']), ('direct_simulation', []), ('direct_logs', []), ('export_submissions', [self.form.pk])]:
++            self.assertEqual(self.client.get(reverse('windirect:' + name, args=args)).status_code, 302)
++
++    def test_pages_use_site_base_and_render(self):
++        self.send('فرم')
++        submission = FormSubmission.objects.get()
++        routes = [('dashboard', []), ('direct_logs', []), ('direct_simulation', []), ('submissions', [self.form.pk]), ('submission_detail', [submission.pk])]
++        for kind in ['direct', 'showcases', 'forms']:
++            routes.extend([('asset_list', [kind]), ('asset_create', [kind])])
++        for name, args in routes:
++            with self.subTest(name=name, args=args):
++                response = self.client.get(reverse('windirect:' + name, args=args))
++                self.assertEqual(response.status_code, 200)
++                self.assertTemplateUsed(response, 'parent/base.html')
++                self.assertContains(response, 'finder/css/theme.min.css')
++        response = self.client.get(reverse('windirect:direct_simulation') + f'?event={DirectMessageEvent.objects.first().pk}')
++        self.assertContains(response, 'نام شما')
++
++    def test_editor_saves_children_and_rejects_wrong_child_ids(self):
++        data = {'connection': self.connection.pk, 'name': 'جدید', 'completion_text': 'تمام شد', 'cancel_keyword': 'لغو', 'is_active': 'on', 'items-TOTAL_FORMS': 1, 'items-INITIAL_FORMS': 0, 'items-MIN_NUM_FORMS': 1, 'items-MAX_NUM_FORMS': 20, 'items-0-prompt': 'نام؟', 'items-0-kind': 'text', 'items-0-position': 1}
++        response = self.client.post(reverse('windirect:asset_create', args=['forms']), data)
++        self.assertEqual(response.status_code, 302)
++        created = ConversationForm.objects.get(name='جدید')
++        self.assertEqual(created.questions.count(), 1)
++        data.update({'items-INITIAL_FORMS': 1, 'items-0-id': self.name.pk, 'items-0-form': created.pk, 'items-0-prompt': 'تغییر نام غیرمجاز'})
++        response = self.client.post(reverse('windirect:asset_edit', args=['forms', created.pk]), data)
++        self.assertEqual(response.status_code, 200)
++        self.assertContains(response, 'متعلق به این ابزار نیست')
++        self.name.refresh_from_db()
++        self.assertEqual(self.name.prompt, 'نام شما؟')
++
++    def test_excel_is_real_safe_filtered_and_keeps_phone(self):
++        self.send('فرم')
++        self.send('=HYPERLINK("https://example.com")')
++        self.send('09123456789')
++        self.send('فرم', sender='unfinished')
++        response = self.client.get(reverse('windirect:export_submissions', args=[self.form.pk]) + '?status=completed')
++        self.assertEqual(response.status_code, 200)
++        sheet = load_workbook(BytesIO(response.content)).active
++        rows = list(sheet.rows)
++        self.assertEqual(len(rows), 2)
++        self.assertEqual(rows[1][5].value, '=HYPERLINK("https://example.com")')
++        self.assertEqual(rows[1][5].data_type, 's')
++        self.assertEqual(rows[1][6].value, '09123456789')
++        self.assertTrue(sheet.sheet_view.rightToLeft)
++
++    def test_delete_is_post_and_history_is_protected(self):
++        self.send('فرم')
++        url = reverse('windirect:asset_delete', args=['forms', self.form.pk])
++        self.assertEqual(self.client.get(url).status_code, 200)
++        self.assertTrue(ConversationForm.objects.filter(pk=self.form.pk).exists())
++        self.assertEqual(self.client.post(url).status_code, 302)
++        self.assertTrue(ConversationForm.objects.filter(pk=self.form.pk).exists())
++        self.assertEqual(self.client.get(reverse('windirect:asset_toggle', args=['forms', self.form.pk])).status_code, 405)
++
++    def test_simulation_post_redirect_get_and_duplicate(self):
++        payload = {'connection': self.connection.pk, 'sender_id': 'visitor', 'message_id': str(uuid4()), 'text': 'فرم'}
++        url = reverse('windirect:direct_simulation')
++        first = self.client.post(url, payload)
++        self.assertEqual(first.status_code, 302)
++        self.client.post(url, payload)
++        self.client.get(first.url)
++        self.assertEqual(DirectMessageEvent.objects.count(), 1)
++        self.assertEqual(FormSubmission.objects.count(), 1)
++
++    def test_choice_and_number_validation(self):
++        self.name.kind = 'number'
++        self.name.save()
++        self.phone.kind = 'choice'
++        self.phone.options = 'بله\nخیر'
++        self.phone.save()
++        self.send('فرم')
++        self.send('سن من بیست است')
++        self.assertEqual(FormSubmission.objects.get().answers, [])
++        self.send('۲۵')
++        self.send('شاید')
++        self.assertEqual(FormSubmission.objects.get().answers, ['25'])
++        self.send('بله')
++        self.assertEqual(FormSubmission.objects.get().status, 'completed')
++
++    def test_formset_rejects_empty_duplicate_order_and_excess(self):
++        from .features_forms import QuestionFormSet
++        base = {'items-TOTAL_FORMS': '0', 'items-INITIAL_FORMS': '0'}
++        self.assertFalse(QuestionFormSet(base, instance=self.form, prefix='items').is_valid())
++        data = {'items-TOTAL_FORMS': '2', 'items-INITIAL_FORMS': '0'}
++        for index in range(2):
++            data.update({f'items-{index}-prompt': 'سؤال', f'items-{index}-kind': 'text', f'items-{index}-position': '1'})
++        children = QuestionFormSet(data, instance=self.form, prefix='items')
++        self.assertFalse(children.is_valid())
++        self.assertIn('ترتیب‌ها', str(children.non_form_errors()))
++        data['items-TOTAL_FORMS'] = '5000'
++        children = QuestionFormSet(data, instance=self.form, prefix='items')
++        self.assertFalse(children.is_valid())
++        self.assertEqual(len(children.forms), 30)
++
++    def test_email_validation_and_https_cards(self):
++        self.name.kind = 'email'
++        self.name.save()
++        self.send('فرم')
++        self.send('invalid-email')
++        self.assertEqual(FormSubmission.objects.get().answers, [])
++        self.send('hello@example.com')
++        self.assertEqual(FormSubmission.objects.get().answers, ['hello@example.com'])
++        showcase = Showcase.objects.create(connection=self.connection, name='ویترین')
++        card = ShowcaseCard(showcase=showcase, title='کارت', image_url='http://example.com/image.jpg', button_title='خرید', button_url='javascript:alert(1)')
++        with self.assertRaises(ValidationError):
++            card.full_clean()
++
++    def test_simulator_rejects_foreign_account_and_csrf(self):
++        from django.test import Client
++        payload = {'connection': self.foreign.pk, 'sender_id': 'visitor', 'message_id': str(uuid4()), 'text': 'فرم'}
++        response = self.client.post(reverse('windirect:direct_simulation'), payload)
++        self.assertEqual(response.status_code, 200)
++        self.assertFalse(DirectMessageEvent.objects.exists())
++        secure_client = Client(enforce_csrf_checks=True)
++        secure_client.force_login(self.user)
++        response = secure_client.post(reverse('windirect:asset_toggle', args=['forms', self.form.pk]))
++        self.assertEqual(response.status_code, 403)
++
++    def test_excel_preserves_old_question_columns_after_edit(self):
++        self.send('فرم')
++        self.send('نام قدیمی')
++        self.send('09123456789')
++        self.name.prompt = 'نام جدید؟'
++        self.name.save()
++        self.send('فرم', sender='second')
++        self.send('نام جدید', sender='second')
++        self.send('09123456780', sender='second')
++        response = self.client.get(reverse('windirect:export_submissions', args=[self.form.pk]))
++        rows = list(load_workbook(BytesIO(response.content)).active.values)
++        self.assertEqual(len(rows), 3)
++        self.assertEqual(len(rows[0]), 8)
++        self.assertIn('نام قدیمی', rows[1])
++        self.assertIn('نام جدید', rows[2])
+diff --git a/windirect/urls.py b/windirect/urls.py
+index ad3782d..0e3ea04 100644
+--- a/windirect/urls.py
++++ b/windirect/urls.py
+@@ -15,3 +15,18 @@ urlpatterns = [
+     path("test/", views.simulation, name="simulation"),
+     path("logs/", views.logs, name="logs"),
+ ]
++
++from . import features_views
++
++urlpatterns += [
++    path('tools/<str:kind>/', features_views.asset_list, name='asset_list'),
++    path('tools/<str:kind>/new/', features_views.asset_edit, name='asset_create'),
++    path('tools/<str:kind>/<int:pk>/edit/', features_views.asset_edit, name='asset_edit'),
++    path('tools/<str:kind>/<int:pk>/toggle/', features_views.asset_toggle, name='asset_toggle'),
++    path('tools/<str:kind>/<int:pk>/delete/', features_views.asset_delete, name='asset_delete'),
++    path('direct/test/', features_views.direct_simulation, name='direct_simulation'),
++    path('direct/logs/', features_views.direct_logs, name='direct_logs'),
++    path('forms/<int:pk>/responses/', features_views.submissions, name='submissions'),
++    path('forms/<int:pk>/export/', features_views.export_submissions, name='export_submissions'),
++    path('responses/<int:pk>/', features_views.submission_detail, name='submission_detail'),
++]
+diff --git a/windirect/views.py b/windirect/views.py
+index 5d7a96e..c5a39f5 100644
+--- a/windirect/views.py
++++ b/windirect/views.py
+@@ -59,7 +59,7 @@ def connections(request):
+ @login_required(login_url="accounts:login")
+ def rules(request):
+     """قوانین متعلق به کاربر را همراه با تعداد اجرا فهرست می‌کند."""
+-    queryset = Automation.objects.filter(connection__owner=request.user).select_related("connection").annotate(execution_count=Count("executions"))
++    queryset = Automation.objects.filter(connection__owner=request.user).select_related("connection").annotate(execution_count=Count("executions")).order_by("-created_at", "-pk")
+     context = _owner_context(request)
+     context.update({"rules": Paginator(queryset, 12).get_page(request.GET.get("page"))})
+     return render(request, "windirect/rules.html", context)

@@ -1,0 +1,39 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block title %}فاکتور اشتراک وین دایرکت {{ invoice.invoice_number }}{% endblock %}
+{% block extra_head %}
+    <meta name="robots" content="noindex, nofollow">
+{% endblock %}
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'windirect/css/panel.css' %}">
+    <style>@media print {header, nav, aside, footer, .wd-print-actions, #django-messages-data {display:none!important} .wd-invoice, .wd-invoice * {color:#000!important} .wd-invoice {background:#fff!important} }</style>
+{% endblock %}
+{% block content %}
+    <div class="container py-5 wd-panel wd-invoice">
+        <div class="card wd-card">
+            <div class="card-body p-4">
+                <h1 class="h3 text-white">فاکتور اشتراک وین دایرکت</h1>
+                <p class="text-light">شماره {{ invoice.invoice_number }} · تاریخ {{ invoice.created_at|date:'Y/m/d H:i' }}</p>
+                <p class="text-light">خریدار {{ invoice.user.phone_number }} · {{ order.quote.plan_name }} · {{ order.get_kind_display }}</p>
+                <p class="text-muted">دورهٔ مبنا {{ order.quote.duration_days }} روز · {% if invoice.is_paid %}پرداخت‌شده{% else %}پرداخت‌نشده{% endif %} · وضعیت سفارش: {{ order.get_status_display }}</p>
+                {% include 'windirect/subscriptions/amounts.html' %}
+                {% if order.referral_id %}
+                    <p class="text-light">معرف: {{ order.referral.code }} · {{ order.quote.buyer_gift_days }} روز هدیه</p>
+                {% endif %}
+                {% for tx in transactions %}
+                    <p class="text-muted">{{ tx.get_type_display }} · پیگیری {{ tx.reference_id }} · {{ tx.created_at|date:'Y/m/d H:i' }}</p>
+                {% endfor %}
+                <div class="d-flex flex-wrap gap-2 mt-4 wd-print-actions">
+                    <a class="btn btn-outline-primary"
+                       href="{% url 'windirect:subscription_order' order.pk %}">مشاهدهٔ سفارش</a>
+                    <a class="btn btn-outline-light"
+                       href="{% url 'payment:invoice_print' invoice.pk %}">نسخهٔ چاپ</a>
+                    <a class="btn btn-outline-light" href="{% url 'payment:invoice_list' %}">همهٔ فاکتورها</a>
+                </div>
+                {% if printing %}
+                    <p class="small text-muted mt-3 wd-print-actions">برای چاپ یا ذخیرهٔ PDF از Ctrl+P مرورگر استفاده کنید.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

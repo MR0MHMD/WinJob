@@ -6,6 +6,7 @@ ListView های پنل Support
 هر View بر اساس نقش، دسترسی و فیلتر استانی مناسب داره.
 """
 
+from support.utils import scope_support_queryset
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Count, Avg, Prefetch, Sum
 from django.views.generic import ListView
@@ -86,7 +87,7 @@ class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView
     province_field_path = 'province'
 
     def get_queryset(self):
-        queryset = Channel.objects.select_related(
+        queryset = scope_support_queryset(self.request.user, Channel.objects.all()).select_related(
             'influencer',
             'influencer__user',
             'platform',
@@ -95,12 +96,12 @@ class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView
             'score'
         ).prefetch_related(
             Prefetch('service_rates', queryset=ChannelServiceRate.objects.filter(is_active=True)),
-            Prefetch('campaign_bookings', queryset=ChannelBooking.objects.filter(status='completed')),
+            Prefetch('campaign_bookings', queryset=scope_support_queryset(self.request.user, ChannelBooking.objects.all()).filter(status='completed')),
         ).annotate(
             avg_rating_=Avg('reviews__rating'),
             reviews_count_=Count('reviews'),
-            completed_bookings_count_=Count('campaign_bookings', filter=Q(campaign_bookings__status='completed')),
-            total_revenue_=Sum('campaign_bookings__price', filter=Q(campaign_bookings__status='completed'))
+            completed_bookings_count_=Count('campaign_bookings', filter=Q(campaign_bookings__status='completed', campaign_bookings__in=scope_support_queryset(self.request.user, ChannelBooking.objects.all()))),
+            total_revenue_=Sum('campaign_bookings__price', filter=Q(campaign_bookings__status='completed', campaign_bookings__in=scope_support_queryset(self.request.user, ChannelBooking.objects.all())))
         )
 
         # ========== فیلتر Regional ==========
@@ -162,7 +163,7 @@ class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView
         is_regional = user.is_regional_manager and user.province_id
 
         # آمار پایه (بر اساس دسترسی کاربر)
-        base_qs = Channel.objects.all()
+        base_qs = scope_support_queryset(self.request.user, Channel.objects.all())
         if is_regional:
             base_qs = base_qs.filter(province=user.province)
 
@@ -179,7 +180,7 @@ class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView
         context['current_search'] = self.request.GET.get('q', '')
         context['current_sort'] = self.request.GET.get('sort', '')
 
-        context['platforms'] = Platform.objects.filter(is_active=True)
+        context['platforms'] = scope_support_queryset(self.request.user, Platform.objects.all()).filter(is_active=True)
         # اگه Regional هست، فقط استان خودش رو توی فیلتر نشون بده
         if is_regional:
             context['provinces'] = Province.objects.filter(id=user.province_id)
@@ -191,7 +192,7 @@ class ChannelListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListView
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             try:
-                influencer = InfluencerProfile.objects.get(id=int(influencer_id))
+                influencer = scope_support_queryset(self.request.user, InfluencerProfile.objects.all()).get(id=int(influencer_id))
                 context['filtered_influencer_name'] = influencer.user.nickname
             except InfluencerProfile.DoesNotExist:
                 pass
@@ -217,9 +218,9 @@ class CampaignListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListVie
     province_field_path = 'advertiser__user__province'
 
     def get_queryset(self):
-        queryset = Campaign.objects.select_related(
+        queryset = scope_support_queryset(self.request.user, Campaign.objects.all()).select_related(
             'advertiser', 'platform', 'content_type', 'ad_type', 'advertiser__user'
-        ).prefetch_related('influencer_bookings')
+        ).prefetch_related(Prefetch('influencer_bookings', queryset=scope_support_queryset(self.request.user, ChannelBooking.objects.all())))
 
         # ========== فیلتر Regional ==========
         user = self.request.user
@@ -280,7 +281,7 @@ class CampaignListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListVie
         is_regional = user.is_regional_manager and user.province_id
 
         # آمار پایه (بر اساس دسترسی کاربر)
-        base_qs = Campaign.objects.all()
+        base_qs = scope_support_queryset(self.request.user, Campaign.objects.all())
         if is_regional:
             base_qs = base_qs.filter(advertiser__user__province=user.province)
 
@@ -301,7 +302,7 @@ class CampaignListView(PublishManagerRequiredMixin, RegionalFilterMixin, ListVie
 
         if context['current_advertiser']:
             try:
-                advertiser = AdvertiserProfile.objects.get(id=context['current_advertiser'])
+                advertiser = scope_support_queryset(self.request.user, AdvertiserProfile.objects.all()).get(id=context['current_advertiser'])
                 context['filtered_advertiser_name'] = advertiser.business_name
             except:
                 pass
@@ -367,12 +368,12 @@ class UserListView(BaseSupportMixin, RegionalFilterMixin, ListView):
     province_field_path = 'province'
 
     def get_queryset(self):
-        queryset = User.objects.select_related('province', 'wallet').annotate(
+        queryset = scope_support_queryset(self.request.user, User.objects.all()).select_related('province', 'wallet').annotate(
             advertiser_count=Count('advertiser_profile', distinct=True),
             influencer_count=Count('influencer_profile', distinct=True),
             team_member_count=Count('team_member', distinct=True),
-            ticket_count=Count('tickets', distinct=True),
-            campaign_count=Count('advertiser_profile__campaigns', distinct=True),
+            ticket_count=Count('tickets', filter=Q(tickets__in=scope_support_queryset(self.request.user, Ticket.objects.all())), distinct=True),
+            campaign_count=Count('advertiser_profile__campaigns', filter=Q(advertiser_profile__campaigns__in=scope_support_queryset(self.request.user, Campaign.objects.all())), distinct=True),
         )
 
         # ========== فیلتر Regional ==========
@@ -413,9 +414,9 @@ class UserListView(BaseSupportMixin, RegionalFilterMixin, ListView):
         is_regional = user.is_regional_manager and user.province_id
 
         # آمار پایه
-        user_qs = User.objects.all()
-        adv_qs = AdvertiserProfile.objects.all()
-        inf_qs = InfluencerProfile.objects.all()
+        user_qs = scope_support_queryset(self.request.user, User.objects.all())
+        adv_qs = scope_support_queryset(self.request.user, AdvertiserProfile.objects.all())
+        inf_qs = scope_support_queryset(self.request.user, InfluencerProfile.objects.all())
 
         if is_regional:
             user_qs = user_qs.filter(province=user.province)
@@ -425,7 +426,7 @@ class UserListView(BaseSupportMixin, RegionalFilterMixin, ListView):
         context['total_users'] = user_qs.count()
         context['advertisers_count'] = adv_qs.count()
         context['influencers_count'] = inf_qs.count()
-        context['team_members_count'] = ContentTeamMember.objects.count()
+        context['team_members_count'] = scope_support_queryset(self.request.user, ContentTeamMember.objects.all()).count()
         context['current_role'] = self.request.GET.get('role', '')
         context['current_search'] = self.request.GET.get('q', '')
         return context
@@ -449,7 +450,7 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
     province_field_path = 'channel__province'
 
     def get_queryset(self):
-        queryset = ChannelBooking.objects.select_related(
+        queryset = scope_support_queryset(self.request.user, ChannelBooking.objects.all()).select_related(
             'campaign',
             'campaign__advertiser',
             'channel',
@@ -459,7 +460,7 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
             'service_rate',
             'service_rate__ad_type',
         ).prefetch_related(
-            Prefetch('report', queryset=CampaignReport.objects.all())
+            Prefetch('report', queryset=scope_support_queryset(self.request.user, CampaignReport.objects.all()))
         )
 
         # ========== فیلتر Regional ==========
@@ -542,7 +543,7 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
         influencer_id = self.request.GET.get('influencer')
         if influencer_id and influencer_id.isdigit():
             try:
-                influencer = InfluencerProfile.objects.get(id=int(influencer_id))
+                influencer = scope_support_queryset(self.request.user, InfluencerProfile.objects.all()).get(id=int(influencer_id))
                 context['filtered_influencer_name'] = influencer.user.nickname
                 context['filtered_influencer_id'] = influencer_id
             except InfluencerProfile.DoesNotExist:
@@ -551,7 +552,7 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
         campaign_id = self.request.GET.get('campaign')
         if campaign_id and campaign_id.isdigit():
             try:
-                campaign = Campaign.objects.get(id=int(campaign_id))
+                campaign = scope_support_queryset(self.request.user, Campaign.objects.all()).get(id=int(campaign_id))
                 context['filtered_campaign_name'] = campaign.name
                 context['filtered_campaign_id'] = campaign_id
             except Campaign.DoesNotExist:
@@ -560,14 +561,14 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
         channel_id = self.request.GET.get('channel')
         if channel_id and channel_id.isdigit():
             try:
-                channel = Channel.objects.get(id=int(channel_id))
+                channel = scope_support_queryset(self.request.user, Channel.objects.all()).get(id=int(channel_id))
                 context['filtered_channel_name'] = channel.channel_name
                 context['filtered_channel_id'] = channel_id
             except Channel.DoesNotExist:
                 pass
 
         # آمار پایه با فیلتر Regional
-        base_qs = ChannelBooking.objects.all()
+        base_qs = scope_support_queryset(self.request.user, ChannelBooking.objects.all())
         if is_regional:
             base_qs = base_qs.filter(channel__province=user.province)
 
@@ -578,7 +579,7 @@ class CampaignBookingListView(PublishManagerRequiredMixin, RegionalFilterMixin, 
         context['completed_count'] = base_qs.filter(status='completed').count()
         context['paid_count'] = base_qs.filter(is_paid=True).count()
         context['unpaid_count'] = base_qs.filter(is_paid=False).count()
-        context['platforms'] = Platform.objects.filter(is_active=True)
+        context['platforms'] = scope_support_queryset(self.request.user, Platform.objects.all()).filter(is_active=True)
 
         if is_regional:
             context['provinces'] = Province.objects.filter(id=user.province_id)
@@ -608,7 +609,7 @@ class TeamListView(ContentManagerRequiredMixin, RegionalFilterMixin, ListView):
     province_field_path = 'province'
 
     def get_queryset(self):
-        queryset = ContentTeam.objects.annotate(
+        queryset = scope_support_queryset(self.request.user, ContentTeam.objects.all()).annotate(
             members_count_=Count('members', filter=Q(members__is_active=True)),
             orders_count_=Count('orders'),
             completed_orders_count_=Count('orders', filter=Q(orders__status='completed')),
@@ -659,7 +660,7 @@ class TeamListView(ContentManagerRequiredMixin, RegionalFilterMixin, ListView):
         is_regional = user.is_regional_manager and user.province_id
 
         # آمار پایه با فیلتر Regional
-        base_qs = ContentTeam.objects.all()
+        base_qs = scope_support_queryset(self.request.user, ContentTeam.objects.all())
         if is_regional:
             base_qs = base_qs.filter(province=user.province)
 
@@ -700,7 +701,7 @@ class ContentOrderListView(ContentManagerRequiredMixin, RegionalFilterComplexMix
         )
 
     def get_queryset(self):
-        queryset = ContentOrder.objects.select_related(
+        queryset = scope_support_queryset(self.request.user, ContentOrder.objects.all()).select_related(
             'campaign',
             'campaign__advertiser',
             'campaign__advertiser__user',
@@ -776,7 +777,7 @@ class ContentOrderListView(ContentManagerRequiredMixin, RegionalFilterComplexMix
         team_id = self.request.GET.get('team')
 
         # آمار پایه با فیلتر Regional
-        base_qs = ContentOrder.objects.all()
+        base_qs = scope_support_queryset(self.request.user, ContentOrder.objects.all())
         if is_regional:
             base_qs = base_qs.filter(
                 Q(campaign__advertiser__user__province=user.province) |
@@ -801,7 +802,7 @@ class ContentOrderListView(ContentManagerRequiredMixin, RegionalFilterComplexMix
         context['current_sort'] = self.request.GET.get('sort', '')
 
         # تیم‌ها (با فیلتر Regional اگه لازم باشه)
-        teams_qs = ContentTeam.objects.filter(is_active=True)
+        teams_qs = scope_support_queryset(self.request.user, ContentTeam.objects.all()).filter(is_active=True)
         if is_regional:
             teams_qs = teams_qs.filter(province=user.province)
         context['teams'] = teams_qs
@@ -810,7 +811,7 @@ class ContentOrderListView(ContentManagerRequiredMixin, RegionalFilterComplexMix
 
         if team_id and team_id.isdigit():
             try:
-                team = ContentTeam.objects.get(id=int(team_id))
+                team = scope_support_queryset(self.request.user, ContentTeam.objects.all()).get(id=int(team_id))
                 context['filtered_team_name'] = team.name
             except ContentTeam.DoesNotExist:
                 pass
@@ -836,7 +837,7 @@ class NotificationListView(BaseSupportMixin, RegionalFilterMixin, ListView):
     province_field_path = 'user__province'
 
     def get_queryset(self):
-        queryset = Notification.objects.select_related('user').order_by('-created_at')
+        queryset = scope_support_queryset(self.request.user, Notification.objects.all()).select_related('user').order_by('-created_at')
 
         # ========== فیلتر Regional ==========
         user = self.request.user
@@ -895,13 +896,13 @@ class NotificationListView(BaseSupportMixin, RegionalFilterMixin, ListView):
         user_id = self.request.GET.get('user')
         if user_id and user_id.isdigit():
             try:
-                user_obj = CustomUser.objects.get(id=int(user_id))
+                user_obj = scope_support_queryset(self.request.user, CustomUser.objects.all()).get(id=int(user_id))
                 context['filtered_user_name'] = user_obj.nickname or user_obj.phone_number
             except CustomUser.DoesNotExist:
                 pass
 
         # آمار پایه با فیلتر Regional
-        base_qs = Notification.objects.all()
+        base_qs = scope_support_queryset(self.request.user, Notification.objects.all())
         if is_regional:
             base_qs = base_qs.filter(user__province=user.province)
 

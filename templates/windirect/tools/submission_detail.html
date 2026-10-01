@@ -1,0 +1,17 @@
+{% extends 'windirect/base.html' %}
+{% block panel_heading %}پاسخ‌نامهٔ {{ obj.sender_id }}{% endblock %}
+{% block panel_intro %}{{ obj.form.name }} · {{ obj.get_status_display }} · {{ obj.created_at|date:'Y/m/d H:i' }}{% endblock %}
+{% block panel_content %}
+    <div class="card wd-card">
+        <div class="card-body p-4">
+            {% for row in rows %}
+                <div class="border-bottom border-light mb-3 pb-3">
+                    <h2 class="h6 text-white">{{ forloop.counter }}. {{ row.prompt }}</h2>
+                    <p class="text-light wd-message-text">{{ row.answer }}</p>
+                </div>
+            {% endfor %}
+            <a class="btn btn-outline-primary"
+               href="{% url 'windirect:submissions' obj.form_id %}">بازگشت به پاسخ‌ها</a>
+        </div>
+    </div>
+{% endblock %}

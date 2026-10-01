@@ -1,0 +1,23 @@
+{% load humanize %}
+<dl class="row text-light mb-0">
+    <dt class="col-7">قیمت اولیه</dt>
+    <dd class="col-5">
+        {{ invoice.base_plan_cost|default_if_none:0|intcomma }} تومان
+    </dd>
+    <dt class="col-7">تخفیف</dt>
+    <dd class="col-5 text-success">
+        {{ invoice.plan_discount_amount|default_if_none:0|intcomma }} تومان
+    </dd>
+    <dt class="col-7">قیمت نهایی پیش از مالیات</dt>
+    <dd class="col-5">
+        {{ invoice.plan_cost|intcomma }} تومان
+    </dd>
+    <dt class="col-7">مالیات</dt>
+    <dd class="col-5">
+        {{ invoice.plan_vat|intcomma }} تومان
+    </dd>
+    <dt class="col-7 border-top border-light pt-3">مبلغ قابل پرداخت</dt>
+    <dd class="col-5 border-top border-light pt-3 text-primary fw-bold">
+        {{ invoice.payable_amount|intcomma }} تومان
+    </dd>
+</dl>

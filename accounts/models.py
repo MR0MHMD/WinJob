@@ -27,6 +27,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         DEVELOPER = 'developer', _('توسعه‌دهنده')
         CONTENT_MANAGER = 'content_manager', _('مدیر تولید محتوا')
         PUBLISH_MANAGER = 'publish_manager', _('مدیر نشر')
+        HUMAN_MEDIA_MANAGER = 'human_media_manager', _('مدیر انسان رسانه')
         REGIONAL_MANAGER = 'regional_manager', _('مدیر استانی')
 
     # ==================== فیلدهای اصلی ====================
@@ -184,6 +185,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.role == self.Role.PUBLISH_MANAGER
 
     @property
+    def is_human_media_manager(self):
+        return self.role == self.Role.HUMAN_MEDIA_MANAGER
+
+    @property
+    def has_platform_scope(self):
+        return self.role in (self.Role.PUBLISH_MANAGER, self.Role.HUMAN_MEDIA_MANAGER)
+
+    @property
     def is_regional_manager(self):
         """مدیر استانی (جایگزین فیلد قبلی)"""
         return self.role == self.Role.REGIONAL_MANAGER
@@ -202,6 +211,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             self.Role.DEVELOPER,
             self.Role.CONTENT_MANAGER,
             self.Role.PUBLISH_MANAGER,
+            self.Role.HUMAN_MEDIA_MANAGER,
             self.Role.REGIONAL_MANAGER,
         ]
 

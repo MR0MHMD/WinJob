@@ -21,6 +21,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 
 from accounts.models import CustomUser
+from .utils import scope_support_queryset
 
 
 # ==================== Mixin های دسترسی پایه ====================
@@ -35,6 +36,9 @@ class BaseSupportMixin(UserPassesTestMixin):
 
     در صورت نداشتن دسترسی: 403 Forbidden
     """
+
+    def get_queryset(self):
+        return scope_support_queryset(self.request.user, super().get_queryset())
 
     def test_func(self):
         user = self.request.user
@@ -99,6 +103,7 @@ class PublishManagerRequiredMixin(BaseSupportMixin):
             CustomUser.Role.CEO,
             CustomUser.Role.DEVELOPER,
             CustomUser.Role.PUBLISH_MANAGER,
+            CustomUser.Role.HUMAN_MEDIA_MANAGER,
             CustomUser.Role.REGIONAL_MANAGER,  # ✅ اضافه شد
         ]
 

@@ -1,0 +1,71 @@
+{% extends 'windirect/base.html' %}
+{% block panel_heading %}اشتراک من{% endblock %}
+{% block panel_intro %}دوره‌های فعال و آتی، روزهای هدیه و سوابق خرید{% endblock %}
+{% block panel_action %}
+    <a href="{% url 'windirect:plans' %}"
+       class="btn btn-primary rounded-pill">خرید، تمدید یا ارتقا</a>
+{% endblock %}
+{% block panel_content %}
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card wd-card">
+                <div class="card-body p-4">
+                    <p class="text-primary fw-bold">{{ total_days_remaining }} روز باقی‌مانده در مجموع دوره‌های فعال و رزروشده</p>
+                    <h2 class="h5 text-white">{% if active %}{{ active.plan_name }}{% else %}اشتراک فعالی ندارید{% endif %}</h2>
+                    {% if active %}
+                        <p class="text-light">{{ active.get_kind_display }} · سقف {{ active.capabilities.max_pages }} پیج · پایان این بازه {{ active.ends_at|date:'Y/m/d H:i' }}</p>
+                    {% else %}
+                        <p class="text-muted">سوابق و خروجی اکسل قبلی در دسترس‌اند؛ برای استفادهٔ جدید یک پلن فعال کنید.</p>
+                    {% endif %}
+                    {% for period in periods %}
+                        <div class="wd-list-row">
+                            <div>
+                                <strong class="text-white">{{ period.plan_name }} · {{ period.get_kind_display }}</strong>
+                                <small class="d-block text-muted">{{ period.starts_at|date:'Y/m/d H:i' }} تا {{ period.ends_at|date:'Y/m/d H:i' }}</small>
+                            </div>
+                            <span class="text-light">{{ period.duration_days }} روز دورهٔ مبنا</span>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">دورهٔ آینده‌ای رزرو نشده است.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card wd-card h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5 text-white">معرفی و هدیه</h2>
+                    <p class="text-light">{{ account.banked_gift_days }} روز هدیه برای خرید بعدی ذخیره شده است.</p>
+                    {% if referral %}
+                        <p class="text-light">
+                            کد شما: <strong dir="ltr" class="text-primary">{{ referral.code }}</strong>
+                        </p>
+                        <p class="small text-muted">{{ referral.redemptions.count }} معرفی موفق؛ هر معرفی یک روز هدیه.</p>
+                    {% endif %}
+                    {% for gift in gifts %}
+                        <p class="small text-muted">{{ gift.days }} روز · {% if gift.period_id %}به اشتراک افزوده شده{% else %}ذخیره برای خرید بعدی{% endif %}
+                        </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card wd-card">
+        <div class="card-body p-4">
+            <h2 class="h5 text-white">سفارش‌های من</h2>
+            {% for order in orders %}
+                <div class="wd-list-row">
+                    <div>
+                        <strong class="text-white">{{ order.quote.plan_name }} · {{ order.get_kind_display }}</strong>
+                        <small class="d-block text-muted">{{ order.get_status_display }} · {{ order.created_at|date:'Y/m/d H:i' }}</small>
+                    </div>
+                    <a class="btn btn-outline-primary btn-sm"
+                       href="{% url 'windirect:subscription_order' order.pk %}">جزئیات</a>
+                </div>
+            {% empty %}
+                <div class="wd-empty">خریدی ثبت نشده است.</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% include 'windirect/tools/pagination.html' with page_obj=orders %}
+{% endblock %}
