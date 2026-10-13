@@ -1,9 +1,8 @@
 """کنترل مشترک دسترسی زمانی و سقف پیج در پنل و موتور اجرا."""
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
-from ..models import InstagramConnection, SubscriptionAccount
-from .services import current_period, account_for
+from windirect.connections.models import InstagramConnection
+from .services import current_period
 
 FEATURE_LABELS = {
     "smart_comments": "کامنت هوشمند",
@@ -49,36 +48,3 @@ def require_connection(connection, feature):
             "این پیج غیرفعال یا خارج از سقف پیج‌های اشتراک است. پیج‌های اضافی را قطع کنید."
         )
     return period
-
-
-@transaction.atomic
-def register_connection(user, connection):
-    """ثبت هم‌زمان چند پیج را با قفل حساب و رعایت سقف کنترل می‌کند."""
-    account_for(user)
-    SubscriptionAccount.objects.select_for_update().get(user=user)
-    if (
-        InstagramConnection.objects.filter(
-            owner=user, username__iexact=connection.username
-        )
-        .exclude(pk=connection.pk)
-        .exists()
-    ):
-        raise ValidationError("این حساب را قبلاً ثبت کرده‌اید.")
-    period = current_period(user)
-    if period is None:
-        raise ValidationError("ابتدا دورهٔ رایگان یا اشتراک وین دایرکت را فعال کنید.")
-    count = (
-        InstagramConnection.objects.filter(
-            owner=user, status__in=["simulated", "connected"]
-        )
-        .exclude(pk=connection.pk)
-        .count()
-    )
-    if count >= int(period.capabilities["max_pages"]):
-        raise ValidationError(
-            "به سقف پیج‌های اشتراک رسیده‌اید؛ یک پیج را قطع کنید یا پلن را ارتقا دهید."
-        )
-    connection.owner = user
-    connection.status = "simulated"
-    connection.save()
-    return connection

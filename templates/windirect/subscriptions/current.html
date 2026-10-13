@@ -1,71 +1,616 @@
-{% extends 'windirect/base.html' %}
-{% block panel_heading %}اشتراک من{% endblock %}
-{% block panel_intro %}دوره‌های فعال و آتی، روزهای هدیه و سوابق خرید{% endblock %}
-{% block panel_action %}
-    <a href="{% url 'windirect:plans' %}"
-       class="btn btn-primary rounded-pill">خرید، تمدید یا ارتقا</a>
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}اشتراک من | وین دایرکت{% endblock %}
+{% block description %}دوره‌های فعال و آتی، روزهای هدیه و سوابق خرید اشتراک وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-current { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.08), rgba(60, 118, 242, 0.08));
+    border: 1px solid rgba(7, 201, 139, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 2rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.25), rgba(60, 118, 242, 0.25));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #07c98b;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; color: #fff; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+.wd-page-header .wd-btn-buy {
+    background: linear-gradient(135deg, #fd5631, #e64a2a);
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.875rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px -2px rgba(253, 86, 49, 0.4);
+}
+.wd-page-header .wd-btn-buy:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(253, 86, 49, 0.5);
+}
+
+/* ==================== کارت‌ها ==================== */
+.wd-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.wd-card-header {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.wd-card-header-icon {
+    width: 36px; height: 36px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-card-header-icon.primary { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-card-header-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-card-header-icon.warning { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-card-header-icon.accent { background: rgba(93, 60, 242, 0.15); color: #8b5cf6; }
+.wd-card-header h2 { font-size: 1rem; font-weight: 600; margin: 0; color: #fff; }
+.wd-card-header p { color: #9691a4; font-size: 0.8rem; margin: 0.15rem 0 0; }
+.wd-card-body { padding: 1.5rem; }
+
+/* ==================== خلاصه اشتراک ==================== */
+.wd-active-summary {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.1), rgba(60, 118, 242, 0.1));
+    border: 1px solid rgba(7, 201, 139, 0.2);
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+}
+.wd-active-summary-days {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #07c98b;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+.wd-active-summary-label {
+    color: #9691a4;
+    font-size: 0.875rem;
+}
+.wd-active-summary-plan {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 1rem 0 0.5rem;
+}
+.wd-active-summary-meta {
+    color: #9691a4;
+    font-size: 0.85rem;
+}
+
+/* ==================== لیست دوره‌ها ==================== */
+.wd-period-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.wd-period-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.875rem;
+    transition: all 0.2s ease;
+}
+.wd-period-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(7, 201, 139, 0.2);
+}
+.wd-period-item.is-active {
+    background: rgba(7, 201, 139, 0.05);
+    border-color: rgba(7, 201, 139, 0.3);
+}
+.wd-period-icon {
+    width: 40px; height: 40px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-period-icon.paid { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-period-icon.gift { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-period-icon.trial { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-period-content { flex: 1; min-width: 0; }
+.wd-period-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 0 0 0.15rem;
+}
+.wd-period-meta {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin: 0;
+}
+.wd-period-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.wd-period-badge.active {
+    background: rgba(7, 201, 139, 0.2);
+    color: #07c98b;
+}
+.wd-period-badge.upcoming {
+    background: rgba(60, 118, 242, 0.2);
+    color: #6391f5;
+}
+
+/* ==================== خالی ==================== */
+.wd-empty {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+}
+.wd-empty-icon {
+    width: 72px; height: 72px;
+    margin: 0 auto 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: #666276;
+}
+.wd-empty h3 {
+    color: #fff; font-size: 1.1rem; margin: 0 0 0.5rem;
+}
+.wd-empty p {
+    color: #9691a4; margin: 0 0 1.5rem; font-size: 0.9rem;
+}
+
+/* ==================== معرف و هدیه ==================== */
+.wd-referral-code {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, rgba(253, 188, 49, 0.1), rgba(253, 86, 49, 0.1));
+    border: 1px solid rgba(253, 188, 49, 0.3);
+    border-radius: 0.875rem;
+    margin-bottom: 1rem;
+}
+.wd-referral-code-label {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+.wd-referral-code-value {
+    color: #fdbc31;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    direction: ltr;
+}
+.wd-referral-copy {
+    background: rgba(253, 188, 49, 0.15);
+    border: 1px solid rgba(253, 188, 49, 0.3);
+    color: #fdbc31;
+    width: 40px; height: 40px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.wd-referral-copy:hover {
+    background: rgba(253, 188, 49, 0.25);
+    transform: scale(1.05);
+}
+
+.wd-gift-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.wd-gift-stat {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.875rem;
+}
+.wd-gift-stat-number {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #07c98b;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+}
+.wd-gift-stat-label {
+    color: #9691a4;
+    font-size: 0.75rem;
+}
+
+.wd-gift-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.wd-gift-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    background: rgba(253, 188, 49, 0.05);
+    border: 1px solid rgba(253, 188, 49, 0.15);
+    border-radius: 0.75rem;
+    font-size: 0.8rem;
+}
+.wd-gift-item i { color: #fdbc31; font-size: 1rem; }
+.wd-gift-item-text { color: #9691a4; flex: 1; }
+.wd-gift-item-text strong { color: #fdbc31; }
+
+/* ==================== سوابق خرید ==================== */
+.wd-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.wd-order-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.875rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.wd-order-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(7, 201, 139, 0.2);
+    color: inherit;
+}
+.wd-order-content { flex: 1; min-width: 0; }
+.wd-order-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 0 0 0.15rem;
+}
+.wd-order-meta {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin: 0;
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.wd-order-status {
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.wd-order-status.pending { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-order-status.paid { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-order-status.cancelled { background: rgba(150, 145, 164, 0.15); color: #9691a4; }
+.wd-order-status.credited { background: rgba(60, 118, 242, 0.15); color: #6391f5; }
+.wd-order-arrow {
+    color: #666276;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+.wd-order-item:hover .wd-order-arrow {
+    color: #07c98b;
+    transform: translateX(-4px);
+}
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-page-header { padding: 1.25rem; }
+    .wd-page-header h1 { font-size: 1.25rem; }
+    .wd-card-body { padding: 1rem; }
+    .wd-period-item { flex-wrap: wrap; }
+    .wd-period-badge { width: 100%; text-align: center; }
+}
+</style>
 {% endblock %}
-{% block panel_content %}
-    <div class="row g-4 mb-4">
+
+{% block content %}
+<div class="container py-4 wd-current">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item active">اشتراک من</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-patch-check-fill"></i></div>
+            <div>
+                <h1>اشتراک من</h1>
+                <p>دوره‌های فعال و آتی، روزهای هدیه و سوابق خرید</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'windirect:plans' %}" class="wd-btn-buy">
+                <i class="bi bi-cart-check"></i>
+                خرید، تمدید یا ارتقا
+            </a>
+        </div>
+    </div>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- ستون راست: اشتراک فعلی + دوره‌ها -->
         <div class="col-lg-8">
-            <div class="card wd-card">
-                <div class="card-body p-4">
-                    <p class="text-primary fw-bold">{{ total_days_remaining }} روز باقی‌مانده در مجموع دوره‌های فعال و رزروشده</p>
-                    <h2 class="h5 text-white">{% if active %}{{ active.plan_name }}{% else %}اشتراک فعالی ندارید{% endif %}</h2>
-                    {% if active %}
-                        <p class="text-light">{{ active.get_kind_display }} · سقف {{ active.capabilities.max_pages }} پیج · پایان این بازه {{ active.ends_at|date:'Y/m/d H:i' }}</p>
-                    {% else %}
-                        <p class="text-muted">سوابق و خروجی اکسل قبلی در دسترس‌اند؛ برای استفادهٔ جدید یک پلن فعال کنید.</p>
-                    {% endif %}
-                    {% for period in periods %}
-                        <div class="wd-list-row">
-                            <div>
-                                <strong class="text-white">{{ period.plan_name }} · {{ period.get_kind_display }}</strong>
-                                <small class="d-block text-muted">{{ period.starts_at|date:'Y/m/d H:i' }} تا {{ period.ends_at|date:'Y/m/d H:i' }}</small>
-                            </div>
-                            <span class="text-light">{{ period.duration_days }} روز دورهٔ مبنا</span>
-                        </div>
-                    {% empty %}
-                        <p class="text-muted">دورهٔ آینده‌ای رزرو نشده است.</p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card wd-card h-100">
-                <div class="card-body p-4">
-                    <h2 class="h5 text-white">معرفی و هدیه</h2>
-                    <p class="text-light">{{ account.banked_gift_days }} روز هدیه برای خرید بعدی ذخیره شده است.</p>
-                    {% if referral %}
-                        <p class="text-light">
-                            کد شما: <strong dir="ltr" class="text-primary">{{ referral.code }}</strong>
-                        </p>
-                        <p class="small text-muted">{{ referral.redemptions.count }} معرفی موفق؛ هر معرفی یک روز هدیه.</p>
-                    {% endif %}
-                    {% for gift in gifts %}
-                        <p class="small text-muted">{{ gift.days }} روز · {% if gift.period_id %}به اشتراک افزوده شده{% else %}ذخیره برای خرید بعدی{% endif %}
-                        </p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="card wd-card">
-        <div class="card-body p-4">
-            <h2 class="h5 text-white">سفارش‌های من</h2>
-            {% for order in orders %}
-                <div class="wd-list-row">
-                    <div>
-                        <strong class="text-white">{{ order.quote.plan_name }} · {{ order.get_kind_display }}</strong>
-                        <small class="d-block text-muted">{{ order.get_status_display }} · {{ order.created_at|date:'Y/m/d H:i' }}</small>
+            <!-- کارت اشتراک فعال -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon primary">
+                        <i class="bi bi-patch-check-fill"></i>
                     </div>
-                    <a class="btn btn-outline-primary btn-sm"
-                       href="{% url 'windirect:subscription_order' order.pk %}">جزئیات</a>
+                    <div>
+                        <h2>وضعیت اشتراک</h2>
+                        <p>خلاصه‌ی وضعیت فعلی</p>
+                    </div>
                 </div>
-            {% empty %}
-                <div class="wd-empty">خریدی ثبت نشده است.</div>
-            {% endfor %}
+                <div class="wd-card-body">
+                    {% if active %}
+                        <div class="wd-active-summary">
+                            <div class="wd-active-summary-days">{{ total_days_remaining }}</div>
+                            <div class="wd-active-summary-label">روز باقی‌مانده</div>
+                            <div class="wd-active-summary-plan">{{ active.plan_name }}</div>
+                            <div class="wd-active-summary-meta">
+                                {{ active.get_kind_display }} ·
+                                سقف {{ active.capabilities.max_pages }} پیج ·
+                                پایان این بازه: {{ active.ends_at|date:'Y/m/d H:i' }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="wd-empty" style="padding: 1.5rem 1rem;">
+                            <div class="wd-empty-icon" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+                            <h3>اشتراک فعالی ندارید</h3>
+                            <p>سوابق و خروجی اکسل قبلی در دسترس‌اند؛ برای استفادهٔ جدید یک پلن فعال کنید.</p>
+                            <a href="{% url 'windirect:plans' %}" class="wd-btn-buy">
+                                <i class="bi bi-cart-check"></i>
+                                مشاهده پلن‌ها
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- کارت دوره‌ها -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon info">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+                    <div>
+                        <h2>دوره‌های فعال و رزروشده</h2>
+                        <p>پشت سر هم و به ترتیب زمان</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    {% if periods %}
+                        <div class="wd-period-list">
+                            {% for period in periods %}
+                                <div class="wd-period-item {% if forloop.first %}is-active{% endif %}">
+                                    <div class="wd-period-icon {{ period.kind }}">
+                                        {% if period.kind == 'trial' %}
+                                            <i class="bi bi-gift"></i>
+                                        {% elif period.kind == 'gift' %}
+                                            <i class="bi bi-gift-fill"></i>
+                                        {% else %}
+                                            <i class="bi bi-patch-check-fill"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="wd-period-content">
+                                        <p class="wd-period-title">{{ period.plan_name }}</p>
+                                        <p class="wd-period-meta">
+                                            {{ period.get_kind_display }} ·
+                                            {{ period.starts_at|date:'Y/m/d' }} تا {{ period.ends_at|date:'Y/m/d' }} ·
+                                            سقف {{ period.capabilities.max_pages }} پیج
+                                        </p>
+                                    </div>
+                                    {% if forloop.first %}
+                                        <span class="wd-period-badge active">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            فعال
+                                        </span>
+                                    {% else %}
+                                        <span class="wd-period-badge upcoming">
+                                            <i class="bi bi-clock"></i>
+                                            رزروشده
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">دورهٔ فعال یا رزروشده‌ای وجود ندارد.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ستون چپ: معرف و هدیه -->
+        <div class="col-lg-4">
+            <div class="wd-card h-100">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon warning">
+                        <i class="bi bi-gift"></i>
+                    </div>
+                    <div>
+                        <h2>معرفی و هدیه</h2>
+                        <p>کد معرف و پاداش‌ها</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    {% if referral %}
+                        <div class="wd-referral-code">
+                            <div>
+                                <div class="wd-referral-code-label">کد معرف شما</div>
+                                <div class="wd-referral-code-value" id="referral-code">{{ referral.code }}</div>
+                            </div>
+                            <button type="button" class="wd-referral-copy" id="copy-referral" title="کپی کد">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <div class="wd-gift-stats">
+                        <div class="wd-gift-stat">
+                            <div class="wd-gift-stat-number">{{ account.banked_gift_days }}</div>
+                            <div class="wd-gift-stat-label">روز هدیهٔ ذخیره‌شده</div>
+                        </div>
+                        <div class="wd-gift-stat">
+                            <div class="wd-gift-stat-number">
+                                {% if referral %}{{ referral.redemptions.count }}{% else %}۰{% endif %}
+                            </div>
+                            <div class="wd-gift-stat-label">معرفی موفق</div>
+                        </div>
+                    </div>
+
+                    {% if referral %}
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            هر معرفی موفق، ۱ روز هدیه برای شما ثبت می‌کند.
+                        </p>
+                    {% endif %}
+
+                    {% if gifts %}
+                        <div class="wd-gift-list">
+                            {% for gift in gifts %}
+                                <div class="wd-gift-item">
+                                    <i class="bi bi-gift-fill"></i>
+                                    <span class="wd-gift-item-text">
+                                        <strong>{{ gift.days }} روز</strong> ·
+                                        {% if gift.period_id %}به اشتراک افزوده شده{% else %}ذخیره برای خرید بعدی{% endif %}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0 small">هنوز هدیه‌ای ثبت نشده است.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-    {% include 'windirect/tools/pagination.html' with page_obj=orders %}
+
+    <!-- سوابق خرید -->
+    <div class="wd-card mt-4">
+        <div class="wd-card-header">
+            <div class="wd-card-header-icon accent">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div>
+                <h2>سوابق خرید</h2>
+                <p>سفارش‌های اشتراک شما</p>
+            </div>
+        </div>
+        <div class="wd-card-body">
+            {% if orders %}
+                <div class="wd-order-list">
+                    {% for order in orders %}
+                        <a href="{% url 'windirect:subscription_order' order.pk %}" class="wd-order-item">
+                            <div class="wd-order-content">
+                                <p class="wd-order-title">
+                                    {{ order.quote.plan_name }} · {{ order.get_kind_display }}
+                                </p>
+                                <p class="wd-order-meta">
+                                    <span>{{ order.created_at|date:'Y/m/d H:i' }}</span>
+                                    <span class="wd-order-status {{ order.status }}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                    {% if order.quote.total %}
+                                        <span>{{ order.quote.total|intcomma }} تومان</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <i class="bi bi-chevron-left wd-order-arrow"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {% if orders.has_other_pages %}
+                    <div class="mt-3">
+                        {% include 'windirect/common/pagination.html' with page_obj=orders %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="wd-empty">
+                    <div class="wd-empty-icon">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <h3>سابقه‌ای ثبت نشده</h3>
+                    <p>هنوز هیچ سفارش اشتراکی ثبت نکرده‌اید.</p>
+                    <a href="{% url 'windirect:plans' %}" class="wd-btn-buy">
+                        <i class="bi bi-cart-check"></i>
+                        مشاهده پلن‌ها
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const copyBtn = document.getElementById('copy-referral');
+    const codeEl = document.getElementById('referral-code');
+    if (copyBtn && codeEl) {
+        copyBtn.addEventListener('click', async function () {
+            const code = codeEl.textContent.trim();
+            try {
+                await navigator.clipboard.writeText(code);
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                setTimeout(() => { copyBtn.innerHTML = originalHTML; }, 1500);
+            } catch (e) {
+                console.error('Copy failed:', e);
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

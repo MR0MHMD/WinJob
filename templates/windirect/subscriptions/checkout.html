@@ -1,46 +1,973 @@
-{% extends 'windirect/base.html' %}
-{% block panel_heading %}تأیید خرید و پرداخت{% endblock %}
-{% block panel_content %}
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="card wd-card">
-                <div class="card-body p-4">
-                    <h2 class="h5 text-white">{{ order.quote.plan_name }} · {{ order.get_kind_display }}</h2>
-                    <p class="text-muted">فاکتور {{ invoice.invoice_number }} · اعتبار سفارش تا {{ order.expires_at|date:'Y/m/d H:i' }}</p>
-                    {% include 'windirect/subscriptions/amounts.html' %}
-                    {% if order.referral_id %}
-                        <p class="text-light">کد {{ order.referral.code }} · {{ order.quote.buyer_gift_days }} روز هدیه پس از دورهٔ خرید</p>
-                    {% endif %}
-                    <a href="{% url 'payment:invoice_detail' invoice.pk %}">مشاهدهٔ فاکتور در بخش مالی سایت</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="card wd-card">
-                <div class="card-body p-4">
-                    <h2 class="h5 text-white">پرداخت</h2>
-                    {% if expired or order.status != 'pending' %}
-                        <p class="text-light">این سفارش قابل شروع پرداخت نیست؛ وضعیت و سوابق را بررسی کنید.</p>
-                        <a class="btn btn-outline-primary"
-                           href="{% url 'windirect:subscription_order' order.pk %}">جزئیات سفارش</a>
-                        <a class="btn btn-outline-light" href="{% url 'windirect:plans' %}">انتخاب پلن</a>
-                    {% else %}
-                        {% if sandbox %}
-                            <p class="text-warning">محیط توسعه؛ زرین‌پال سندباکس است. پرداخت آزمایشی هم در همین دیتابیس اشتراک و تسهیم می‌سازد.</p>
-                        {% endif %}
-                        <form method="post">
-                            {% csrf_token %}{{ form.non_field_errors }}{% include 'windirect/partials/field.html' with field=form.method %}
-                            <button class="btn btn-primary w-100">پرداخت مبلغ فاکتور</button>
-                        </form>
-                        <form class="mt-3"
-                              method="post"
-                              action="{% url 'windirect:subscription_cancel' order.pk %}">
-                            {% csrf_token %}
-                            <button class="btn btn-outline-light w-100">لغو سفارش</button>
-                        </form>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}تأیید و پرداخت | وین دایرکت{% endblock %}
+{% block description %}تأیید خرید اشتراک وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-checkout { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== بردکرامب ==================== */
+.wd-checkout-steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.75rem; flex-wrap: wrap;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+}
+.wd-step-item {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    color: #9691a4; font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.wd-step-item:hover { color: #fff; }
+.wd-step-item.is-active { color: #07c98b; font-weight: 600; }
+.wd-step-item.is-done { color: #6391f5; }
+.wd-step-item .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+}
+.wd-step-item.is-active .step-num {
+    background: rgba(7, 201, 139, 0.15);
+    border-color: #07c98b;
+    color: #07c98b;
+}
+.wd-step-item.is-done .step-num {
+    background: rgba(60, 118, 242, 0.15);
+    border-color: #3c76f2;
+    color: #3c76f2;
+}
+.wd-step-arrow { color: #666276; font-size: 0.75rem; }
+
+/* ==================== کارت‌ها ==================== */
+.wd-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.wd-card-header {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.wd-card-header-icon {
+    width: 36px; height: 36px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-card-header-icon.primary { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-card-header-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-card-header-icon.warning { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-card-header-icon.accent { background: rgba(93, 60, 242, 0.15); color: #8b5cf6; }
+.wd-card-header h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+.wd-card-header p { color: #9691a4; font-size: 0.8rem; margin: 0.15rem 0 0; }
+.wd-card-body { padding: 1.5rem; }
+
+/* ==================== اطلاعات پلن ==================== */
+.wd-plan-summary {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.wd-plan-summary-icon {
+    width: 60px; height: 60px;
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.2), rgba(253, 86, 49, 0.2));
+    color: #8b5cf6;
+}
+.wd-plan-summary-content { flex: 1; min-width: 0; }
+.wd-plan-summary-name {
+    font-size: 1.15rem; font-weight: 700; color: #fff;
+    margin: 0 0 0.25rem;
+}
+.wd-plan-summary-meta {
+    color: #9691a4; font-size: 0.85rem; margin: 0;
+}
+.wd-plan-summary-meta strong { color: #fff; font-weight: 600; }
+
+/* امکانات */
+.wd-plan-features-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.wd-feature-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.85rem;
+    padding: 0.4rem 0;
+}
+.wd-feature-row i { color: #07c98b; font-size: 0.9rem; }
+.wd-feature-row.is-disabled { color: #666276; }
+.wd-feature-row.is-disabled i { color: #666276; }
+
+/* ==================== اشتراک فعال ==================== */
+.wd-active-period {
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.08), rgba(60, 118, 242, 0.08));
+    border: 1px solid rgba(7, 201, 139, 0.2);
+    border-radius: 0.875rem;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 0.85rem;
+}
+.wd-active-period-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-active-period-content { flex: 1; min-width: 0; }
+.wd-active-period-title {
+    color: #fff; font-weight: 600; font-size: 0.9rem;
+    margin: 0 0 0.15rem;
+}
+.wd-active-period-meta {
+    color: #9691a4; font-size: 0.8rem;
+    margin: 0;
+}
+
+/* ==================== ردیف جزئیات سفارش ==================== */
+.wd-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.wd-info-item {
+    display: flex; flex-direction: column; gap: 0.35rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.wd-info-label {
+    color: #9691a4; font-size: 0.75rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-info-label i { color: #07c98b; font-size: 0.8rem; }
+.wd-info-value {
+    color: #fff; font-weight: 600; font-size: 0.9rem;
+}
+.wd-info-value.ltr { direction: ltr; }
+
+/* ==================== هزینه‌ها ==================== */
+.wd-cost-list {
+    display: flex; flex-direction: column; gap: 0.75rem;
+}
+.wd-cost-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.wd-cost-row:last-child { border-bottom: 0; }
+.wd-cost-row.is-total {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 0;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+.wd-cost-row.is-payable {
+    border-top: 2px solid rgba(7, 201, 139, 0.3);
+    border-bottom: 0;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+.wd-cost-label {
+    color: #9691a4; font-size: 0.875rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.wd-cost-label i { color: #666276; font-size: 0.85rem; }
+.wd-cost-value {
+    color: #fff; font-weight: 500; font-size: 0.95rem;
+}
+.wd-cost-value.discount { color: #07c98b; }
+.wd-cost-value.total { font-weight: 700; font-size: 1.05rem; }
+.wd-cost-value.payable {
+    color: #07c98b; font-weight: 800; font-size: 1.25rem;
+}
+.wd-cost-value .currency {
+    font-size: 0.7rem; color: #9691a4; font-weight: 400;
+    margin-right: 0.25rem;
+}
+
+/* ==================== کد تخفیف ==================== */
+.wd-coupon-form {
+    display: flex; gap: 0.5rem; margin-bottom: 1rem;
+}
+.wd-coupon-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.7rem 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+.wd-coupon-input:focus {
+    border-color: #07c98b;
+    box-shadow: 0 0 0 3px rgba(7, 201, 139, 0.15);
+}
+.wd-coupon-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.wd-coupon-btn {
+    background: linear-gradient(135deg, #07c98b, #059869);
+    border: 0;
+    color: #fff;
+    padding: 0.7rem 1.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.wd-coupon-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px -4px rgba(7, 201, 139, 0.5);
+}
+.wd-coupon-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+}
+.wd-coupon-applied {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(7, 201, 139, 0.08);
+    border: 1px solid rgba(7, 201, 139, 0.3);
+    border-radius: 0.75rem;
+    color: #07c98b;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.wd-coupon-applied-remove {
+    background: none; border: 0;
+    color: #f23c49;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s ease;
+}
+.wd-coupon-applied-remove:hover { transform: scale(1.2); }
+.wd-coupon-error {
+    color: #f23c49;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-coupon-error i { font-size: 0.9rem; }
+
+/* ==================== روش پرداخت ==================== */
+.wd-payment-methods {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+.wd-payment-option {
+    background: rgba(255, 255, 255, 0.02);
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    position: relative;
+}
+.wd-payment-option:hover:not(.is-disabled) {
+    border-color: rgba(7, 201, 139, 0.4);
+    transform: translateY(-2px);
+}
+.wd-payment-option.is-selected {
+    border-color: #07c98b;
+    background: rgba(7, 201, 139, 0.08);
+    box-shadow: 0 0 0 4px rgba(7, 201, 139, 0.1);
+}
+.wd-payment-option.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.wd-payment-option-icon {
+    font-size: 1.75rem;
+    color: #07c98b;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.wd-payment-option-title {
+    color: #fff; font-weight: 600; font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+.wd-payment-option-desc {
+    color: #9691a4; font-size: 0.75rem;
+}
+.wd-payment-balance {
+    color: #07c98b; font-weight: 600; font-size: 0.85rem;
+    display: block; margin-top: 0.25rem;
+}
+.wd-payment-balance.insufficient { color: #f23c49; }
+
+/* ==================== مبلغ نهایی ==================== */
+.wd-final-amount {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.1), rgba(60, 118, 242, 0.1));
+    border: 1px solid rgba(7, 201, 139, 0.3);
+    border-radius: 1.25rem;
+    margin-bottom: 1rem;
+}
+.wd-final-label {
+    color: #9691a4; font-size: 0.85rem;
+}
+.wd-final-value {
+    color: #07c98b; font-weight: 800; font-size: 1.5rem;
+    line-height: 1.1;
+    display: flex; align-items: baseline; gap: 0.35rem;
+}
+.wd-final-value .currency {
+    font-size: 0.85rem; color: #9691a4; font-weight: 500;
+}
+
+/* ==================== دکمه‌ها ==================== */
+.wd-actions {
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+}
+.wd-actions .btn {
+    flex: 1;
+    min-width: 150px;
+    padding: 0.85rem 1.25rem;
+    border-radius: 0.875rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: all 0.25s ease;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+.wd-btn-pay {
+    background: linear-gradient(135deg, #07c98b, #059869);
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgba(7, 201, 139, 0.4);
+}
+.wd-btn-pay:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(7, 201, 139, 0.5);
+}
+.wd-btn-pay:disabled {
+    opacity: 0.5; cursor: not-allowed;
+}
+.wd-btn-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.8);
+}
+.wd-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ==================== هشدار sandbox ==================== */
+.wd-sandbox-alert {
+    background: rgba(253, 188, 49, 0.08);
+    border: 1px solid rgba(253, 188, 49, 0.2);
+    border-radius: 0.875rem;
+    padding: 0.85rem 1rem;
+    color: #fdbc31;
+    font-size: 0.85rem;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.wd-sandbox-alert i { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+/* ==================== هشدار غیرقابل پرداخت ==================== */
+.wd-expired-alert {
+    background: rgba(242, 60, 73, 0.08);
+    border: 1px solid rgba(242, 60, 73, 0.2);
+    border-radius: 0.875rem;
+    padding: 1rem 1.25rem;
+    color: #f5636d;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-info-grid { grid-template-columns: 1fr; }
+    .wd-plan-features-list { grid-template-columns: 1fr; }
+    .wd-payment-methods { grid-template-columns: 1fr; }
+    .wd-card-body { padding: 1rem; }
+    .wd-final-amount { flex-direction: column; text-align: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-checkout">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:plans' %}">پلن‌ها</a></li>
+        <li class="breadcrumb-item active">تأیید و پرداخت</li>
+    </ol>
+
+    <!-- استپ‌های ساده -->
+    <div class="wd-checkout-steps">
+        <a href="{% url 'windirect:plans' %}" class="wd-step-item is-done">
+            <span class="step-num"><i class="bi bi-check-lg"></i></span>
+            انتخاب پلن
+        </a>
+        <i class="bi bi-chevron-left wd-step-arrow"></i>
+        <span class="wd-step-item is-done">
+            <span class="step-num"><i class="bi bi-check-lg"></i></span>
+            پیش‌نمایش خرید
+        </span>
+        <i class="bi bi-chevron-left wd-step-arrow"></i>
+        <span class="wd-step-item is-active">
+            <span class="step-num">۳</span>
+            تأیید و پرداخت
+        </span>
     </div>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if order.status != 'pending' %}
+        <!-- ==================== سفارش غیرقابل پرداخت ==================== -->
+        <div class="wd-card">
+            <div class="wd-card-body">
+                <div class="wd-expired-alert mb-4">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 d-block mb-2"></i>
+                    <h3 class="h5 text-white mb-2">این سفارش قابل پرداخت نیست</h3>
+                    <p class="mb-0">وضعیت سفارش تغییر کرده است (پرداخت شده، لغو شده یا اعتبار برگشتی).</p>
+                </div>
+                <div class="wd-actions">
+                    <a href="{% url 'windirect:subscription_order' order.pk %}" class="wd-btn-cancel btn">
+                        <i class="bi bi-receipt"></i> جزئیات سفارش
+                    </a>
+                    <a href="{% url 'windirect:plans' %}" class="wd-btn-pay btn">
+                        <i class="bi bi-arrow-right"></i> انتخاب پلن جدید
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- ==================== پرداخت ==================== -->
+        <div class="row g-4">
+            <!-- ستون راست: اطلاعات پلن و سفارش -->
+            <div class="col-lg-6">
+                <!-- اطلاعات پلن -->
+                <div class="wd-card">
+                    <div class="wd-card-header">
+                        <div class="wd-card-header-icon accent">
+                            <i class="bi bi-gem"></i>
+                        </div>
+                        <div>
+                            <h2>اطلاعات پلن</h2>
+                            <p>خلاصه‌ی پلن انتخاب‌شده</p>
+                        </div>
+                    </div>
+                    <div class="wd-card-body">
+                        <div class="wd-plan-summary">
+                            <div class="wd-plan-summary-icon">
+                                {% if order.offer.plan.level >= 2 %}
+                                    <i class="bi bi-gem"></i>
+                                {% else %}
+                                    <i class="bi bi-rocket"></i>
+                                {% endif %}
+                            </div>
+                            <div class="wd-plan-summary-content">
+                                <h3 class="wd-plan-summary-name">{{ order.quote.plan_name }}</h3>
+                                <p class="wd-plan-summary-meta">
+                                    {{ order.offer.get_duration_days_display }} ·
+                                    سقف <strong>{{ order.quote.capabilities.max_pages }}</strong> پیج
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="wd-plan-features-list">
+                            <div class="wd-feature-row {% if not order.quote.capabilities.smart_comments %}is-disabled{% endif %}">
+                                <i class="bi bi-{% if order.quote.capabilities.smart_comments %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                                کامنت هوشمند
+                            </div>
+                            <div class="wd-feature-row {% if not order.quote.capabilities.smart_direct %}is-disabled{% endif %}">
+                                <i class="bi bi-{% if order.quote.capabilities.smart_direct %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                                دایرکت هوشمند
+                            </div>
+                            <div class="wd-feature-row {% if not order.quote.capabilities.showcases %}is-disabled{% endif %}">
+                                <i class="bi bi-{% if order.quote.capabilities.showcases %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                                ویترین‌ساز
+                            </div>
+                            <div class="wd-feature-row {% if not order.quote.capabilities.forms %}is-disabled{% endif %}">
+                                <i class="bi bi-{% if order.quote.capabilities.forms %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                                فرم‌ساز
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- اشتراک فعال فعلی (اگه هست) -->
+                {% if active %}
+                    <div class="wd-card">
+                        <div class="wd-card-header">
+                            <div class="wd-card-header-icon primary">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </div>
+                            <div>
+                                <h2>اشتراک فعال فعلی</h2>
+                                <p>دوره‌ای که در حال حاضر فعال است</p>
+                            </div>
+                        </div>
+                        <div class="wd-card-body">
+                            <div class="wd-active-period">
+                                <div class="wd-active-period-icon">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <div class="wd-active-period-content">
+                                    <p class="wd-active-period-title">{{ active.plan_name }}</p>
+                                    <p class="wd-active-period-meta">
+                                        پایان: {{ active.ends_at|date:'Y/m/d H:i' }} ·
+                                        سقف {{ active.capabilities.max_pages }} پیج
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- جزئیات سفارش -->
+                <div class="wd-card">
+                    <div class="wd-card-header">
+                        <div class="wd-card-header-icon info">
+                            <i class="bi bi-receipt-cutoff"></i>
+                        </div>
+                        <div>
+                            <h2>جزئیات سفارش</h2>
+                            <p>اطلاعات فاکتور و نوع عملیات</p>
+                        </div>
+                    </div>
+                    <div class="wd-card-body">
+                        <div class="wd-info-grid">
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-hash"></i> شماره فاکتور</span>
+                                <span class="wd-info-value ltr">{{ invoice.invoice_number }}</span>
+                            </div>
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-tag"></i> نوع عملیات</span>
+                                <span class="wd-info-value">{{ order.get_kind_display }}</span>
+                            </div>
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-calendar-event"></i> تاریخ ثبت</span>
+                                <span class="wd-info-value ltr">{{ order.created_at|date:'Y/m/d H:i' }}</span>
+                            </div>
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-clock"></i> مدت دوره</span>
+                                <span class="wd-info-value">{{ order.quote.duration_days }} روز</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ستون چپ: هزینه‌ها و پرداخت -->
+            <div class="col-lg-6">
+                <!-- کد تخفیف -->
+                <div class="wd-card">
+                    <div class="wd-card-header">
+                        <div class="wd-card-header-icon warning">
+                            <i class="bi bi-ticket-perforated"></i>
+                        </div>
+                        <div>
+                            <h2>کد تخفیف</h2>
+                            <p>اگر کد تخفیف دارید، اینجا اعمال کنید</p>
+                        </div>
+                    </div>
+                    <div class="wd-card-body">
+                        <div id="coupon-section">
+                            {% if order.quote.coupon_code %}
+                                <!-- کد اعمال شده -->
+                                <div class="wd-coupon-applied" id="applied-coupon">
+                                    <span>
+                                        <i class="bi bi-check-circle-fill ms-1"></i>
+                                        کد «{{ order.quote.coupon_code }}» اعمال شده
+                                    </span>
+                                    <button type="button" class="wd-coupon-applied-remove" id="remove-coupon" title="حذف کد">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                <!-- فرم اعمال کد -->
+                                <div class="wd-coupon-form">
+                                    <input type="text"
+                                           class="wd-coupon-input"
+                                           id="coupon-input"
+                                           placeholder="مثلاً: WELCOME30"
+                                           autocomplete="off">
+                                    <button type="button" class="wd-coupon-btn" id="apply-coupon-btn">
+                                        <i class="bi bi-check2"></i>
+                                        اعمال
+                                    </button>
+                                </div>
+                                <div class="wd-coupon-error d-none" id="coupon-error">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    <span id="coupon-error-text"></span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- هزینه‌ها -->
+                <div class="wd-card">
+                    <div class="wd-card-header">
+                        <div class="wd-card-header-icon primary">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div>
+                            <h2>جزئیات هزینه‌ها</h2>
+                            <p>مبالغ به تومان</p>
+                        </div>
+                    </div>
+                    <div class="wd-card-body">
+                        <div class="wd-cost-list" id="cost-list">
+                            <div class="wd-cost-row">
+                                <span class="wd-cost-label">
+                                    <i class="bi bi-tag-fill"></i>
+                                    قیمت پلن
+                                </span>
+                                <span class="wd-cost-value" id="cost-base">
+                                    {{ order.quote.base|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-cost-row" id="cost-discount-row" {% if not order.quote.discount %}style="display:none"{% endif %}>
+                                <span class="wd-cost-label">
+                                    <i class="bi bi-ticket-perforated"></i>
+                                    تخفیف
+                                </span>
+                                <span class="wd-cost-value discount" id="cost-discount">
+                                    - {{ order.quote.discount|default:0|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-cost-row">
+                                <span class="wd-cost-label">
+                                    <i class="bi bi-wallet2"></i>
+                                    مبلغ پس از تخفیف
+                                </span>
+                                <span class="wd-cost-value" id="cost-net">
+                                    {{ order.quote.net|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-cost-row">
+                                <span class="wd-cost-label">
+                                    <i class="bi bi-percent"></i>
+                                    مالیات بر ارزش افزوده ({{ order.quote.vat_rate }}٪)
+                                </span>
+                                <span class="wd-cost-value" id="cost-vat">
+                                    {{ order.quote.vat|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-cost-row is-payable">
+                                <span class="wd-cost-label" style="color: #fff; font-weight: 600;">
+                                    <i class="bi bi-cash-coin"></i>
+                                    مبلغ قابل پرداخت
+                                </span>
+                                <span class="wd-cost-value payable" id="cost-payable">
+                                    {{ order.quote.total|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- روش پرداخت -->
+                <div class="wd-card">
+                    <div class="wd-card-header">
+                        <div class="wd-card-header-icon info">
+                            <i class="bi bi-credit-card-2-front"></i>
+                        </div>
+                        <div>
+                            <h2>روش پرداخت</h2>
+                            <p>روش مورد نظر را انتخاب کنید</p>
+                        </div>
+                    </div>
+                    <div class="wd-card-body">
+                        {% if sandbox %}
+                            <div class="wd-sandbox-alert">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <div>
+                                    <strong>محیط توسعه فعال است</strong>
+                                    پرداخت‌ها در حالت سندباکس زرین‌پال انجام می‌شوند.
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <form method="post" id="checkout-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="method" id="payment-method-input" value="gateway">
+
+                            <div class="wd-payment-methods">
+                                <div class="wd-payment-option is-selected" data-method="gateway">
+                                    <i class="bi bi-credit-card-2-front-fill wd-payment-option-icon"></i>
+                                    <div class="wd-payment-option-title">درگاه بانکی</div>
+                                    <div class="wd-payment-option-desc">پرداخت امن زرین‌پال</div>
+                                </div>
+
+                                <div class="wd-payment-option {% if wallet.balance < order.quote.total %}is-disabled{% endif %}"
+                                     data-method="wallet">
+                                    <i class="bi bi-wallet2 wd-payment-option-icon"></i>
+                                    <div class="wd-payment-option-title">کیف پول</div>
+                                    <div class="wd-payment-option-desc">
+                                        موجودی:
+                                        <span class="wd-payment-balance {% if wallet.balance < order.quote.total %}insufficient{% endif %}">
+                                            {{ wallet.balance|intcomma }} تومان
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- مبلغ نهایی -->
+                            <div class="wd-final-amount mt-4">
+                                <div>
+                                    <div class="wd-final-label">مبلغ قابل پرداخت</div>
+                                    <div class="wd-final-value">
+                                        {{ order.quote.total|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </div>
+                                </div>
+                                <div class="wd-actions">
+                                    <a href="{% url 'windirect:plans' %}" class="wd-btn-cancel btn">
+                                        <i class="bi bi-x-lg"></i>
+                                        انصراف
+                                    </a>
+                                    <button type="submit" class="wd-btn-pay btn" id="pay-btn">
+                                        <i class="bi bi-shield-check"></i>
+                                        پرداخت
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- لغو سفارش -->
+                        <form method="post"
+                              action="{% url 'windirect:subscription_cancel' order.pk %}"
+                              class="mt-3"
+                              onsubmit="return confirm('آیا از لغو این سفارش مطمئن هستید؟');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn w-100" style="background: rgba(242, 60, 73, 0.08); border: 1px solid rgba(242, 60, 73, 0.2); color: #f5636d; padding: 0.65rem; border-radius: 0.75rem; font-size: 0.85rem;">
+                                <i class="bi bi-x-circle ms-1"></i>
+                                لغو این سفارش
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    window.CSRF_TOKEN = '{{ csrf_token }}';
+    window.APPLY_COUPON_URL = '{% url "windirect:apply_subscription_coupon" order.pk %}';
+    window.REMOVE_COUPON_URL = '{% url "windirect:remove_subscription_coupon" order.pk %}';
+</script>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ==================== کد تخفیف ====================
+    const couponInput = document.getElementById('coupon-input');
+    const applyBtn = document.getElementById('apply-coupon-btn');
+    const couponError = document.getElementById('coupon-error');
+    const couponErrorText = document.getElementById('coupon-error-text');
+    const removeBtn = document.getElementById('remove-coupon');
+
+    const csrfToken = window.CSRF_TOKEN;
+    const applyUrl = window.APPLY_COUPON_URL;
+    const removeUrl = window.REMOVE_COUPON_URL;
+
+    function formatMoney(num) {
+        return Number(num).toLocaleString('fa-IR');
+    }
+
+    function updateCosts(quote) {
+        document.getElementById('cost-base').innerHTML = formatMoney(quote.base) + ' <span class="currency">تومان</span>';
+        document.getElementById('cost-net').innerHTML = formatMoney(quote.net) + ' <span class="currency">تومان</span>';
+        document.getElementById('cost-vat').innerHTML = formatMoney(quote.vat) + ' <span class="currency">تومان</span>';
+        document.getElementById('cost-payable').innerHTML = formatMoney(quote.total) + ' <span class="currency">تومان</span>';
+
+        const discountRow = document.getElementById('cost-discount-row');
+        const discountValue = document.getElementById('cost-discount');
+        if (quote.discount > 0) {
+            discountRow.style.display = '';
+            discountValue.innerHTML = '- ' + formatMoney(quote.discount) + ' <span class="currency">تومان</span>';
+        } else {
+            discountRow.style.display = 'none';
+        }
+
+        // آپدیت مبلغ نهایی
+        const finalValue = document.querySelector('.wd-final-value');
+        if (finalValue) {
+            finalValue.innerHTML = formatMoney(quote.total) + ' <span class="currency">تومان</span>';
+        }
+    }
+
+    function showError(msg) {
+        couponErrorText.textContent = msg;
+        couponError.classList.remove('d-none');
+        setTimeout(() => couponError.classList.add('d-none'), 5000);
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', async function () {
+            const code = couponInput.value.trim();
+            if (!code) {
+                showError('کد تخفیف را وارد کنید.');
+                return;
+            }
+
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> در حال بررسی...';
+
+            try {
+                const response = await fetch(applyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ code: code }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateCosts(data.quote);
+                    // بازسازی بخش کوپن
+                    document.getElementById('coupon-section').innerHTML = `
+                        <div class="wd-coupon-applied" id="applied-coupon">
+                            <span>
+                                <i class="bi bi-check-circle-fill ms-1"></i>
+                                کد «${data.coupon_code}» اعمال شده
+                            </span>
+                            <button type="button" class="wd-coupon-applied-remove" id="remove-coupon" title="حذف کد">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    `;
+                    bindRemoveCoupon();
+                } else {
+                    showError(data.message || 'خطا در اعمال کد تخفیف.');
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = '<i class="bi bi-check2"></i> اعمال';
+                }
+            } catch (e) {
+                console.error(e);
+                showError('خطا در ارتباط با سرور.');
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = '<i class="bi bi-check2"></i> اعمال';
+            }
+        });
+
+        if (couponInput) {
+            couponInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyBtn.click();
+                }
+            });
+        }
+    }
+
+    function bindRemoveCoupon() {
+        const btn = document.getElementById('remove-coupon');
+        if (!btn) return;
+        btn.addEventListener('click', async function () {
+            try {
+                const response = await fetch(removeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                });
+                const data = await response.json();
+                if (data.success) {
+                    updateCosts(data.quote);
+                    location.reload();
+                } else {
+                    showError(data.message || 'خطا در حذف کد.');
+                }
+            } catch (e) {
+                showError('خطا در ارتباط با سرور.');
+            }
+        });
+    }
+
+    bindRemoveCoupon();
+
+    // ==================== روش پرداخت ====================
+    const options = document.querySelectorAll('.wd-payment-option');
+    const methodInput = document.getElementById('payment-method-input');
+
+    options.forEach(opt => {
+        opt.addEventListener('click', function () {
+            if (this.classList.contains('is-disabled')) return;
+            options.forEach(o => o.classList.remove('is-selected'));
+            this.classList.add('is-selected');
+            methodInput.value = this.dataset.method;
+        });
+    });
+
+    // ==================== ارسال فرم ====================
+    const form = document.getElementById('checkout-form');
+    const payBtn = document.getElementById('pay-btn');
+    if (form && payBtn) {
+        form.addEventListener('submit', function () {
+            payBtn.disabled = true;
+            payBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> در حال پردازش...';
+        });
+    }
+});
+</script>
 {% endblock %}

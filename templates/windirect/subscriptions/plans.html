@@ -1,80 +1,846 @@
-{% extends 'windirect/base.html' %}
+{% extends 'parent/base.html' %}
+{% load static %}
 {% load humanize %}
-{% block windirect_title %}پلن‌های وین دایرکت{% endblock %}
-{% block panel_heading %}انتخاب اشتراک وین دایرکت{% endblock %}
-{% block panel_intro %}یک اشتراک برای کاربر؛ امکانات نامحدود با سقف پیج مشخص{% endblock %}
-{% block panel_action %}
-    <a class="btn btn-outline-primary rounded-pill"
-       href="{% url 'windirect:subscription' %}">اشتراک و سوابق من</a>
+
+{% block title %}پلن‌های وین دایرکت | وین‌جاب{% endblock %}
+{% block description %}انتخاب و خرید اشتراک وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-plans { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 188, 49, 0.08), rgba(253, 86, 49, 0.08));
+    border: 1px solid rgba(253, 188, 49, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 2rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(253, 188, 49, 0.25), rgba(253, 86, 49, 0.25));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #fdbc31;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+
+/* ==================== اشتراک فعال ==================== */
+.wd-active-subscription {
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.1), rgba(60, 118, 242, 0.1));
+    border: 1px solid rgba(7, 201, 139, 0.3);
+    border-radius: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 1rem;
+    flex-wrap: wrap;
+}
+.wd-active-subscription-icon {
+    width: 48px; height: 48px;
+    border-radius: 0.875rem;
+    background: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.wd-active-subscription-content { flex: 1; min-width: 200px; }
+.wd-active-subscription-title {
+    color: #fff;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1rem;
+}
+.wd-active-subscription-meta {
+    color: #9691a4;
+    font-size: 0.85rem;
+    margin: 0.15rem 0 0;
+}
+.wd-active-subscription-btn {
+    background: rgba(7, 201, 139, 0.15);
+    border: 1px solid rgba(7, 201, 139, 0.3);
+    color: #07c98b;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+.wd-active-subscription-btn:hover {
+    background: rgba(7, 201, 139, 0.25);
+    border-color: #07c98b;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* ==================== بنر رایگان (جدا) ==================== */
+.wd-trial-banner {
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.12), rgba(93, 60, 242, 0.12));
+    border: 1px solid rgba(60, 118, 242, 0.3);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex; align-items: center; gap: 1.25rem;
+    flex-wrap: wrap;
+    position: relative;
+    overflow: hidden;
+}
+.wd-trial-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3c76f2, #5d3cf2);
+}
+.wd-trial-banner-icon {
+    width: 64px; height: 64px;
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.25), rgba(93, 60, 242, 0.25));
+    color: #6391f5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+    box-shadow: 0 8px 24px -8px rgba(60, 118, 242, 0.5);
+}
+.wd-trial-banner-content { flex: 1; min-width: 250px; }
+.wd-trial-banner-title {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.wd-trial-banner-badge {
+    background: rgba(60, 118, 242, 0.2);
+    color: #6391f5;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.wd-trial-banner-desc {
+    color: #9691a4;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    margin: 0;
+}
+.wd-trial-banner-action {
+    flex-shrink: 0;
+}
+.wd-btn-trial-lg {
+    background: linear-gradient(135deg, #3c76f2, #2d5bc4);
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.875rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 20px -4px rgba(60, 118, 242, 0.5);
+}
+.wd-btn-trial-lg:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px -4px rgba(60, 118, 242, 0.6);
+}
+.wd-trial-banner-used {
+    background: rgba(150, 145, 164, 0.15);
+    color: #9691a4;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border: 1px solid rgba(150, 145, 164, 0.2);
+}
+
+/* ==================== تب‌ها ==================== */
+.wd-tabs-wrapper {
+    margin-bottom: 1.5rem;
+}
+.wd-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.25rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.wd-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+.wd-tabs::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+.wd-tab {
+    flex: 1;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.25rem;
+    border-radius: 1rem;
+    background: transparent;
+    border: 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    position: relative;
+    font-family: inherit;
+}
+.wd-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+}
+.wd-tab.is-active {
+    background: linear-gradient(135deg, #fdbc31, #fd5631);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 20px -4px rgba(253, 188, 49, 0.5);
+}
+.wd-tab.is-active i {
+    color: #fff;
+}
+.wd-tab i {
+    color: #fdbc31;
+    font-size: 1rem;
+    transition: color 0.25s ease;
+}
+.wd-tab-badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+.wd-tab.is-active .wd-tab-badge {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== محتوای تب ==================== */
+.wd-tab-content {
+    display: none;
+    animation: wdTabFadeIn 0.35s ease;
+}
+.wd-tab-content.is-active {
+    display: block;
+}
+@keyframes wdTabFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== گرید پلن‌ها ==================== */
+.wd-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+/* ==================== کارت پلن ==================== */
+.wd-plan-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+.wd-plan-card:hover {
+    border-color: rgba(253, 188, 49, 0.4);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+}
+.wd-plan-card.is-featured {
+    border-color: rgba(253, 188, 49, 0.5);
+    background: linear-gradient(180deg, rgba(253, 188, 49, 0.06), rgba(255, 255, 255, 0.03));
+    box-shadow: 0 12px 32px -12px rgba(253, 188, 49, 0.3);
+}
+.wd-plan-card.is-featured::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #fdbc31, #fd5631);
+}
+.wd-plan-card.is-pro {
+    border-color: rgba(93, 60, 242, 0.4);
+}
+.wd-plan-card.is-pro::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #5d3cf2, #fd5631);
+}
+
+.wd-plan-badge-featured {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    background: linear-gradient(135deg, #fdbc31, #fd5631);
+    color: #fff;
+    padding: 0.35rem 0.85rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    box-shadow: 0 4px 12px -2px rgba(253, 188, 49, 0.5);
+    z-index: 2;
+}
+
+/* هدر کارت */
+.wd-plan-header {
+    padding: 2rem 1.5rem 1.5rem;
+    text-align: center;
+    position: relative;
+}
+.wd-plan-icon {
+    width: 72px; height: 72px;
+    border-radius: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+}
+.wd-plan-icon.basic {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(253, 188, 49, 0.2));
+    color: #fd5631;
+    box-shadow: 0 8px 24px -8px rgba(253, 86, 49, 0.5);
+}
+.wd-plan-icon.pro {
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.25), rgba(253, 86, 49, 0.25));
+    color: #8b5cf6;
+    box-shadow: 0 8px 24px -8px rgba(93, 60, 242, 0.5);
+}
+.wd-plan-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+}
+.wd-plan-desc {
+    color: #9691a4;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* قیمت */
+.wd-plan-price {
+    padding: 0 1.5rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.wd-plan-price-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fdbc31;
+    line-height: 1.1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+.wd-plan-price-value .currency {
+    font-size: 0.85rem;
+    color: #9691a4;
+    font-weight: 400;
+}
+.wd-plan-price-meta {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin: 0.35rem 0 0;
+}
+
+/* امکانات */
+.wd-plan-features {
+    padding: 1.5rem;
+    flex: 1;
+}
+.wd-features-title {
+    color: #9691a4;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.4rem;
+}
+.wd-feature-item {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.55rem 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+}
+.wd-feature-item.is-disabled {
+    color: #666276;
+}
+.wd-feature-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+.wd-feature-icon.yes {
+    background: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+}
+.wd-feature-icon.no {
+    background: rgba(150, 145, 164, 0.15);
+    color: #9691a4;
+}
+.wd-feature-icon.number {
+    background: rgba(60, 118, 242, 0.15);
+    color: #3c76f2;
+    font-weight: 700;
+    font-size: 0.65rem;
+}
+
+/* اکشن کارت */
+.wd-plan-action {
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.wd-plan-action .btn {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.875rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: all 0.25s ease;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+.wd-plan-action .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+}
+.wd-btn-buy {
+    background: linear-gradient(135deg, #fd5631, #e64a2a);
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgba(253, 86, 49, 0.4);
+}
+.wd-btn-buy:hover { color: #fff; }
+.wd-btn-upgrade {
+    background: linear-gradient(135deg, #5d3cf2, #4a30c2);
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgba(93, 60, 242, 0.4);
+}
+.wd-btn-upgrade:hover { color: #fff; }
+.wd-btn-disabled {
+    background: rgba(150, 145, 164, 0.15);
+    color: #9691a4;
+    cursor: not-allowed;
+    border: 1px solid rgba(150, 145, 164, 0.2);
+}
+.wd-btn-disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==================== شرایط ==================== */
+.wd-terms-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+.wd-terms-card-header {
+    display: flex; align-items: center; gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+.wd-terms-card-header-icon {
+    width: 36px; height: 36px;
+    border-radius: 0.75rem;
+    background: rgba(60, 118, 242, 0.15);
+    color: #3c76f2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.wd-terms-card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+.wd-terms-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.wd-terms-list li {
+    padding: 0.65rem 0;
+    color: #9691a4;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.wd-terms-list li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+.wd-terms-list li i {
+    color: #fdbc31;
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+
+/* ==================== Empty state ==================== */
+.wd-empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+}
+.wd-empty-state-icon {
+    width: 100px; height: 100px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 188, 49, 0.1), rgba(253, 86, 49, 0.1));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.75rem; color: #fdbc31;
+}
+.wd-empty-state h3 {
+    color: #fff; margin-bottom: 0.75rem; font-size: 1.15rem;
+}
+.wd-empty-state p {
+    color: #9691a4; margin-bottom: 0; font-size: 0.9rem;
+}
+
+/* ==================== responsive ==================== */
+@media (max-width: 767px) {
+    .wd-page-header { padding: 1.25rem; }
+    .wd-plans-grid { grid-template-columns: 1fr; }
+    .wd-plan-header { padding: 1.5rem 1rem 1rem; }
+    .wd-plan-features,
+    .wd-plan-action { padding: 1rem; }
+    .wd-trial-banner { padding: 1.25rem; }
+    .wd-tabs { padding: 0.4rem; }
+    .wd-tab { padding: 0.7rem 0.85rem; font-size: 0.8rem; min-width: 110px; }
+    .wd-tab i { font-size: 0.9rem; }
+}
+</style>
 {% endblock %}
-{% block panel_content %}
-    <div class="row g-4">
-        {% for plan in plans %}
-            <div class="col-lg-4">
-                <article class="card wd-card h-100">
-                    <div class="card-body p-4">
-                        {% if plan.is_featured %}
-                            <span class="badge bg-faded-primary text-primary mb-3">پیشنهاد وین دایرکت</span>
-                        {% endif %}
-                        <h2 class="h4 text-white">{{ plan.name }}</h2>
-                        <p class="text-muted">{{ plan.description }}</p>
-                        <p class="text-light">
-                            <strong class="text-primary">{{ plan.max_pages }}</strong> پیج مجاز
-                        </p>
-                        <ul class="wd-help-list text-light mb-4">
-                            <li>کامنت هوشمند: {% if plan.smart_comments %}دارد{% else %}ندارد{% endif %}</li>
-                            <li>دایرکت هوشمند: {% if plan.smart_direct %}دارد{% else %}ندارد{% endif %}</li>
-                            <li>ویترین‌ساز: {% if plan.showcases %}دارد{% else %}ندارد{% endif %}</li>
-                            <li>فرم‌ساز و اکسل: {% if plan.forms %}دارد{% else %}ندارد{% endif %}</li>
-                        </ul>
-                        {% for offer in plan.offers.all %}
-                            {% if offer.is_active %}
-                                <div class="border-top border-light pt-3 mt-3">
-                                    <p class="text-light mb-2">{{ offer.get_duration_days_display }} · <strong>{{ offer.price|intcomma }}</strong> تومان {% if not plan.is_trial %}
-                                        <small class="text-muted">پیش از مالیات</small>
-                            {% endif %}
-                            </p>
-                        {% if plan.is_trial %}
-                            {% if account.trial_used_at or account.first_paid_at %}
-                                <span class="text-muted">رایگان قبلاً استفاده شده یا خرید پولی انجام شده است.</span>
-                            {% else %}
-                                <form method="post" action="{% url 'windirect:trial_activate' offer.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn btn-outline-primary w-100">فعال‌سازی رایگان ۳۰ روزه</button>
-                                </form>
-                            {% endif %}
-                        {% else %}
-                            {% if plan.level < account.highest_level %}
-                                <span class="text-muted">کاهش پلن مجاز نیست.</span>
-                            {% elif paid_reference and plan.level > paid_reference.capabilities.level %}
-                                {% if offer.duration_days == paid_reference.duration_days %}
-                                    <a href="{% url 'windirect:subscribe' offer.pk %}?kind=upgrade"
-                                       class="btn btn-primary w-100">محاسبهٔ ارتقا</a>
-                                {% else %}
-                                    <span class="text-muted">برای ارتقا گزینهٔ {{ paid_reference.duration_days }} روزه را انتخاب کنید.</span>
-                                {% endif %}
-                            {% else %}
-                                <a href="{% url 'windirect:subscribe' offer.pk %}"
-                                   class="btn btn-primary w-100">
-                                    {% if account.first_paid_at %}خرید / تمدید{% else %}انتخاب پلن{% endif %}
-                                </a>
-                            {% endif %}
-                        {% endif %}
-                            </div>
-                    {% endif %}
+
+{% block content %}
+<div class="container py-4 wd-plans">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item active">پلن‌ها و اشتراک</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-gem"></i></div>
+            <div>
+                <h1 class="text-white">پلن‌های وین دایرکت</h1>
+                <p>یک اشتراک برای کاربر؛ امکانات نامحدود با سقف پیج مشخص</p>
+            </div>
+        </div>
+        <div>
+            <a class="btn btn-outline-warning rounded-pill px-4" href="{% url 'windirect:subscription' %}">
+                <i class="bi bi-person-badge ms-1"></i> اشتراک و سوابق من
+            </a>
+        </div>
+    </div>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
         {% endfor %}
+    {% endif %}
+
+    <!-- اشتراک فعال (اگه هست) -->
+    {% if active %}
+        <div class="wd-active-subscription">
+            <div class="wd-active-subscription-icon">
+                <i class="bi bi-patch-check-fill"></i>
+            </div>
+            <div class="wd-active-subscription-content">
+                <p class="wd-active-subscription-title">اشتراک فعال: {{ active.plan_name }}</p>
+                <p class="wd-active-subscription-meta">
+                    {{ active.get_kind_display }} ·
+                    سقف {{ active.capabilities.max_pages }} پیج ·
+                    پایان: {{ active.ends_at|date:'Y/m/d H:i' }}
+                </p>
+            </div>
+            <a href="{% url 'windirect:subscription' %}" class="wd-active-subscription-btn">
+                <i class="bi bi-arrow-left"></i>
+                مشاهده جزئیات
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- بنر رایگان (جدا) -->
+    {% if trial_plan and trial_offer %}
+        <div class="wd-trial-banner">
+            <div class="wd-trial-banner-icon">
+                <i class="bi bi-gift"></i>
+            </div>
+            <div class="wd-trial-banner-content">
+                <h2 class="wd-trial-banner-title">
+                    {{ trial_plan.name }}
+                    <span class="wd-trial-banner-badge">رایگان</span>
+                </h2>
+                <p class="wd-trial-banner-desc">
+                    {{ trial_plan.description|default:"یک دوره‌ی رایگان ۳۰ روزه برای شروع. فقط یک‌بار قابل استفاده است." }}
+                </p>
+            </div>
+            <div class="wd-trial-banner-action">
+                {% if account.trial_used_at or account.first_paid_at %}
+                    <span class="wd-trial-banner-used">
+                        <i class="bi bi-x-circle"></i>
+                        قبلاً استفاده شده
+                    </span>
+                {% else %}
+                    <form method="post" action="{% url 'windirect:trial_activate' trial_offer.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="wd-btn-trial-lg">
+                            <i class="bi bi-gift"></i>
+                            فعال‌سازی رایگان ۳۰ روزه
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- تب‌ها -->
+    {% if tabs %}
+        <div class="wd-tabs-wrapper">
+            <div class="wd-tabs" role="tablist">
+                {% for tab in tabs %}
+                    <button type="button"
+                            class="wd-tab {% if forloop.first %}is-active{% endif %}"
+                            data-tab-target="{{ tab.key }}"
+                            role="tab">
+                        <i class="bi bi-{{ tab.icon }}"></i>
+                        {{ tab.label }}
+                        <span class="wd-tab-badge">{{ tab.plans|length }}</span>
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- محتوای تب‌ها -->
+        {% for tab in tabs %}
+            <div class="wd-tab-content {% if forloop.first %}is-active{% endif %}" data-tab-content="{{ tab.key }}">
+                <div class="wd-plans-grid">
+                    {% for item in tab.plans %}
+                        {% with plan=item.plan offer=item.offer %}
+                            <article class="wd-plan-card
+                                {% if plan.is_featured %}is-featured{% endif %}
+                                {% if plan.level >= 2 %}is-pro{% endif %}">
+
+                                {% if plan.is_featured %}
+                                    <span class="wd-plan-badge-featured">
+                                        <i class="bi bi-star-fill"></i>
+                                        پیشنهاد وین دایرکت
+                                    </span>
+                                {% endif %}
+
+                                <!-- هدر -->
+                                <div class="wd-plan-header">
+                                    <div class="wd-plan-icon {% if plan.level >= 2 %}pro{% else %}basic{% endif %}">
+                                        {% if plan.level >= 2 %}
+                                            <i class="bi bi-gem"></i>
+                                        {% else %}
+                                            <i class="bi bi-rocket"></i>
+                                        {% endif %}
+                                    </div>
+                                    <h2 class="wd-plan-name">{{ plan.name }}</h2>
+                                    {% if plan.description %}
+                                        <p class="wd-plan-desc">{{ plan.description }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- قیمت -->
+                                <div class="wd-plan-price">
+                                    <div class="wd-plan-price-value">
+                                        {{ offer.price|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </div>
+                                    <p class="wd-plan-price-meta">
+                                        به مدت {{ offer.get_duration_days_display }} · پیش از مالیات
+                                    </p>
+                                </div>
+
+                                <!-- امکانات -->
+                                <div class="wd-plan-features">
+                                    <div class="wd-features-title">
+                                        <i class="bi bi-list-check"></i>
+                                        امکانات این پلن
+                                    </div>
+
+                                    <div class="wd-feature-item {% if not plan.smart_comments %}is-disabled{% endif %}">
+                                        <span class="wd-feature-icon {% if plan.smart_comments %}yes{% else %}no{% endif %}">
+                                            <i class="bi bi-{% if plan.smart_comments %}check-lg{% else %}x-lg{% endif %}"></i>
+                                        </span>
+                                        <span>کامنت هوشمند</span>
+                                    </div>
+
+                                    <div class="wd-feature-item {% if not plan.smart_direct %}is-disabled{% endif %}">
+                                        <span class="wd-feature-icon {% if plan.smart_direct %}yes{% else %}no{% endif %}">
+                                            <i class="bi bi-{% if plan.smart_direct %}check-lg{% else %}x-lg{% endif %}"></i>
+                                        </span>
+                                        <span>دایرکت هوشمند</span>
+                                    </div>
+
+                                    <div class="wd-feature-item {% if not plan.showcases %}is-disabled{% endif %}">
+                                        <span class="wd-feature-icon {% if plan.showcases %}yes{% else %}no{% endif %}">
+                                            <i class="bi bi-{% if plan.showcases %}check-lg{% else %}x-lg{% endif %}"></i>
+                                        </span>
+                                        <span>ویترین‌ساز</span>
+                                    </div>
+
+                                    <div class="wd-feature-item {% if not plan.forms %}is-disabled{% endif %}">
+                                        <span class="wd-feature-icon {% if plan.forms %}yes{% else %}no{% endif %}">
+                                            <i class="bi bi-{% if plan.forms %}check-lg{% else %}x-lg{% endif %}"></i>
+                                        </span>
+                                        <span>فرم‌ساز و خروجی اکسل</span>
+                                    </div>
+
+                                    <div class="wd-feature-item">
+                                        <span class="wd-feature-icon number">{{ plan.max_pages }}</span>
+                                        <span>پیج اینستاگرام مجاز</span>
+                                    </div>
+                                </div>
+
+                                <!-- اکشن -->
+                                <div class="wd-plan-action">
+                                    {% if plan.level < account.highest_level %}
+                                        <span class="wd-btn-disabled btn">
+                                            <i class="bi bi-arrow-down-circle"></i>
+                                            کاهش پلن مجاز نیست
+                                        </span>
+                                    {% elif paid_reference and plan.level > paid_reference.capabilities.level %}
+                                        {% if offer.duration_days == paid_reference.duration_days %}
+                                            <a href="{% url 'windirect:checkout_offer' offer_pk=offer.pk %}?kind=upgrade" class="wd-btn-upgrade btn">
+                                                <i class="bi bi-arrow-up-circle"></i>
+                                                ارتقا به این پلن
+                                            </a>
+                                        {% else %}
+                                            <span class="wd-btn-disabled btn">
+                                                <i class="bi bi-info-circle"></i>
+                                                دوره‌ی {{ paid_reference.duration_days }} روزه را انتخاب کنید
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{% url 'windirect:checkout_offer' offer_pk=offer.pk %}?kind=purchase" class="wd-btn-buy btn">
+                                            <i class="bi bi-cart-check"></i>
+                                            {% if account.first_paid_at %}خرید / تمدید{% else %}انتخاب این پلن{% endif %}
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <!-- Empty state -->
+        <div class="wd-empty-state">
+            <div class="wd-empty-state-icon">
+                <i class="bi bi-gem"></i>
+            </div>
+            <h3>هنوز پلنی برای عرضه ثبت نشده</h3>
+            <p>به‌زودی پلن‌های وین دایرکت در دسترس قرار می‌گیرند.</p>
+        </div>
+    {% endif %}
+
+    <!-- شرایط -->
+    <div class="wd-terms-card">
+        <div class="wd-terms-card-header">
+            <div class="wd-terms-card-header-icon">
+                <i class="bi bi-info-circle"></i>
+            </div>
+            <h2>شرایط و قوانین اشتراک</h2>
+        </div>
+        <ul class="wd-terms-list">
+            <li>
+                <i class="bi bi-check2-circle"></i>
+                <span>دوره‌ی رایگان فقط با انتخاب شما فعال می‌شود و یک‌بار قابل استفاده است.</span>
+            </li>
+            <li>
+                <i class="bi bi-check2-circle"></i>
+                <span>در صورت خرید پولی در دوره‌ی رایگان، دوره‌ی پولی از پایان دوره‌ی رایگان شروع می‌شود.</span>
+            </li>
+            <li>
+                <i class="bi bi-check2-circle"></i>
+                <span>تمدید همان پلن، روزهای باقی‌مانده را حفظ می‌کند.</span>
+            </li>
+            <li>
+                <i class="bi bi-check2-circle"></i>
+                <span>کد معرف در اولین خرید موفق، ۳۰٪ تخفیف و ۵ روز هدیه دارد.</span>
+            </li>
+            <li>
+                <i class="bi bi-check2-circle"></i>
+                <span>پایان اشتراک داده‌های قبلی را حذف نمی‌کند؛ مشاهده‌ی سابقه و دریافت اکسل قبلی همچنان باز است.</span>
+            </li>
+        </ul>
     </div>
-    </article>
-    </div>
-{% empty %}
-    <div class="col-12 wd-empty">پلن قابل عرضه‌ای ثبت نشده است.</div>
-{% endfor %}
+
 </div>
-<div class="card wd-card mt-4">
-    <div class="card-body p-4">
-        <h2 class="h5 text-white">شرایط اشتراک</h2>
-        <p class="text-light">دورهٔ رایگان فقط با انتخاب شما فعال می‌شود و یک بار قابل استفاده است. خرید در دورهٔ رایگان از پایان آن شروع می‌شود. تمدید همان پلن روزهای باقی‌مانده را حفظ می‌کند.</p>
-        <p class="text-muted mb-0">کد معرف در اولین خرید موفق، ۳۰٪ تخفیف و ۵ روز هدیه دارد. پایان اشتراک داده‌های قبلی را حذف نمی‌کند؛ مشاهدهٔ سابقه و دریافت اکسل قبلی همچنان باز است.</p>
-    </div>
-</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ==================== تب‌ها ====================
+    const tabs = document.querySelectorAll('.wd-tab');
+    const contents = document.querySelectorAll('.wd-tab-content');
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            const target = tab.getAttribute('data-tab-target');
+
+            // غیرفعال کردن همه تب‌ها
+            tabs.forEach(t => t.classList.remove('is-active'));
+            contents.forEach(c => c.classList.remove('is-active'));
+
+            // فعال کردن تب انتخاب‌شده
+            tab.classList.add('is-active');
+            const targetContent = document.querySelector(`[data-tab-content="${target}"]`);
+            if (targetContent) {
+                targetContent.classList.add('is-active');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

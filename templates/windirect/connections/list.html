@@ -1,0 +1,611 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}وین دایرکت | حساب‌های اینستاگرام{% endblock %}
+{% block description %}مدیریت حساب‌های اینستاگرام وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-connections { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.08));
+    border: 1px solid rgba(253, 86, 49, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 2rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(93, 60, 242, 0.2));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #fd5631;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+
+/* ==================== کارت‌های آماری ==================== */
+.wd-mini-stat {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+.wd-mini-stat:hover {
+    transform: translateY(-3px);
+    border-color: rgba(253, 86, 49, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+}
+.wd-mini-stat-icon {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 0.875rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+}
+.wd-mini-stat-icon.primary { background: rgba(253, 86, 49, 0.15); color: #fd5631; }
+.wd-mini-stat-icon.warning { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-mini-stat-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-mini-stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.wd-mini-stat-label { color: #9691a4; font-size: 0.8rem; }
+
+/* ==================== کارت‌های عمومی ==================== */
+.wd-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.wd-card-header {
+    padding: 1.25rem 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ==================== آیتم حساب ==================== */
+.wd-connection-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.15rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.25s ease;
+    position: relative;
+}
+.wd-connection-item:last-child { border-bottom: 0; }
+.wd-connection-item:hover { background: rgba(255, 255, 255, 0.03); }
+.wd-connection-item.disconnected { opacity: 0.65; }
+
+.wd-avatar {
+    width: 52px; height: 52px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700; color: #fff;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+}
+.wd-avatar.status-simulated { background: linear-gradient(135deg, #3c76f2, #5d3cf2); }
+.wd-avatar.status-connected { background: linear-gradient(135deg, #07c98b, #17a2b8); }
+.wd-avatar.status-disconnected { background: linear-gradient(135deg, #6c757d, #454056); }
+.wd-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.wd-connection-info { flex-grow: 1; min-width: 0; }
+.wd-connection-username {
+    font-weight: 700; color: #fff; font-size: 1rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wd-connection-meta {
+    color: #9691a4; font-size: 0.8rem; margin-top: 0.25rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.wd-connection-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+/* badge وضعیت */
+.wd-status-badge {
+    padding: 0.3rem 0.85rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.wd-status-badge.simulated { background: rgba(60, 118, 242, 0.15); color: #6391f5; }
+.wd-status-badge.connected { background: rgba(7, 201, 139, 0.15); color: #2cd19c; }
+.wd-status-badge.disconnected { background: rgba(150, 145, 164, 0.15); color: #bbb7c5; }
+
+/* dropdown سه نقطه */
+.wd-actions-dropdown .btn-dots {
+    width: 36px; height: 36px;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #9691a4;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.1rem;
+}
+.wd-actions-dropdown .btn-dots:hover {
+    background: rgba(253, 86, 49, 0.15);
+    border-color: rgba(253, 86, 49, 0.4);
+    color: #fd5631;
+}
+.wd-actions-dropdown .dropdown-menu {
+    background: #1f1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    min-width: 200px;
+    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5);
+}
+.wd-actions-dropdown .dropdown-item {
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.875rem;
+    display: flex; align-items: center; gap: 0.65rem;
+    transition: all 0.2s ease;
+}
+.wd-actions-dropdown .dropdown-item:hover {
+    background: rgba(253, 86, 49, 0.12);
+    color: #fff;
+}
+.wd-actions-dropdown .dropdown-item.danger { color: #f23c49; }
+.wd-actions-dropdown .dropdown-item.danger:hover {
+    background: rgba(242, 60, 73, 0.15);
+    color: #f5636d;
+}
+
+/* ==================== empty state ==================== */
+.wd-empty-state {
+    text-align: center; padding: 4rem 1.5rem;
+}
+.wd-empty-state-icon {
+    width: 90px; height: 90px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.1), rgba(93, 60, 242, 0.1));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; color: #fd5631;
+}
+.wd-empty-state h5 { color: #fff; margin-bottom: 0.75rem; }
+.wd-empty-state p { color: #9691a4; margin-bottom: 1.5rem; }
+
+/* ==================== مودال ==================== */
+.wd-modal .modal-content {
+    background: #1f1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    color: #fff;
+}
+.wd-modal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.25rem 1.5rem;
+}
+.wd-modal .modal-body { padding: 1.5rem; }
+.wd-modal .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem 1.5rem;
+}
+.wd-modal .btn-close { filter: invert(1) grayscale(1) brightness(2); opacity: 0.7; }
+.wd-modal .btn-close:hover { opacity: 1; }
+
+/* form داخل مودال */
+.wd-modal .form-control {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+.wd-modal .form-control:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #fd5631;
+    box-shadow: 0 0 0 0.2rem rgba(253, 86, 49, 0.15);
+    color: #fff;
+}
+.wd-modal .form-control::placeholder { color: rgba(255, 255, 255, 0.4); }
+.wd-modal .form-label { color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+/* input تأیید قطع */
+.wd-confirm-input {
+    text-align: center;
+    letter-spacing: 0.1rem;
+    font-weight: 700;
+}
+
+/* ==================== بنر هشدار اشتراک ==================== */
+.wd-alert-info {
+    background: rgba(60, 118, 242, 0.08);
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    color: #d5e7ff;
+    display: flex; align-items: flex-start; gap: 1rem;
+    margin-top: 1.5rem;
+}
+.wd-alert-info i { font-size: 1.4rem; color: #3c76f2; flex-shrink: 0; margin-top: 0.1rem; }
+.wd-alert-warning {
+    background: rgba(253, 188, 49, 0.08);
+    border: 1px solid rgba(253, 188, 49, 0.2);
+    color: #ffe9c2;
+}
+.wd-alert-warning i { color: #fdbc31; }
+
+.btn-success {
+    background: linear-gradient(135deg, #07c98b, #059869);
+    border: 0;
+    color: #fff;
+}
+.btn-success:hover {
+    background: linear-gradient(135deg, #059869, #047a54);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(7, 201, 139, 0.5);
+}
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-connection-item { flex-wrap: wrap; padding: 1rem; }
+    .wd-connection-info { order: 2; width: calc(100% - 68px); }
+    .wd-actions-dropdown { order: 3; }
+    .wd-page-header { padding: 1.25rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-connections">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item active" aria-current="page">حساب‌ها</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-instagram"></i></div>
+            <div>
+                <h1 class="text-white">حساب‌های اینستاگرام</h1>
+                <p>نام حساب را ثبت کنید تا قوانین پاسخ‌گویی را روی آن بسازید و آزمایش کنید</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if can_add_connection %}
+                <a href="{% url 'windirect:instagram_connect' %}" class="btn btn-success rounded-pill px-4">
+                    <i class="bi bi-instagram ms-1"></i> اتصال با اینستاگرام
+                </a>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                    <i class="bi bi-plus-lg ms-1"></i> حساب آزمایشی
+                </button>
+            {% elif not has_active_subscription %}
+                <a href="{% url 'windirect:plans' %}" class="btn btn-warning rounded-pill px-4">
+                    <i class="bi bi-star-fill ms-1"></i> تهیه اشتراک
+                </a>
+            {% else %}
+                <a href="{% url 'windirect:plans' %}" class="btn btn-outline-warning rounded-pill px-4">
+                    <i class="bi bi-arrow-up-circle ms-1"></i> ارتقای پلن
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- کارت‌های آماری -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon primary"><i class="bi bi-instagram"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ active_connections_count }}<span class="text-muted fs-6"> / {{ allowed_pages }}</span></div>
+                    <div class="wd-mini-stat-label">حساب فعال از ظرفیت اشتراک</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon warning"><i class="bi bi-pause-circle"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ disconnected_connections_count }}</div>
+                    <div class="wd-mini-stat-label">حساب قطع‌شده</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon info"><i class="bi bi-lightning-charge"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ total_rules_count }}</div>
+                    <div class="wd-mini-stat-label">کل قوانین ثبت‌شده</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- لیست حساب‌ها -->
+    <div class="wd-card">
+        <div class="wd-card-header">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-list-ul text-primary"></i>
+                <h5 class="text-white mb-0">حساب‌های ثبت‌شده</h5>
+                <span class="badge bg-faded-primary text-primary">{{ connections|length }}</span>
+            </div>
+        </div>
+
+        {% for connection in connections %}
+            <div class="wd-connection-item {% if connection.status == 'disconnected' %}disconnected{% endif %}">
+                <div class="wd-avatar status-{{ connection.status }}">
+                    {% if connection.profile_picture %}
+                        <img src="{{ connection.profile_picture.url }}" alt="@{{ connection.username }}">
+                    {% else %}
+                        {{ connection.username|slice:":1" }}
+                    {% endif %}
+                </div>
+
+                <div class="wd-connection-info">
+                    <div class="wd-connection-username" dir="ltr">@{{ connection.username }}</div>
+                    <div class="wd-connection-meta">
+                        <span><i class="bi bi-lightning-charge"></i> {{ connection.rule_count }} قانون</span>
+                        <span><i class="bi bi-calendar-event"></i> ثبت {{ connection.created_at|date:"Y/m/d" }}</span>
+                    </div>
+                </div>
+
+                <span class="wd-status-badge {{ connection.status }}">{{ connection.get_status_display }}</span>
+
+                {% if connection.is_official_connection %}
+                    {% if connection.is_token_expired %}
+                        <span class="wd-status-badge" style="background: rgba(242, 60, 73, 0.15); color: #f23c49;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            توکن در حال انقضا
+                        </span>
+                    {% endif %}
+                {% endif %}
+
+                <!-- dropdown سه نقطه -->
+                <div class="dropdown wd-actions-dropdown">
+                    <button class="btn-dots" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="عملیات">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'windirect:rules' %}">
+                                <i class="bi bi-lightning-charge"></i> مشاهده قوانین
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
+                        <li>
+                            {% if connection.status == 'disconnected' %}
+                                <form method="post" action="{% url 'windirect:connection_toggle' connection.pk %}" class="d-inline w-100">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item w-100 text-start">
+                                        <i class="bi bi-play-circle"></i> فعال‌سازی آزمایشی
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="dropdown-item danger w-100 text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#disconnectModal"
+                                        data-action-url="{% url 'windirect:connection_toggle' connection.pk %}"
+                                        data-connection-username="{{ connection.username }}">
+                                    <i class="bi bi-x-circle"></i> قطع پیج
+                                </button>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        {% empty %}
+            <div class="wd-empty-state">
+                <div class="wd-empty-state-icon"><i class="bi bi-instagram"></i></div>
+                <h5>هنوز حسابی ثبت نکرده‌اید</h5>
+                <p>برای شروع، اولین حساب اینستاگرام خود را اضافه کنید تا بتوانید قوانین پاسخ‌گویی بسازید</p>
+                {% if can_add_connection %}
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <a href="{% url 'windirect:instagram_connect' %}" class="btn btn-success rounded-pill px-4">
+                            <i class="bi bi-instagram ms-1"></i> اتصال رسمی با اینستاگرام
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                            <i class="bi bi-plus-lg ms-1"></i> حساب آزمایشی
+                        </button>
+                    </div>
+                {% elif not has_active_subscription %}
+                    <a href="{% url 'windirect:plans' %}" class="btn btn-warning rounded-pill px-4">
+                        <i class="bi bi-star-fill ms-1"></i> ابتدا اشتراک تهیه کنید
+                    </a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- بنر اطلاع‌رسانی -->
+    <div class="wd-alert-info">
+        <i class="bi bi-shield-lock"></i>
+        <div>
+            <strong class="text-white d-block mb-1">اتصال رسمی در مرحله‌ی بعد</strong>
+            <span>در این نسخه فقط نام کاربری ذخیره می‌شود و مالکیت حساب تأیید نمی‌شود. هیچ رمز عبور یا توکنی وارد نکنید.</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ==================== مودال افزودن حساب ==================== -->
+{% if can_add_connection %}
+<div class="modal fade wd-modal" id="addConnectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" novalidate id="addConnectionForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-plus-circle text-primary ms-2"></i>
+                        افزودن حساب اینستاگرام
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        نام کاربری اینستاگرام را بدون @ و بدون لینک وارد کنید.
+                        در این مرحله فقط برای آزمایش محلی ذخیره می‌شود.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.username.id_for_label }}">
+                            {{ form.username.label }}
+                            <span class="text-primary" aria-hidden="true">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #fd5631; font-weight: 700;">@</span>
+                            <input type="text" name="username" id="{{ form.username.id_for_label }}"
+                               class="form-control bg-dark text-light border-light"
+                               placeholder="مثلاً winjob.ir"
+                               autocomplete="off" dir="ltr"
+                               value="{{ prefilled_username|default:'' }}">
+                        </div>
+                        {% if form.username.help_text %}
+                            <div class="form-text text-muted small mt-1">{{ form.username.help_text }}</div>
+                        {% endif %}
+                        {% for error in form.username.errors %}
+                            <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle ms-1"></i>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger bg-faded-danger border-0 rounded-3 small mb-0">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-check2-circle ms-1"></i> ثبت حساب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== مودال تأیید قطع پیج ==================== -->
+<div class="modal fade wd-modal" id="disconnectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" id="disconnectForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle ms-2"></i>
+                        تأیید قطع پیج
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-light mb-3">
+                        شما در حال قطع پیج
+                        <strong class="text-warning" id="disconnectUsername" dir="ltr">@—</strong>
+                        هستید.
+                    </p>
+                    <div class="alert alert-warning bg-faded-warning border-0 rounded-3 small mb-4">
+                        <i class="bi bi-info-circle ms-1"></i>
+                        پس از قطع، قوانین روی این حساب اجرا نمی‌شوند ولی حذف نمی‌شوند. می‌توانید بعداً فعالشان کنید.
+                    </div>
+                    <label class="form-label">
+                        برای تأیید، نام کاربری این حساب را وارد کنید:
+                    </label>
+                    <input type="text" class="form-control wd-confirm-input" id="disconnectConfirmInput"
+                           placeholder="winjob.ir" autocomplete="off" dir="ltr">
+                    <div class="text-danger small mt-2 d-none" id="disconnectError">
+                        <i class="bi bi-x-circle ms-1"></i> نام کاربری را دقیقاً مطابق وارد کنید.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4" id="disconnectSubmitBtn" disabled>
+                        <i class="bi bi-x-circle ms-1"></i> قطع پیج
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ==================== مودال قطع پیج ====================
+    const disconnectModal = document.getElementById('disconnectModal');
+    if (disconnectModal) {
+        const form = document.getElementById('disconnectForm');
+        const usernameEl = document.getElementById('disconnectUsername');
+        const confirmInput = document.getElementById('disconnectConfirmInput');
+        const submitBtn = document.getElementById('disconnectSubmitBtn');
+        const errorEl = document.getElementById('disconnectError');
+        let expectedUsername = '';
+
+        disconnectModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            const actionUrl = button.getAttribute('data-action-url');
+            expectedUsername = (button.getAttribute('data-connection-username') || '').toLowerCase();
+
+            form.action = actionUrl;
+            usernameEl.textContent = '@' + expectedUsername;
+            confirmInput.value = '';
+            confirmInput.placeholder = expectedUsername;
+            submitBtn.disabled = true;
+            errorEl.classList.add('d-none');
+            setTimeout(() => confirmInput.focus(), 300);
+        });
+
+        confirmInput.addEventListener('input', function () {
+            const value = confirmInput.value.trim().toLowerCase();
+            if (value === expectedUsername) {
+                submitBtn.disabled = false;
+                errorEl.classList.add('d-none');
+            } else {
+                submitBtn.disabled = true;
+                if (value.length > 0) errorEl.classList.remove('d-none');
+                else errorEl.classList.add('d-none');
+            }
+        });
+
+        form.addEventListener('submit', function (e) {
+            if (confirmInput.value.trim().toLowerCase() !== expectedUsername) {
+                e.preventDefault();
+                errorEl.classList.remove('d-none');
+            }
+        });
+    }
+
+    // ==================== مودال افزودن: باز شدن خودکار بعد از خطا ====================
+    const addModal = document.getElementById('addConnectionModal');
+    {% if open_modal %}
+    if (addModal) {
+        const modal = new bootstrap.Modal(addModal);
+        modal.show();
+        setTimeout(function () {
+            const firstInput = addModal.querySelector('input[name="username"]');
+            if (firstInput) firstInput.focus();
+        }, 300);
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

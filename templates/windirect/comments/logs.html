@@ -1,0 +1,926 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}گزارش اجراها | وین دایرکت{% endblock %}
+{% block description %}گزارش اجرای کامنت‌های هوشمند وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-logs { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.08), rgba(93, 60, 242, 0.08));
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.2), rgba(93, 60, 242, 0.2));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #3c76f2;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+
+/* ==================== دکمه فیلتر ==================== */
+.wd-filter-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2rem;
+    color: #fff;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.wd-filter-btn:hover {
+    background: rgba(60, 118, 242, 0.15);
+    border-color: rgba(60, 118, 242, 0.4);
+    color: #fff;
+    transform: translateY(-2px);
+}
+.wd-filter-btn .filter-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px;
+    padding: 0 0.35rem;
+    background: #3c76f2;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 1rem;
+}
+
+/* ==================== کارت‌های آماری ==================== */
+.wd-mini-stat {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+.wd-mini-stat:hover {
+    transform: translateY(-3px);
+    border-color: rgba(60, 118, 242, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+}
+.wd-mini-stat-icon {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 0.875rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+}
+.wd-mini-stat-icon.primary { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-mini-stat-icon.info { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-mini-stat-icon.success { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-mini-stat-icon.danger { background: rgba(242, 60, 73, 0.15); color: #f23c49; }
+.wd-mini-stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.wd-mini-stat-label { color: #9691a4; font-size: 0.8rem; }
+
+/* ==================== چیپ‌های فیلتر فعال ==================== */
+.wd-active-filters {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(60, 118, 242, 0.05);
+    border: 1px solid rgba(60, 118, 242, 0.15);
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+.wd-active-filters-label {
+    color: #9691a4; font-size: 0.8rem; margin-left: 0.5rem;
+}
+.wd-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(60, 118, 242, 0.15);
+    border: 1px solid rgba(60, 118, 242, 0.3);
+    border-radius: 2rem;
+    color: #fff;
+    font-size: 0.75rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.wd-chip:hover {
+    background: rgba(60, 118, 242, 0.25);
+    color: #fff;
+}
+.wd-chip i { font-size: 0.85rem; }
+
+/* ==================== کارت رویداد ==================== */
+.wd-event-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.wd-event-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3c76f2, #5d3cf2);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s ease;
+}
+.wd-event-card:hover::before { transform: scaleX(1); }
+.wd-event-card:hover {
+    border-color: rgba(60, 118, 242, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* هدر رویداد */
+.wd-event-header {
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.wd-avatar {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #3c76f2, #5d3cf2);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+}
+.wd-avatar.status-simulated { background: linear-gradient(135deg, #3c76f2, #5d3cf2); }
+.wd-avatar.status-connected { background: linear-gradient(135deg, #07c98b, #17a2b8); }
+.wd-avatar.status-disconnected { background: linear-gradient(135deg, #6c757d, #454056); }
+
+.wd-event-meta {
+    flex: 1; min-width: 0;
+}
+.wd-event-username {
+    color: #fff; font-weight: 700; font-size: 0.95rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    margin-bottom: 0.15rem;
+}
+.wd-event-username i { color: #3c76f2; font-size: 0.95rem; }
+.wd-event-details {
+    color: #9691a4; font-size: 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.wd-event-details span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+.wd-event-time {
+    color: #9691a4; font-size: 0.75rem;
+    display: flex; align-items: center; gap: 0.3rem;
+    white-space: nowrap;
+}
+
+/* متن کامنت */
+.wd-event-comment {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex; align-items: flex-start; gap: 0.75rem;
+}
+.wd-event-comment-icon {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: 0.5rem;
+    background: rgba(60, 118, 242, 0.12);
+    color: #3c76f2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+}
+.wd-event-comment-text {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+/* بخش اجراها */
+.wd-event-executions {
+    padding: 1.25rem 1.5rem;
+}
+.wd-executions-title {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin-bottom: 0.85rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    font-weight: 500;
+}
+.wd-executions-title i { color: #3c76f2; }
+
+/* کارت اجرا */
+.wd-execution {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1rem 1.15rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+}
+.wd-execution:last-child { margin-bottom: 0; }
+.wd-execution:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(60, 118, 242, 0.2);
+}
+
+/* هدر اجرا */
+.wd-execution-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; margin-bottom: 0.75rem;
+}
+.wd-execution-name {
+    color: #fff; font-weight: 600; font-size: 0.875rem;
+    display: flex; align-items: center; gap: 0.4rem;
+}
+.wd-execution-name i { color: #3c76f2; font-size: 0.95rem; }
+
+/* badge وضعیت */
+.wd-status-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    white-space: nowrap;
+}
+.wd-status-badge.simulated {
+    background: rgba(60, 118, 242, 0.15);
+    color: #6391f5;
+    border: 1px solid rgba(60, 118, 242, 0.3);
+}
+.wd-status-badge.sent {
+    background: rgba(7, 201, 139, 0.15);
+    color: #2cd19c;
+    border: 1px solid rgba(7, 201, 139, 0.3);
+}
+.wd-status-badge.failed {
+    background: rgba(242, 60, 73, 0.15);
+    color: #f5636d;
+    border: 1px solid rgba(242, 60, 73, 0.3);
+}
+.wd-status-badge.follow_required {
+    background: rgba(253, 188, 49, 0.15);
+    color: #fdbc31;
+    border: 1px solid rgba(253, 188, 49, 0.3);
+}
+
+/* پیش‌نمایش پاسخ */
+.wd-execution-response {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* متن */
+.wd-response-text {
+    padding: 0.85rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    word-break: break-word;
+}
+.wd-response-text i {
+    color: #3c76f2;
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+
+/* تصویر */
+.wd-response-image {
+    position: relative;
+    width: 100%;
+    max-height: 280px;
+    background: #000;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+}
+.wd-response-image img {
+    max-width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+}
+
+/* ویدیو */
+.wd-response-video {
+    width: 100%;
+    background: #000;
+}
+.wd-response-video video {
+    width: 100%;
+    max-height: 280px;
+    display: block;
+}
+
+/* صوت */
+.wd-response-audio {
+    padding: 0.85rem 1rem;
+    display: flex; flex-direction: column; gap: 0.6rem;
+}
+.wd-response-audio-title {
+    color: #3c76f2;
+    font-size: 0.8rem;
+    display: flex; align-items: center; gap: 0.4rem;
+}
+.wd-response-audio audio {
+    width: 100%;
+    height: 40px;
+    border-radius: 0.5rem;
+    outline: none;
+}
+
+/* فالو اجباری */
+.wd-response-follow {
+    padding: 0.85rem 1rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    background: rgba(253, 188, 49, 0.05);
+}
+.wd-response-follow .follow-prompt {
+    color: #fdbc31;
+    font-size: 0.85rem;
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    line-height: 1.6;
+}
+.wd-response-follow .follow-prompt i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+.wd-response-follow .follow-button {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.85rem;
+    background: rgba(253, 188, 49, 0.15);
+    border: 1px solid rgba(253, 188, 49, 0.3);
+    border-radius: 0.5rem;
+    color: #fdbc31;
+    font-size: 0.8rem;
+    width: fit-content;
+}
+
+/* ==================== Empty state ==================== */
+.wd-empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+}
+.wd-empty-state-icon {
+    width: 100px; height: 100px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.1), rgba(93, 60, 242, 0.1));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.75rem; color: #3c76f2;
+}
+.wd-empty-state h3 {
+    color: #fff; margin-bottom: 0.75rem; font-size: 1.15rem;
+}
+.wd-empty-state p {
+    color: #9691a4; margin-bottom: 1.5rem; font-size: 0.9rem;
+}
+
+/* ==================== Pagination ==================== */
+.wd-pagination {
+    display: flex; justify-content: center; gap: 0.5rem;
+    margin-top: 2rem; flex-wrap: wrap;
+}
+.wd-page-link {
+    min-width: 40px; height: 40px; padding: 0 0.85rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    display: inline-flex; align-items: center; justify-content: center;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+.wd-page-link:hover {
+    background: rgba(60, 118, 242, 0.1);
+    border-color: rgba(60, 118, 242, 0.4);
+    color: #fff;
+}
+.wd-page-link.is-active {
+    background: linear-gradient(135deg, #3c76f2, #2d5bc4);
+    border-color: #3c76f2;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px -2px rgba(60, 118, 242, 0.4);
+}
+.wd-page-link.is-disabled { opacity: 0.3; pointer-events: none; }
+.wd-page-info {
+    min-width: 80px; height: 40px; padding: 0 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    color: #9691a4;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* ==================== مودال فیلتر ==================== */
+.wd-modal .modal-content {
+    background: #1f1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+    color: #fff;
+}
+.wd-modal .modal-header,
+.wd-modal .modal-footer {
+    border-color: rgba(255, 255, 255, 0.08);
+    padding: 1.25rem 1.5rem;
+}
+.wd-modal .modal-body { padding: 1.5rem; }
+.wd-modal .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+    opacity: 0.7;
+}
+.wd-modal .btn-close:hover { opacity: 1; }
+
+.wd-filter-group { margin-bottom: 1.25rem; }
+.wd-filter-group:last-child { margin-bottom: 0; }
+.wd-filter-group-title {
+    color: #fff; font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    font-weight: 500;
+}
+.wd-filter-group-title i { color: #3c76f2; }
+
+.wd-filter-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.7rem 1rem;
+    color: #fff;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: all 0.2s ease;
+    outline: none;
+    min-height: 44px;
+    font-family: inherit;
+}
+.wd-filter-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.wd-filter-input:hover {
+    border-color: rgba(60, 118, 242, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+}
+.wd-filter-input:focus {
+    border-color: #3c76f2;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(60, 118, 242, 0.15);
+}
+.wd-filter-select {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%239691a4' d='M7 10L1 4h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 1rem center;
+    background-size: 14px 14px;
+    padding-left: 2.75rem;
+    cursor: pointer;
+}
+.wd-filter-select option {
+    background: #1f1b2d;
+    color: #fff;
+    padding: 0.5rem;
+}
+.wd-search-input-wrapper { position: relative; }
+.wd-search-input-wrapper .wd-filter-input {
+    padding-right: 3rem;
+    padding-left: 3rem;
+}
+.wd-search-icon {
+    position: absolute;
+    right: 1rem; top: 50%;
+    transform: translateY(-50%);
+    color: #9691a4;
+    font-size: 1rem;
+    pointer-events: none;
+}
+.wd-search-clear {
+    position: absolute;
+    left: 0.85rem; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: 0;
+    color: #9691a4;
+    font-size: 1.1rem;
+    cursor: pointer; padding: 0;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+.wd-search-clear:hover { color: #f23c49; }
+
+/* ==================== responsive ==================== */
+@media (max-width: 767px) {
+    .wd-page-header { padding: 1.25rem; }
+    .wd-event-header { flex-wrap: wrap; }
+    .wd-event-time { width: 100%; justify-content: flex-end; }
+    .wd-event-comment { padding: 1rem; }
+    .wd-event-executions { padding: 1rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-logs">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item active">گزارش اجراها</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-clock-history"></i></div>
+            <div>
+                <h1 class="text-white">گزارش اجراها</h1>
+                <p>سابقه‌ی کامنت‌ها و پاسخ‌های ارسال‌شده</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="wd-filter-btn" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="bi bi-funnel"></i>
+                فیلتر
+                {% if has_filters %}
+                    <span class="filter-count">فعال</span>
+                {% endif %}
+            </button>
+            <a href="{% url 'windirect:simulation' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-play-circle ms-1"></i> آزمایش جدید
+            </a>
+        </div>
+    </div>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- کارت‌های آماری -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon primary"><i class="bi bi-play-circle"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ total_count }}</div>
+                    <div class="wd-mini-stat-label">کل اجراها</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon info"><i class="bi bi-hourglass-split"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ simulated_count }}</div>
+                    <div class="wd-mini-stat-label">شبیه‌سازی</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon success"><i class="bi bi-check-circle"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ sent_count }}</div>
+                    <div class="wd-mini-stat-label">ارسال شده</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon danger"><i class="bi bi-x-circle"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ failed_count }}</div>
+                    <div class="wd-mini-stat-label">ناموفق</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- چیپ‌های فیلتر فعال -->
+    {% if has_filters %}
+        <div class="wd-active-filters">
+            <span class="wd-active-filters-label"><i class="bi bi-funnel-fill"></i> فیلترهای فعال:</span>
+
+            {% for filter in active_filters %}
+                <a href="?{% for f in active_filters %}{% if f.key != filter.key %}{{ f.key }}={{ f.value }}&{% endif %}{% endfor %}" class="wd-chip">
+                    <i class="bi bi-{{ filter.icon }}"></i>
+                    {{ filter.label }}
+                    <i class="bi bi-x"></i>
+                </a>
+            {% endfor %}
+
+            <a href="{% url 'windirect:logs' %}" class="wd-chip" style="background: rgba(242, 60, 73, 0.15); border-color: rgba(242, 60, 73, 0.3);">
+                <i class="bi bi-x-circle"></i> پاک کردن همه
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- لیست رویدادها -->
+    {% if events %}
+        {% for event in events %}
+            <article class="wd-event-card">
+                <!-- هدر رویداد -->
+                <div class="wd-event-header">
+                    <div class="wd-avatar status-{{ event.connection.status }}">
+                        {{ event.connection.username|slice:":1" }}
+                    </div>
+                    <div class="wd-event-meta">
+                        <div class="wd-event-username" dir="ltr">
+                            <i class="bi bi-instagram"></i>
+                            @{{ event.connection.username }}
+                        </div>
+                        <div class="wd-event-details">
+                            <span><i class="bi bi-image"></i> پست: <bdi>{{ event.media_id }}</bdi></span>
+                            <span><i class="bi bi-hash"></i> کامنت: {{ event.external_comment_id|truncatechars:20 }}</span>
+                        </div>
+                    </div>
+                    <div class="wd-event-time">
+                        <i class="bi bi-clock"></i>
+                        {{ event.created_at|date:"Y/m/d H:i" }}
+                    </div>
+                </div>
+
+                <!-- متن کامنت -->
+                <div class="wd-event-comment">
+                    <div class="wd-event-comment-icon">
+                        <i class="bi bi-chat-quote"></i>
+                    </div>
+                    <div class="wd-event-comment-text">
+                        {{ event.text|linebreaksbr }}
+                    </div>
+                </div>
+
+                <!-- اجراها -->
+                <div class="wd-event-executions">
+                    {% if event.executions.all %}
+                        <div class="wd-executions-title">
+                            <i class="bi bi-lightning-charge-fill"></i>
+                            {{ event.executions.all|length }} قانون اجرا شد
+                        </div>
+
+                        {% for execution in event.executions.all %}
+                            <div class="wd-execution">
+                                <!-- هدر اجرا -->
+                                <div class="wd-execution-header">
+                                    <div class="wd-execution-name">
+                                        <i class="bi bi-lightning-charge"></i>
+                                        {{ execution.automation.name }}
+                                    </div>
+                                    <span class="wd-status-badge {{ execution.status }}">
+                                        {% if execution.status == 'simulated' %}
+                                            <i class="bi bi-hourglass-split"></i> شبیه‌سازی
+                                        {% elif execution.status == 'sent' %}
+                                            <i class="bi bi-check-circle-fill"></i> ارسال شد
+                                        {% elif execution.status == 'failed' %}
+                                            <i class="bi bi-x-circle-fill"></i> ناموفق
+                                        {% elif execution.status == 'follow_required' %}
+                                            <i class="bi bi-person-plus-fill"></i> فالو اجباری
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <!-- پیش‌نمایش پاسخ -->
+                                <div class="wd-execution-response">
+                                    {% if execution.response_payload.kind == 'text' %}
+                                        <div class="wd-response-text">
+                                            <i class="bi bi-chat-left-text"></i>
+                                            <div>{{ execution.response_payload.text|linebreaksbr }}</div>
+                                        </div>
+
+                                    {% elif execution.response_payload.kind == 'image' %}
+                                        {# اول از payload.url و اگه نبود از فایل automation #}
+                                        {% if execution.response_payload.url %}
+                                            <div class="wd-response-image">
+                                                <img src="{{ execution.response_payload.url }}" alt="تصویر پاسخ" loading="lazy">
+                                            </div>
+                                        {% elif execution.automation.direct_message_file %}
+                                            <div class="wd-response-image">
+                                                <img src="{{ execution.automation.direct_message_file.url }}" alt="تصویر پاسخ" loading="lazy">
+                                            </div>
+                                        {% endif %}
+
+                                    {% elif execution.response_payload.kind == 'video' %}
+                                        {% if execution.response_payload.url %}
+                                            <div class="wd-response-video">
+                                                <video controls preload="metadata" playsinline>
+                                                    <source src="{{ execution.response_payload.url }}" type="video/mp4">
+                                                </video>
+                                            </div>
+                                        {% elif execution.automation.direct_message_file %}
+                                            <div class="wd-response-video">
+                                                <video controls preload="metadata" playsinline>
+                                                    <source src="{{ execution.automation.direct_message_file.url }}" type="video/mp4">
+                                                </video>
+                                            </div>
+                                        {% endif %}
+
+                                    {% elif execution.response_payload.kind == 'audio' %}
+                                        <div class="wd-response-audio">
+                                            <div class="wd-response-audio-title">
+                                                <i class="bi bi-music-note-beamed"></i> پیام صوتی
+                                            </div>
+                                            {% if execution.response_payload.url %}
+                                                <audio controls preload="metadata" src="{{ execution.response_payload.url }}"></audio>
+                                            {% elif execution.automation.direct_message_file %}
+                                                <audio controls preload="metadata" src="{{ execution.automation.direct_message_file.url }}"></audio>
+                                            {% endif %}
+                                        </div>
+
+                                    {% elif execution.response_payload.kind == 'follow_prompt' %}
+                                        <div class="wd-response-follow">
+                                            <div class="follow-prompt">
+                                                <i class="bi bi-person-plus-fill"></i>
+                                                <div>{{ execution.response_payload.prompt_text|default:"باید پیج را فالو کنید" }}</div>
+                                            </div>
+                                            {% if execution.response_payload.button_text %}
+                                                <div class="follow-button">
+                                                    <i class="bi bi-hand-index-thumb"></i>
+                                                    {{ execution.response_payload.button_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                    {% else %}
+                                        <div class="wd-response-text">
+                                            <i class="bi bi-dash-circle"></i>
+                                            <div class="text-muted">پاسخ ثبت نشده</div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="wd-executions-title" style="margin-bottom: 0; color: #9691a4;">
+                            <i class="bi bi-info-circle"></i>
+                            هیچ قانونی با این کامنت تطبیق پیدا نکرد.
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if events.has_other_pages %}
+            <div class="wd-pagination">
+                {% if events.has_previous %}
+                    <a href="?page={{ events.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="wd-page-link">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <span class="wd-page-link is-disabled"><i class="bi bi-chevron-right"></i></span>
+                {% endif %}
+
+                {% for num in events.paginator.page_range %}
+                    {% if num == events.number %}
+                        <span class="wd-page-link is-active">{{ num }}</span>
+                    {% elif num > events.number|add:"-3" and num < events.number|add:"3" %}
+                        <a href="?page={{ num }}{% if querystring %}&{{ querystring }}{% endif %}" class="wd-page-link">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                <span class="wd-page-info">{{ events.number }} / {{ events.paginator.num_pages }}</span>
+
+                {% if events.has_next %}
+                    <a href="?page={{ events.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="wd-page-link">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                {% else %}
+                    <span class="wd-page-link is-disabled"><i class="bi bi-chevron-left"></i></span>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty state -->
+        <div class="wd-empty-state">
+            <div class="wd-empty-state-icon">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <h3>هنوز گزارشی برای نمایش نیست</h3>
+            <p>
+                {% if has_filters %}
+                    با فیلترهای انتخابی نتیجه‌ای یافت نشد. فیلترها را پاک کنید.
+                {% else %}
+                    برای دیدن گزارش، یک آزمایش انجام دهید یا منتظر کامنت‌های واقعی بمانید.
+                {% endif %}
+            </p>
+            {% if has_filters %}
+                <a href="{% url 'windirect:logs' %}" class="btn btn-outline-primary rounded-pill px-4">
+                    <i class="bi bi-x-circle ms-1"></i> پاک کردن فیلترها
+                </a>
+            {% else %}
+                <a href="{% url 'windirect:simulation' %}" class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-play-circle ms-1"></i> ثبت اولین آزمایش
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- ==================== مودال فیلتر ==================== -->
+<div class="modal fade wd-modal" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="get">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-funnel text-primary ms-2"></i>
+                        فیلتر گزارش‌ها
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- جستجو -->
+                    <div class="wd-filter-group">
+                        <label class="wd-filter-group-title" for="filterSearch">
+                            <i class="bi bi-search"></i> جستجو
+                        </label>
+                        <div class="wd-search-input-wrapper">
+                            <i class="bi bi-search wd-search-icon"></i>
+                            <input type="text"
+                                   class="wd-filter-input"
+                                   id="filterSearch"
+                                   name="q"
+                                   value="{{ q }}"
+                                   placeholder="جستجوی متن کامنت، آیدی کانال..."
+                                   autocomplete="off">
+                            {% if q %}
+                                <button type="button" class="wd-search-clear" onclick="document.getElementById('filterSearch').value='';">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- حساب -->
+                    {% if connections %}
+                        <div class="wd-filter-group">
+                            <label class="wd-filter-group-title" for="filterConnection">
+                                <i class="bi bi-instagram"></i> حساب اینستاگرام
+                            </label>
+                            <select class="wd-filter-input wd-filter-select" id="filterConnection" name="connection">
+                                <option value="">همه حساب‌ها</option>
+                                {% for conn in connections %}
+                                    <option value="{{ conn.pk }}" {% if selected_connection == conn.pk|stringformat:'s' %}selected{% endif %}>
+                                        @{{ conn.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+
+                    <!-- وضعیت -->
+                    <div class="wd-filter-group">
+                        <label class="wd-filter-group-title" for="filterStatus">
+                            <i class="bi bi-toggle-on"></i> وضعیت اجرا
+                        </label>
+                        <select class="wd-filter-input wd-filter-select" id="filterStatus" name="status">
+                            <option value="">همه وضعیت‌ها</option>
+                            <option value="simulated" {% if selected_status == 'simulated' %}selected{% endif %}>شبیه‌سازی شد</option>
+                            <option value="sent" {% if selected_status == 'sent' %}selected{% endif %}>ارسال شد</option>
+                            <option value="failed" {% if selected_status == 'failed' %}selected{% endif %}>ناموفق</option>
+                            <option value="follow_required" {% if selected_status == 'follow_required' %}selected{% endif %}>فالو اجباری</option>
+                        </select>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'windirect:logs' %}" class="btn btn-outline-danger rounded-pill px-4">
+                        <i class="bi bi-x-circle ms-1"></i> پاک کردن
+                    </a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-check2-circle ms-1"></i> اعمال فیلتر
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

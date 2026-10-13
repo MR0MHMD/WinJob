@@ -1,0 +1,1891 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if editing %}ویرایش کامنت هوشمند{% else %}ساخت کامنت هوشمند{% endif %} | وین دایرکت
+{% endblock %}
+{% block description %}ساخت و ویرایش کامنت هوشمند وین دایرکت{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* ==================== پایه ==================== */
+        .wd-rule-form {
+            margin-top: 2.5rem;
+            color: #fff;
+        }
+
+        /* ==================== input و select یکدست ==================== */
+        .wd-rule-form .form-control,
+        .wd-rule-form .form-select,
+        .wd-rule-form .wd-control,
+        .wd-rule-form .wd-select,
+        .wd-rule-form textarea {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            color: #fff !important;
+            border-radius: 0.75rem !important;
+            padding: 0.7rem 1rem !important;
+            font-size: 0.9rem !important;
+            line-height: 1.5 !important;
+            width: 100% !important;
+            transition: all 0.25s ease !important;
+            min-height: 44px !important;
+            box-shadow: none !important;
+        }
+
+        .wd-rule-form .form-control:focus,
+        .wd-rule-form .form-select:focus,
+        .wd-rule-form textarea:focus {
+            background: rgba(255, 255, 255, 0.06) !important;
+            border-color: #fd5631 !important;
+            box-shadow: 0 0 0 0.2rem rgba(253, 86, 49, 0.15) !important;
+            color: #fff !important;
+            outline: none !important;
+        }
+
+        .wd-rule-form .form-control::placeholder,
+        .wd-rule-form textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .wd-rule-form .form-select option {
+            background: #1f1b2d !important;
+            color: #fff !important;
+        }
+
+        .wd-rule-form textarea.form-control,
+        .wd-rule-form textarea.wd-control {
+            min-height: 80px !important;
+            resize: vertical !important;
+        }
+
+        /* ==================== هدر ==================== */
+        .wd-page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.08));
+            border: 1px solid rgba(253, 86, 49, 0.2);
+            border-radius: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .wd-page-header-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(93, 60, 242, 0.2));
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: #fd5631;
+            flex-shrink: 0;
+        }
+
+        .wd-page-header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .wd-page-header p {
+            color: #9691a4;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* ==================== کارت‌ها ==================== */
+        .wd-step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .wd-step-header {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .wd-step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fd5631, #5d3cf2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .wd-step-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .wd-step-subtitle {
+            color: #9691a4;
+            font-size: 0.8rem;
+            margin: 0.15rem 0 0;
+        }
+
+        .wd-step-body {
+            padding: 1.5rem;
+        }
+
+        /* ==================== کارت‌های انتخابی ==================== */
+        .wd-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .wd-choice-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .wd-choice-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(253, 86, 49, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .wd-choice-card.is-selected {
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.1);
+            box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.1);
+        }
+
+        .wd-choice-card i {
+            font-size: 2rem;
+            color: #fd5631;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .wd-choice-card .title {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .wd-choice-card .desc {
+            color: #9691a4;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        /* ==================== input row ==================== */
+        .wd-input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .wd-input-row .btn {
+            border-radius: 0.75rem;
+            padding: 0.7rem 1.25rem;
+            min-width: 50px;
+        }
+
+        /* ==================== لیبل ==================== */
+        .wd-form-label {
+            color: #fff;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .wd-form-help {
+            color: #9691a4;
+            font-size: 0.8rem;
+            margin-top: 0.35rem;
+        }
+
+        /* ==================== لیست تگ‌ها ==================== */
+        .wd-tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .wd-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(253, 86, 49, 0.12);
+            border: 1px solid rgba(253, 86, 49, 0.3);
+            color: #fff;
+            padding: 0.4rem 0.85rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+        }
+
+        .wd-tag button {
+            background: none;
+            border: 0;
+            color: #f23c49;
+            padding: 0;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s ease;
+        }
+
+        .wd-tag button:hover {
+            background: rgba(242, 60, 73, 0.2);
+        }
+
+        /* ==================== ۴ کارت نوع محتوا ==================== */
+        .wd-kind-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .wd-kind-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            border-radius: 0.875rem;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .wd-kind-card:hover {
+            border-color: rgba(253, 86, 49, 0.4);
+        }
+
+        .wd-kind-card.is-active {
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.1);
+        }
+
+        .wd-kind-card i {
+            font-size: 1.75rem;
+            color: #fd5631;
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        .wd-kind-card span {
+            font-size: 0.875rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* ==================== فایل آپلود ==================== */
+        .wd-file-upload {
+            position: relative;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            padding: 2rem 1rem;
+            text-align: center;
+            transition: all 0.25s ease;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            display: block;
+        }
+
+        .wd-file-upload:hover {
+            border-color: rgba(253, 86, 49, 0.5);
+            background: rgba(253, 86, 49, 0.05);
+        }
+
+        .wd-file-upload input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .wd-file-upload .wd-file-icon {
+            font-size: 2.5rem;
+            color: #fd5631;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .wd-file-upload .wd-file-title {
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .wd-file-upload .wd-file-desc {
+            color: #9691a4;
+            font-size: 0.8rem;
+        }
+
+        .wd-file-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .wd-file-preview i {
+            font-size: 1.5rem;
+            color: #07c98b;
+        }
+
+        .wd-file-preview .name {
+            color: #fff;
+            font-size: 0.875rem;
+            word-break: break-all;
+        }
+
+        .wd-file-preview .size {
+            color: #9691a4;
+            font-size: 0.75rem;
+        }
+
+        .wd-file-remove {
+            margin-inline-start: auto;
+            background: rgba(242, 60, 73, 0.1);
+            border: 1px solid rgba(242, 60, 73, 0.3);
+            color: #f23c49;
+            border-radius: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .wd-file-remove:hover {
+            background: rgba(242, 60, 73, 0.2);
+        }
+
+        /* ==================== پروگرس بار ==================== */
+        .wd-progress-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(253, 86, 49, 0.05);
+            border: 1px solid rgba(253, 86, 49, 0.2);
+            border-radius: 0.75rem;
+        }
+
+        .wd-progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .wd-progress-title {
+            color: #fff;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .wd-progress-percent {
+            color: #fd5631;
+            font-size: 0.875rem;
+            font-weight: 700;
+        }
+
+        .wd-progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .wd-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fd5631, #5d3cf2);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .wd-progress-info {
+            color: #9691a4;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        /* ==================== بنر هشدار ==================== */
+        .wd-alert-info {
+            background: rgba(60, 118, 242, 0.08);
+            border: 1px solid rgba(60, 118, 242, 0.2);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            color: #d5e7ff;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .wd-alert-info i {
+            font-size: 1.25rem;
+            color: #3c76f2;
+            flex-shrink: 0;
+        }
+
+        /* ==================== مودال ==================== */
+        .wd-modal .modal-content {
+            background: #1f1b2d;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+            color: #fff;
+        }
+
+        .wd-modal .modal-header,
+        .wd-modal .modal-footer {
+            border-color: rgba(255, 255, 255, 0.08);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .wd-modal .modal-body {
+            padding: 1.5rem;
+        }
+
+        .wd-modal .btn-close {
+            filter: invert(1) grayscale(1) brightness(2);
+            opacity: 0.7;
+        }
+
+        .wd-modal .btn-close:hover {
+            opacity: 1;
+        }
+
+        /* ==================== فوتر دکمه‌ها ==================== */
+        .wd-form-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* ==================== responsive ==================== */
+        @media (max-width: 767px) {
+            .wd-page-header {
+                padding: 1.25rem;
+            }
+
+            .wd-kind-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .wd-step-body {
+                padding: 1rem;
+            }
+        }
+
+        /* ==================== پست‌های اینستاگرام ==================== */
+        .wd-post-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 0.25rem;
+        }
+
+        .wd-post-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            border-radius: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .wd-post-card:hover {
+            border-color: rgba(253, 86, 49, 0.5);
+            background: rgba(253, 86, 49, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .wd-post-card.is-selected {
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.1);
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.15);
+        }
+
+        .wd-post-card-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.15));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .wd-post-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .wd-post-card-image .post-type-badge {
+            position: absolute;
+            top: 0.35rem;
+            right: 0.35rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 0.15rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .wd-post-card-info {
+            padding: 0.5rem 0.6rem;
+        }
+
+        .wd-post-card-caption {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.7rem;
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            word-break: break-word;
+        }
+
+        .wd-post-card-id {
+            color: #9691a4;
+            font-size: 0.6rem;
+            font-family: monospace;
+            margin-top: 0.25rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 wd-rule-form">
+
+        <!-- بردکرامب -->
+        <ol class="breadcrumb breadcrumb-light mb-4">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'windirect:rules' %}">کامنت هوشمند</a></li>
+            <li class="breadcrumb-item active">{% if editing %}ویرایش{% else %}ساخت{% endif %}</li>
+        </ol>
+
+        <!-- هدر صفحه -->
+        <div class="wd-page-header">
+            <div class="d-flex align-items-center gap-3">
+                <div class="wd-page-header-icon"><i class="bi bi-lightning-charge"></i></div>
+                <div>
+                    <h1 class="text-white">
+                        {% if editing %}ویرایش کامنت هوشمند{% else %}ساخت کامنت هوشمند جدید{% endif %}
+                    </h1>
+                    <p>فعال‌سازها و پاسخ‌های کامنت را تنظیم کنید</p>
+                </div>
+            </div>
+            <div>
+                <a href="{% url 'windirect:rules' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-right ms-1"></i> بازگشت
+                </a>
+            </div>
+        </div>
+
+        <!-- پیام‌ها -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                    <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- خطاهای کلی فرم -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger bg-faded-danger border-0 rounded-3 mb-4">
+                {% for error in form.non_field_errors %}
+                    <div><i class="bi bi-x-circle-fill ms-1"></i> {{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" id="ruleForm" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {{ form.target_type }}
+            {{ form.reply_channel }}
+            {{ form.post_media_id }}
+            {{ form.post_is_simulated }}
+            {{ form.direct_message_kind }}
+
+            <!-- ==================== input های hidden برای media ==================== -->
+            <input type="hidden" name="media_upload_id" id="mediaUploadId" value="">
+
+            <!-- ==================== Step 1: نام و پیج ==================== -->
+            <section class="wd-step">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۱</div>
+                    <div>
+                        <h2 class="wd-step-title">نام و پیج</h2>
+                        <p class="wd-step-subtitle">این کامنت هوشمند روی کدام پیج و با چه نامی ساخته شود؟</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="wd-form-label" for="{{ form.name.id_for_label }}">
+                                نام کامنت هوشمند <span class="text-primary">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="wd-form-label" for="{{ form.connection.id_for_label }}">
+                                حساب اینستاگرام <span class="text-primary">*</span>
+                            </label>
+                            {{ form.connection }}
+                            {% for error in form.connection.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 2: نوع هدف ==================== -->
+            <section class="wd-step">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۲</div>
+                    <div>
+                        <h2 class="wd-step-title">هدف کامنت هوشمند</h2>
+                        <p class="wd-step-subtitle">روی پست اعمال شود یا لایو؟</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="wd-choice-grid">
+                        <div class="wd-choice-card {% if form.target_type.value == 'post' or not form.target_type.value %}is-selected{% endif %}"
+                             data-target-choice="post">
+                            <i class="bi bi-image"></i>
+                            <div class="title">پست</div>
+                            <div class="desc">پاسخ به کامنت‌های روی پست</div>
+                        </div>
+                        <div class="wd-choice-card {% if form.target_type.value == 'live' %}is-selected{% endif %}"
+                             data-target-choice="live">
+                            <i class="bi bi-broadcast"></i>
+                            <div class="title">لایو</div>
+                            <div class="desc">پاسخ خودکار در دایرکت هنگام لایو</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 3: فعال‌سازها ==================== -->
+            <section class="wd-step">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۳</div>
+                    <div>
+                        <h2 class="wd-step-title">فعال‌سازها</h2>
+                        <p class="wd-step-subtitle">حداکثر ۳ کلمه که با دیدنشان پاسخ ارسال می‌شود</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="wd-form-label">افزودن فعال‌ساز</label>
+                            <div class="wd-input-row">
+                                <input type="text" class="form-control wd-control" id="keywordInput"
+                                       placeholder="مثلاً قیمت" maxlength="100" autocomplete="off">
+                                <button type="button" class="btn btn-primary" id="addKeywordBtn">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div class="wd-form-help">فقط ۳ کلمه مجاز است.</div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="wd-form-label">نوع تطبیق</label>
+                            {{ form.match_type }}
+                            {% for error in form.match_type.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="keywordList" class="wd-tag-list"></div>
+                    <div id="keywordEmpty" class="wd-form-help text-center py-3">
+                        هنوز فعال‌سازی اضافه نکرده‌اید
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 4: کانال پاسخ (فقط post) ==================== -->
+            <section class="wd-step" data-step="channel" data-show-for="post">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۴</div>
+                    <div>
+                        <h2 class="wd-step-title">کانال پاسخ</h2>
+                        <p class="wd-step-subtitle">پاسخ در دایرکت داده شود یا در کامنت؟</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="wd-choice-grid">
+                        <div class="wd-choice-card {% if form.reply_channel.value == 'comment' %}is-selected{% endif %}"
+                             data-channel-choice="comment">
+                            <i class="bi bi-chat-left-text"></i>
+                            <div class="title">پاسخ در کامنت</div>
+                            <div class="desc">متن‌های پاسخ به‌صورت تصادفی (ضد اسپم)</div>
+                        </div>
+                        <div class="wd-choice-card {% if form.reply_channel.value == 'direct' or not form.reply_channel.value %}is-selected{% endif %}"
+                             data-channel-choice="direct">
+                            <i class="bi bi-chat-dots"></i>
+                            <div class="title">پاسخ در دایرکت</div>
+                            <div class="desc">ارسال پیام مستقیم به مخاطب</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 5: انتخاب پست + فالو اجباری ==================== -->
+            <section class="wd-step" data-step="post" data-show-for="post">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۵</div>
+                    <div>
+                        <h2 class="wd-step-title">انتخاب پست و فالو اجباری</h2>
+                        <p class="wd-step-subtitle">روی کدام پست اعمال شود و آیا فالو اجباری باشد؟</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <!-- انتخاب پست -->
+                    <div id="postSelectedBox" class="d-none">
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 mb-3"
+                             style="background: rgba(253, 86, 49, 0.08); border: 1px solid rgba(253, 86, 49, 0.2);">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="bi bi-image-fill fs-3 text-primary"></i>
+                                <div>
+                                    <div class="text-white fw-bold" id="postSelectedId">—</div>
+                                    <small class="text-muted">پست انتخاب‌شده</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="clearPostBtn">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="postEmptyBox" class="mb-3">
+                        <button type="button" class="btn btn-outline-primary rounded-pill px-4" data-bs-toggle="modal"
+                                data-bs-target="#postPickerModal">
+                            <i class="bi bi-plus-lg ms-1"></i> انتخاب پست
+                        </button>
+                        <div class="wd-form-help mt-2">
+                            اگر پستی انتخاب نکنید، قانون روی همهٔ پست‌ها اعمال می‌شود.
+                        </div>
+                    </div>
+
+                    <!-- فالو اجباری (فقط اگه direct باشه) -->
+                    <div id="followSection" class="d-none">
+                        <hr class="my-4" style="border-color: rgba(255,255,255,0.08);">
+                        <div class="form-check form-switch mb-3">
+                            {{ form.require_follow }}
+                            <label class="form-check-label text-white" for="{{ form.require_follow.id_for_label }}">
+                                فالو اجباری
+                                <span class="d-block text-muted small mt-1">آیا مخاطب باید قبل از دریافت پیام، پیج را فالو کند؟</span>
+                            </label>
+                        </div>
+
+                        <div id="followFields" class="d-none">
+                            <div class="mb-3">
+                                <label class="wd-form-label" for="{{ form.follow_prompt_text.id_for_label }}">
+                                    متن پیام فالو
+                                </label>
+                                {{ form.follow_prompt_text }}
+                                {% for error in form.follow_prompt_text.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-0">
+                                <label class="wd-form-label" for="{{ form.follow_prompt_button.id_for_label }}">
+                                    متن دکمه فالو
+                                </label>
+                                {{ form.follow_prompt_button }}
+                                {% for error in form.follow_prompt_button.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 6: محتوای پیام (direct یا live) ==================== -->
+            <section class="wd-step" data-step="message" data-show-for="direct,live">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۶</div>
+                    <div>
+                        <h2 class="wd-step-title">محتوای پیام</h2>
+                        <p class="wd-step-subtitle">چه چیزی برای مخاطب ارسال شود؟</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="wd-kind-grid">
+                        <div class="wd-kind-card {% if form.direct_message_kind.value == 'text' or not form.direct_message_kind.value %}is-active{% endif %}"
+                             data-kind="text">
+                            <i class="bi bi-card-text"></i>
+                            <span>متن</span>
+                        </div>
+                        <div class="wd-kind-card {% if form.direct_message_kind.value == 'audio' %}is-active{% endif %}"
+                             data-kind="audio">
+                            <i class="bi bi-mic"></i>
+                            <span>صوت</span>
+                        </div>
+                        <div class="wd-kind-card {% if form.direct_message_kind.value == 'image' %}is-active{% endif %}"
+                             data-kind="image">
+                            <i class="bi bi-image"></i>
+                            <span>تصویر</span>
+                        </div>
+                        <div class="wd-kind-card {% if form.direct_message_kind.value == 'video' %}is-active{% endif %}"
+                             data-kind="video">
+                            <i class="bi bi-camera-video"></i>
+                            <span>ویدیو</span>
+                        </div>
+                    </div>
+
+                    <div id="messageTextField">
+                        <label class="wd-form-label" for="{{ form.direct_message_text.id_for_label }}">
+                            متن پیام
+                        </label>
+                        {{ form.direct_message_text }}
+                        {% for error in form.direct_message_text.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="messageFileField" class="d-none">
+                        <label class="wd-form-label">
+                            فایل مدیا
+                        </label>
+
+                        <!-- فایل فعلی (در ویرایش) -->
+                        <div class="wd-file-preview mb-3 d-none" id="currentFilePreview">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <div>
+                                <div class="name" id="currentFileName">—</div>
+                                <div class="size" id="currentFileSize">—</div>
+                            </div>
+                            <button type="button" class="wd-file-remove" id="removeCurrentFileBtn">
+                                <i class="bi bi-trash ms-1"></i> حذف
+                            </button>
+                        </div>
+
+                        <!-- باکس آپلود -->
+                        <label class="wd-file-upload d-block" id="fileUploadBox">
+                            <input type="file" id="mediaFileInput" accept="">
+                            <i class="bi bi-cloud-arrow-up wd-file-icon"></i>
+                            <div class="wd-file-title">فایل را انتخاب کنید یا اینجا رها کنید</div>
+                            <div class="wd-file-desc" id="fileUploadHint">
+                                فرمت‌های مجاز را انتخاب کنید
+                            </div>
+                        </label>
+
+                        <!-- پیش‌نمایش فایل جدید -->
+                        <div class="wd-file-preview d-none" id="newFilePreview">
+                            <i class="bi bi-file-earmark-check-fill"></i>
+                            <div>
+                                <div class="name" id="newFileName">—</div>
+                                <div class="size" id="newFileSize">—</div>
+                            </div>
+                            <button type="button" class="wd-file-remove" id="removeNewFileBtn">
+                                <i class="bi bi-trash ms-1"></i> حذف
+                            </button>
+                        </div>
+
+                        <!-- پروگرس بار آپلود -->
+                        <div class="wd-progress-box d-none" id="uploadProgressBox">
+                            <div class="wd-progress-header">
+                                <span class="wd-progress-title" id="uploadProgressTitle">در حال آپلود...</span>
+                                <span class="wd-progress-percent" id="uploadProgressPercent">۰٪</span>
+                            </div>
+                            <div class="wd-progress-bar-track">
+                                <div class="wd-progress-bar-fill" id="uploadProgressFill"></div>
+                            </div>
+                            <div class="wd-progress-info" id="uploadProgressInfo">—</div>
+                        </div>
+
+                        <!-- پیام خطا -->
+                        <div class="text-danger small mt-2 d-none" id="uploadErrorMessage"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== Step 7: پاسخ کامنت (comment + post) ==================== -->
+            <section class="wd-step" data-step="comment" data-show-for="comment">
+                <div class="wd-step-header">
+                    <div class="wd-step-number" data-step-number>۷</div>
+                    <div>
+                        <h2 class="wd-step-title">متن‌های پاسخ کامنت</h2>
+                        <p class="wd-step-subtitle">حداکثر ۳ متن؛ هر بار یکی به‌صورت تصادفی انتخاب می‌شود</p>
+                    </div>
+                </div>
+                <div class="wd-step-body">
+                    <div class="wd-alert-info">
+                        <i class="bi bi-shield-check"></i>
+                        <div>هر بار که مخاطب جدیدی کامنت می‌گذارد، سیستم یکی از این متن‌ها را به‌صورت تصادفی ارسال
+                            می‌کند تا از اسپم جلوگیری شود.
+                        </div>
+                    </div>
+
+                    <div id="replyInputs">
+                        <div class="mb-3">
+                            <label class="wd-form-label">متن پاسخ ۱</label>
+                            <textarea class="form-control wd-control" rows="2" maxlength="2000"
+                                      placeholder="متن اول..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="wd-form-label">متن پاسخ ۲ (اختیاری)</label>
+                            <textarea class="form-control wd-control" rows="2" maxlength="2000"
+                                      placeholder="متن دوم..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="wd-form-label">متن پاسخ ۳ (اختیاری)</label>
+                            <textarea class="form-control wd-control" rows="2" maxlength="2000"
+                                      placeholder="متن سوم..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== فوتر دکمه‌ها ==================== -->
+            <div class="wd-form-footer">
+                <button type="submit" class="btn btn-primary rounded-pill px-4" id="submitBtn">
+                    <i class="bi bi-check2-circle ms-1"></i>
+                    <span id="submitBtnText">{% if editing %}ذخیره تغییرات{% else %}ساخت کامنت هوشمند{% endif %}</span>
+                </button>
+                <a href="{% url 'windirect:rules' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                    انصراف
+                </a>
+            </div>
+
+            <!-- input های مخفی -->
+            <div id="hiddenKeywordInputs"></div>
+            <div id="hiddenReplyInputs"></div>
+        </form>
+    </div>
+
+    <!-- ==================== مودال انتخاب پست ==================== -->
+    <div class="modal fade wd-modal" id="postPickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-image text-primary ms-2"></i>
+                        انتخاب پست
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="postPickerBody">
+                    <div class="text-center py-5" id="postPickerLoading">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">در حال بارگذاری...</span>
+                        </div>
+                        <p class="text-light mb-1">در حال دریافت پست‌های پیج...</p>
+                        <p class="text-muted small mb-0">این ممکنه چند ثانیه طول بکشه</p>
+                    </div>
+
+                    <div class="text-center py-5 d-none" id="postPickerError">
+                        <i class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
+                        <p class="text-light mt-3 mb-2" id="postPickerErrorText">خطا در دریافت پست‌ها</p>
+                        <button type="button" class="btn btn-outline-primary rounded-pill px-4" id="postPickerRetry">
+                            <i class="bi bi-arrow-clockwise ms-1"></i> تلاش دوباره
+                        </button>
+                    </div>
+
+                    <div class="text-center py-5 d-none" id="postPickerEmpty">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-light mt-3 mb-0">هیچ پستی در این پیج پیدا نشد</p>
+                    </div>
+
+                    <div class="d-none" id="postPickerGrid">
+                        <div class="wd-alert-info mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            <div>پستی رو انتخاب کنید که می‌خواید قانون کامنت هوشمند روش اعمال بشه.</div>
+                        </div>
+                        <div class="wd-post-grid" id="postPickerGridInner"></div>
+                    </div>
+
+                    <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4 w-100"
+                                id="selectSimulatedPost">
+                            <i class="bi bi-flask ms-1"></i>
+                            استفاده از پست آزمایشی (بدون اتصال به اینستاگرام)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== مودال تأیید تغییر نوع محتوا ==================== -->
+    <div class="modal fade wd-modal" id="changeKindModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-warning">
+                        <i class="bi bi-exclamation-triangle ms-2"></i>
+                        تغییر نوع محتوا
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-light mb-0">
+                        با تغییر نوع محتوا، متن یا فایلی که وارد کرده‌اید <strong class="text-danger">پاک
+                        می‌شود</strong>. ادامه می‌دهید؟
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal"
+                            id="cancelKindChange">
+                        انصراف
+                    </button>
+                    <button type="button" class="btn btn-warning rounded-pill px-4" id="confirmKindChange">
+                        بله، تغییر بده
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ==================== متغیرهای سراسری ====================
+    const initialKeywords = {{ existing_keywords|safe }} || [];
+    const initialReplies = {{ existing_replies|safe }} || [];
+    const existingMedia = {{ existing_media|safe }} || null;
+    const MAX_KEYWORDS = {{ max_keywords|default:3 }};
+    const UPLOAD_URL = '{% url "windirect:upload_media" %}';
+    const CONNECTION_IDS = {
+        {% for conn in form.fields.connection.queryset %}
+        "{{ conn.pk }}": "{{ conn.username }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    const state = {
+        targetType: document.querySelector('input[name="target_type"]').value || 'post',
+        replyChannel: document.querySelector('input[name="reply_channel"]').value || 'direct',
+        messageKind: document.querySelector('input[name="direct_message_kind"]').value || 'text',
+        keywords: [...initialKeywords],
+        // فایل مدیا
+        mediaUploadId: null,
+        mediaUrl: null,
+        mediaFileName: null,
+        mediaFileSize: null,
+        isUploading: false,
+    };
+
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+    // ==================== Step 2: نوع هدف ====================
+    const targetInput = $('input[name="target_type"]');
+    $$('[data-target-choice]').forEach(card => {
+        card.addEventListener('click', () => {
+            const value = card.dataset.targetChoice;
+            targetInput.value = value;
+            state.targetType = value;
+            $$('[data-target-choice]').forEach(c => c.classList.toggle('is-selected', c === card));
+            updateVisibility();
+        });
+    });
+
+    // ==================== Step 3: فعال‌سازها ====================
+    const keywordInput = $('#keywordInput');
+    const addKeywordBtn = $('#addKeywordBtn');
+    const keywordList = $('#keywordList');
+    const keywordEmpty = $('#keywordEmpty');
+
+    function renderKeywords() {
+        keywordList.innerHTML = '';
+        keywordEmpty.classList.toggle('d-none', state.keywords.length > 0);
+        state.keywords.forEach((kw, i) => {
+            const tag = document.createElement('div');
+            tag.className = 'wd-tag';
+            tag.innerHTML = `<span dir="auto">${escapeHtml(kw)}</span>
+        <button type="button" data-index="${i}" title="حذف">
+            <i class="bi bi-x"></i>
+        </button>`;
+            tag.querySelector('button').addEventListener('click', () => {
+                state.keywords.splice(i, 1);
+                renderKeywords();
+                syncHiddenKeywords();
+            });
+            keywordList.appendChild(tag);
+        });
+        const full = state.keywords.length >= MAX_KEYWORDS;
+        keywordInput.disabled = full;
+        addKeywordBtn.disabled = full;
+        keywordInput.placeholder = full ? `حداکثر ${MAX_KEYWORDS} فعال‌ساز` : 'مثلاً قیمت';
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+    }
+
+    function addKeyword() {
+        const value = keywordInput.value.trim();
+        if (!value || state.keywords.length >= MAX_KEYWORDS) return;
+        if (state.keywords.some(k => k.toLowerCase() === value.toLowerCase())) {
+            keywordInput.value = '';
+            return;
+        }
+        state.keywords.push(value);
+        keywordInput.value = '';
+        renderKeywords();
+        syncHiddenKeywords();
+    }
+
+    addKeywordBtn.addEventListener('click', addKeyword);
+    keywordInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addKeyword();
+        }
+    });
+
+    function syncHiddenKeywords() {
+        const container = $('#hiddenKeywordInputs');
+        container.innerHTML = '';
+        state.keywords.forEach(kw => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'keywords[]';
+            input.value = kw;
+            container.appendChild(input);
+        });
+    }
+
+    // ==================== Step 4: کانال پاسخ ====================
+    const channelInput = $('input[name="reply_channel"]');
+    $$('[data-channel-choice]').forEach(card => {
+        card.addEventListener('click', () => {
+            const value = card.dataset.channelChoice;
+            channelInput.value = value;
+            state.replyChannel = value;
+            $$('[data-channel-choice]').forEach(c => c.classList.toggle('is-selected', c === card));
+            updateVisibility();
+        });
+    });
+
+    // ==================== Step 5: انتخاب پست ====================
+    const postInput = $('input[name="post_media_id"]');
+    const postSimulatedInput = $('input[name="post_is_simulated"]');
+    const postSelectedBox = $('#postSelectedBox');
+    const postEmptyBox = $('#postEmptyBox');
+    const postSelectedId = $('#postSelectedId');
+
+    $('#clearPostBtn')?.addEventListener('click', () => {
+        postInput.value = '';
+        postSimulatedInput.value = 'false';
+        postSelectedBox.classList.add('d-none');
+        postEmptyBox.classList.remove('d-none');
+    });
+
+    // ==================== فالو اجباری ====================
+    const requireFollowInput = $('#id_require_follow');
+    const followFields = $('#followFields');
+
+    function updateFollowFields() {
+        if (requireFollowInput?.checked) {
+            followFields.classList.remove('d-none');
+        } else {
+            followFields.classList.add('d-none');
+        }
+    }
+
+    requireFollowInput?.addEventListener('change', updateFollowFields);
+
+    // ==================== Step 6: نوع محتوا ====================
+    const kindInput = $('input[name="direct_message_kind"]');
+    const textField = $('#messageTextField');
+    const fileField = $('#messageFileField');
+    let pendingKind = null;
+
+    function applyKind(kind) {
+        state.messageKind = kind;
+        kindInput.value = kind;
+        $$('[data-kind]').forEach(c => c.classList.toggle('is-active', c.dataset.kind === kind));
+
+        if (kind === 'text') {
+            textField.classList.remove('d-none');
+            fileField.classList.add('d-none');
+            clearFileInput();
+        } else {
+            textField.classList.add('d-none');
+            fileField.classList.remove('d-none');
+            updateFileHint(kind);
+            if ($('#id_direct_message_text')) $('#id_direct_message_text').value = '';
+        }
+
+        renumberSteps();
+    }
+
+    function updateFileHint(kind) {
+        const hints = {
+            audio: 'فرمت‌های مجاز: AAC، M4A، WAV، MP4 (حداکثر ۲۵ مگابایت)',
+            image: 'فرمت‌های مجاز: PNG، JPG، JPEG (حداکثر ۸ مگابایت)',
+            video: 'فرمت‌های مجاز: MP4، OGG، AVI، MOV، WEBM (حداکثر ۲۵ مگابایت)',
+        };
+        const accepts = {
+            audio: 'audio/*,.aac,.m4a,.wav,.mp4',
+            image: 'image/png,image/jpeg,.png,.jpg,.jpeg',
+            video: 'video/*,.mp4,.ogg,.avi,.mov,.webm',
+        };
+        const fileInput = $('#mediaFileInput');
+        if (fileInput) fileInput.accept = accepts[kind] || '';
+        $('#fileUploadHint').textContent = hints[kind] || '';
+    }
+
+    // ==================== پاک کردن فایل ====================
+    function clearFileInput() {
+        const fileInput = $('#mediaFileInput');
+        if (fileInput) fileInput.value = '';
+
+        state.mediaUploadId = null;
+        state.mediaUrl = null;
+        state.mediaFileName = null;
+        state.mediaFileSize = null;
+
+        // پاک کردن hidden ها
+        $('#mediaUploadId').value = '';
+
+        // مخفی کردن پیش‌نمایش‌ها
+        $('#newFilePreview').classList.add('d-none');
+        $('#currentFilePreview').classList.add('d-none');
+        $('#uploadProgressBox').classList.add('d-none');
+        $('#uploadErrorMessage').classList.add('d-none');
+        $('#uploadErrorMessage').textContent = '';
+
+        // نمایش باکس آپلود
+        $('#fileUploadBox').classList.remove('d-none');
+    }
+
+    // ==================== آپلود فایل ====================
+    const fileInput = $('#mediaFileInput');
+    const fileUploadBox = $('#fileUploadBox');
+    const newFilePreview = $('#newFilePreview');
+    const uploadProgressBox = $('#uploadProgressBox');
+    const uploadProgressFill = $('#uploadProgressFill');
+    const uploadProgressPercent = $('#uploadProgressPercent');
+    const uploadProgressInfo = $('#uploadProgressInfo');
+    const uploadProgressTitle = $('#uploadProgressTitle');
+    const uploadErrorMessage = $('#uploadErrorMessage');
+
+    fileInput?.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        // چک سمت کلاینت
+        const kind = state.messageKind;
+        const MAX_SIZES = {
+            audio: 25 * 1024 * 1024,
+            image: 8 * 1024 * 1024,
+            video: 25 * 1024 * 1024,
+        };
+        const ALLOWED_EXTENSIONS = {
+            audio: ['.aac', '.m4a', '.wav', '.mp4'],
+            image: ['.png', '.jpg', '.jpeg'],
+            video: ['.mp4', '.ogg', '.avi', '.mov', '.webm'],
+        };
+
+        const maxSize = MAX_SIZES[kind] || 25 * 1024 * 1024;
+        const allowed = ALLOWED_EXTENSIONS[kind] || [];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+        if (file.size > maxSize) {
+            showUploadError(`حجم فایل بیش از حد مجاز است (حداکثر ${(maxSize / (1024 * 1024)).toFixed(0)} مگابایت).`);
+            fileInput.value = '';
+            return;
+        }
+
+        if (allowed.length && !allowed.includes(ext)) {
+            showUploadError(`فرمت فایل مجاز نیست. فرمت‌های مجاز: ${allowed.join(', ')}`);
+            fileInput.value = '';
+            return;
+        }
+
+        // نمایش پیش‌نمایش
+        $('#newFileName').textContent = file.name;
+        $('#newFileSize').textContent = formatBytes(file.size);
+        newFilePreview.classList.remove('d-none');
+        fileUploadBox.classList.add('d-none');
+        uploadErrorMessage.classList.add('d-none');
+
+        // شروع آپلود
+        uploadFile(file);
+    });
+
+    function showUploadError(message) {
+        uploadErrorMessage.textContent = message;
+        uploadErrorMessage.classList.remove('d-none');
+    }
+
+    function uploadFile(file) {
+        const connectionSelect = $('select[name="connection"]');
+        const connectionId = connectionSelect ? connectionSelect.value : null;
+
+        if (!connectionId) {
+            showUploadError('ابتدا یک پیج انتخاب کنید.');
+            return;
+        }
+
+        state.isUploading = true;
+        uploadProgressBox.classList.remove('d-none');
+        uploadProgressFill.style.width = '0%';
+        uploadProgressPercent.textContent = '۰٪';
+        uploadProgressInfo.textContent = 'در حال آماده‌سازی...';
+        uploadProgressTitle.textContent = 'در حال آپلود...';
+        uploadErrorMessage.classList.add('d-none');
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('kind', state.messageKind);
+        formData.append('connection_id', connectionId);
+
+        // CSRF
+        const csrfToken = $('[name=csrfmiddlewaretoken]')?.value || '';
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                uploadProgressFill.style.width = percent + '%';
+                uploadProgressPercent.textContent = toPersianDigits(percent) + '٪';
+                uploadProgressInfo.textContent = `${formatBytes(e.loaded)} از ${formatBytes(e.total)}`;
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            state.isUploading = false;
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        state.mediaUploadId = response.media_upload_id;
+                        state.mediaUrl = response.url;
+                        state.mediaFileName = response.file_name;
+                        state.mediaFileSize = response.file_size;
+
+                        $('#mediaUploadId').value = response.media_upload_id;
+                        uploadProgressBox.classList.add('d-none');
+                        uploadProgressTitle.textContent = '✅ آپلود شد';
+                        uploadProgressInfo.textContent = response.file_size_display || '';
+                    } else {
+                        showUploadError(response.message || 'خطا در آپلود فایل.');
+                        uploadProgressBox.classList.add('d-none');
+                        clearFileInput();
+                    }
+                } catch (err) {
+                    console.error('Parse error:', err);
+                    showUploadError('پاسخ سرور نامعتبر است.');
+                    uploadProgressBox.classList.add('d-none');
+                }
+            } else {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    showUploadError(response.message || `خطای ${xhr.status}`);
+                } catch (e) {
+                    showUploadError(`خطای ${xhr.status}`);
+                }
+                uploadProgressBox.classList.add('d-none');
+                clearFileInput();
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            state.isUploading = false;
+            showUploadError('خطا در ارتباط با سرور.');
+            uploadProgressBox.classList.add('d-none');
+            clearFileInput();
+        });
+
+        xhr.open('POST', UPLOAD_URL, true);
+        xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        xhr.send(formData);
+    }
+
+    function toPersianDigits(num) {
+        const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        return String(num).split('').map(d => fa[+d] || d).join('');
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' بایت';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' کیلوبایت';
+        return (bytes / 1024 / 1024).toFixed(2) + ' مگابایت';
+    }
+
+    // ==================== حذف فایل ====================
+    $('#removeNewFileBtn')?.addEventListener('click', () => {
+        clearFileInput();
+    });
+
+    $('#removeCurrentFileBtn')?.addEventListener('click', () => {
+        // فایل فعلی (توی ویرایش) - فقط از فرم حذفش کن
+        $('#currentFilePreview').classList.add('d-none');
+        state.mediaUploadId = null;
+        $('#mediaUploadId').value = '';
+        $('#fileUploadBox').classList.remove('d-none');
+    });
+
+    // ==================== تغییر نوع محتوا ====================
+    $$('[data-kind]').forEach(card => {
+        card.addEventListener('click', () => {
+            const kind = card.dataset.kind;
+            if (kind === state.messageKind) return;
+
+            const hasContent = state.messageKind === 'text'
+                ? ($('#id_direct_message_text')?.value.trim() !== '')
+                : (state.mediaUploadId !== null || !$('#currentFilePreview')?.classList.contains('d-none'));
+
+            if (hasContent) {
+                pendingKind = kind;
+                new bootstrap.Modal($('#changeKindModal')).show();
+            } else {
+                applyKind(kind);
+            }
+        });
+    });
+
+    $('#confirmKindChange')?.addEventListener('click', () => {
+        if (pendingKind) {
+            if ($('#id_direct_message_text')) $('#id_direct_message_text').value = '';
+            clearFileInput();
+            applyKind(pendingKind);
+            pendingKind = null;
+        }
+        bootstrap.Modal.getInstance($('#changeKindModal'))?.hide();
+    });
+
+    $('#cancelKindChange')?.addEventListener('click', () => {
+        pendingKind = null;
+    });
+
+    // ==================== Step 7: پاسخ‌های کامنت ====================
+    function syncReplyInputs() {
+        const container = $('#hiddenReplyInputs');
+        container.innerHTML = '';
+        $$('#replyInputs textarea').forEach(ta => {
+            const val = ta.value.trim();
+            if (!val) return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'comment_replies[]';
+            input.value = val;
+            container.appendChild(input);
+        });
+    }
+
+    // ==================== شماره‌گذاری داینامیک ====================
+    function renumberSteps() {
+        let counter = 1;
+        const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+        $$('.wd-step').forEach(section => {
+            const isVisible = section.style.display !== 'none';
+            if (!isVisible) return;
+            const numberEl = section.querySelector('[data-step-number]');
+            if (numberEl) {
+                const faNum = String(counter).split('').map(d => faDigits[+d]).join('');
+                numberEl.textContent = faNum;
+                counter++;
+            }
+        });
+    }
+
+    // ==================== نمایش/مخفی ====================
+    function updateVisibility() {
+        const isPost = state.targetType === 'post';
+        const isLive = state.targetType === 'live';
+
+        if (isLive && state.replyChannel !== 'direct') {
+            channelInput.value = 'direct';
+            state.replyChannel = 'direct';
+            $$('[data-channel-choice]').forEach(c => c.classList.toggle('is-selected', c.dataset.channelChoice === 'direct'));
+        }
+
+        const isComment = state.replyChannel === 'comment';
+        const isDirect = state.replyChannel === 'direct';
+
+        $('[data-step="channel"]').style.display = isPost ? '' : 'none';
+        $('[data-step="post"]').style.display = isPost ? '' : 'none';
+        $('[data-step="message"]').style.display = (isDirect || isLive) ? '' : 'none';
+        $('[data-step="comment"]').style.display = (isComment && isPost) ? '' : 'none';
+
+        const followSection = $('#followSection');
+        if (followSection) {
+            followSection.classList.toggle('d-none', !(isPost && isDirect));
+        }
+
+        updateFollowFields();
+        renumberSteps();
+    }
+
+    // ==================== submit ====================
+    $('#ruleForm')?.addEventListener('submit', function (e) {
+        // چک: اگه در حال آپلودیم
+        if (state.isUploading) {
+            e.preventDefault();
+            alert('لطفاً تا اتمام آپلود صبر کنید.');
+            return;
+        }
+
+        if (state.keywords.length === 0) {
+            e.preventDefault();
+            alert('حداقل یک فعال‌ساز وارد کنید.');
+            return;
+        }
+
+        // چک: اگه kind غیر متن و فایل جدید آپلود نشده
+        if (state.messageKind !== 'text') {
+            const hasExistingFile = $('#currentFilePreview') && !$('#currentFilePreview').classList.contains('d-none');
+            const hasNewUpload = state.mediaUploadId !== null;
+
+            if (!hasExistingFile && !hasNewUpload) {
+                e.preventDefault();
+                showUploadError('لطفاً فایل مدیا را انتخاب و آپلود کنید.');
+                return;
+            }
+        }
+
+        syncHiddenKeywords();
+        syncReplyInputs();
+    });
+
+    // ==================== init ====================
+    renderKeywords();
+    syncHiddenKeywords();
+
+    const replyTextareas = $$('#replyInputs textarea');
+    initialReplies.forEach((text, i) => {
+        if (replyTextareas[i]) replyTextareas[i].value = text;
+    });
+
+    // ===== init فایل مدیا (اگه ویرایش) =====
+    if (existingMedia) {
+        state.mediaUploadId = existingMedia.id;
+        state.mediaUrl = existingMedia.url;
+        state.mediaFileName = existingMedia.name;
+        state.mediaFileSize = existingMedia.size;
+
+        $('#currentFileName').textContent = existingMedia.name;
+        $('#currentFileSize').textContent = existingMedia.size_display || '';
+        $('#currentFilePreview').classList.remove('d-none');
+        $('#fileUploadBox').classList.add('d-none');
+    }
+
+    applyKind(state.messageKind);
+    updateVisibility();
+    updateFollowFields();
+    renumberSteps();
+
+    // ==================== تغییر connection → پاک کردن پست ====================
+    const connectionSelectGlobal = document.querySelector('select[name="connection"]');
+    if (connectionSelectGlobal) {
+        connectionSelectGlobal.addEventListener('change', function () {
+            const postMediaInput = document.querySelector('input[name="post_media_id"]');
+            const postSimulatedInput = document.querySelector('input[name="post_is_simulated"]');
+            if (postMediaInput) postMediaInput.value = '';
+            if (postSimulatedInput) postSimulatedInput.value = 'false';
+
+            const postSelectedBoxEl = document.getElementById('postSelectedBox');
+            const postEmptyBoxEl = document.getElementById('postEmptyBox');
+            if (postSelectedBoxEl) postSelectedBoxEl.classList.add('d-none');
+            if (postEmptyBoxEl) postEmptyBoxEl.classList.remove('d-none');
+        });
+    }
+
+    // ==================== انتخاب پست (AJAX + Polling) ====================
+    (function setupPostPicker() {
+        const modal = document.getElementById('postPickerModal');
+        if (!modal) return;
+
+        const loadingEl = document.getElementById('postPickerLoading');
+        const errorEl = document.getElementById('postPickerError');
+        const errorTextEl = document.getElementById('postPickerErrorText');
+        const emptyEl = document.getElementById('postPickerEmpty');
+        const gridEl = document.getElementById('postPickerGrid');
+        const gridInnerEl = document.getElementById('postPickerGridInner');
+        const retryBtn = document.getElementById('postPickerRetry');
+
+        let pollInterval = null;
+        let currentConnectionId = null;
+        let postMediaInput, postSimulatedInput;
+
+        function getCsrf() {
+            const el = document.querySelector('[name=csrfmiddlewaretoken]');
+            return el ? el.value : '';
+        }
+
+        function showState(s) {
+            loadingEl.classList.add('d-none');
+            errorEl.classList.add('d-none');
+            emptyEl.classList.add('d-none');
+            gridEl.classList.add('d-none');
+
+            if (s === 'loading') loadingEl.classList.remove('d-none');
+            else if (s === 'error') errorEl.classList.remove('d-none');
+            else if (s === 'empty') emptyEl.classList.remove('d-none');
+            else if (s === 'ready') gridEl.classList.remove('d-none');
+        }
+
+        function escapeHtmlPost(str) {
+            return String(str || '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function getMediaTypeIcon(type) {
+            const icons = {
+                'IMAGE': 'bi-image',
+                'VIDEO': 'bi-camera-video',
+                'CAROUSEL_ALBUM': 'bi-collection',
+            };
+            return icons[type] || 'bi-image';
+        }
+
+        function getMediaTypeLabel(type) {
+            const labels = {
+                'IMAGE': 'تصویر',
+                'VIDEO': 'ویدیو',
+                'CAROUSEL_ALBUM': 'آلبوم',
+            };
+            return labels[type] || type;
+        }
+
+        function renderPosts(posts) {
+            if (!posts || posts.length === 0) {
+                showState('empty');
+                return;
+            }
+
+            gridInnerEl.innerHTML = '';
+            posts.forEach(post => {
+                const card = document.createElement('div');
+                card.className = 'wd-post-card';
+                card.dataset.postId = post.id || '';
+
+                const mediaType = post.media_type || 'IMAGE';
+                const icon = getMediaTypeIcon(mediaType);
+                const label = getMediaTypeLabel(mediaType);
+                const thumb = post.thumbnail_url || post.media_url || '';
+                const caption = post.caption || 'بدون توضیح';
+
+                let imageHtml;
+                if (thumb) {
+                    imageHtml = `<img src="${escapeHtmlPost(thumb)}" alt="" loading="lazy">`;
+                } else {
+                    imageHtml = `<i class="bi ${icon} text-primary" style="font-size:2.5rem"></i>`;
+                }
+
+                card.innerHTML = `
+                    <div class="wd-post-card-image">
+                        ${imageHtml}
+                        <span class="post-type-badge">
+                            <i class="bi ${icon}"></i> ${label}
+                        </span>
+                    </div>
+                    <div class="wd-post-card-info">
+                        <div class="wd-post-card-caption">${escapeHtmlPost(caption)}</div>
+                        <div class="wd-post-card-id">${escapeHtmlPost(post.id || '')}</div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    gridInnerEl.querySelectorAll('.wd-post-card').forEach(c => c.classList.remove('is-selected'));
+                    card.classList.add('is-selected');
+
+                    if (postMediaInput) postMediaInput.value = post.id || '';
+                    if (postSimulatedInput) postSimulatedInput.value = 'false';
+
+                    const postSelectedIdEl = document.getElementById('postSelectedId');
+                    const postSelectedBoxEl = document.getElementById('postSelectedBox');
+                    const postEmptyBoxEl = document.getElementById('postEmptyBox');
+                    if (postSelectedIdEl) postSelectedIdEl.textContent = post.id || '';
+                    if (postSelectedBoxEl) postSelectedBoxEl.classList.remove('d-none');
+                    if (postEmptyBoxEl) postEmptyBoxEl.classList.add('d-none');
+
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) bsModal.hide();
+                });
+
+                gridInnerEl.appendChild(card);
+            });
+
+            showState('ready');
+        }
+
+        async function loadPosts() {
+            if (!currentConnectionId) {
+                errorTextEl.textContent = 'ابتدا یک پیج انتخاب کنید.';
+                showState('error');
+                return;
+            }
+
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+
+            showState('loading');
+
+            try {
+                const loadResponse = await fetch('{% url "windirect:instagram_posts_load" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrf(),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({ connection_id: currentConnectionId }),
+                });
+
+                const loadData = await loadResponse.json();
+
+                if (!loadData.success) {
+                    errorTextEl.textContent = loadData.message || 'خطا در شروع درخواست.';
+                    showState('error');
+                    return;
+                }
+
+                let attempts = 0;
+                const maxAttempts = 30;
+
+                pollInterval = setInterval(async () => {
+                    attempts++;
+
+                    if (attempts > maxAttempts) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        errorTextEl.textContent = 'زمان انتظار به پایان رسید. دوباره تلاش کنید.';
+                        showState('error');
+                        return;
+                    }
+
+                    try {
+                        const statusResponse = await fetch(
+                            `{% url "windirect:instagram_posts_status" %}?connection_id=${currentConnectionId}`,
+                            { method: 'GET' }
+                        );
+                        const statusData = await statusResponse.json();
+
+                        if (statusData.status === 'ready') {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            renderPosts(statusData.posts || []);
+                        } else if (statusData.status === 'failed') {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            errorTextEl.textContent = statusData.message || 'خطا در دریافت پست‌ها.';
+                            showState('error');
+                        }
+                    } catch (err) {
+                        console.error('Polling error:', err);
+                    }
+                }, 2000);
+
+            } catch (err) {
+                console.error('Load posts error:', err);
+                errorTextEl.textContent = 'خطا در ارتباط با سرور.';
+                showState('error');
+            }
+        }
+
+        modal.addEventListener('show.bs.modal', function () {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+
+            postMediaInput = document.querySelector('input[name="post_media_id"]');
+            postSimulatedInput = document.querySelector('input[name="post_is_simulated"]');
+
+            const connectionSelect = document.querySelector('select[name="connection"]');
+            currentConnectionId = connectionSelect ? connectionSelect.value : null;
+
+            if (!currentConnectionId) {
+                errorTextEl.textContent = 'ابتدا یک پیج انتخاب کنید.';
+                showState('error');
+                return;
+            }
+
+            loadPosts();
+        });
+
+        modal.addEventListener('hidden.bs.modal', function () {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        });
+
+        if (retryBtn) {
+            retryBtn.addEventListener('click', loadPosts);
+        }
+
+        const simulatedBtn = document.getElementById('selectSimulatedPost');
+        if (simulatedBtn) {
+            simulatedBtn.addEventListener('click', () => {
+                const id = 'sim_' + Math.random().toString(36).substring(2, 10);
+                if (postMediaInput) postMediaInput.value = id;
+                if (postSimulatedInput) postSimulatedInput.value = 'true';
+
+                const postSelectedIdEl = document.getElementById('postSelectedId');
+                const postSelectedBoxEl = document.getElementById('postSelectedBox');
+                const postEmptyBoxEl = document.getElementById('postEmptyBox');
+                if (postSelectedIdEl) postSelectedIdEl.textContent = id;
+                if (postSelectedBoxEl) postSelectedBoxEl.classList.remove('d-none');
+                if (postEmptyBoxEl) postEmptyBoxEl.classList.add('d-none');
+
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+            });
+        }
+    })();
+});
+</script>
+{% endblock %}

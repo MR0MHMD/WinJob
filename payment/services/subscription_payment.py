@@ -13,12 +13,11 @@ from payment.models import (
     Transaction,
     Wallet,
     CommissionSplit,
-    SubscriptionPaymentAttempt,
 )
 from payment.services.payout import payout_commission, PayoutError
 from payment.services.commission import calculate_subscription_breakdown
 from payment.services.zarinpal_flow import callback_url
-from windirect.models import SubscriptionOrder, SubscriptionAccount
+from windirect.subscriptions.models import SubscriptionOrder, SubscriptionAccount
 from windirect.subscriptions.services import account_for, validate_order, fulfil_order
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,6 @@ def _record_success(order, invoice, account, payment):
         },
     )
     try:
-        # تابع موجود در یک savepoint جدا اجرا می‌شود؛ در نبود مدیر، واریز قابل تلاش مجدد است.
         payout_commission(invoice)
     except PayoutError as error:
         logger.error(
@@ -95,7 +93,8 @@ def pay_subscription_wallet(order, user):
         return order
     account = _lock_accounts(order)
     validate_order(order, account)
-    if order.attempts.filter(payment__status="pending").exists():
+    # چک نبود پرداخت درگاه pending
+    if invoice.payments.filter(status=Payment.Status.PENDING).exists():
         raise ValidationError(
             "این سفارش در حال پرداخت درگاه است. ابتدا آن را لغو و سفارش جدید ایجاد کنید."
         )
@@ -138,14 +137,15 @@ def start_subscription_gateway(order, user):
         invoice = Invoice.objects.select_for_update().get(subscription_order=order)
         account = _lock_accounts(order)
         validate_order(order, account)
-        pending = order.attempts.filter(
-            payment__status="pending", verified_at__isnull=True
-        ).first()
+        # اگه پرداخت pending برای همین invoice وجود داره، خطا بده
+        pending = invoice.payments.filter(
+            status=Payment.Status.PENDING,
+            authority__isnull=False,
+        ).exclude(authority="").first()
         if pending:
-            if pending.gateway_url:
-                return pending.gateway_url
             raise ValidationError(
-                "درخواست درگاه در حال آماده‌سازی است. کمی بعد دوباره تلاش کنید."
+                "پرداخت قبلی این سفارش در حال انجام است. لطفاً چند لحظه صبر کنید "
+                "یا سفارش را لغو کنید."
             )
         payment = Payment.objects.create(
             user=user,
@@ -153,9 +153,6 @@ def start_subscription_gateway(order, user):
             amount=invoice.payable_amount,
             payment_method=Payment.Method.GATEWAY,
             status=Payment.Status.PENDING,
-        )
-        attempt = SubscriptionPaymentAttempt.objects.create(
-            order=order, payment=payment
         )
     try:
         from django.conf import settings
@@ -172,7 +169,7 @@ def start_subscription_gateway(order, user):
             amount=invoice.payable_amount,
             currency="toman",
             callback_url=callback_url("payment:subscription_callback"),
-            order_id=f"windirect-{attempt.pk}",
+            order_id=f"windirect-{payment.pk}",
             description=invoice.description,
             mobile=user.phone_number,
         )
@@ -181,45 +178,43 @@ def start_subscription_gateway(order, user):
         if not record.authority or not is_allowed_gateway_url(url):
             raise ValidationError("پاسخ درگاه معتبر نیست.")
         with transaction.atomic():
-            attempt = SubscriptionPaymentAttempt.objects.select_for_update().get(
-                pk=attempt.pk
-            )
-            attempt.authority = record.authority
-            attempt.gateway_url = url
-            attempt.save(update_fields=["authority", "gateway_url"])
             Payment.objects.filter(pk=payment.pk).update(authority=record.authority)
         return url
     except Exception:
-        Payment.objects.filter(pk=payment.pk, status="pending").update(
+        Payment.objects.filter(pk=payment.pk, status=Payment.Status.PENDING).update(
             status=Payment.Status.FAILED
         )
         raise
 
 
 @transaction.atomic
-def settle_subscription_gateway(attempt, record):
+def settle_subscription_gateway(payment, record):
     """تأیید قطعی درگاه را حتی پس از تغییر وضعیت سفارش یک‌بار تعیین تکلیف می‌کند."""
+    payment = Payment.objects.select_for_update().select_related(
+        "invoice__subscription_order__referral__owner",
+        "invoice__subscription_order__offer__plan",
+    ).get(pk=payment.pk)
+    invoice = Invoice.objects.select_for_update().get(pk=payment.invoice_id)
     order = (
         SubscriptionOrder.objects.select_for_update()
         .select_related("referral__owner", "offer__plan")
-        .get(pk=attempt.order_id)
+        .get(pk=invoice.subscription_order_id)
     )
-    invoice = Invoice.objects.select_for_update().get(subscription_order=order)
-    attempt = SubscriptionPaymentAttempt.objects.select_for_update().get(pk=attempt.pk)
-    if attempt.verified_at:
+    # اگه قبلاً تأیید شده، هیچ کاری نکن
+    if payment.status == Payment.Status.SUCCESS:
         return order
+    # اعتبارسنجی پاسخ درگاه
     if (
         record is None
         or str(record.status).lower() != "complete"
-        or record.authority != attempt.authority
-        or record.order_id != f"windirect-{attempt.pk}"
+        or record.authority != payment.authority
+        or record.order_id != f"windirect-{payment.pk}"
         or int(record.amount) != invoice.payable_amount * 10
         or record.gateway_slug != "zarinpal"
     ):
         raise ValidationError("تأیید پرداخت با سفارش و مبلغ ثبت‌شده تطابق ندارد.")
     account = _lock_accounts(order)
     wallet = _lock_wallets(order)
-    payment = Payment.objects.select_for_update().get(pk=attempt.payment_id)
     payment.status = Payment.Status.SUCCESS
     payment.ref_id = record.reference_id
     payment.save(update_fields=["status", "ref_id"])
@@ -254,16 +249,14 @@ def settle_subscription_gateway(attempt, record):
             description=f'پرداخت اشتراک {order.quote["plan_name"]} از زرین‌پال',
         )
         _record_success(order, invoice, account, payment)
-    attempt.verified_at = timezone.now()
-    attempt.save(update_fields=["verified_at"])
     return order
 
 
-def verify_subscription_gateway(attempt):
+def verify_subscription_gateway(payment):
     """تماس تأیید درگاه خارج از قفل‌ها انجام می‌شود و در خطای شبکه قابل تکرار است."""
-    record = gateway.verify_payment(slug="zarinpal", authority=attempt.authority)
+    record = gateway.verify_payment(slug="zarinpal", authority=payment.authority)
     if record is None or str(record.status).lower() != "complete":
         raise ValidationError(
             "پرداخت هنوز توسط درگاه تأیید نشده است. امکان بررسی دوباره وجود دارد."
         )
-    return settle_subscription_gateway(attempt, record)
+    return settle_subscription_gateway(payment, record)

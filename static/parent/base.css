@@ -198,3 +198,309 @@
 .toast-container {
     z-index: 1090;
 }
+
+/* ======================================================================
+   🔥 Checkbox & Switch - ULTIMATE EDITION (نسخه اصلاح شده) 🔥
+   ====================================================================== */
+
+:root {
+    --cb-primary: #fd5631;
+    --cb-primary-dark: #e64a2a;
+    --cb-primary-glow: rgba(253, 86, 49, 0.4);
+    --cb-bg-light: rgba(255, 255, 255, 0.08);
+    --cb-border: rgba(255, 255, 255, 0.15);
+    --cb-border-hover: rgba(253, 86, 49, 0.5);
+    --cb-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ======================================================================
+   ✅ چک‌باکس معمولی (فقط .form-check بدون .form-switch)
+   ====================================================================== */
+.form-check:not(.form-switch) input[type="checkbox"].form-check-input,
+.form-check:not(.form-switch) input[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: none !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    width: 22px !important;
+    height: 22px !important;
+
+    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)) !important;
+    border: 2px solid var(--cb-border) !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: var(--cb-transition) !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    outline: none !important;
+    flex-shrink: 0 !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:hover {
+    border-color: var(--cb-border-hover) !important;
+    background: linear-gradient(145deg, rgba(253,86,49,0.08), rgba(253,86,49,0.03)) !important;
+    transform: scale(1.05) !important;
+    box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: 6px !important;
+    height: 11px !important;
+    border: solid #fff !important;
+    border-width: 0 2.5px 2.5px 0 !important;
+    transform: translate(-50%, -60%) rotate(45deg) scale(0) !important;
+    opacity: 0 !important;
+    transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+    display: block !important;
+    z-index: 2 !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, var(--cb-primary) 0%, var(--cb-primary-dark) 100%) !important;
+    border-color: var(--cb-primary) !important;
+    box-shadow: 0 4px 12px -2px var(--cb-primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:checked::before {
+    transform: translate(-50%, -60%) rotate(45deg) scale(1) !important;
+    opacity: 1 !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:checked:hover {
+    box-shadow: 0 6px 20px -2px var(--cb-primary-glow), 0 0 0 6px rgba(253, 86, 49, 0.15) !important;
+    transform: scale(1.08) !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--cb-primary) !important;
+    outline-offset: 3px !important;
+}
+
+.form-check:not(.form-switch) input[type="checkbox"]:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(0.5) !important;
+}
+
+
+/* ======================================================================
+   🔥🔥🔥 سوئیچ (Switch) - نسخه اصلاح شده با specificity بالا 🔥🔥🔥
+   ====================================================================== */
+/* از selectorهای چندگانه استفاده می‌کنیم تا DaisyUI و theme رو override کنیم */
+.form-switch input[type="checkbox"],
+.form-switch input[type="checkbox"].form-check-input,
+.form-check.form-switch input[type="checkbox"],
+.form-check.form-switch input[type="checkbox"].form-check-input,
+input[type="checkbox"].form-check-input.form-switch,
+input.form-check-input[name="is_active"],
+input.form-check-input[name="require_follow"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: none !important;
+
+    display: inline-block !important;
+    position: relative !important;
+    width: 50px !important;
+    height: 26px !important;
+    min-width: 50px !important;
+    min-height: 26px !important;
+    max-width: 50px !important;
+    max-height: 26px !important;
+
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 999px !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    outline: none !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+}
+
+/* هاور */
+.form-switch input[type="checkbox"]:hover,
+.form-switch input[type="checkbox"].form-check-input:hover,
+.form-check.form-switch input[type="checkbox"]:hover {
+    border-color: rgba(253, 86, 49, 0.4) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(253, 86, 49, 0.1) !important;
+    transform: none !important;
+}
+
+/* دایره Knob */
+.form-switch input[type="checkbox"]::before,
+.form-switch input[type="checkbox"].form-check-input::before,
+.form-check.form-switch input[type="checkbox"]::before,
+input[type="checkbox"].form-check-input.form-switch::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 2px !important;
+    transform: translateY(-50%) !important;
+
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+
+    background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%) !important;
+    border-radius: 50% !important;
+
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 -1px 2px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+    display: block !important;
+    z-index: 2 !important;
+    border: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* حالت checked */
+.form-switch input[type="checkbox"]:checked,
+.form-switch input[type="checkbox"].form-check-input:checked,
+.form-check.form-switch input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, var(--cb-primary) 0%, var(--cb-primary-dark) 100%) !important;
+    border-color: var(--cb-primary) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 16px -2px var(--cb-primary-glow) !important;
+}
+
+.form-switch input[type="checkbox"]:checked::before,
+.form-switch input[type="checkbox"].form-check-input:checked::before,
+.form-check.form-switch input[type="checkbox"]:checked::before {
+    left: calc(100% - 22px) !important;
+    transform: translateY(-50%) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.form-switch input[type="checkbox"]:checked:hover,
+.form-switch input[type="checkbox"].form-check-input:checked:hover {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 6px 24px -2px var(--cb-primary-glow), 0 0 0 6px rgba(253, 86, 49, 0.15) !important;
+}
+
+.form-switch input[type="checkbox"]:focus-visible,
+.form-switch input[type="checkbox"].form-check-input:focus-visible {
+    outline: 2px solid var(--cb-primary) !important;
+    outline-offset: 3px !important;
+}
+
+.form-switch input[type="checkbox"]:disabled,
+.form-switch input[type="checkbox"].form-check-input:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(0.7) !important;
+}
+
+
+/* ======================================================================
+   📐 هم‌ترازی فرم
+   ====================================================================== */
+.form-check {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.65rem !important;
+    padding: 0 !important;
+    margin-bottom: 0.6rem !important;
+    min-height: auto !important;
+}
+
+.form-check .form-check-input {
+    float: none !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+.form-check .form-check-label {
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    color: inherit !important;
+    display: block !important;
+    line-height: 1.4 !important;
+}
+
+.form-check .form-check-label .small,
+.form-check .form-check-label small {
+    display: block !important;
+    margin-top: 0.2rem !important;
+    opacity: 0.75 !important;
+}
+
+
+/* ======================================================================
+   🎨 حذف DaisyUI
+   ====================================================================== */
+input[type="checkbox"] + svg,
+.toggle svg,
+.toggle-sm svg,
+.toggle-primary svg,
+.text-base-content svg {
+    display: none !important;
+}
+
+.toggle,
+.toggle-sm,
+.toggle-primary,
+.toggle-md,
+.toggle-lg {
+    all: unset !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    cursor: pointer !important;
+}
+
+
+/* ======================================================================
+   📱 ریسپانسیو
+   ====================================================================== */
+@media (max-width: 768px) {
+    .form-check {
+        gap: 0.5rem !important;
+    }
+
+    .form-check:not(.form-switch) input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .form-switch input[type="checkbox"],
+    .form-check.form-switch input[type="checkbox"] {
+        width: 44px !important;
+        height: 24px !important;
+        min-width: 44px !important;
+        min-height: 24px !important;
+        max-width: 44px !important;
+        max-height: 24px !important;
+    }
+
+    .form-switch input[type="checkbox"]::before {
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+        min-height: 18px !important;
+    }
+
+    .form-switch input[type="checkbox"]:checked::before {
+        left: calc(100% - 20px) !important;
+    }
+}

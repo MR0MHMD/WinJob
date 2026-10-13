@@ -1,46 +1,681 @@
-{% extends 'windirect/base.html' %}
-{% block panel_heading %}سفارش اشتراک #{{ order.pk }}{% endblock %}
-{% block panel_content %}
-    <div class="card wd-card">
-        <div class="card-body p-4">
-            <h2 class="h5 text-white">{{ order.quote.plan_name }}</h2>
-            <p class="text-light">{{ order.get_status_display }}</p>
-            {% if order.status == 'credited' %}
-                <p class="text-warning">وجه تأییدشده به کیف پول شما افزوده شده است. برای خرید اشتراک، سفارش تازه بسازید.</p>
-            {% endif %}
-            {% include 'windirect/subscriptions/amounts.html' %}
-            <div class="d-flex flex-wrap gap-2 mt-3">
-                <a class="btn btn-outline-primary"
-                   href="{% url 'payment:invoice_detail' invoice.pk %}">فاکتور</a>
-                <a class="btn btn-outline-light"
-                   href="{% url 'windirect:subscription' %}">اشتراک من</a>
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}سفارش اشتراک #{{ order.pk }} | وین دایرکت{% endblock %}
+{% block description %}جزئیات سفارش اشتراک وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-order { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.08), rgba(253, 86, 49, 0.08));
+    border: 1px solid rgba(93, 60, 242, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 2rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.25), rgba(253, 86, 49, 0.25));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #8b5cf6;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; color: #fff; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+
+/* ==================== badge وضعیت ==================== */
+.wd-status-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.wd-status-badge.pending { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-status-badge.paid { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-status-badge.cancelled { background: rgba(150, 145, 164, 0.15); color: #9691a4; }
+.wd-status-badge.credited { background: rgba(60, 118, 242, 0.15); color: #6391f5; }
+
+/* ==================== کارت‌ها ==================== */
+.wd-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.wd-card-header {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.wd-card-header-icon {
+    width: 36px; height: 36px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-card-header-icon.primary { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-card-header-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-card-header-icon.warning { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-card-header-icon.accent { background: rgba(93, 60, 242, 0.15); color: #8b5cf6; }
+.wd-card-header h2 { font-size: 1rem; font-weight: 600; margin: 0; color: #fff; }
+.wd-card-header p { color: #9691a4; font-size: 0.8rem; margin: 0.15rem 0 0; }
+.wd-card-body { padding: 1.5rem; }
+
+/* ==================== اطلاعات پلن ==================== */
+.wd-plan-summary {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.wd-plan-summary-icon {
+    width: 60px; height: 60px;
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.2), rgba(253, 86, 49, 0.2));
+    color: #8b5cf6;
+}
+.wd-plan-summary-content { flex: 1; min-width: 0; }
+.wd-plan-summary-name {
+    font-size: 1.15rem; font-weight: 700; color: #fff;
+    margin: 0 0 0.25rem;
+}
+.wd-plan-summary-meta {
+    color: #9691a4; font-size: 0.85rem; margin: 0;
+}
+.wd-plan-summary-meta strong { color: #fff; font-weight: 600; }
+
+/* ==================== امکانات ==================== */
+.wd-plan-features-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.wd-feature-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.85rem;
+    padding: 0.4rem 0;
+}
+.wd-feature-row i { color: #07c98b; font-size: 0.9rem; }
+.wd-feature-row.is-disabled { color: #666276; }
+.wd-feature-row.is-disabled i { color: #666276; }
+
+/* ==================== جزئیات سفارش ==================== */
+.wd-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.wd-info-item {
+    display: flex; flex-direction: column; gap: 0.35rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.wd-info-label {
+    color: #9691a4; font-size: 0.75rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-info-label i { color: #07c98b; font-size: 0.8rem; }
+.wd-info-value {
+    color: #fff; font-weight: 600; font-size: 0.9rem;
+}
+.wd-info-value.ltr { direction: ltr; }
+
+/* ==================== هزینه‌ها ==================== */
+.wd-cost-list {
+    display: flex; flex-direction: column; gap: 0.75rem;
+}
+.wd-cost-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.wd-cost-row:last-child { border-bottom: 0; }
+.wd-cost-row.is-payable {
+    border-top: 2px solid rgba(7, 201, 139, 0.3);
+    border-bottom: 0;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+.wd-cost-label {
+    color: #9691a4; font-size: 0.875rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.wd-cost-label i { color: #666276; font-size: 0.85rem; }
+.wd-cost-value {
+    color: #fff; font-weight: 500; font-size: 0.95rem;
+}
+.wd-cost-value.discount { color: #07c98b; }
+.wd-cost-value.payable {
+    color: #07c98b; font-weight: 800; font-size: 1.25rem;
+}
+.wd-cost-value .currency {
+    font-size: 0.7rem; color: #9691a4; font-weight: 400;
+    margin-right: 0.25rem;
+}
+
+/* ==================== دکمه‌ها ==================== */
+.wd-actions {
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+    margin-top: 1rem;
+}
+.wd-actions .btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.85rem 1.25rem;
+    border-radius: 0.875rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: all 0.25s ease;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+.wd-btn-primary {
+    background: linear-gradient(135deg, #07c98b, #059869);
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgba(7, 201, 139, 0.4);
+}
+.wd-btn-primary:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(7, 201, 139, 0.5);
+}
+.wd-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.8);
+}
+.wd-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.wd-btn-outline {
+    background: transparent;
+    border: 1px solid rgba(253, 86, 49, 0.4) !important;
+    color: #fd5631;
+}
+.wd-btn-outline:hover {
+    background: rgba(253, 86, 49, 0.1);
+    color: #fd5631;
+}
+
+/* ==================== هشدارها ==================== */
+.wd-alert {
+    border-radius: 0.875rem;
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.wd-alert i { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+.wd-alert.warning {
+    background: rgba(253, 188, 49, 0.08);
+    border: 1px solid rgba(253, 188, 49, 0.2);
+    color: #fdbc31;
+}
+.wd-alert.info {
+    background: rgba(60, 118, 242, 0.08);
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    color: #6391f5;
+}
+.wd-alert.success {
+    background: rgba(7, 201, 139, 0.08);
+    border: 1px solid rgba(7, 201, 139, 0.2);
+    color: #07c98b;
+}
+
+/* ==================== تلاش‌های پرداخت ==================== */
+.wd-payment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.wd-payment-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.875rem;
+    transition: all 0.2s ease;
+}
+.wd-payment-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+.wd-payment-icon {
+    width: 40px; height: 40px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-payment-icon.success { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-payment-icon.pending { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-payment-icon.failed { background: rgba(242, 60, 73, 0.15); color: #f23c49; }
+.wd-payment-content { flex: 1; min-width: 0; }
+.wd-payment-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 0 0 0.15rem;
+}
+.wd-payment-meta {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin: 0;
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.wd-payment-meta code {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    color: #9691a4;
+    direction: ltr;
+}
+.wd-payment-actions {
+    display: flex; gap: 0.5rem;
+    flex-shrink: 0;
+}
+.wd-payment-actions .btn-sm {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+/* ==================== خالی ==================== */
+.wd-empty {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+}
+.wd-empty-icon {
+    width: 72px; height: 72px;
+    margin: 0 auto 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: #666276;
+}
+.wd-empty h3 {
+    color: #fff; font-size: 1.1rem; margin: 0 0 0.5rem;
+}
+.wd-empty p {
+    color: #9691a4; margin: 0; font-size: 0.9rem;
+}
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-page-header { padding: 1.25rem; }
+    .wd-page-header h1 { font-size: 1.25rem; }
+    .wd-info-grid { grid-template-columns: 1fr; }
+    .wd-plan-features-list { grid-template-columns: 1fr; }
+    .wd-card-body { padding: 1rem; }
+    .wd-actions .btn { min-width: 100%; }
+    .wd-payment-item { flex-wrap: wrap; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-order">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:subscription' %}">اشتراک من</a></li>
+        <li class="breadcrumb-item active">سفارش #{{ order.pk }}</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <div>
+                <h1>سفارش اشتراک #{{ order.pk }}</h1>
+                <p>{{ order.quote.plan_name }} · {{ order.get_kind_display }} · {{ order.created_at|date:'Y/m/d H:i' }}</p>
+            </div>
+        </div>
+        <div>
+            <span class="wd-status-badge {{ order.status }}">
                 {% if order.status == 'pending' %}
-                    <a class="btn btn-primary"
-                       href="{% url 'windirect:subscription_checkout' order.pk %}">ادامهٔ پرداخت</a>
+                    <i class="bi bi-hourglass-split"></i>
+                {% elif order.status == 'paid' %}
+                    <i class="bi bi-check-circle-fill"></i>
+                {% elif order.status == 'cancelled' %}
+                    <i class="bi bi-x-circle-fill"></i>
+                {% elif order.status == 'credited' %}
+                    <i class="bi bi-arrow-counterclockwise"></i>
                 {% endif %}
+                {{ order.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- ستون راست: اطلاعات سفارش -->
+        <div class="col-lg-7">
+            <!-- خلاصه پلن -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon accent">
+                        <i class="bi bi-gem"></i>
+                    </div>
+                    <div>
+                        <h2>اطلاعات پلن</h2>
+                        <p>خلاصه‌ی پلن خریداری‌شده</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    <div class="wd-plan-summary">
+                        <div class="wd-plan-summary-icon">
+                            {% if order.offer.plan.level >= 2 %}
+                                <i class="bi bi-gem"></i>
+                            {% else %}
+                                <i class="bi bi-rocket"></i>
+                            {% endif %}
+                        </div>
+                        <div class="wd-plan-summary-content">
+                            <h3 class="wd-plan-summary-name">{{ order.quote.plan_name }}</h3>
+                            <p class="wd-plan-summary-meta">
+                                {{ order.offer.get_duration_days_display }} ·
+                                سقف <strong>{{ order.quote.capabilities.max_pages }}</strong> پیج ·
+                                {{ order.get_kind_display }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="wd-plan-features-list">
+                        <div class="wd-feature-row {% if not order.quote.capabilities.smart_comments %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if order.quote.capabilities.smart_comments %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            کامنت هوشمند
+                        </div>
+                        <div class="wd-feature-row {% if not order.quote.capabilities.smart_direct %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if order.quote.capabilities.smart_direct %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            دایرکت هوشمند
+                        </div>
+                        <div class="wd-feature-row {% if not order.quote.capabilities.showcases %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if order.quote.capabilities.showcases %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            ویترین‌ساز
+                        </div>
+                        <div class="wd-feature-row {% if not order.quote.capabilities.forms %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if order.quote.capabilities.forms %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            فرم‌ساز
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- جزئیات سفارش -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon info">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div>
+                        <h2>جزئیات سفارش</h2>
+                        <p>اطلاعات تکمیلی</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    <div class="wd-info-grid">
+                        <div class="wd-info-item">
+                            <span class="wd-info-label"><i class="bi bi-hash"></i> شناسه سفارش</span>
+                            <span class="wd-info-value ltr">#{{ order.pk }}</span>
+                        </div>
+                        <div class="wd-info-item">
+                            <span class="wd-info-label"><i class="bi bi-tag"></i> نوع عملیات</span>
+                            <span class="wd-info-value">{{ order.get_kind_display }}</span>
+                        </div>
+                        <div class="wd-info-item">
+                            <span class="wd-info-label"><i class="bi bi-calendar-event"></i> تاریخ ثبت</span>
+                            <span class="wd-info-value ltr">{{ order.created_at|date:'Y/m/d H:i' }}</span>
+                        </div>
+                        <div class="wd-info-item">
+                            <span class="wd-info-label"><i class="bi bi-clock"></i> مدت دوره</span>
+                            <span class="wd-info-value">{{ order.quote.duration_days }} روز</span>
+                        </div>
+                        {% if order.settled_at %}
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-check-circle"></i> تاریخ تعیین تکلیف</span>
+                                <span class="wd-info-value ltr">{{ order.settled_at|date:'Y/m/d H:i' }}</span>
+                            </div>
+                        {% endif %}
+                        {% if invoice %}
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-receipt"></i> شماره فاکتور</span>
+                                <span class="wd-info-value ltr">{{ invoice.invoice_number }}</span>
+                            </div>
+                        {% endif %}
+                        {% if order.referral %}
+                            <div class="wd-info-item">
+                                <span class="wd-info-label"><i class="bi bi-person-badge"></i> کد معرف</span>
+                                <span class="wd-info-value ltr">{{ order.referral.code }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ستون چپ: هزینه‌ها + پرداخت -->
+        <div class="col-lg-5">
+            <!-- خلاصه هزینه -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon primary">
+                        <i class="bi bi-calculator"></i>
+                    </div>
+                    <div>
+                        <h2>جزئیات هزینه‌ها</h2>
+                        <p>مبالغ به تومان</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    <div class="wd-cost-list">
+                        <div class="wd-cost-row">
+                            <span class="wd-cost-label">
+                                <i class="bi bi-tag-fill"></i> قیمت پلن
+                            </span>
+                            <span class="wd-cost-value">
+                                {{ order.quote.base|intcomma }}
+                                <span class="currency">تومان</span>
+                            </span>
+                        </div>
+
+                        {% if order.quote.discount %}
+                            <div class="wd-cost-row">
+                                <span class="wd-cost-label">
+                                    <i class="bi bi-ticket-perforated"></i> تخفیف
+                                </span>
+                                <span class="wd-cost-value discount">
+                                    - {{ order.quote.discount|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+                        {% endif %}
+
+                        <div class="wd-cost-row">
+                            <span class="wd-cost-label">
+                                <i class="bi bi-wallet2"></i> مبلغ پس از تخفیف
+                            </span>
+                            <span class="wd-cost-value">
+                                {{ order.quote.net|intcomma }}
+                                <span class="currency">تومان</span>
+                            </span>
+                        </div>
+
+                        <div class="wd-cost-row">
+                            <span class="wd-cost-label">
+                                <i class="bi bi-percent"></i> مالیات ({{ order.quote.vat_rate }}٪)
+                            </span>
+                            <span class="wd-cost-value">
+                                {{ order.quote.vat|intcomma }}
+                                <span class="currency">تومان</span>
+                            </span>
+                        </div>
+
+                        <div class="wd-cost-row is-payable">
+                            <span class="wd-cost-label" style="color: #fff; font-weight: 600;">
+                                <i class="bi bi-cash-coin"></i> مبلغ قابل پرداخت
+                            </span>
+                            <span class="wd-cost-value payable">
+                                {{ order.quote.total|intcomma }}
+                                <span class="currency">تومان</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- پیام‌های وضعیت -->
+                    {% if order.status == 'pending' %}
+                        <div class="wd-alert info mt-3">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                این سفارش هنوز پرداخت نشده است. برای ادامه، روی دکمهٔ «ادامهٔ پرداخت» کلیک کنید.
+                            </div>
+                        </div>
+                    {% elif order.status == 'paid' %}
+                        <div class="wd-alert success mt-3">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <div>
+                                پرداخت این سفارش با موفقیت انجام شد و اشتراک فعال شده است.
+                            </div>
+                        </div>
+                    {% elif order.status == 'credited' %}
+                        <div class="wd-alert warning mt-3">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <div>
+                                وجه تأییدشدهٔ این سفارش به کیف پول شما افزوده شده است. برای خرید اشتراک، سفارش تازه بسازید.
+                            </div>
+                        </div>
+                    {% elif order.status == 'cancelled' %}
+                        <div class="wd-alert warning mt-3">
+                            <i class="bi bi-x-circle-fill"></i>
+                            <div>
+                                این سفارش لغو شده است. برای خرید اشتراک، سفارش تازه بسازید.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- دکمه‌ها -->
+                    <div class="wd-actions">
+                        <a href="{% url 'windirect:subscription' %}" class="wd-btn-secondary btn">
+                            <i class="bi bi-arrow-right"></i>
+                            بازگشت
+                        </a>
+                        {% if order.status == 'pending' %}
+                            <a href="{% url 'windirect:subscription_checkout' order.pk %}" class="wd-btn-primary btn">
+                                <i class="bi bi-credit-card-2-front"></i>
+                                ادامهٔ پرداخت
+                            </a>
+                        {% elif invoice %}
+                            <a href="{% url 'payment:invoice_detail' invoice.pk %}" class="wd-btn-primary btn">
+                                <i class="bi bi-receipt"></i>
+                                مشاهدهٔ فاکتور
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="card wd-card mt-4">
-        <div class="card-body p-4">
-            <h2 class="h5 text-white">تلاش‌های پرداخت درگاه</h2>
-            {% for attempt in attempts %}
-                <div class="wd-list-row">
-                    <div>
-                        <span class="text-light">{{ attempt.payment.get_status_display }}</span>
-                        <small class="d-block text-muted">{{ attempt.created_at|date:'Y/m/d H:i' }} · پیگیری {{ attempt.payment.ref_id|default:'—' }}</small>
-                    </div>
-                    {% if attempt.authority and not attempt.verified_at %}
-                        <form method="post"
-                              action="{% url 'payment:subscription_reverify' attempt.pk %}">
-                            {% csrf_token %}
-                            <button class="btn btn-outline-primary btn-sm">بررسی دوباره</button>
-                        </form>
-                    {% endif %}
+
+    <!-- تلاش‌های پرداخت -->
+    <div class="wd-card">
+        <div class="wd-card-header">
+            <div class="wd-card-header-icon warning">
+                <i class="bi bi-credit-card-2-front"></i>
+            </div>
+            <div>
+                <h2>تلاش‌های پرداخت</h2>
+                <p>سوابق پرداخت این سفارش</p>
+            </div>
+        </div>
+        <div class="wd-card-body">
+            {% if payments %}
+                <div class="wd-payment-list">
+                    {% for payment in payments %}
+                        <div class="wd-payment-item">
+                            <div class="wd-payment-icon {{ payment.status }}">
+                                {% if payment.status == 'success' %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                {% elif payment.status == 'pending' %}
+                                    <i class="bi bi-hourglass-split"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="wd-payment-content">
+                                <p class="wd-payment-title">
+                                    {{ payment.get_status_display }} ·
+                                    {{ payment.get_payment_method_display }}
+                                </p>
+                                <p class="wd-payment-meta">
+                                    <span>{{ payment.created_at|date:'Y/m/d H:i' }}</span>
+                                    {% if payment.ref_id %}
+                                        <span>پیگیری: <code>{{ payment.ref_id }}</code></span>
+                                    {% endif %}
+                                    {% if payment.amount %}
+                                        <span>{{ payment.amount|intcomma }} تومان</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% if payment.authority and payment.status == 'pending' %}
+                                <div class="wd-payment-actions">
+                                    <form method="post"
+                                          action="{% url 'payment:subscription_reverify' payment.pk %}">
+                                        {% csrf_token %}
+                                        <button class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            بررسی دوباره
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
-            {% empty %}
-                <p class="text-muted">پرداخت درگاهی ثبت نشده است.</p>
-            {% endfor %}
+            {% else %}
+                <div class="wd-empty">
+                    <div class="wd-empty-icon">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <h3>پرداختی ثبت نشده</h3>
+                    <p>هنوز هیچ تلاش پرداختی برای این سفارش ثبت نشده است.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
+</div>
 {% endblock %}

@@ -1,43 +1,550 @@
-{% extends 'windirect/base.html' %}
+{% extends 'parent/base.html' %}
+{% load static %}
 {% load humanize %}
-{% block panel_heading %}{{ offer.plan.name }} · {{ offer.get_duration_days_display }}{% endblock %}
-{% block panel_intro %}ابتدا سفارش و فاکتور را بررسی کنید؛ سپس روش پرداخت را انتخاب کنید.{% endblock %}
-{% block panel_content %}
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="card wd-card">
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}{{ form.non_field_errors }}{% for field in form %}
-                        {% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}
-                            {% include 'windirect/partials/field.html' %}
-                        {% endif %}
-{% endfor %}
-<p class="text-light">مبلغ پیش از تخفیف و مالیات: {{ quote.base|default:offer.price|intcomma }} تومان</p>
-<p class="small text-muted">کد معرف فقط در اولین خرید پولی، ۳۰٪ تخفیف و ۵ روز هدیه دارد. خرید بدون استفاده از رایگان نیز ممکن است؛ پس از خرید پولی دورهٔ رایگان قابل فعال‌سازی نیست.</p>
-<button class="btn btn-primary rounded-pill">ساخت فاکتور و بررسی مبلغ نهایی</button>
-<a class="btn btn-outline-light rounded-pill"
-   href="{% url 'windirect:plans' %}">بازگشت</a>
-</form>
-</div>
-</div>
-</div>
-<aside class="col-lg-5">
-    <div class="card wd-card">
-        <div class="card-body p-4">
-            <h2 class="h5 text-white">محاسبهٔ خرید</h2>
-            {% if quote.upgrades %}
-                <p class="text-light">ارتقا تاریخ پایان را تغییر نمی‌دهد. هر دوره با قیمت حرفه‌ای متناظر با مدت خودش محاسبه می‌شود.</p>
-                {% for row in quote.upgrades %}
-                    <p class="small text-muted">{{ row.days|floatformat:2 }} روز · نرخ مقصد {{ row.daily|floatformat:2 }} · اعتبار روزانه {{ row.credit_daily|floatformat:2 }} تومان</p>
-                {% endfor %}
-                <p class="text-muted">روزهای هدیه اعتبار نقدی ندارند؛ ارتقای آن‌ها با نرخ روزانهٔ پلن مقصد محاسبه می‌شود. اعتبار پایه از مبلغ واقعی پس از تخفیف و بدون مالیات است.</p>
-            {% else %}
-                <p class="text-light">{{ offer.duration_days }} روز به دوره‌های موجود افزوده می‌شود. سقف پیج {{ offer.plan.max_pages }} است.</p>
-            {% endif %}
-            <p class="text-muted mb-0">مالیات از ثابت مالیات سایت و روی قیمت پس از تخفیف محاسبه می‌شود. قیمت قطعی در مرحلهٔ بعد نشان داده خواهد شد.</p>
-        </div>
+
+{% block title %}پیش‌نمایش خرید | وین دایرکت{% endblock %}
+{% block description %}پیش‌نمایش و تأیید خرید اشتراک وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-subscribe { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== بردکرامب ==================== */
+.wd-subscribe-steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.75rem; flex-wrap: wrap;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+}
+.wd-step-item {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    color: #9691a4; font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.wd-step-item:hover { color: #fff; }
+.wd-step-item.is-active { color: #07c98b; font-weight: 600; }
+.wd-step-item.is-done { color: #6391f5; }
+.wd-step-item .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+}
+.wd-step-item.is-active .step-num {
+    background: rgba(7, 201, 139, 0.15);
+    border-color: #07c98b;
+    color: #07c98b;
+}
+.wd-step-item.is-done .step-num {
+    background: rgba(60, 118, 242, 0.15);
+    border-color: #3c76f2;
+    color: #3c76f2;
+}
+.wd-step-arrow { color: #666276; font-size: 0.75rem; }
+
+/* ==================== کارت‌ها ==================== */
+.wd-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.wd-card-header {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.wd-card-header-icon {
+    width: 36px; height: 36px;
+    border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.wd-card-header-icon.primary { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-card-header-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-card-header-icon.warning { background: rgba(253, 188, 49, 0.15); color: #fdbc31; }
+.wd-card-header-icon.accent { background: rgba(93, 60, 242, 0.15); color: #8b5cf6; }
+.wd-card-header h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+.wd-card-header p { color: #9691a4; font-size: 0.8rem; margin: 0.15rem 0 0; }
+.wd-card-body { padding: 1.5rem; }
+
+/* ==================== اطلاعات پلن ==================== */
+.wd-plan-summary {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.wd-plan-summary-icon {
+    width: 64px; height: 64px;
+    border-radius: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.85rem;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.2), rgba(253, 86, 49, 0.2));
+    color: #8b5cf6;
+}
+.wd-plan-summary-content { flex: 1; min-width: 0; }
+.wd-plan-summary-name {
+    font-size: 1.2rem; font-weight: 700; color: #fff;
+    margin: 0 0 0.35rem;
+}
+.wd-plan-summary-meta {
+    color: #9691a4; font-size: 0.875rem; margin: 0;
+}
+.wd-plan-summary-meta strong { color: #fff; font-weight: 600; }
+
+/* امکانات */
+.wd-plan-features-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+.wd-feature-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+    padding: 0.5rem 0;
+}
+.wd-feature-row i { color: #07c98b; font-size: 1rem; }
+.wd-feature-row.is-disabled { color: #666276; }
+.wd-feature-row.is-disabled i { color: #666276; }
+
+/* ==================== فرم ==================== */
+.wd-form-group {
+    margin-bottom: 1.25rem;
+}
+.wd-form-label {
+    display: block;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.wd-form-label i { color: #07c98b; font-size: 0.9rem; margin-left: 0.35rem; }
+.wd-form-input, .wd-form-select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.7rem 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+.wd-form-input:focus, .wd-form-select:focus {
+    border-color: #07c98b;
+    box-shadow: 0 0 0 3px rgba(7, 201, 139, 0.15);
+}
+.wd-form-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.wd-form-select option { background: #1f1b2d; color: #fff; }
+.wd-form-help {
+    color: #9691a4;
+    font-size: 0.75rem;
+    margin-top: 0.35rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-form-help i { color: #fdbc31; }
+.wd-form-error {
+    color: #f23c49;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+
+/* ==================== قیمت‌گذاری ==================== */
+.wd-quote-list {
+    display: flex; flex-direction: column; gap: 0.75rem;
+}
+.wd-quote-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.wd-quote-row:last-child { border-bottom: 0; }
+.wd-quote-row.is-payable {
+    border-top: 2px solid rgba(7, 201, 139, 0.3);
+    border-bottom: 0;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+.wd-quote-label {
+    color: #9691a4; font-size: 0.875rem;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.wd-quote-label i { color: #666276; font-size: 0.85rem; }
+.wd-quote-value {
+    color: #fff; font-weight: 500; font-size: 0.95rem;
+}
+.wd-quote-value.payable {
+    color: #07c98b; font-weight: 800; font-size: 1.25rem;
+}
+.wd-quote-value .currency {
+    font-size: 0.7rem; color: #9691a4; font-weight: 400;
+    margin-right: 0.25rem;
+}
+
+/* ==================== دکمه‌ها ==================== */
+.wd-actions {
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+    margin-top: 1rem;
+}
+.wd-actions .btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.85rem 1.25rem;
+    border-radius: 0.875rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: all 0.25s ease;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+.wd-btn-primary {
+    background: linear-gradient(135deg, #07c98b, #059869);
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgba(7, 201, 139, 0.4);
+}
+.wd-btn-primary:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(7, 201, 139, 0.5);
+}
+.wd-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.8);
+}
+.wd-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ==================== هشدار ==================== */
+.wd-alert-info {
+    background: rgba(60, 118, 242, 0.08);
+    border: 1px solid rgba(60, 118, 242, 0.2);
+    border-radius: 0.875rem;
+    padding: 1rem 1.25rem;
+    color: #6391f5;
+    font-size: 0.85rem;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.wd-alert-info i { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-plan-features-list { grid-template-columns: 1fr; }
+    .wd-card-body { padding: 1rem; }
+    .wd-actions .btn { min-width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-subscribe">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:plans' %}">پلن‌ها</a></li>
+        <li class="breadcrumb-item active">پیش‌نمایش خرید</li>
+    </ol>
+
+    <!-- استپ‌ها -->
+    <div class="wd-subscribe-steps">
+        <a href="{% url 'windirect:plans' %}" class="wd-step-item is-done">
+            <span class="step-num"><i class="bi bi-check-lg"></i></span>
+            انتخاب پلن
+        </a>
+        <i class="bi bi-chevron-left wd-step-arrow"></i>
+        <span class="wd-step-item is-active">
+            <span class="step-num">۲</span>
+            پیش‌نمایش خرید
+        </span>
+        <i class="bi bi-chevron-left wd-step-arrow"></i>
+        <span class="wd-step-item">
+            <span class="step-num">۳</span>
+            تأیید و پرداخت
+        </span>
     </div>
-</aside>
+
+    <!-- پیام‌ها -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-faded-{{ message.tags }} border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-circle-fill text-danger{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill text-warning{% else %}bi-info-circle-fill text-info{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- ستون راست: پلن و فرم -->
+        <div class="col-lg-7">
+            <!-- اطلاعات پلن -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon accent">
+                        <i class="bi bi-gem"></i>
+                    </div>
+                    <div>
+                        <h2>پلن انتخاب‌شده</h2>
+                        <p>خلاصه‌ی پلن و امکانات</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    <div class="wd-plan-summary">
+                        <div class="wd-plan-summary-icon">
+                            {% if offer.plan.level >= 2 %}
+                                <i class="bi bi-gem"></i>
+                            {% else %}
+                                <i class="bi bi-rocket"></i>
+                            {% endif %}
+                        </div>
+                        <div class="wd-plan-summary-content">
+                            <h3 class="wd-plan-summary-name">{{ offer.plan.name }}</h3>
+                            <p class="wd-plan-summary-meta">
+                                {{ offer.get_duration_days_display }} ·
+                                سقف <strong>{{ offer.plan.max_pages }}</strong> پیج
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="wd-plan-features-list">
+                        <div class="wd-feature-row {% if not offer.plan.smart_comments %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if offer.plan.smart_comments %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            کامنت هوشمند
+                        </div>
+                        <div class="wd-feature-row {% if not offer.plan.smart_direct %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if offer.plan.smart_direct %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            دایرکت هوشمند
+                        </div>
+                        <div class="wd-feature-row {% if not offer.plan.showcases %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if offer.plan.showcases %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            ویترین‌ساز
+                        </div>
+                        <div class="wd-feature-row {% if not offer.plan.forms %}is-disabled{% endif %}">
+                            <i class="bi bi-{% if offer.plan.forms %}check-circle-fill{% else %}x-circle{% endif %}"></i>
+                            فرم‌ساز
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- فرم تأیید -->
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon primary">
+                        <i class="bi bi-sliders"></i>
+                    </div>
+                    <div>
+                        <h2>تنظیمات خرید</h2>
+                        <p>نوع عملیات و کد تخفیف</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="wd-form-error mb-3">
+                                <i class="bi bi-x-circle-fill"></i>
+                                {% for error in form.non_field_errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- نوع عملیات -->
+                        <div class="wd-form-group">
+                            <label class="wd-form-label" for="{{ form.kind.id_for_label }}">
+                                <i class="bi bi-tag"></i>
+                                نوع عملیات
+                            </label>
+                            <select name="{{ form.kind.name }}" id="{{ form.kind.id_for_label }}" class="wd-form-select">
+                                {% for value, label in form.kind.field.choices %}
+                                    <option value="{{ value }}" {% if form.kind.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.kind.errors %}
+                                <div class="wd-form-error">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    {{ form.kind.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- کد تخفیف -->
+                        <div class="wd-form-group">
+                            <label class="wd-form-label" for="{{ form.coupon_code.id_for_label }}">
+                                <i class="bi bi-ticket-perforated"></i>
+                                کد تخفیف (اختیاری)
+                            </label>
+                            <input type="text"
+                                   name="{{ form.coupon_code.name }}"
+                                   id="{{ form.coupon_code.id_for_label }}"
+                                   class="wd-form-input"
+                                   placeholder="مثلاً: WELCOME30"
+                                   value="{{ form.coupon_code.value|default:'' }}"
+                                   autocomplete="off">
+                            <div class="wd-form-help">
+                                <i class="bi bi-info-circle"></i>
+                                کد تخفیف فقط روی خرید اول اعمال می‌شود.
+                            </div>
+                            {% if form.coupon_code.errors %}
+                                <div class="wd-form-error">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                    {{ form.coupon_code.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="wd-alert-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                با کلیک روی «بررسی مبلغ نهایی»، فاکتور پیش‌نمایش ساخته می‌شود و به صفحهٔ پرداخت می‌روید.
+                                هنوز هیچ مبلغی کسر نمی‌شود.
+                            </div>
+                        </div>
+
+                        <div class="wd-actions">
+                            <a href="{% url 'windirect:plans' %}" class="wd-btn-secondary btn">
+                                <i class="bi bi-arrow-right"></i>
+                                بازگشت
+                            </a>
+                            <button type="submit" class="wd-btn-primary btn">
+                                <i class="bi bi-arrow-left"></i>
+                                بررسی مبلغ نهایی
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ستون چپ: پیش‌نمایش محاسبه -->
+        <aside class="col-lg-5">
+            <div class="wd-card">
+                <div class="wd-card-header">
+                    <div class="wd-card-header-icon info">
+                        <i class="bi bi-calculator"></i>
+                    </div>
+                    <div>
+                        <h2>پیش‌نمایش محاسبه</h2>
+                        <p>مبالغ تقریبی (تومان)</p>
+                    </div>
+                </div>
+                <div class="wd-card-body">
+                    {% if quote %}
+                        <div class="wd-quote-list">
+                            <div class="wd-quote-row">
+                                <span class="wd-quote-label">
+                                    <i class="bi bi-tag-fill"></i>
+                                    قیمت پلن
+                                </span>
+                                <span class="wd-quote-value">
+                                    {{ quote.base|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            {% if quote.discount %}
+                                <div class="wd-quote-row">
+                                    <span class="wd-quote-label">
+                                        <i class="bi bi-ticket-perforated"></i>
+                                        تخفیف
+                                    </span>
+                                    <span class="wd-quote-value" style="color: #07c98b;">
+                                        - {{ quote.discount|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </span>
+                                </div>
+                            {% endif %}
+
+                            <div class="wd-quote-row">
+                                <span class="wd-quote-label">
+                                    <i class="bi bi-wallet2"></i>
+                                    مبلغ پس از تخفیف
+                                </span>
+                                <span class="wd-quote-value">
+                                    {{ quote.net|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-quote-row">
+                                <span class="wd-quote-label">
+                                    <i class="bi bi-percent"></i>
+                                    مالیات ({{ quote.vat_rate }}٪)
+                                </span>
+                                <span class="wd-quote-value">
+                                    {{ quote.vat|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+
+                            <div class="wd-quote-row is-payable">
+                                <span class="wd-quote-label" style="color: #fff; font-weight: 600;">
+                                    <i class="bi bi-cash-coin"></i>
+                                    مبلغ قابل پرداخت
+                                </span>
+                                <span class="wd-quote-value payable">
+                                    {{ quote.total|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {% if quote.upgrades %}
+                            <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                                <p class="wd-form-help" style="margin-bottom: 0.5rem;">
+                                    <i class="bi bi-info-circle"></i>
+                                    محاسبه ارتقا:
+                                </p>
+                                {% for row in quote.upgrades %}
+                                    <p class="wd-form-help" style="margin-bottom: 0.25rem;">
+                                        {{ row.days|floatformat:2 }} روز · نرخ مقصد {{ row.daily|floatformat:2 }} · اعتبار روزانه {{ row.credit_daily|floatformat:2 }} تومان
+                                    </p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="wd-alert-info mt-3" style="margin-bottom: 0;">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                مبلغ قطعی در مرحلهٔ بعد (تأیید و پرداخت) محاسبه و نمایش داده می‌شود.
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="wd-alert-info" style="margin-bottom: 0;">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                برای مشاهده پیش‌نمایش، پلن را انتخاب و فرم را تکمیل کنید.
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+    </div>
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 from django_jalali.db import models as jmodels
 from django.utils import timezone
 from django.urls import reverse
@@ -78,9 +78,13 @@ class Invoice(models.Model):
     )
 
     subscription_order = models.OneToOneField(
-        'windirect.SubscriptionOrder', on_delete=models.PROTECT,
-        related_name='invoice', null=True, blank=True, verbose_name=_("سفارش اشتراک وین دایرکت"),
+        'windirect_subscriptions.SubscriptionOrder',
+        on_delete=models.PROTECT,
+        related_name='invoice',
+        null=True, blank=True,
+        verbose_name=_("سفارش اشتراک وین دایرکت"),
     )
+
     base_plan_cost = models.PositiveBigIntegerField(_("قیمت اولیهٔ پلن"), null=True, blank=True)
     plan_discount_amount = models.PositiveBigIntegerField(_("تخفیف پلن"), null=True, blank=True)
     plan_cost = models.PositiveBigIntegerField(_("قیمت نهایی پلن پیش از مالیات"), default=0)
@@ -886,5 +890,3 @@ class WithdrawalRequest(models.Model):
         self.completed_at = timezone.now()
         self.transaction = transaction
         self.save()
-
-from .subscription_models import SubscriptionPaymentAttempt  # noqa: E402,F401

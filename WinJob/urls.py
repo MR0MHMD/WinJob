@@ -19,7 +19,7 @@ urlpatterns = [
     path('service-worker.js', pwa.service_worker, name='pwa_service_worker'),
     path('offline/', pwa.offline, name='pwa_offline'),
     path('admin/', admin.site.urls),
-    path('windirect/panel/', include("windirect.urls", namespace="windirect")),
+    path('windirect/', include("windirect.urls", namespace="windirect")),
     path('accounts/', include("accounts.urls", namespace="accounts")),
     path('notifications/', include("notifications.urls", namespace="notifications")),
     path('advertisers/', include("advertisers.urls", namespace="advertisers")),

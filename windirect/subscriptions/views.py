@@ -1,14 +1,19 @@
 """صفحات انتخاب پلن، خرید، اشتراک و سوابق با بیس فعلی سایت."""
 
+import json
+import logging
 from math import ceil
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
+
 from payment.services.subscription_payment import (
     pay_subscription_wallet,
     start_subscription_gateway,
@@ -17,13 +22,14 @@ from payment.services.zarinpal_flow import (
     prepare_gateway_bridge,
     _zarinpal_sandbox_enabled,
 )
-from ..models import (
+from payment.services.create_invoice import create_subscription_invoice
+from windirect.subscriptions.models import (
     SubscriptionPlan,
     SubscriptionOffer,
     SubscriptionOrder,
-    InstagramConnection,
+    WindirectCoupon,
 )
-from .forms import SubscriptionOrderForm, SubscriptionPaymentForm
+from .forms import SubscriptionPaymentForm
 from .services import (
     account_for,
     current_period,
@@ -31,9 +37,10 @@ from .services import (
     activate_trial,
     create_order,
     _build_quote,
-    as_datetime,
+    _as_datetime,
 )
-from .access import register_connection
+
+logger = logging.getLogger(__name__)
 
 
 def _context(user):
@@ -52,13 +59,62 @@ def _context(user):
 def plans(request):
     """پلن رایگان و گزینه‌های قیمت را با شرایط استفاده نمایش می‌دهد."""
     context = _context(request.user)
-    context["plans"] = SubscriptionPlan.objects.filter(is_active=True).prefetch_related(
-        "offers"
+
+    periods = remaining_periods(context["account"])
+
+    all_plans = (
+        SubscriptionPlan.objects.filter(is_active=True)
+        .prefetch_related("offers")
+        .order_by("level", "position", "pk")
     )
-    context["periods"] = remaining_periods(context["account"])
-    context["paid_reference"] = next(
-        (period for period in context["periods"] if period.kind != "trial"), None
-    )
+
+    trial_plan = all_plans.filter(is_trial=True).first()
+    paid_plans = list(all_plans.filter(is_trial=False))
+
+    TAB_CONFIG = [
+        {"key": "monthly", "label": "ماهانه", "days": 30, "icon": "calendar-month"},
+        {"key": "quarter", "label": "سه‌ماهه", "days": 90, "icon": "calendar-range"},
+        {"key": "yearly", "label": "سالانه", "days": 365, "icon": "calendar-heart"},
+    ]
+
+    tabs = []
+    for tab in TAB_CONFIG:
+        plans_in_tab = []
+        for plan in paid_plans:
+            offer = next(
+                (
+                    o for o in plan.offers.all()
+                    if o.is_active and o.duration_days == tab["days"]
+                ),
+                None,
+            )
+            if offer:
+                plans_in_tab.append({"plan": plan, "offer": offer})
+
+        if plans_in_tab:
+            tabs.append({
+                "key": tab["key"],
+                "label": tab["label"],
+                "days": tab["days"],
+                "icon": tab["icon"],
+                "plans": plans_in_tab,
+            })
+
+    context.update({
+        "trial_plan": trial_plan,
+        "trial_offer": (
+            next(
+                (o for o in trial_plan.offers.all() if o.is_active and o.duration_days == 30),
+                None,
+            )
+            if trial_plan else None
+        ),
+        "tabs": tabs,
+        "periods": periods,
+        "paid_reference": next(
+            (period for period in periods if period.kind != "trial"), None
+        ),
+    })
     return render(request, "windirect/subscriptions/plans.html", context)
 
 
@@ -78,54 +134,55 @@ def trial(request, pk):
 
 @login_required(login_url="accounts:login")
 @require_http_methods(["GET", "POST"])
-def subscribe(request, pk):
-    """پیش‌نمایش خرید و ثبت سفارش پیش از انتخاب روش پرداخت."""
-    offer = get_object_or_404(
-        SubscriptionOffer.objects.select_related("plan"),
-        pk=pk,
-        is_active=True,
-        plan__is_active=True,
-        plan__is_trial=False,
-    )
-    context = _context(request.user)
-    form = SubscriptionOrderForm(
-        request.POST if request.method == "POST" else None,
-        initial={
-            "kind": "upgrade" if request.GET.get("kind") == "upgrade" else "purchase"
-        },
-    )
-    quote = None
-    if request.method == "POST" and form.is_valid():
+def checkout(request, offer_pk=None, order_pk=None):
+    """
+    صفحهٔ تأیید و پرداخت.
+
+    - اگه `offer_pk` بیاد (از صفحهٔ پلن‌ها):
+        → سفارش و فاکتور ساخته/آپدیت می‌شود
+        → redirect به همین view با `order_pk`
+    - اگه `order_pk` بیاد (پرداخت):
+        → فاکتور نمایش داده می‌شود
+        → روی POST، پرداخت شروع می‌شود
+    """
+    # ==================== حالت ۱: از صفحهٔ پلن‌ها ====================
+    if offer_pk is not None:
+        offer = get_object_or_404(
+            SubscriptionOffer.objects.select_related("plan"),
+            pk=offer_pk,
+            is_active=True,
+            plan__is_active=True,
+            plan__is_trial=False,
+        )
+        kind = request.GET.get("kind", "purchase")
+        if kind not in ("purchase", "upgrade"):
+            kind = "purchase"
         try:
-            order = create_order(
-                request.user,
-                offer,
-                kind=form.cleaned_data["kind"],
-                referral_code=form.cleaned_data["referral_code"],
-            )
-        except ValidationError as error:
-            form.add_error(None, error)
-        else:
-            return redirect("windirect:subscription_checkout", pk=order.pk)
-    else:
-        try:
-            quote, _ = _build_quote(context["account"], offer, form.initial["kind"])
+            order = create_order(request.user, offer, kind=kind, coupon_code="")
+            create_subscription_invoice(order)
         except ValidationError as error:
             messages.error(request, error.messages[0])
             return redirect("windirect:plans")
-    context.update(form=form, offer=offer, quote=quote)
-    return render(request, "windirect/subscriptions/subscribe.html", context)
+        return redirect("windirect:subscription_checkout", order_pk=order.pk)
 
-
-@login_required(login_url="accounts:login")
-@require_http_methods(["GET", "POST"])
-def checkout(request, pk):
-    """فاکتور قطعی و مبلغ نهایی را نشان می‌دهد و پرداخت را شروع می‌کند."""
+    # ==================== حالت ۲: صفحهٔ پرداخت ====================
     order = get_object_or_404(
-        SubscriptionOrder.objects.select_related("offer__plan"),
-        pk=pk,
+        SubscriptionOrder.objects.select_related("offer__plan", "referral"),
+        pk=order_pk,
         user=request.user,
     )
+
+    # اطمینان از وجود فاکتور
+    invoice = getattr(order, "invoice", None)
+    if invoice is None:
+        invoice = create_subscription_invoice(order)
+
+    # اگه سفارش دیگه pending نیست، فقط نمایش
+    if order.status != "pending":
+        context = _context(request.user)
+        context.update(order=order, invoice=invoice, form=None)
+        return render(request, "windirect/subscriptions/checkout.html", context)
+
     form = SubscriptionPaymentForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -138,23 +195,156 @@ def checkout(request, pk):
         except ValidationError as error:
             form.add_error(None, error)
         except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "خطای شروع پرداخت اشتراک %s", order.pk
-            )
+            logger.exception("خطای شروع پرداخت اشتراک %s", order.pk)
             form.add_error(
                 None,
                 "شروع پرداخت درگاه ممکن نشد. بعداً دوباره تلاش کنید؛ اشتراک هنوز فعال نشده است.",
             )
+
     context = _context(request.user)
     context.update(
         order=order,
-        invoice=order.invoice,
+        invoice=invoice,
         form=form,
-        expired=as_datetime(order.expires_at) <= timezone.now(),
     )
     return render(request, "windirect/subscriptions/checkout.html", context)
+
+
+@login_required(login_url="accounts:login")
+@require_POST
+def apply_coupon(request, pk):
+    """کد تخفیف رو روی سفارش اعمال می‌کنه و quote و invoice رو آپدیت می‌کنه."""
+    order = get_object_or_404(
+        SubscriptionOrder.objects.select_related("offer__plan"),
+        pk=pk,
+        user=request.user,
+        status=SubscriptionOrder.Status.PENDING,
+    )
+
+    try:
+        body = json.loads(request.body)
+        code = body.get("code", "").strip().upper()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({
+            "success": False,
+            "message": "درخواست نامعتبر است.",
+        }, status=400)
+
+    if not code:
+        return JsonResponse({
+            "success": False,
+            "message": "کد تخفیف را وارد کنید.",
+        }, status=400)
+
+    coupon = WindirectCoupon.objects.filter(code=code, is_active=True).first()
+    if not coupon:
+        return JsonResponse({
+            "success": False,
+            "message": "کد تخفیف معتبر نیست.",
+        }, status=404)
+
+    if not coupon.is_valid():
+        return JsonResponse({
+            "success": False,
+            "message": "این کد تخفیف منقضی شده یا به حد استفاده رسیده است.",
+        }, status=400)
+
+    account = account_for(request.user)
+    try:
+        new_quote, _ = _build_quote(
+            account,
+            order.offer,
+            order.kind,
+            code,
+        )
+    except ValidationError as error:
+        return JsonResponse({
+            "success": False,
+            "message": error.messages[0] if error.messages else str(error),
+        }, status=400)
+
+    order.quote = new_quote
+    order.save(update_fields=["quote", "updated_at"])
+
+    invoice = getattr(order, "invoice", None)
+    if invoice and not invoice.is_paid:
+        invoice.base_plan_cost = new_quote["base"]
+        invoice.plan_discount_amount = new_quote["discount"]
+        invoice.plan_cost = new_quote["net"]
+        invoice.plan_vat = new_quote["vat"]
+        invoice.discount_amount = new_quote["discount"]
+        invoice.total_amount = new_quote["base"]
+        invoice.payable_amount = new_quote["total"]
+        invoice.total_vat = new_quote["vat"]
+        invoice.save(update_fields=[
+            "base_plan_cost", "plan_discount_amount", "plan_cost",
+            "plan_vat", "discount_amount", "total_amount",
+            "payable_amount", "total_vat",
+        ])
+
+    return JsonResponse({
+        "success": True,
+        "message": f"کد «{coupon.code}» با موفقیت اعمال شد.",
+        "coupon_code": coupon.code,
+        "quote": {
+            "base": new_quote["base"],
+            "discount": new_quote["discount"],
+            "net": new_quote["net"],
+            "vat": new_quote["vat"],
+            "total": new_quote["total"],
+            "vat_rate": new_quote["vat_rate"],
+        },
+    })
+
+
+@login_required(login_url="accounts:login")
+@require_POST
+def remove_coupon(request, pk):
+    """کد تخفیف رو از سفارش حذف می‌کنه."""
+    order = get_object_or_404(
+        SubscriptionOrder.objects.select_related("offer__plan"),
+        pk=pk,
+        user=request.user,
+        status=SubscriptionOrder.Status.PENDING,
+    )
+
+    account = account_for(request.user)
+    try:
+        new_quote, _ = _build_quote(account, order.offer, order.kind, "")
+    except ValidationError as error:
+        return JsonResponse({
+            "success": False,
+            "message": error.messages[0] if error.messages else str(error),
+        }, status=400)
+
+    order.quote = new_quote
+    order.save(update_fields=["quote", "updated_at"])
+
+    invoice = getattr(order, "invoice", None)
+    if invoice and not invoice.is_paid:
+        invoice.plan_discount_amount = 0
+        invoice.discount_amount = 0
+        invoice.plan_cost = new_quote["net"]
+        invoice.plan_vat = new_quote["vat"]
+        invoice.payable_amount = new_quote["total"]
+        invoice.total_vat = new_quote["vat"]
+        invoice.save(update_fields=[
+            "plan_discount_amount", "discount_amount", "plan_cost",
+            "plan_vat", "payable_amount", "total_vat",
+        ])
+
+    return JsonResponse({
+        "success": True,
+        "message": "کد تخفیف حذف شد.",
+        "quote": {
+            "base": new_quote["base"],
+            "discount": new_quote["discount"],
+            "net": new_quote["net"],
+            "vat": new_quote["vat"],
+            "total": new_quote["total"],
+            "vat_rate": new_quote["vat_rate"],
+        },
+    })
 
 
 @login_required(login_url="accounts:login")
@@ -167,7 +357,7 @@ def subscription(request):
             0,
             ceil(
                 (
-                    as_datetime(context["periods"][-1].ends_at) - timezone.now()
+                    _as_datetime(context["periods"][-1].ends_at) - timezone.now()
                 ).total_seconds()
                 / 86400
             ),
@@ -192,13 +382,13 @@ def subscription(request):
 
 @login_required(login_url="accounts:login")
 def order_detail(request, pk):
-    """نتیجه و سوابق تلاش پرداخت سفارش متعلق به کاربر را نمایش می‌دهد."""
     order = get_object_or_404(SubscriptionOrder, pk=pk, user=request.user)
+    invoice = getattr(order, "invoice", None)
     context = _context(request.user)
     context.update(
         order=order,
-        invoice=order.invoice,
-        attempts=order.attempts.select_related("payment"),
+        invoice=invoice,
+        payments=invoice.payments.select_related("invoice").order_by("-created_at") if invoice else [],
     )
     return render(request, "windirect/subscriptions/order.html", context)
 
@@ -216,27 +406,3 @@ def cancel_order(request, pk):
             order.settled_at = timezone.now()
             order.save(update_fields=["status", "settled_at"])
     return redirect("windirect:subscription_order", pk=pk)
-
-
-@login_required(login_url="accounts:login")
-@require_POST
-def connection_toggle(request, pk):
-    """قطع پیج داده‌ها را حذف نمی‌کند؛ فعال‌سازی نمونه سقف اشتراک را رعایت می‌کند."""
-    with transaction.atomic():
-        connection = get_object_or_404(
-            InstagramConnection.objects.select_for_update(), pk=pk, owner=request.user
-        )
-        if connection.status == "disconnected":
-            if connection.instagram_user_id:
-                messages.error(
-                    request, "اتصال مجدد رسمی با ورود متا در مرحلهٔ اتصال انجام می‌شود."
-                )
-            else:
-                try:
-                    register_connection(request.user, connection)
-                except ValidationError as error:
-                    messages.error(request, error.messages[0])
-        else:
-            connection.status = "disconnected"
-            connection.save(update_fields=["status", "updated_at"])
-    return redirect("windirect:connections")

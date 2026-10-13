@@ -1,0 +1,1510 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}کامنت‌های هوشمند | وین دایرکت{% endblock %}
+{% block description %}مدیریت کامنت‌های هوشمند وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== پایه ==================== */
+.wd-rules { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== هدر صفحه ==================== */
+.wd-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.08));
+    border: 1px solid rgba(253, 86, 49, 0.2);
+    border-radius: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+.wd-page-header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.2), rgba(93, 60, 242, 0.2));
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #fd5631;
+    flex-shrink: 0;
+}
+.wd-page-header h1 { font-size: 1.5rem; margin: 0; }
+.wd-page-header p { color: #9691a4; margin: 0; font-size: 0.9rem; }
+
+/* ==================== دکمه فیلتر ==================== */
+.wd-filter-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2rem;
+    color: #fff;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+.wd-filter-btn:hover {
+    background: rgba(253, 86, 49, 0.15);
+    border-color: rgba(253, 86, 49, 0.4);
+    color: #fff;
+    transform: translateY(-2px);
+}
+.wd-filter-btn .filter-count {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    min-width: 20px; height: 20px;
+    padding: 0 0.35rem;
+    background: #fd5631;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 1rem;
+}
+
+/* ==================== کارت‌های آماری ==================== */
+.wd-mini-stat {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+.wd-mini-stat:hover {
+    transform: translateY(-3px);
+    border-color: rgba(253, 86, 49, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+}
+.wd-mini-stat-icon {
+    width: 48px; height: 48px; flex-shrink: 0;
+    border-radius: 0.875rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+}
+.wd-mini-stat-icon.primary { background: rgba(253, 86, 49, 0.15); color: #fd5631; }
+.wd-mini-stat-icon.success { background: rgba(7, 201, 139, 0.15); color: #07c98b; }
+.wd-mini-stat-icon.info { background: rgba(60, 118, 242, 0.15); color: #3c76f2; }
+.wd-mini-stat-icon.accent { background: rgba(93, 60, 242, 0.15); color: #8b5cf6; }
+.wd-mini-stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.wd-mini-stat-label { color: #9691a4; font-size: 0.8rem; }
+
+/* ==================== چیپ‌های فیلتر فعال ==================== */
+.wd-active-filters {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(253, 86, 49, 0.05);
+    border: 1px solid rgba(253, 86, 49, 0.15);
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+.wd-active-filters-label {
+    color: #9691a4; font-size: 0.8rem; margin-left: 0.5rem;
+}
+.wd-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(253, 86, 49, 0.15);
+    border: 1px solid rgba(253, 86, 49, 0.3);
+    border-radius: 2rem;
+    color: #fff;
+    font-size: 0.75rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.wd-chip:hover {
+    background: rgba(253, 86, 49, 0.25);
+    color: #fff;
+}
+.wd-chip i { font-size: 0.85rem; }
+
+/* ==================== کارت‌های کامنت هوشمند ==================== */
+.wd-rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.25rem;
+}
+
+.wd-rule-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.wd-rule-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #fd5631, #5d3cf2);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s ease;
+}
+.wd-rule-card:hover::before { transform: scaleX(1); }
+.wd-rule-card:hover {
+    border-color: rgba(253, 86, 49, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.4);
+}
+.wd-rule-card.is-inactive { opacity: 0.65; }
+.wd-rule-card.is-inactive:hover { opacity: 0.9; }
+
+/* ==================== هدر کارت با آواتار ==================== */
+.wd-rule-top {
+    display: flex; align-items: flex-start; gap: 0.85rem;
+    margin-bottom: 1rem;
+}
+.wd-avatar {
+    width: 52px; height: 52px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    position: relative;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+}
+.wd-avatar.status-simulated { background: linear-gradient(135deg, #3c76f2, #5d3cf2); }
+.wd-avatar.status-connected { background: linear-gradient(135deg, #07c98b, #17a2b8); }
+.wd-avatar.status-disconnected { background: linear-gradient(135deg, #6c757d, #454056); }
+.wd-avatar .status-dot {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 3px solid #1a1625;
+}
+.wd-avatar.status-simulated .status-dot { background: #3c76f2; }
+.wd-avatar.status-connected .status-dot { background: #07c98b; }
+.wd-avatar.status-disconnected .status-dot { background: #6c757d; }
+
+.wd-rule-top-content {
+    flex: 1; min-width: 0;
+}
+.wd-rule-username {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wd-rule-username i { color: #fd5631; font-size: 0.95rem; }
+.wd-rule-name-small {
+    color: #9691a4;
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wd-rule-status {
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.wd-rule-status.active {
+    background: rgba(7, 201, 139, 0.15);
+    color: #07c98b;
+    border: 1px solid rgba(7, 201, 139, 0.3);
+}
+.wd-rule-status.inactive {
+    background: rgba(150, 145, 164, 0.15);
+    color: #9691a4;
+    border: 1px solid rgba(150, 145, 164, 0.3);
+}
+
+/* ==================== بج‌های کارت ==================== */
+.wd-rule-badges {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+.wd-badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wd-badge i { font-size: 0.75rem; }
+.wd-badge.badge-post { background: rgba(60, 118, 242, 0.12); color: #6391f5; border-color: rgba(60, 118, 242, 0.3); }
+.wd-badge.badge-live { background: rgba(242, 60, 73, 0.12); color: #f5636d; border-color: rgba(242, 60, 73, 0.3); }
+.wd-badge.badge-comment { background: rgba(7, 201, 139, 0.12); color: #2cd19c; border-color: rgba(7, 201, 139, 0.3); }
+.wd-badge.badge-direct { background: rgba(93, 60, 242, 0.15); color: #a78bfa; border-color: rgba(93, 60, 242, 0.3); }
+.wd-badge.badge-count { background: rgba(253, 86, 49, 0.12); color: #fd5631; border-color: rgba(253, 86, 49, 0.3); }
+
+/* ==================== کلیدواژه‌ها ==================== */
+.wd-rule-keywords {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+.wd-rule-keywords-label {
+    color: #666276;
+    font-size: 0.7rem;
+    margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.3rem;
+}
+.wd-rule-keywords-list {
+    display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+.wd-keyword {
+    background: rgba(253, 86, 49, 0.12);
+    border: 1px solid rgba(253, 86, 49, 0.25);
+    color: #fff;
+    padding: 0.25rem 0.65rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* ==================== پیش‌نمایش محتوا ==================== */
+.wd-rule-preview {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* پیش‌نمایش متن */
+.wd-preview-text {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.6;
+    display: flex; align-items: flex-start; gap: 0.5rem;
+}
+.wd-preview-text i {
+    color: #fd5631;
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+.wd-preview-text .text-content {
+    flex: 1;
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* پیش‌نمایش تصویر */
+.wd-preview-image {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #0d0b14;
+    overflow: hidden;
+}
+.wd-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+.wd-rule-card:hover .wd-preview-image img {
+    transform: scale(1.05);
+}
+.wd-preview-image .image-badge {
+    position: absolute;
+    top: 0.5rem; right: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 0.25rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    display: inline-flex; align-items: center; gap: 0.25rem;
+}
+
+/* پیش‌نمایش ویدیو */
+.wd-preview-video {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #0d0b14;
+    overflow: hidden;
+}
+.wd-preview-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.wd-preview-video .video-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+.wd-preview-video .video-overlay .play-icon {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 1.25rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* پیش‌نمایش صدا */
+/* ==================== پلیر صوت سفارشی ==================== */
+.wd-audio-player {
+    padding: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.08), rgba(253, 86, 49, 0.08));
+    border-radius: 0.75rem;
+    margin: 0.5rem;
+}
+.wd-audio-player audio {
+    display: none;
+}
+
+/* دکمه play */
+.wd-audio-play-btn {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fd5631, #e64a2a);
+    border: 0;
+    color: #fff;
+    font-size: 1.35rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px -2px rgba(253, 86, 49, 0.5);
+    position: relative;
+}
+.wd-audio-play-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: rgba(253, 86, 49, 0.3);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: -1;
+}
+.wd-audio-play-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px -2px rgba(253, 86, 49, 0.6);
+}
+.wd-audio-play-btn:hover::before {
+    opacity: 1;
+    inset: -6px;
+}
+.wd-audio-play-btn.is-playing {
+    background: linear-gradient(135deg, #5d3cf2, #4a30c2);
+    box-shadow: 0 4px 12px -2px rgba(93, 60, 242, 0.5);
+}
+.wd-audio-play-btn.is-playing::before {
+    background: rgba(93, 60, 242, 0.3);
+    animation: audioPulse 1.5s ease-in-out infinite;
+}
+@keyframes audioPulse {
+    0%, 100% { inset: -4px; opacity: 0.6; }
+    50% { inset: -8px; opacity: 0; }
+}
+
+/* اطلاعات صوت */
+.wd-audio-info {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 0.35rem;
+}
+.wd-audio-title {
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-audio-title i {
+    color: #fd5631;
+    font-size: 0.85rem;
+}
+
+/* Waveform */
+.wd-audio-waveform {
+    position: relative;
+    height: 32px;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background: rgba(0, 0, 0, 0.15);
+}
+.wd-audio-bars {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 4px;
+    gap: 2px;
+}
+.wd-audio-bars span {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    transition: background 0.15s ease, transform 0.15s ease;
+    min-height: 4px;
+}
+/* ارتفاع‌های متفاوت برای ظاهر waveform */
+.wd-audio-bars span:nth-child(1) { height: 30%; }
+.wd-audio-bars span:nth-child(2) { height: 55%; }
+.wd-audio-bars span:nth-child(3) { height: 75%; }
+.wd-audio-bars span:nth-child(4) { height: 45%; }
+.wd-audio-bars span:nth-child(5) { height: 90%; }
+.wd-audio-bars span:nth-child(6) { height: 60%; }
+.wd-audio-bars span:nth-child(7) { height: 40%; }
+.wd-audio-bars span:nth-child(8) { height: 80%; }
+.wd-audio-bars span:nth-child(9) { height: 50%; }
+.wd-audio-bars span:nth-child(10) { height: 70%; }
+.wd-audio-bars span:nth-child(11) { height: 35%; }
+.wd-audio-bars span:nth-child(12) { height: 85%; }
+.wd-audio-bars span:nth-child(13) { height: 55%; }
+.wd-audio-bars span:nth-child(14) { height: 75%; }
+.wd-audio-bars span:nth-child(15) { height: 45%; }
+.wd-audio-bars span:nth-child(16) { height: 90%; }
+.wd-audio-bars span:nth-child(17) { height: 60%; }
+.wd-audio-bars span:nth-child(18) { height: 40%; }
+.wd-audio-bars span:nth-child(19) { height: 80%; }
+.wd-audio-bars span:nth-child(20) { height: 50%; }
+.wd-audio-bars span:nth-child(21) { height: 70%; }
+.wd-audio-bars span:nth-child(22) { height: 35%; }
+.wd-audio-bars span:nth-child(23) { height: 85%; }
+.wd-audio-bars span:nth-child(24) { height: 55%; }
+.wd-audio-bars span:nth-child(25) { height: 75%; }
+.wd-audio-bars span:nth-child(26) { height: 45%; }
+.wd-audio-bars span:nth-child(27) { height: 90%; }
+.wd-audio-bars span:nth-child(28) { height: 60%; }
+.wd-audio-bars span:nth-child(29) { height: 40%; }
+.wd-audio-bars span:nth-child(30) { height: 80%; }
+
+/* نوار پیشرفت */
+.wd-audio-progress {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 0%;
+    background: linear-gradient(90deg, rgba(253, 86, 49, 0.25), rgba(253, 86, 49, 0.4));
+    border-radius: 0.375rem;
+    transition: width 0.1s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* میله‌های فعال (قبل از progress) */
+.wd-audio-player.is-playing .wd-audio-bars span,
+.wd-audio-player.is-progress .wd-audio-bars span {
+    position: relative;
+    z-index: 2;
+}
+
+/* زمان */
+.wd-audio-time {
+    display: flex; align-items: center; gap: 0.25rem;
+    font-size: 0.7rem;
+    color: #9691a4;
+    font-family: monospace;
+    direction: ltr;
+}
+.wd-audio-time .current { color: #fd5631; font-weight: 600; }
+.wd-audio-time .separator { opacity: 0.5; }
+
+/* کنترل صدا */
+.wd-audio-volume {
+    display: flex; align-items: center; gap: 0.35rem;
+    flex-shrink: 0;
+}
+.wd-audio-volume-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+.wd-audio-volume-btn:hover {
+    background: rgba(253, 86, 49, 0.15);
+    color: #fd5631;
+    border-color: rgba(253, 86, 49, 0.3);
+}
+.wd-audio-volume-range {
+    width: 50px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+.wd-audio-volume-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fd5631;
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.2);
+    transition: all 0.15s ease;
+}
+.wd-audio-volume-range::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 5px rgba(253, 86, 49, 0.3);
+}
+.wd-audio-volume-range::-moz-range-thumb {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fd5631;
+    cursor: pointer;
+    border: 0;
+    box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.2);
+}
+
+/* ویدیو */
+.wd-preview-video {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+.wd-preview-video video {
+    width: 100%;
+    height: auto;
+    max-height: 240px;
+    display: block;
+    border-radius: 0.75rem;
+}
+.wd-preview-video .image-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 0.25rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* responsive */
+@media (max-width: 480px) {
+    .wd-audio-volume {
+        display: none;
+    }
+    .wd-audio-player {
+        flex-wrap: wrap;
+    }
+}
+
+/* اطلاعات پست */
+.wd-rule-post-info {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    color: #9691a4;
+    margin-bottom: 1rem;
+}
+.wd-rule-post-info i { color: #3c76f2; }
+.wd-rule-post-info strong { color: #fff; font-weight: 500; }
+
+/* فوتر کارت */
+.wd-rule-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: auto;
+}
+.wd-rule-meta {
+    font-size: 0.75rem;
+    color: #9691a4;
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.wd-rule-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+.wd-rule-meta i { font-size: 0.75rem; }
+
+.wd-rule-actions {
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.wd-action-btn {
+    width: 34px; height: 34px;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+.wd-action-btn:hover {
+    background: rgba(253, 86, 49, 0.15);
+    border-color: rgba(253, 86, 49, 0.4);
+    color: #fd5631;
+    transform: translateY(-2px);
+}
+.wd-action-btn.danger:hover {
+    background: rgba(242, 60, 73, 0.15);
+    border-color: rgba(242, 60, 73, 0.4);
+    color: #f23c49;
+}
+.wd-action-btn.warning:hover {
+    background: rgba(253, 188, 49, 0.15);
+    border-color: rgba(253, 188, 49, 0.4);
+    color: #fdbc31;
+}
+
+/* ==================== Empty state ==================== */
+.wd-empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+}
+.wd-empty-state-icon {
+    width: 100px; height: 100px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.1), rgba(93, 60, 242, 0.1));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.75rem; color: #fd5631;
+}
+.wd-empty-state h3 {
+    color: #fff; margin-bottom: 0.75rem; font-size: 1.15rem;
+}
+.wd-empty-state p {
+    color: #9691a4; margin-bottom: 1.5rem; font-size: 0.9rem;
+}
+
+/* ==================== Pagination ==================== */
+.wd-pagination {
+    display: flex; justify-content: center; gap: 0.5rem;
+    margin-top: 2rem; flex-wrap: wrap;
+}
+.wd-page-link {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 0.85rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    display: inline-flex; align-items: center; justify-content: center;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+.wd-page-link:hover {
+    background: rgba(253, 86, 49, 0.1);
+    border-color: rgba(253, 86, 49, 0.4);
+    color: #fff;
+}
+.wd-page-link.is-active {
+    background: linear-gradient(135deg, #fd5631, #e64a2a);
+    border-color: #fd5631;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px -2px rgba(253, 86, 49, 0.4);
+}
+.wd-page-link.is-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+.wd-page-info {
+    min-width: 80px;
+    height: 40px;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    color: #9691a4;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* ==================== مودال فیلتر ==================== */
+.wd-modal .modal-content {
+    background: #1f1b2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.5rem;
+    color: #fff;
+}
+.wd-modal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.25rem 1.5rem;
+}
+.wd-modal .modal-body {
+    padding: 1.5rem;
+}
+.wd-modal .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem 1.5rem;
+    gap: 0.5rem;
+}
+.wd-modal .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+    opacity: 0.7;
+}
+.wd-modal .btn-close:hover { opacity: 1; }
+
+/* گروه فیلتر */
+.wd-filter-group {
+    margin-bottom: 0;
+}
+
+.wd-filter-group-title {
+    color: #fff;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+}
+.wd-filter-group-title i { color: #fd5631; }
+
+/* input و select یکدست */
+.wd-filter-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.7rem 1rem;
+    color: #fff;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: all 0.2s ease;
+    outline: none;
+    min-height: 44px;
+    font-family: inherit;
+}
+.wd-filter-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+.wd-filter-input:hover {
+    border-color: rgba(253, 86, 49, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+}
+.wd-filter-input:focus {
+    border-color: #fd5631;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.15);
+}
+
+/* Select */
+.wd-filter-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%239691a4' d='M7 10L1 4h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 1rem center;
+    background-size: 14px 14px;
+    padding-left: 2.75rem;
+    cursor: pointer;
+}
+.wd-filter-select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23fd5631' d='M7 10L1 4h12z'/%3E%3C/svg%3E");
+}
+.wd-filter-select option {
+    background: #1f1b2d;
+    color: #fff;
+    padding: 0.5rem;
+}
+
+/* جستجو با آیکون */
+.wd-search-input-wrapper {
+    position: relative;
+}
+.wd-search-input-wrapper .wd-filter-input {
+    padding-right: 3rem;
+    padding-left: 3rem;
+}
+.wd-search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9691a4;
+    font-size: 1rem;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+.wd-search-input-wrapper .wd-filter-input:focus ~ .wd-search-icon {
+    color: #fd5631;
+}
+.wd-search-clear {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: 0;
+    color: #9691a4;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+.wd-search-clear:hover {
+    color: #f23c49;
+}
+
+/* responsive */
+@media (max-width: 767px) {
+    .wd-modal .modal-body {
+        padding: 1rem;
+    }
+}
+
+/* ==================== responsive ==================== */
+@media (max-width: 767px) {
+    .wd-page-header { padding: 1.25rem; }
+    .wd-rules-grid { grid-template-columns: 1fr; }
+    .wd-rule-card { padding: 1.25rem; }
+    .wd-preview-image, .wd-preview-video { height: 150px; }
+}
+
+/* ==================== انیمیشن ورود کارت‌ها ==================== */
+@keyframes wdCardEnter {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.wd-rule-card {
+    animation: wdCardEnter 0.4s ease-out forwards;
+    opacity: 0;
+}
+.wd-rule-card:nth-child(1) { animation-delay: 0.05s; }
+.wd-rule-card:nth-child(2) { animation-delay: 0.1s; }
+.wd-rule-card:nth-child(3) { animation-delay: 0.15s; }
+.wd-rule-card:nth-child(4) { animation-delay: 0.2s; }
+.wd-rule-card:nth-child(5) { animation-delay: 0.25s; }
+.wd-rule-card:nth-child(6) { animation-delay: 0.3s; }
+.wd-rule-card:nth-child(7) { animation-delay: 0.35s; }
+.wd-rule-card:nth-child(8) { animation-delay: 0.4s; }
+.wd-rule-card:nth-child(9) { animation-delay: 0.45s; }
+.wd-rule-card:nth-child(10) { animation-delay: 0.5s; }
+.wd-rule-card:nth-child(11) { animation-delay: 0.55s; }
+.wd-rule-card:nth-child(12) { animation-delay: 0.6s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wd-rules">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:windirect_landing' %}">وین دایرکت</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'windirect:dashboard' %}">داشبورد</a></li>
+        <li class="breadcrumb-item active">کامنت‌های هوشمند</li>
+    </ol>
+
+    <!-- هدر صفحه -->
+    <div class="wd-page-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wd-page-header-icon"><i class="bi bi-lightning-charge"></i></div>
+            <div>
+                <h1 class="text-white">کامنت‌های هوشمند</h1>
+                <p>قوانین پاسخ‌دهی خودکار به کامنت‌ها و لایوها</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="wd-filter-btn" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="bi bi-funnel"></i>
+                فیلتر
+                {% if has_filters %}
+                    <span class="filter-count">فعال</span>
+                {% endif %}
+            </button>
+            <a href="{% url 'windirect:simulation' %}" class="btn btn-outline-primary rounded-pill px-4">
+                <i class="bi bi-play-circle ms-1"></i> آزمایش
+            </a>
+            <a href="{% url 'windirect:rule_create' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-lg ms-1"></i> ساخت کامنت هوشمند
+            </a>
+        </div>
+    </div>
+
+    <!-- کارت‌های آماری -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon primary"><i class="bi bi-lightning-charge"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ total_count }}</div>
+                    <div class="wd-mini-stat-label">کل کامنت‌های هوشمند</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon success"><i class="bi bi-check-circle"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ active_count }}</div>
+                    <div class="wd-mini-stat-label">فعال</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon info"><i class="bi bi-chat-left-text"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ comment_count }}</div>
+                    <div class="wd-mini-stat-label">پاسخ در کامنت</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="wd-mini-stat">
+                <div class="wd-mini-stat-icon accent"><i class="bi bi-chat-dots"></i></div>
+                <div>
+                    <div class="wd-mini-stat-value">{{ direct_count }}</div>
+                    <div class="wd-mini-stat-label">پاسخ در دایرکت</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- چیپ‌های فیلتر فعال -->
+    {% if has_filters %}
+        <div class="wd-active-filters">
+            <span class="wd-active-filters-label"><i class="bi bi-funnel-fill"></i> فیلترهای فعال:</span>
+    
+            {% for filter in active_filters %}
+                <a href="?{% for f in active_filters %}{% if f.key != filter.key %}{{ f.key }}={{ f.value }}&{% endif %}{% endfor %}"
+                   class="wd-chip">
+                    <i class="bi bi-{{ filter.icon }}"></i>
+                    {{ filter.label }}
+                    <i class="bi bi-x"></i>
+                </a>
+            {% endfor %}
+    
+            <a href="{% url 'windirect:rules' %}" class="wd-chip" style="background: rgba(242, 60, 73, 0.15); border-color: rgba(242, 60, 73, 0.3);">
+                <i class="bi bi-x-circle"></i> پاک کردن همه
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- لیست کامنت‌های هوشمند -->
+    {% if rules %}
+        <div class="wd-rules-grid">
+            {% for rule in rules %}
+                <div class="wd-rule-card {% if not rule.is_active %}is-inactive{% endif %}">
+
+                    <!-- هدر با آواتار -->
+                    <div class="wd-rule-top">
+                        <div class="wd-avatar status-{{ rule.connection.status }}">
+                            {{ rule.connection.username|slice:":1" }}
+                            <span class="status-dot"></span>
+                        </div>
+                        <div class="wd-rule-top-content">
+                            <div class="wd-rule-username" dir="ltr">
+                                <i class="bi bi-instagram"></i>
+                                @{{ rule.connection.username }}
+                            </div>
+                            <div class="wd-rule-name-small">{{ rule.name }}</div>
+                        </div>
+                        <span class="wd-rule-status {% if rule.is_active %}active{% else %}inactive{% endif %}">
+                            {% if rule.is_active %}
+                                <i class="bi bi-check-circle-fill"></i> فعال
+                            {% else %}
+                                <i class="bi bi-pause-circle-fill"></i> غیرفعال
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- بج‌ها -->
+                    <div class="wd-rule-badges">
+                        {% if rule.target_type == 'post' %}
+                            <span class="wd-badge badge-post"><i class="bi bi-image"></i> پست</span>
+                        {% else %}
+                            <span class="wd-badge badge-live"><i class="bi bi-broadcast"></i> لایو</span>
+                        {% endif %}
+
+                        {% if rule.reply_channel == 'comment' %}
+                            <span class="wd-badge badge-comment"><i class="bi bi-chat-left-text"></i> کامنت</span>
+                        {% else %}
+                            <span class="wd-badge badge-direct"><i class="bi bi-chat-dots"></i> دایرکت</span>
+                        {% endif %}
+
+                        <span class="wd-badge badge-count"><i class="bi bi-play-circle"></i> {{ rule.execution_count }} اجرا</span>
+
+                        <span class="wd-badge">
+                            {% if rule.match_type == 'contains' %}<i class="bi bi-search"></i> شامل{% else %}<i class="bi bi-equals"></i> برابر{% endif %}
+                        </span>
+                    </div>
+
+                    <!-- کلیدواژه‌ها -->
+                    <div class="wd-rule-keywords">
+                        <div class="wd-rule-keywords-label">
+                            <i class="bi bi-tag"></i> فعال‌سازها
+                        </div>
+                        <div class="wd-rule-keywords-list">
+                            {% for kw in rule.keywords.all|slice:":3" %}
+                                <span class="wd-keyword">{{ kw.value }}</span>
+                            {% empty %}
+                                <span class="text-muted small">—</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- پیش‌نمایش محتوا -->
+                    <div class="wd-rule-preview">
+                        {% if rule.reply_channel == 'comment' %}
+                            {# پاسخ کامنت - متن #}
+                            {% with first_reply=rule.comment_replies.first %}
+                                {% if first_reply %}
+                                    <div class="wd-preview-text">
+                                        <i class="bi bi-chat-left-quote"></i>
+                                        <div class="text-content">{{ first_reply.text }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="wd-preview-text">
+                                        <i class="bi bi-dash-circle"></i>
+                                        <div class="text-content text-muted">هیچ پاسخی ثبت نشده</div>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            {# دایرکت - بر اساس نوع #}
+                            {% if rule.direct_message_kind == 'text' %}
+                                <div class="wd-preview-text">
+                                    <i class="bi bi-card-text"></i>
+                                    <div class="text-content">{{ rule.direct_message_text|default:"—" }}</div>
+                                </div>
+                    
+                            {% elif rule.direct_message_kind == 'image' and rule.direct_message_file %}
+                                <div class="wd-preview-image">
+                                    <img src="{{ rule.direct_message_file.url }}" alt="تصویر دایرکت" loading="lazy">
+                                    <span class="image-badge"><i class="bi bi-image"></i> تصویر</span>
+                                </div>
+                    
+                            {% elif rule.direct_message_kind == 'video' and rule.direct_message_file %}
+                                <div class="wd-preview-video">
+                                    <video controls preload="metadata" playsinline poster="">
+                                        <source src="{{ rule.direct_message_file.url }}" type="video/mp4">
+                                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                                    </video>
+                                    <span class="image-badge" style="top: 0.5rem; right: 0.5rem; z-index: 2;"><i class="bi bi-camera-video"></i> ویدیو</span>
+                                </div>
+                    
+                            {% elif rule.direct_message_kind == 'audio' and rule.direct_message_file %}
+                                {# ⭐ پلیر صوت سفارشی #}
+                                <div class="wd-audio-player" data-audio-src="{{ rule.direct_message_file.url }}" dir="ltr">
+                                    <audio preload="metadata" src="{{ rule.direct_message_file.url }}"></audio>
+                    
+                                    <button type="button" class="wd-audio-play-btn" aria-label="پخش">
+                                        <i class="bi bi-play-fill"></i>
+                                    </button>
+                    
+                                    <div class="wd-audio-info">
+                                        <div class="wd-audio-title">
+                                            <i class="bi bi-music-note-beamed"></i>
+                                            پیام صوتی
+                                        </div>
+                                        <div class="wd-audio-waveform" >
+                                            <div class="wd-audio-progress"></div>
+                                            <div class="wd-audio-bars">
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                            </div>
+                                        </div>
+                                        <div class="wd-audio-time">
+                                            <span class="current">0:00</span>
+                                            <span class="separator">/</span>
+                                            <span class="duration">0:00</span>
+                                        </div>
+                                    </div>
+                    
+                                    <div class="wd-audio-volume">
+                                        <button type="button" class="wd-audio-volume-btn" aria-label="صدا">
+                                            <i class="bi bi-volume-up-fill"></i>
+                                        </button>
+                                        <input type="range" class="wd-audio-volume-range" min="0" max="1" step="0.05" value="1">
+                                    </div>
+                                </div>
+                    
+                            {% else %}
+                                <div class="wd-preview-text">
+                                    <i class="bi bi-dash-circle"></i>
+                                    <div class="text-content text-muted">محتوایی ثبت نشده</div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- اطلاعات پست -->
+                    {% if rule.target_type == 'post' and rule.post_media_id %}
+                        <div class="wd-rule-post-info">
+                            <i class="bi bi-pin-angle-fill"></i>
+                            پست: <strong>{{ rule.post_media_id }}</strong>
+                        </div>
+                    {% elif rule.target_type == 'post' %}
+                        <div class="wd-rule-post-info">
+                            <i class="bi bi-collection"></i>
+                            همه‌ی پست‌ها
+                        </div>
+                    {% endif %}
+
+                    <!-- فوتر -->
+                    <div class="wd-rule-footer">
+                        <div class="wd-rule-meta">
+                            <span>
+                                <i class="bi bi-calendar-event"></i> {{ rule.created_at|date:"Y/m/d" }}
+                            </span>
+                        </div>
+                        <div class="wd-rule-actions">
+                            <a href="{% url 'windirect:rule_edit' rule.pk %}" class="wd-action-btn" title="ویرایش">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'windirect:rule_toggle' rule.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="wd-action-btn {% if rule.is_active %}warning{% endif %}" title="{% if rule.is_active %}غیرفعال کردن{% else %}فعال کردن{% endif %}">
+                                    {% if rule.is_active %}
+                                        <i class="bi bi-pause-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-play-fill"></i>
+                                    {% endif %}
+                                </button>
+                            </form>
+                            {% if not rule.execution_count %}
+                                <button type="button" class="wd-action-btn danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteRuleModal"
+                                        data-delete-url="{% url 'windirect:rule_delete' rule.pk %}"
+                                        data-rule-name="{{ rule.name }}"
+                                        title="حذف">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {% include 'partials/pagination.html' with rules=page_obj %}
+    {% endif %}
+
+</div>
+
+<!-- ==================== مودال فیلتر ==================== -->
+<div class="modal fade wd-modal" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form method="get" id="filterForm">
+                <div class="modal-header">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-funnel text-primary ms-2"></i>
+                        فیلتر کامنت‌های هوشمند
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- جستجو -->
+                    <div class="wd-filter-group">
+                        <label class="wd-filter-group-title" for="filterSearch">
+                            <i class="bi bi-search"></i> جستجو
+                        </label>
+                        <div class="wd-search-input-wrapper">
+                            <i class="bi bi-search wd-search-icon"></i>
+                            <input type="text"
+                                   class="wd-filter-input"
+                                   id="filterSearch"
+                                   name="q"
+                                   value="{{ q }}"
+                                   placeholder="جستجوی نام، آیدی کانال یا فعال‌ساز..."
+                                   autocomplete="off">
+                            {% if q %}
+                                <button type="button" class="wd-search-clear" onclick="document.getElementById('filterSearch').value='';">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- نوع هدف -->
+                        <div class="col-md-6">
+                            <div class="wd-filter-group">
+                                <label class="wd-filter-group-title" for="filterTarget">
+                                    <i class="bi bi-bullseye"></i> نوع هدف
+                                </label>
+                                <select class="wd-filter-input wd-filter-select" id="filterTarget" name="target">
+                                    <option value="" {% if not selected_target %}selected{% endif %}>همه اهداف</option>
+                                    <option value="post" {% if selected_target == 'post' %}selected{% endif %}>پست</option>
+                                    <option value="live" {% if selected_target == 'live' %}selected{% endif %}>لایو</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- کانال پاسخ -->
+                        <div class="col-md-6">
+                            <div class="wd-filter-group">
+                                <label class="wd-filter-group-title" for="filterChannel">
+                                    <i class="bi bi-chat-dots"></i> کانال پاسخ
+                                </label>
+                                <select class="wd-filter-input wd-filter-select" id="filterChannel" name="channel">
+                                    <option value="" {% if not selected_channel %}selected{% endif %}>همه کانال‌ها</option>
+                                    <option value="comment" {% if selected_channel == 'comment' %}selected{% endif %}>پاسخ در کامنت</option>
+                                    <option value="direct" {% if selected_channel == 'direct' %}selected{% endif %}>پاسخ در دایرکت</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- حساب اینستاگرام -->
+                        {% if connections %}
+                            <div class="col-md-6">
+                                <div class="wd-filter-group">
+                                    <label class="wd-filter-group-title" for="filterConnection">
+                                        <i class="bi bi-instagram"></i> حساب اینستاگرام
+                                    </label>
+                                    <select class="wd-filter-input wd-filter-select" id="filterConnection" name="connection">
+                                        <option value="" {% if not selected_connection %}selected{% endif %}>همه حساب‌ها</option>
+                                        {% for conn in connections %}
+                                            <option value="{{ conn.pk }}" {% if selected_connection == conn.pk|stringformat:'s' %}selected{% endif %}>
+                                                @{{ conn.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- وضعیت -->
+                        <div class="col-md-6">
+                            <div class="wd-filter-group">
+                                <label class="wd-filter-group-title" for="filterStatus">
+                                    <i class="bi bi-toggle-on"></i> وضعیت
+                                </label>
+                                <select class="wd-filter-input wd-filter-select" id="filterStatus" name="status">
+                                    <option value="" {% if not selected_status %}selected{% endif %}>همه وضعیت‌ها</option>
+                                    <option value="active" {% if selected_status == 'active' %}selected{% endif %}>فعال</option>
+                                    <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>غیرفعال</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'windirect:rules' %}" class="btn btn-outline-danger rounded-pill px-4">
+                        <i class="bi bi-x-circle ms-1"></i> پاک کردن همه
+                    </a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-check2-circle ms-1"></i> اعمال فیلتر
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== مودال تأیید حذف ==================== -->
+<div class="modal fade wd-modal" id="deleteRuleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" id="deleteRuleForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle ms-2"></i>
+                        حذف کامنت هوشمند
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-light mb-3">
+                        آیا از حذف کامنت هوشمند
+                        <strong class="text-warning" id="deleteRuleName">—</strong>
+                        مطمئن هستید؟
+                    </p>
+                    <div class="alert alert-warning bg-faded-warning border-0 rounded-3 small mb-0">
+                        <i class="bi bi-info-circle ms-1"></i>
+                        این عمل غیرقابل بازگشت است. اگر این کامنت هوشمند سابقه‌ی اجرا داشته باشد، حذف نمی‌شود.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">
+                        <i class="bi bi-trash ms-1"></i> حذف کن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ==================== مودال حذف ====================
+    const deleteModal = document.getElementById('deleteRuleModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            const deleteUrl = button.getAttribute('data-delete-url');
+            const ruleName = button.getAttribute('data-rule-name');
+
+            document.getElementById('deleteRuleForm').action = deleteUrl;
+            document.getElementById('deleteRuleName').textContent = ruleName;
+        });
+    }
+});
+</script>
+    <script>
+    // ==================== پلیر صوت سفارشی ====================
+document.querySelectorAll('.wd-audio-player').forEach(function (player) {
+    const audio = player.querySelector('audio');
+    const playBtn = player.querySelector('.wd-audio-play-btn');
+    const playIcon = playBtn.querySelector('i');
+    const waveform = player.querySelector('.wd-audio-waveform');
+    const progress = player.querySelector('.wd-audio-progress');
+    const currentTime = player.querySelector('.wd-audio-time .current');
+    const durationEl = player.querySelector('.wd-audio-time .duration');
+    const volumeBtn = player.querySelector('.wd-audio-volume-btn');
+    const volumeIcon = volumeBtn.querySelector('i');
+    const volumeRange = player.querySelector('.wd-audio-volume-range');
+    const bars = player.querySelectorAll('.wd-audio-bars span');
+
+    // فرمت زمان
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // Play / Pause
+    playBtn.addEventListener('click', function () {
+        if (audio.paused) {
+            // فقط یه پلیر رو پخش کن
+            document.querySelectorAll('.wd-audio-player audio').forEach(function (a) {
+                if (a !== audio) a.pause();
+            });
+            audio.play();
+        } else {
+            audio.pause();
+        }
+    });
+
+    audio.addEventListener('play', function () {
+        playIcon.className = 'bi bi-pause-fill';
+        playBtn.classList.add('is-playing');
+        player.classList.add('is-playing');
+    });
+
+    audio.addEventListener('pause', function () {
+        playIcon.className = 'bi bi-play-fill';
+        playBtn.classList.remove('is-playing');
+        player.classList.remove('is-playing');
+    });
+
+    audio.addEventListener('ended', function () {
+        playIcon.className = 'bi bi-play-fill';
+        playBtn.classList.remove('is-playing');
+        player.classList.remove('is-playing');
+        progress.style.width = '0%';
+        currentTime.textContent = '0:00';
+    });
+
+    // آپدیت duration
+    audio.addEventListener('loadedmetadata', function () {
+        durationEl.textContent = formatTime(audio.duration);
+    });
+
+    // آپدیت progress
+    audio.addEventListener('timeupdate', function () {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = percent + '%';
+        currentTime.textContent = formatTime(audio.currentTime);
+        player.classList.add('is-progress');
+
+        // رنگ میله‌های قبل از progress
+        bars.forEach(function (bar, index) {
+            const barPercent = (index / bars.length) * 100;
+            if (barPercent < percent) {
+                bar.style.background = '#fd5631';
+            } else {
+                bar.style.background = 'rgba(255, 255, 255, 0.2)';
+            }
+        });
+    });
+
+    // کلیک روی waveform
+    waveform.addEventListener('click', function (e) {
+        const rect = waveform.getBoundingClientRect();
+        // RTL support
+        const clickX = rect.right - e.clientX;
+        const percent = clickX / rect.width;
+        audio.currentTime = percent * audio.duration;
+    });
+
+    // کنترل صدا
+    volumeRange.addEventListener('input', function () {
+        audio.volume = parseFloat(volumeRange.value);
+        updateVolumeIcon();
+    });
+
+    volumeBtn.addEventListener('click', function () {
+        audio.muted = !audio.muted;
+        updateVolumeIcon();
+    });
+
+    function updateVolumeIcon() {
+        if (audio.muted || audio.volume === 0) {
+            volumeIcon.className = 'bi bi-volume-mute-fill';
+        } else if (audio.volume < 0.5) {
+            volumeIcon.className = 'bi bi-volume-down-fill';
+        } else {
+            volumeIcon.className = 'bi bi-volume-up-fill';
+        }
+    }
+});
+    </script>
+{% endblock %}

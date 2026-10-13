@@ -1,0 +1,78 @@
+{% extends 'windirect/base.html' %}
+{% block windirect_title %}{{ heading }} | وین دایرکت{% endblock %}
+{% block panel_heading %}{{ heading }}{% endblock %}
+{% block panel_intro %}{{ intro }}{% endblock %}
+{% block panel_action %}
+    <a class="btn btn-primary rounded-pill"
+       href="{% url 'windirect:asset_create' kind %}">
+        <i class="bi bi-plus-lg ms-2">
+        </i>{{ singular }} جدید</a>
+{% endblock %}
+{% block panel_content %}
+    <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
+        <form method="get" class="d-flex gap-2">
+            <label class="visually-hidden" for="tool-search">جست‌وجوی عنوان</label>
+            <input id="tool-search"
+                   class="form-control bg-dark text-light border-light"
+                   name="q"
+                   value="{{ query }}"
+                   placeholder="جست‌وجوی عنوان…"
+                   maxlength="150">
+            <button class="btn btn-outline-primary">جست‌وجو</button>
+        </form>
+        <a href="{% url 'windirect:direct_simulation' %}"
+           class="btn btn-outline-light rounded-pill">آزمایش در شبیه‌ساز</a>
+    </div>
+    <div class="row g-4">
+        {% for item in page_obj %}
+            <div class="col-lg-6">
+                <article class="card wd-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between gap-2 mb-3">
+                            <h2 class="h5 text-white mb-0">{{ item.name }}</h2>
+                            <span class="badge {% if item.is_active %}bg-faded-success text-success{% else %}bg-faded-warning text-warning{% endif %}">
+                                {% if item.is_active %}فعال{% else %}غیرفعال{% endif %}
+                            </span>
+                        </div>
+                        <p class="text-muted">
+                            <span dir="ltr">@{{ item.connection.username }}</span> · آزمایشی
+                        </p>
+                        {% if kind == 'direct' %}
+                            <p class="text-light">«{{ item.keyword }}» ← {{ item.get_response_type_display }}</p>
+                            <p class="small text-muted">تطبیق {{ item.get_match_type_display }} · اولویت {{ item.priority }}</p>
+                        {% endif %}
+                        <div class="d-flex flex-wrap gap-2 mt-4">
+                            <a class="btn btn-outline-primary btn-sm"
+                               href="{% url 'windirect:asset_edit' kind item.pk %}">ویرایش</a>
+                            {% if kind == 'forms' %}
+                                <a class="btn btn-outline-light btn-sm"
+                                   href="{% url 'windirect:submissions' item.pk %}">پاسخ‌ها و اکسل</a>
+                            {% endif %}
+                            <form method="post"
+                                  action="{% url 'windirect:asset_toggle' kind item.pk %}">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-light btn-sm">{% if item.is_active %}غیرفعال کردن{% else %}فعال کردن{% endif %}</button>
+                            </form>
+                            <a class="btn btn-outline-danger btn-sm"
+                               href="{% url 'windirect:asset_delete' kind item.pk %}">حذف</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="card wd-card wd-empty">
+                    <i class="bi bi-inboxes">
+                    </i>
+                    <h2 class="h5 text-light">{% if query %}نتیجه‌ای پیدا نشد{% else %}اولین {{ singular }} را بسازید{% endif %}</h2>
+                    <p>{{ intro }}</p>
+                    <div>
+                        <a class="btn btn-primary"
+                           href="{% url 'windirect:asset_create' kind %}">ساخت {{ singular }}</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% include 'windirect/common/pagination.html' %}
+{% endblock %}

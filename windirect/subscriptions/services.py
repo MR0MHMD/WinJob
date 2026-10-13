@@ -2,29 +2,33 @@
 
 from datetime import timedelta, datetime
 from decimal import Decimal, ROUND_HALF_UP
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from payment import constants
-from ..models import (
-    SubscriptionPlan,
+from windirect.subscriptions.models import (
     SubscriptionOffer,
     SubscriptionAccount,
     SubscriptionOrder,
     UserSubscription,
-    ReferralCode,
-    ReferralRedemption,
-    SubscriptionGift,
+    WindirectCoupon,
+    ReferralRedemption, SubscriptionGift,
 )
 
 FEATURES = ("smart_comments", "smart_direct", "showcases", "forms")
 
 
-def as_datetime(value):
-    """تاریخ مدل شمسی را برای محاسبات دقیق زمانی به میلادی تبدیل می‌کند."""
-    result = value.togregorian() if hasattr(value, "togregorian") else value
-    return timezone.make_aware(result) if timezone.is_naive(result) else result
+def _as_datetime(value):
+    """تاریخ شمسی رو به میلادی تبدیل می‌کنه."""
+    if hasattr(value, "togregorian"):
+        value = value.togregorian()
+    if timezone.is_naive(value):
+        value = timezone.make_aware(value)
+    return value
+
+
+# alias برای سازگاری با کدهای قبلی
+as_datetime = _as_datetime
 
 
 def money(value):
@@ -121,6 +125,7 @@ def _build_quote(account, offer, kind, code="", now=None):
     now = now or timezone.now()
     offer = SubscriptionOffer.objects.select_related("plan").get(pk=offer.pk)
     plan = offer.plan
+
     if (
         constants.WINDIRECT_CEO_POOL_PERCENT
         + constants.WINDIRECT_DEVELOPER_POOL_PERCENT
@@ -128,16 +133,21 @@ def _build_quote(account, offer, kind, code="", now=None):
         or not 0 <= constants.WINDIRECT_MAINTENANCE_PERCENT <= 100
     ):
         raise ValidationError("درصدهای تسهیم اشتراک در ثابت‌های پرداخت معتبر نیستند.")
+
     if not plan.is_active or not offer.is_active or plan.is_trial or offer.price <= 0:
         raise ValidationError("این گزینهٔ خرید فعال نیست.")
     if plan.level < account.highest_level:
         raise ValidationError("کاهش پلن خریداری‌شده مجاز نیست.")
+
     periods = remaining_periods(account, now)
     paid = [p for p in periods if p.kind != "trial"]
-    referral = None
+
     discount = 0
+    coupon = None
     upgrades = []
+
     if kind == "upgrade":
+        # ... (منطق ارتقا دست‌نخورده)
         if not paid:
             raise ValidationError(
                 "برای ارتقا باید یک دورهٔ پولی یا هدیهٔ وابسته به خرید باقی مانده باشد."
@@ -165,7 +175,6 @@ def _build_quote(account, offer, kind, code="", now=None):
                 str((as_datetime(period.ends_at) - start).total_seconds())
             ) / Decimal(86400)
             target_daily = Decimal(target.price) / Decimal(target.duration_days)
-            # هدیه اعتبار نقدی ندارد؛ برای ارتقای آن قیمت مقصد کامل محاسبه می‌شود.
             credit = Decimal(period.credit_daily)
             difference = max(target_daily - credit, Decimal(0)) * remaining
             base += difference
@@ -182,39 +191,38 @@ def _build_quote(account, offer, kind, code="", now=None):
         base = money(base)
         if code:
             raise ValidationError(
-                "کد معرف فقط برای اولین خرید است و روی ارتقا اعمال نمی‌شود."
+                "کد تخفیف فقط برای خرید اول قابل استفاده است و روی ارتقا اعمال نمی‌شود."
             )
     elif kind == "purchase":
         if paid and plan.level != paid[-1].capabilities["level"]:
             raise ValidationError("برای تغییر پلن فعال، از گزینهٔ ارتقا استفاده کنید.")
         base = offer.price
+
+        # ==================== اعمال کد تخفیف وین دایرکت ====================
         if code:
             code = code.strip().upper()
-            referral = (
-                ReferralCode.objects.select_related("owner")
-                .filter(code=code, is_active=True, owner__is_active=True)
-                .first()
-            )
-            if referral is None or referral.owner_id == account.user_id:
-                raise ValidationError("کد معرف معتبر نیست یا متعلق به خودتان است.")
-            if (
-                account.first_paid_at
-                or ReferralRedemption.objects.filter(buyer_id=account.user_id).exists()
-            ):
-                raise ValidationError(
-                    "مزایای معرف فقط در اولین خرید موفق قابل استفاده است."
-                )
-            discount = money(
-                Decimal(base)
-                * Decimal(constants.WINDIRECT_REFERRAL_DISCOUNT_PERCENT)
-                / 100
-            )
+            coupon = WindirectCoupon.objects.filter(
+                code=code,
+                is_active=True,
+            ).first()
+
+            if coupon is None:
+                raise ValidationError("کد تخفیف معتبر نیست.")
+
+            if not coupon.is_valid(now):
+                raise ValidationError("این کد تخفیف منقضی شده یا به حد استفاده رسیده است.")
+
+            discount = coupon.calculate_discount(base)
     else:
         raise ValidationError("نوع سفارش نامعتبر است.")
+
+    # ==================== محاسبه نهایی ====================
     net = base - discount
     if net <= 0:
         raise ValidationError("مبلغ خرید یا ارتقا باید مثبت باشد.")
+
     vat = money(Decimal(net) * Decimal(str(constants.VAT_PERCENT)))
+
     quote = {
         "plan_name": plan.name,
         "capabilities": plan.capabilities(),
@@ -227,33 +235,45 @@ def _build_quote(account, offer, kind, code="", now=None):
         "vat_rate": str(constants.VAT_PERCENT),
         "quoted_at": now.isoformat(),
         "upgrades": upgrades,
-        "buyer_gift_days": constants.WINDIRECT_BUYER_GIFT_DAYS if referral else 0,
-        "owner_gift_days": constants.WINDIRECT_REFERRER_GIFT_DAYS if referral else 0,
+        "coupon_code": coupon.code if coupon else "",
         "maintenance_percent": constants.WINDIRECT_MAINTENANCE_PERCENT,
         "ceo_pool_percent": constants.WINDIRECT_CEO_POOL_PERCENT,
         "developer_pool_percent": constants.WINDIRECT_DEVELOPER_POOL_PERCENT,
     }
-    return quote, referral
+    return quote, coupon
 
 
 @transaction.atomic
-def create_order(user, offer, kind="purchase", referral_code=""):
-    """سفارش و فاکتور قطعی را با اعتبار پانزده دقیقه‌ای ایجاد می‌کند."""
+def create_order(user, offer, kind="purchase", coupon_code=""):
+    """
+    سفارش را می‌سازد یا در صورت وجود pending قبلی با همان offer و kind،
+    همان را به‌روزرسانی می‌کند. فاکتور اینجا ساخته نمی‌شود؛ در view ساخته می‌شود.
+    """
     account_for(user)
     account = SubscriptionAccount.objects.select_for_update().get(user=user)
-    quote, referral = _build_quote(account, offer, kind, referral_code)
-    order = SubscriptionOrder.objects.create(
-        user=user,
-        offer=offer,
-        kind=kind,
-        quote=quote,
-        account_revision=account.revision,
-        referral=referral,
-        expires_at=timezone.now() + timedelta(minutes=15),
-    )
-    from payment.services.create_invoice import create_subscription_invoice
+    quote, coupon = _build_quote(account, offer, kind, coupon_code)
 
-    create_subscription_invoice(order)
+    # اگه order pending برای همین offer + kind وجود داشت، آپدیت کن
+    order = (
+        SubscriptionOrder.objects.select_for_update()
+        .filter(user=user, offer=offer, kind=kind, status="pending")
+        .order_by("-pk")
+        .first()
+    )
+
+    if order:
+        order.quote = quote
+        order.account_revision = account.revision
+        order.save(update_fields=["quote", "account_revision", "updated_at"])
+    else:
+        order = SubscriptionOrder.objects.create(
+            user=user,
+            offer=offer,
+            kind=kind,
+            quote=quote,
+            account_revision=account.revision,
+        )
+
     return order
 
 
@@ -262,7 +282,6 @@ def validate_order(order, account, now=None):
     now = now or timezone.now()
     if (
         order.status != "pending"
-        or as_datetime(order.expires_at) <= now
         or account.revision != order.account_revision
     ):
         raise ValidationError(

@@ -1,4 +1,4 @@
-from .models import Invoice, Coupon, Payment, Transaction, Wallet, BankAccount, WithdrawalRequest
+from .models import Invoice, Coupon, Payment, Transaction, Wallet, BankAccount, WithdrawalRequest, CommissionSplit
 from core.utils.admin_utils import RegionalFilterAdminMixin, format_datetime
 from django_jalali.admin.filters import JDateFieldListFilter
 from django.utils.translation import gettext_lazy as _
@@ -9,7 +9,6 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.urls import reverse
 from django.db import models
-
 
 
 class TransactionInline(admin.TabularInline):
@@ -87,6 +86,7 @@ class CouponAdmin(admin.ModelAdmin):
         }),
     )
 
+
 class InvoiceTypeFilter(SimpleListFilter):
     title = 'نوع فاکتور'
     parameter_name = 'type'
@@ -103,7 +103,6 @@ class InvoiceTypeFilter(SimpleListFilter):
         if self.value():
             return queryset.filter(type=self.value())
         return queryset
-
 
 
 @admin.register(Invoice)
@@ -243,6 +242,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             '<span class="fw-bold">{}</span>',
             obj.invoice_number or '---'
         )
+
     invoice_number_display.short_description = "شماره فاکتور"
     invoice_number_display.admin_order_field = "invoice_number"
 
@@ -265,6 +265,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             color,
             label
         )
+
     type_display.short_description = "نوع فاکتور"
     type_display.admin_order_field = "type"
 
@@ -278,6 +279,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 obj.user.phone_number
             )
         return "-"
+
     user_display.short_description = "کاربر"
     user_display.admin_order_field = "user__phone_number"
 
@@ -307,6 +309,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 team_name
             )
         return "-"
+
     campaign_or_order_link.short_description = "کمپین / سفارش"
     campaign_or_order_link.admin_order_field = "campaign__name"
 
@@ -315,6 +318,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if obj.type == Invoice.Type.WALLET:
             return "-"
         return f"{obj.content_cost:,}" if obj.content_cost else "۰"
+
     content_cost_display.short_description = "هزینه محتوا"
     content_cost_display.admin_order_field = "content_cost"
 
@@ -323,12 +327,14 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if obj.type == Invoice.Type.WALLET:
             return "-"
         return f"{obj.commission:,}" if obj.commission else "۰"
+
     commission_display.short_description = "کمیسیون"
     commission_display.admin_order_field = "commission"
 
     def total_vat_display(self, obj):
         """نمایش مالیات"""
         return f"{obj.total_vat:,}" if obj.total_vat else "۰"
+
     total_vat_display.short_description = "مالیات"
     total_vat_display.admin_order_field = "total_vat"
 
@@ -337,6 +343,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if obj.type == Invoice.Type.WALLET:
             return f"{obj.wallet_deposit_amount:,}"
         return f"{obj.payable_amount:,}"
+
     payable_amount_display.short_description = "مبلغ قابل پرداخت"
     payable_amount_display.admin_order_field = "payable_amount"
 
@@ -345,18 +352,21 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
         if obj.is_paid:
             return mark_safe('<span class="badge bg-success">✅ پرداخت شده</span>')
         return mark_safe('<span class="badge bg-danger">❌ پرداخت نشده</span>')
+
     is_paid_display.short_description = "وضعیت پرداخت"
     is_paid_display.admin_order_field = "is_paid"
 
     def formatted_created_at(self, obj):
         """تاریخ ایجاد فرمت شده"""
         return format_datetime(obj.created_at)
+
     formatted_created_at.short_description = "تاریخ ایجاد"
     formatted_created_at.admin_order_field = "created_at"
 
     def formatted_updated_at(self, obj):
         """تاریخ ویرایش فرمت شده"""
         return format_datetime(obj.updated_at)
+
     formatted_updated_at.short_description = "آخرین بروزرسانی"
     formatted_updated_at.admin_order_field = "updated_at"
 
@@ -379,6 +389,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
             """
         html += "</ul>"
         return mark_safe(html)
+
     payments_list.short_description = "پرداخت‌ها"
 
     def related_order_link(self, obj):
@@ -391,6 +402,7 @@ class InvoiceAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
                 obj.content_order.id
             )
         return "-"
+
     related_order_link.short_description = "سفارش مرتبط"
 
     # ================================================================
@@ -482,6 +494,7 @@ class PaymentAdmin(admin.ModelAdmin):
             reverse("admin:accounts_customuser_change", args=[obj.user.id]),
             obj.user.phone_number
         )
+
     user_display.short_description = "کاربر"
     user_display.admin_order_field = "user__phone_number"
 
@@ -491,11 +504,13 @@ class PaymentAdmin(admin.ModelAdmin):
             reverse("admin:payment_invoice_change", args=[obj.invoice.id]),
             obj.invoice.invoice_number or f"فاکتور #{obj.invoice.id}"
         )
+
     invoice_display.short_description = "فاکتور"
     invoice_display.admin_order_field = "invoice__invoice_number"
 
     def amount_display(self, obj):
         return f"{obj.amount:,} تومان"
+
     amount_display.short_description = "مبلغ"
     amount_display.admin_order_field = "amount"
 
@@ -505,6 +520,7 @@ class PaymentAdmin(admin.ModelAdmin):
             'wallet': '💰 کیف پول',
         }
         return labels.get(obj.payment_method, obj.payment_method)
+
     payment_method_display.short_description = "روش پرداخت"
     payment_method_display.admin_order_field = "payment_method"
 
@@ -521,12 +537,14 @@ class PaymentAdmin(admin.ModelAdmin):
             color,
             obj.get_status_display()
         )
+
     status_display.short_description = "وضعیت"
     status_display.admin_order_field = "status"
 
     def formatted_created_at(self, obj):
         from core.utils.admin_utils import format_datetime
         return format_datetime(obj.created_at)
+
     formatted_created_at.short_description = "تاریخ ایجاد"
 
     def get_queryset(self, request):
@@ -585,7 +603,7 @@ class TransactionAdmin(admin.ModelAdmin):
         'description',
     )
 
-    autocomplete_fields = ('user', )
+    autocomplete_fields = ('user',)
 
     raw_id_fields = ('campaign', 'invoice', 'payment')
 
@@ -1389,8 +1407,6 @@ class WithdrawalRequestAdmin(RegionalFilterAdminMixin, admin.ModelAdmin):
 
         return super().response_change(request, obj)
 
-from payment.models import CommissionSplit, SubscriptionPaymentAttempt
-
 
 @admin.register(CommissionSplit)
 class CommissionSplitAdmin(admin.ModelAdmin):
@@ -1431,24 +1447,4 @@ class CommissionSplitAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         """حذف دفتر تسهیم مجاز نیست."""
-        return False
-
-
-@admin.register(SubscriptionPaymentAttempt)
-class SubscriptionPaymentAttemptAdmin(admin.ModelAdmin):
-    """مرور تلاش‌های پرداخت اشتراک بدون تغییر سوابق."""
-    list_display = ('order', 'payment', 'authority', 'verified_at', 'created_at')
-    search_fields = ('authority', 'order__user__phone_number')
-    list_select_related = ('order', 'payment')
-
-    def has_add_permission(self, request):
-        """تلاش توسط سرویس ثبت می‌شود."""
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        """تلاش قابل ویرایش دستی نیست."""
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        """حذف سابقه مجاز نیست."""
         return False

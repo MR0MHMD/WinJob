@@ -1,138 +1,621 @@
-{% extends 'windirect/base.html' %}
-{% block windirect_title %}نمای کلی وین دایرکت{% endblock %}
-{% block panel_heading %}داشبورد وین دایرکت{% endblock %}
-{% block panel_intro %}حساب‌های آزمایشی، قوانین و آخرین نتیجه‌ها در یک نگاه{% endblock %}
-{% block panel_action %}
-    <a class="btn btn-primary rounded-pill"
-       href="{% url 'windirect:rule_create' %}">
-        <i class="bi bi-plus-lg ms-1">
-        </i> قانون جدید</a>
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}وین دایرکت{% endblock %}
+{% block description %}پنل مدیریت وین دایرکت{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ==================== تنظیمات پایه ==================== */
+.wd-dashboard { margin-top: 2.5rem; color: #fff; }
+
+/* ==================== بنر خوش‌آمدگویی ==================== */
+.wd-welcome-banner {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.1), rgba(93, 60, 242, 0.1));
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(253, 86, 49, 0.2);
+    margin-bottom: 2rem;
+}
+
+.wd-avatar-wrapper {
+    width: 70px; height: 70px; font-size: 2rem;
+    overflow: hidden; padding: 0; border-radius: 50%;
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    display: flex; align-items: center; justify-content: center;
+}
+
+.wd-user-avatar { width: 100%; height: 100%; object-fit: cover; }
+
+.wd-default-avatar {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%; color: #fff; font-size: 1.75rem;
+}
+
+/* ==================== کارت‌های آماری ==================== */
+.wd-stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    height: 100%;
+}
+
+.wd-stat-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(253, 86, 49, 0.4);
+    box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.3);
+}
+
+.wd-stat-icon {
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.15));
+    border-radius: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; color: #fd5631;
+    transition: all 0.3s ease;
+}
+
+.wd-stat-card:hover .wd-stat-icon {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.25), rgba(93, 60, 242, 0.25));
+}
+
+.wd-stat-value {
+    font-size: 2rem; font-weight: 800; color: #fff;
+    letter-spacing: -0.02em; line-height: 1.1;
+}
+
+.wd-stat-label {
+    color: #9691a4; font-size: 0.875rem; font-weight: 500;
+}
+
+/* ==================== کارت‌های عمومی ==================== */
+.wd-dashboard-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.wd-dashboard-card:hover {
+    border-color: rgba(253, 86, 49, 0.3);
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.3);
+}
+
+.wd-dashboard-card-header {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ==================== دسترسی سریع ==================== */
+.wd-quick-action {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 1.25rem 0.875rem;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: block;
+    color: #fff;
+    text-decoration: none;
+    height: 100%;
+}
+
+.wd-quick-action:hover {
+    background: rgba(253, 86, 49, 0.1);
+    border-color: #fd5631;
+    transform: translateY(-3px);
+    color: #fff;
+}
+
+.wd-quick-action i {
+    font-size: 1.75rem; color: #fd5631;
+    margin-bottom: 0.5rem; display: block;
+}
+
+.wd-quick-action span {
+    font-size: 0.875rem; font-weight: 500;
+}
+
+/* ==================== لیست‌ها ==================== */
+.wd-list-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 1rem;
+    margin: 0 1rem 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+}
+
+.wd-list-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(-4px);
+    border-color: rgba(253, 86, 49, 0.3);
+}
+
+.wd-empty {
+    text-align: center; padding: 2.5rem 1rem;
+}
+
+.wd-empty > i {
+    display: block; color: #fd5631;
+    font-size: 2.5rem; margin-bottom: 0.75rem;
+}
+
+/* ==================== نمودار ==================== */
+.wd-chart-container {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 1rem; padding: 1rem;
+}
+
+.wd-chart-container canvas { max-height: 280px; width: 100%; }
+
+/* ==================== ریسپانسیو ==================== */
+@media (max-width: 767px) {
+    .wd-stat-value { font-size: 1.5rem; }
+    .wd-stat-icon { width: 44px; height: 44px; font-size: 1.4rem; }
+    .wd-list-row { flex-direction: column; align-items: stretch; }
+}
+</style>
 {% endblock %}
-{% block panel_content %}
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <a class="card wd-card h-100 text-decoration-none"
-               href="{% url 'windirect:asset_list' 'direct' %}">
-                <div class="card-body p-4">
-                    <i class="bi bi-chat-dots text-primary fs-3">
-                    </i>
-                    <h2 class="h5 text-white mt-3">دایرکت هوشمند</h2>
-                    <p class="text-muted mb-0">محرک، پاسخ متنی و اتصال به ابزارها</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a class="card wd-card h-100 text-decoration-none"
-               href="{% url 'windirect:asset_list' 'showcases' %}">
-                <div class="card-body p-4">
-                    <i class="bi bi-collection text-primary fs-3">
-                    </i>
-                    <h2 class="h5 text-white mt-3">ویترین‌ساز</h2>
-                    <p class="text-muted mb-0">کارت‌های تصویری محصول با دکمه</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a class="card wd-card h-100 text-decoration-none"
-               href="{% url 'windirect:asset_list' 'forms' %}">
-                <div class="card-body p-4">
-                    <i class="bi bi-ui-checks text-primary fs-3">
-                    </i>
-                    <h2 class="h5 text-white mt-3">فرم‌ساز</h2>
-                    <p class="text-muted mb-0">سؤال‌های مرحله‌ای و خروجی اکسل</p>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <a class="wd-stat card border-light h-100 text-decoration-none"
-               href="{% url 'windirect:connections' %}">
-                <div class="card-body">
-                    <i class="bi bi-instagram text-primary fs-3">
-                    </i>
-                    <strong>{{ connections_count }}</strong>
-                    <span>حساب آزمایشی</span>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a class="wd-stat card border-light h-100 text-decoration-none"
-               href="{% url 'windirect:rules' %}">
-                <div class="card-body">
-                    <i class="bi bi-lightning-charge text-warning fs-3">
-                    </i>
-                    <strong>{{ rules_count }}</strong>
-                    <span>قانون ثبت‌شده</span>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a class="wd-stat card border-light h-100 text-decoration-none"
-               href="{% url 'windirect:logs' %}">
-                <div class="card-body">
-                    <i class="bi bi-chat-left-text text-accent fs-3">
-                    </i>
-                    <strong>{{ events_count }}</strong>
-                    <span>کامنت نمونه</span>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <section class="card wd-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 text-white mb-0">حساب‌های من</h2>
-                        <a href="{% url 'windirect:connections' %}">مدیریت حساب‌ها</a>
+
+{% block content %}
+<div class="container py-4 wd-dashboard">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item active" aria-current="page">وین دایرکت</li>
+    </ol>
+
+    <!-- بنر خوش‌آمدگویی -->
+    <div class="wd-welcome-banner">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="wd-avatar-wrapper">
+                        {% if request.user.avatar %}
+                            <img src="{{ request.user.avatar.url }}" alt="آواتار" class="wd-user-avatar">
+                        {% else %}
+                            <div class="wd-default-avatar"><i class="bi bi-person"></i></div>
+                        {% endif %}
                     </div>
-                    {% for connection in connections %}
+                    <div>
+                        <h1 class="h2 text-white mb-1">
+                            {% now "H" as current_hour %}
+                            {% if current_hour|add:"0" < 12 %}صبح بخیر{% elif current_hour|add:"0" < 17 %}ظهر بخیر{% elif current_hour|add:"0" < 19 %}عصر بخیر{% else %}شب بخیر{% endif %},
+                            {{ request.user.nickname|default:"کاربر" }}!
+                        </h1>
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-calendar-event ms-1"></i>
+                            امروز {{ persian_date }} -
+                            <span class="text-primary">به پنل وین دایرکت خوش آمدی!</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <a href="{% url 'windirect:rule_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg ms-1"></i> قانون جدید
+                    </a>
+                    <a href="{% url 'windirect:plans' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-star-fill ms-1"></i> خرید اشتراک
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- کارت‌های آماری -->
+    <div class="row g-4 mb-5">
+        <!-- اشتراک -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wd-stat-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wd-stat-icon"><i class="bi bi-star-fill"></i></div>
+                    <span class="badge bg-success px-3 py-1">
+                        {% if subscription %}فعال{% else %}غیرفعال{% endif %}
+                    </span>
+                </div>
+                {% if subscription %}
+                    <div class="wd-stat-value">{{ subscription_days_left }}</div>
+                    <div class="wd-stat-label">روز باقی‌مانده · {{ subscription.plan_name }}</div>
+                {% else %}
+                    <div class="wd-stat-value">—</div>
+                    <div class="wd-stat-label">اشتراک فعالی ندارید</div>
+                {% endif %}
+                <div class="mt-2">
+                    <a href="{% url 'windirect:plans' %}" class="small text-primary text-decoration-none">
+                        {% if subscription %}تمدید اشتراک{% else %}خرید اشتراک{% endif %}
+                        <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- حساب‌ها -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wd-stat-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wd-stat-icon"><i class="bi bi-instagram"></i></div>
+                    <span class="badge bg-primary px-3 py-1">پیج</span>
+                </div>
+                <div class="wd-stat-value">{{ connections_count }}</div>
+                <div class="wd-stat-label">
+                    حساب از {{ allowed_pages }} پیج مجاز
+                </div>
+                <div class="mt-2">
+                    <a href="{% url 'windirect:connections' %}" class="small text-primary text-decoration-none">
+                        مدیریت حساب‌ها <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- قوانین -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wd-stat-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wd-stat-icon"><i class="bi bi-lightning-charge"></i></div>
+                    <span class="badge bg-accent px-3 py-1">قوانین</span>
+                </div>
+                <div class="wd-stat-value">{{ total_rules_count }}</div>
+                <div class="wd-stat-label">قانون فعال</div>
+                <div class="small text-muted mt-2">
+                    <span class="text-info">✓ {{ comment_rules_count }} کامنت</span>
+                    <span class="mx-2">|</span>
+                    <span class="text-warning">✓ {{ direct_rules_count }} دایرکت</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- اجراها -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wd-stat-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wd-stat-icon"><i class="bi bi-play-circle"></i></div>
+                    <span class="badge bg-info px-3 py-1">اجرا</span>
+                </div>
+                <div class="wd-stat-value">{{ total_executions_count }}</div>
+                <div class="wd-stat-label">کل اجراها</div>
+                <div class="small text-muted mt-2">
+                    <span class="text-info">✓ {{ comment_executions_count }} کامنت</span>
+                    <span class="mx-2">|</span>
+                    <span class="text-warning">✓ {{ direct_executions_count }} دایرکت</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- دسترسی سریع -->
+    <div class="row g-3 mb-5">
+        <div class="col-12">
+            <div class="wd-dashboard-card">
+                <div class="wd-dashboard-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-lightning-charge text-primary"></i>
+                        <h5 class="text-white mb-0">دسترسی سریع</h5>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'windirect:rules' %}" class="wd-quick-action">
+                                <i class="bi bi-chat-left-text"></i>
+                                <span>کامنت هوشمند</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'windirect:direct_logs' %}" class="wd-quick-action">
+                                <i class="bi bi-chat-dots"></i>
+                                <span>دایرکت هوشمند</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'windirect:asset_list' 'showcases' %}" class="wd-quick-action">
+                                <i class="bi bi-collection"></i>
+                                <span>ویترین‌ساز</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'windirect:asset_list' 'forms' %}" class="wd-quick-action">
+                                <i class="bi bi-ui-checks"></i>
+                                <span>فرم‌ساز</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نمودار و لیست‌ها -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- نمودار -->
+            <div class="wd-dashboard-card mb-4">
+                <div class="wd-dashboard-card-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-graph-up text-primary"></i>
+                            <h5 class="text-white mb-0">فعالیت ۳۰ روز اخیر</h5>
+                        </div>
+                        <span class="badge bg-faded-primary">کامنت و دایرکت</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="wd-chart-container">
+                        <canvas id="windirectActivityChart"
+                                data-labels='{{ activity_labels_json|safe }}'
+                                data-comment='{{ activity_comment_data_json|safe }}'
+                                data-direct='{{ activity_direct_data_json|safe }}'></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- آخرین اجراها -->
+            <div class="wd-dashboard-card">
+                <div class="wd-dashboard-card-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-clock-history text-primary"></i>
+                            <h5 class="text-white mb-0">آخرین اجراها</h5>
+                        </div>
+                        <a href="{% url 'windirect:logs' %}" class="small text-primary text-decoration-none">
+                            مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0 py-3" style="max-height: 380px; overflow-y: auto">
+                    {% for execution in recent_executions %}
+                        <div class="wd-list-row">
+                            <div class="flex-grow-1">
+                                {% if execution.automation %}
+                                    {# اجرای کامنت #}
+                                    <div class="text-white fw-bold">
+                                        <i class="bi bi-chat-left-text text-info ms-1"></i>
+                                        {{ execution.automation.name }}
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        @{{ execution.automation.connection.username }} ·
+                                        {{ execution.created_at|date:"Y/m/d H:i" }}
+                                    </div>
+                                {% else %}
+                                    {# اجرای دایرکت #}
+                                    <div class="text-white fw-bold">
+                                        <i class="bi bi-chat-dots text-warning ms-1"></i>
+                                        {% if execution.rule %}{{ execution.rule.name }}{% else %}دایرکت بدون قانون{% endif %}
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        @{{ execution.connection.username }} ·
+                                        {{ execution.created_at|date:"Y/m/d H:i" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if execution.automation %}
+                                    <span class="badge bg-faded-info text-info">{{ execution.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-faded-warning text-warning">دایرکت</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="wd-empty">
+                            <i class="bi bi-clock-history"></i>
+                            <p class="text-muted mb-3">هنوز اجرایی ثبت نشده است.</p>
+                            <a href="{% url 'windirect:simulation' %}" class="btn btn-outline-primary">
+                                آزمایش اولین قانون
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- حساب‌های من -->
+            <div class="wd-dashboard-card mb-4">
+                <div class="wd-dashboard-card-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-instagram text-primary"></i>
+                            <h5 class="text-white mb-0">حساب‌های من</h5>
+                        </div>
+                        <a href="{% url 'windirect:connections' %}" class="small text-primary text-decoration-none">
+                            مدیریت
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0 py-3" style="max-height: 320px; overflow-y: auto">
+                    {% for connection in top_connections %}
                         <div class="wd-list-row">
                             <div>
                                 <strong class="text-white" dir="ltr">@{{ connection.username }}</strong>
-                                <small class="d-block text-muted">{{ connection.rule_count }} قانون · {{ connection.get_status_display }}</small>
+                                <small class="d-block text-muted">
+                                    {{ connection.comment_rule_count }} قانون · {{ connection.get_status_display }}
+                                </small>
                             </div>
-                            <a class="btn btn-outline-primary btn-sm"
-                               href="{% url 'windirect:rules' %}">قوانین</a>
+                            <a class="btn btn-outline-primary btn-sm" href="{% url 'windirect:rules' %}">
+                                قوانین
+                            </a>
                         </div>
                     {% empty %}
                         <div class="wd-empty">
-                            <i class="bi bi-instagram">
-                            </i>
-                            <p>هنوز حساب آزمایشی ثبت نکرده‌اید.</p>
-                            <a class="btn btn-primary" href="{% url 'windirect:connections' %}">افزودن حساب آزمایشی</a>
+                            <i class="bi bi-instagram"></i>
+                            <p class="text-muted mb-3">هنوز حساب آزمایشی ثبت نکرده‌اید.</p>
+                            <a class="btn btn-primary" href="{% url 'windirect:connections' %}">
+                                افزودن حساب
+                            </a>
                         </div>
                     {% endfor %}
                 </div>
-            </section>
-        </div>
-        <div class="col-lg-5">
-            <section class="card wd-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 text-white mb-0">آخرین اجراها</h2>
-                        <a href="{% url 'windirect:logs' %}">همهٔ گزارش‌ها</a>
+            </div>
+
+            <!-- وضعیت ابزارها -->
+            <div class="wd-dashboard-card">
+                <div class="wd-dashboard-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-layers text-primary"></i>
+                        <h5 class="text-white mb-0">وضعیت ابزارها</h5>
                     </div>
-                    {% for execution in executions %}
-                        <div class="wd-list-row">
-                            <div>
-                                <strong class="text-white">{{ execution.automation.name }}</strong>
-                                <small class="d-block text-muted">@{{ execution.automation.connection.username }} · {{ execution.created_at|date:'Y/m/d H:i' }}</small>
-                            </div>
-                            <span class="badge bg-faded-warning text-warning">{{ execution.get_status_display }}</span>
-                        </div>
-                    {% empty %}
-                        <div class="wd-empty">
-                            <i class="bi bi-clock-history">
-                            </i>
-                            <p>هنوز اجرایی ثبت نشده است.</p>
-                            <a class="btn btn-outline-primary"
-                               href="{% url 'windirect:simulation' %}">آزمایش قانون</a>
-                        </div>
-                    {% endfor %}
                 </div>
-            </section>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-collection text-primary fs-5"></i>
+                            <span class="text-white">ویترین‌ها</span>
+                        </div>
+                        <span class="badge bg-faded-primary text-primary">{{ showcases_count }} عدد</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-ui-checks text-accent fs-5"></i>
+                            <span class="text-white">فرم‌ها</span>
+                        </div>
+                        <span class="badge bg-faded-accent text-accent">{{ forms_count }} عدد</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-chat-dots text-warning fs-5"></i>
+                            <span class="text-white">قوانین دایرکت</span>
+                        </div>
+                        <span class="badge bg-faded-warning text-warning">{{ direct_rules_count }} عدد</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const canvas = document.getElementById('windirectActivityChart');
+    if (!canvas) return;
+
+    const labels = JSON.parse(canvas.dataset.labels || '[]');
+    const commentData = JSON.parse(canvas.dataset.comment || '[]');
+    const directData = JSON.parse(canvas.dataset.direct || '[]');
+
+    const ctx = canvas.getContext('2d');
+
+    if (labels.length === 0) {
+        ctx.font = '14px IRANSans, Vazir, sans-serif';
+        ctx.fillStyle = '#9691a4';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('داده‌ای برای نمایش نیست', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    // گرادیان برای کامنت
+    const gradientComment = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientComment.addColorStop(0, 'rgba(60, 118, 242, 0.35)');
+    gradientComment.addColorStop(1, 'rgba(60, 118, 242, 0.02)');
+
+    // گرادیان برای دایرکت
+    const gradientDirect = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientDirect.addColorStop(0, 'rgba(253, 188, 49, 0.35)');
+    gradientDirect.addColorStop(1, 'rgba(253, 188, 49, 0.02)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'کامنت',
+                    data: commentData,
+                    borderColor: '#3c76f2',
+                    backgroundColor: gradientComment,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#3c76f2',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                },
+                {
+                    label: 'دایرکت',
+                    data: directData,
+                    borderColor: '#fdbc31',
+                    backgroundColor: gradientDirect,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#fdbc31',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#fff',
+                        font: { size: 12, family: 'IRANSans, Vazir' },
+                        usePointStyle: true,
+                        padding: 15,
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    titleColor: '#fff',
+                    bodyColor: '#9691a4',
+                    borderColor: '#fd5631',
+                    borderWidth: 1,
+                    padding: 12,
+                    titleFont: { family: 'IRANSans, Vazir', size: 12 },
+                    bodyFont: { family: 'IRANSans, Vazir', size: 12 },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#9691a4',
+                        precision: 0,
+                        font: { family: 'IRANSans, Vazir', size: 11 },
+                    },
+                    title: {
+                        display: true,
+                        text: 'تعداد اجرا',
+                        color: '#9691a4',
+                        font: { size: 11, family: 'IRANSans, Vazir' },
+                    },
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#9691a4',
+                        maxRotation: 45,
+                        minRotation: 45,
+                        font: { family: 'IRANSans, Vazir', size: 10 },
+                    },
+                },
+            },
+        },
+    });
+});
+</script>
 {% endblock %}

@@ -29,6 +29,8 @@
                 صورت حساب / فاکتور رسمی شارژ کیف پول
             {% elif invoice.type == 'content_order' %}
                 صورت حساب / فاکتور رسمی سفارش محتوا
+            {% elif invoice.type == 'windirect' %}
+                صورت حساب / فاکتور رسمی اشتراک وین دایرکت
             {% endif %}
         </div>
         <div class="header-left">
@@ -58,7 +60,7 @@
     </table>
 
     <!-- ============================================================ -->
-    <!-- ===== بخش اطلاعات پرداخت (جدید) ===== -->
+    <!-- ===== بخش اطلاعات پرداخت ===== -->
     <!-- ============================================================ -->
     {% if invoice.is_paid and invoice.payments.first.payment_method == 'gateway' %}
         <div class="payment-info-print mb-2">
@@ -69,7 +71,6 @@
             <div class="payment-grid">
                 {% with payment=invoice.payments.first %}
                     {% if payment %}
-                        <!-- کد پیگیری -->
                         {% if payment.ref_id %}
                             <div class="payment-item">
                                 <span class="label">کد پیگیری</span>
@@ -77,7 +78,6 @@
                             </div>
                         {% endif %}
 
-                        <!-- شماره تراکنش (Authority) -->
                         {% if payment.authority and payment.payment_method == 'gateway' %}
                             <div class="payment-item">
                                 <span class="label">شماره تراکنش</span>
@@ -87,7 +87,6 @@
                             </div>
                         {% endif %}
 
-                        <!-- تاریخ پرداخت -->
                         {% if invoice.paid_at %}
                             <div class="payment-item">
                                 <span class="label">تاریخ پرداخت</span>
@@ -102,8 +101,8 @@
 
     <!-- جدول اصلی -->
     <div class="main-table-wrapper">
-        {% if invoice.type == 'campaign' or invoice.type == 'content_order'%}
-            <!-- ===== فاکتور کمپین ===== -->
+        {% if invoice.type == 'campaign' or invoice.type == 'content_order' %}
+            <!-- ===== فاکتور کمپین / سفارش محتوا ===== -->
             <table class="main-table">
                 <thead>
                 <tr>
@@ -118,36 +117,77 @@
                 </tr>
                 </thead>
                 <tbody>
-                <!-- ردیف اول: هزینه ناشران -->
-                {% if influencer_cost_rial > 0 %}
+                {% if invoice.type == 'campaign' %}
+                    {% if influencer_cost_rial > 0 %}
+                        <tr>
+                            <td>۱</td>
+                            <td class="text-right">
+                                <strong>هزینه همکاری با ناشران</strong>
+                                <span class="sub-text">کمپین: {{ invoice.campaign.name }} | پلتفرم: {{ invoice.campaign.platform.name }}</span>
+                            </td>
+                            <td>{{ influencer_count|default:"۰" }} نفر</td>
+                            <td>{{ base_influencer_cost_rial|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if influencer_discount_rial > 0 %}
+                                    <span class="discount-text">-{{ influencer_discount_rial|floatformat:0|intcomma }}</span>
+                                {% else %}
+                                    ۰
+                                {% endif %}
+                            </td>
+                            <td>{{ influencer_after_discount_rial|floatformat:0|intcomma }}</td>
+                            <td>{{ influencer_vat_rial|floatformat:0|intcomma }}</td>
+                            <td>{{ influencer_cost_rial|floatformat:0|intcomma }}</td>
+                        </tr>
+                    {% endif %}
+
+                    {% if content_cost_rial > 0 %}
+                        <tr>
+                            <td>۲</td>
+                            <td class="text-right">
+                                <strong>هزینه تولید محتوا</strong>
+                                <span class="sub-text">سرویس: {{ invoice.campaign.content_service_type.name|default:"خدمات استاندارد" }}</span>
+                            </td>
+                            <td>۱ سرویس</td>
+                            <td>{{ base_content_cost_rial|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if content_discount_rial > 0 %}
+                                    <span class="discount-text">-{{ content_discount_rial|floatformat:0|intcomma }}</span>
+                                {% else %}
+                                    ۰
+                                {% endif %}
+                            </td>
+                            <td>{{ content_after_discount_rial|floatformat:0|intcomma }}</td>
+                            <td>{{ content_vat_rial|floatformat:0|intcomma }}</td>
+                            <td>{{ content_cost_rial|floatformat:0|intcomma }}</td>
+                        </tr>
+                    {% endif %}
+
                     <tr>
-                        <td>۱</td>
+                        <td>{% if content_cost_rial > 0 %}۳{% else %}۲{% endif %}</td>
                         <td class="text-right">
-                            <strong>هزینه همکاری با ناشران</strong>
-                            <span class="sub-text">کمپین: {{ invoice.campaign.name }} | پلتفرم: {{ invoice.campaign.platform.name }}</span>
+                            <strong>حق‌العمل (کمیسیون) پلتفرم</strong>
+                            <span class="sub-text">درصد توافق‌شده</span>
                         </td>
-                        <td>{{ influencer_count|default:"۰" }} نفر</td>
-                        <td>{{ base_influencer_cost_rial|floatformat:0|intcomma }}</td>
+                        <td>-</td>
+                        <td>{{ base_commission_rial|floatformat:0|intcomma }}</td>
                         <td>
-                            {% if influencer_discount_rial > 0 %}
-                                <span class="discount-text">-{{ influencer_discount_rial|floatformat:0|intcomma }}</span>
+                            {% if platform_discount_rial > 0 %}
+                                <span class="discount-text">-{{ platform_discount_rial|floatformat:0|intcomma }}</span>
                             {% else %}
                                 ۰
                             {% endif %}
                         </td>
-                        <td>{{ influencer_after_discount_rial|floatformat:0|intcomma }}</td>
-                        <td>{{ influencer_vat_rial|floatformat:0|intcomma }}</td>
-                        <td>{{ influencer_cost_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ platform_after_discount_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ platform_vat_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ commission_rial|floatformat:0|intcomma }}</td>
                     </tr>
-                {% endif %}
 
-                <!-- ردیف دوم: هزینه تولید محتوا -->
-                {% if content_cost_rial > 0 %}
+                {% elif invoice.type == 'content_order' %}
                     <tr>
-                        <td>۲</td>
+                        <td>۱</td>
                         <td class="text-right">
                             <strong>هزینه تولید محتوا</strong>
-                            <span class="sub-text">سرویس: {{ invoice.campaign.content_service_type.name|default:"خدمات استاندارد" }}</span>
+                            <span class="sub-text">سفارش #{{ invoice.content_order.id }} | تیم: {{ team_name }}</span>
                         </td>
                         <td>۱ سرویس</td>
                         <td>{{ base_content_cost_rial|floatformat:0|intcomma }}</td>
@@ -162,30 +202,28 @@
                         <td>{{ content_vat_rial|floatformat:0|intcomma }}</td>
                         <td>{{ content_cost_rial|floatformat:0|intcomma }}</td>
                     </tr>
+
+                    <tr>
+                        <td>۲</td>
+                        <td class="text-right">
+                            <strong>حق‌العمل (کمیسیون) پلتفرم</strong>
+                            <span class="sub-text">درصد توافق‌شده</span>
+                        </td>
+                        <td>-</td>
+                        <td>{{ base_commission_rial|floatformat:0|intcomma }}</td>
+                        <td>
+                            {% if platform_discount_rial > 0 %}
+                                <span class="discount-text">-{{ platform_discount_rial|floatformat:0|intcomma }}</span>
+                            {% else %}
+                                ۰
+                            {% endif %}
+                        </td>
+                        <td>{{ platform_after_discount_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ platform_vat_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ commission_rial|floatformat:0|intcomma }}</td>
+                    </tr>
                 {% endif %}
 
-                <!-- ردیف سوم: کمیسیون پلتفرم -->
-                <tr>
-                    <td>{% if content_cost_rial > 0 %}۳{% else %}۲{% endif %}</td>
-                    <td class="text-right">
-                        <strong>حق‌العمل (کمیسیون) پلتفرم</strong>
-                        <span class="sub-text">درصد توافق‌شده</span>
-                    </td>
-                    <td>-</td>
-                    <td>{{ base_commission_rial|floatformat:0|intcomma }}</td>
-                    <td>
-                        {% if platform_discount_rial > 0 %}
-                            <span class="discount-text">-{{ platform_discount_rial|floatformat:0|intcomma }}</span>
-                        {% else %}
-                            ۰
-                        {% endif %}
-                    </td>
-                    <td>{{ platform_after_discount_rial|floatformat:0|intcomma }}</td>
-                    <td>{{ platform_vat_rial|floatformat:0|intcomma }}</td>
-                    <td>{{ commission_rial|floatformat:0|intcomma }}</td>
-                </tr>
-
-                <!-- ردیف جمع -->
                 <tr class="summary-row">
                     <td colspan="7" style="text-align: center; padding-left: 15px;">
                         <span>جمع کل هزینه‌ها (بدون احتساب تخفیف):</span>
@@ -195,7 +233,7 @@
                 </tbody>
             </table>
 
-            <!-- ردیف نهایی (مبلغ قابل پرداخت) -->
+            <!-- ردیف نهایی -->
             <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
                 <tr>
                     <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-weight: bold; font-size: 12px; width: 25%; background: #fafafa;">
@@ -209,75 +247,74 @@
                     </td>
                 </tr>
             </table>
-        
-        {% elif invoice.type == 'content_order' %}
-{#            <!-- ===== فاکتور سفارش محتوا ===== -->#}
-{#            <table class="main-table">#}
-{#                <thead>#}
-{#                <tr>#}
-{#                    <th style="width:5%;">ردیف</th>#}
-{#                    <th style="width:40%;">شرح خدمات و هزینه‌ها</th>#}
-{#                    <th style="width:10%;">تعداد</th>#}
-{#                    <th style="width:10%;">مبلغ پایه</th>#}
-{#                    <th style="width:10%;">تخفیف</th>#}
-{#                    <th style="width:10%;">مبلغ پس از تخفیف</th>#}
-{#                    <th style="width:10%;">مالیات</th>#}
-{#                    <th style="width:10%;">جمع کل</th>#}
-{#                </tr>#}
-{#                </thead>#}
-{#                <tbody>#}
-{#                <!-- ردیف اول: هزینه تولید محتوا -->#}
-{#                <tr>#}
-{#                    <td>۱</td>#}
-{#                    <td class="text-right">#}
-{#                        <strong>هزینه تولید محتوا</strong>#}
-{#                        <span class="sub-text">سفارش #{{ invoice.content_order.id }} | تیم: {{ invoice.content_order.team.name }}</span>#}
-{#                        <span class="sub-text">پلن: {{ invoice.content_order.plan.name }} | سرویس: {{ invoice.content_order.plan.service_type.name }}</span>#}
-{#                    </td>#}
-{#                    <td>۱ سرویس</td>#}
-{#                    <td>{{ base_content_cost_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>#}
-{#                        {% if content_discount_rial > 0 %}#}
-{#                            <span class="discount-text">-{{ content_discount_rial|floatformat:0|intcomma }}</span>#}
-{#                        {% else %}#}
-{#                            ۰#}
-{#                        {% endif %}#}
-{#                    </td>#}
-{#                    <td>{{ content_after_discount_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>{{ content_vat_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>{{ content_cost_rial|floatformat:0|intcomma }}</td>#}
-{#                </tr>#}
-{#        #}
-{#                <!-- ردیف دوم: کمیسیون پلتفرم -->#}
-{#                <tr>#}
-{#                    <td>۲</td>#}
-{#                    <td class="text-right">#}
-{#                        <strong>حق‌العمل (کمیسیون) پلتفرم</strong>#}
-{#                        <span class="sub-text">درصد توافق‌شده</span>#}
-{#                    </td>#}
-{#                    <td>-</td>#}
-{#                    <td>{{ base_commission_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>#}
-{#                        {% if platform_discount_rial > 0 %}#}
-{#                            <span class="discount-text">-{{ platform_discount_rial|floatformat:0|intcomma }}</span>#}
-{#                        {% else %}#}
-{#                            ۰#}
-{#                        {% endif %}#}
-{#                    </td>#}
-{#                    <td>{{ platform_after_discount_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>{{ platform_vat_rial|floatformat:0|intcomma }}</td>#}
-{#                    <td>{{ commission_rial|floatformat:0|intcomma }}</td>#}
-{#                </tr>#}
-{#        #}
-{#                <!-- ردیف جمع -->#}
-{#                <tr class="summary-row">#}
-{#                    <td colspan="7" style="text-align: center; padding-left: 15px;">#}
-{#                        <span>جمع کل هزینه‌ها (بدون احتساب تخفیف):</span>#}
-{#                    </td>#}
-{#                    <td>{{ total_amount_rial|floatformat:0|intcomma }}</td>#}
-{#                </tr>#}
-{#                </tbody>#}
-{#            </table>#}
+
+        {% elif invoice.type == 'windirect' %}
+            <!-- ===== فاکتور اشتراک وین دایرکت ===== -->
+            {% with order=invoice.subscription_order quote=order.quote %}
+                <table class="main-table">
+                    <thead>
+                    <tr>
+                        <th style="width:5%;">ردیف</th>
+                        <th style="width:45%;">شرح</th>
+                        <th style="width:12%;">مبلغ پایه (ریال)</th>
+                        <th style="width:12%;">تخفیف (ریال)</th>
+                        <th style="width:12%;">پس از تخفیف</th>
+                        <th style="width:14%;">جمع کل (ریال)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>۱</td>
+                        <td class="text-right">
+                            <strong>اشتراک {{ quote.plan_name }}</strong>
+                            <span class="sub-text">
+                                {{ order.get_kind_display }} ·
+                                مدت: {{ order.offer.get_duration_days_display }} ·
+                                سقف {{ quote.capabilities.max_pages }} پیج
+                            </span>
+                            <span class="sub-text">
+                                امکانات:
+                                {% if quote.capabilities.smart_comments %}کامنت هوشمند{% endif %}
+                                {% if quote.capabilities.smart_direct %} · دایرکت هوشمند{% endif %}
+                                {% if quote.capabilities.showcases %} · ویترین‌ساز{% endif %}
+                                {% if quote.capabilities.forms %} · فرم‌ساز{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ base_plan_cost_rial|floatformat:0|intcomma }}</td>
+                        <td>
+                            {% if plan_discount_amount_rial > 0 %}
+                                <span class="discount-text">-{{ plan_discount_amount_rial|floatformat:0|intcomma }}</span>
+                            {% else %}
+                                ۰
+                            {% endif %}
+                        </td>
+                        <td>{{ plan_cost_rial|floatformat:0|intcomma }}</td>
+                        <td>{{ payable_amount_rial|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr class="summary-row">
+                        <td colspan="5" style="text-align: center; padding-left: 15px;">
+                            <span>مالیات بر ارزش افزوده:</span>
+                        </td>
+                        <td>{{ plan_vat_rial|floatformat:0|intcomma }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <!-- ردیف نهایی -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-weight: bold; font-size: 12px; width: 25%; background: #fafafa;">
+                            مبلغ قابل پرداخت
+                        </td>
+                        <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-size: 11px; width: 50%;">
+                            {{ payable_amount_words }}
+                        </td>
+                        <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-weight: bold; font-size: 14px; width: 25%;">
+                            {{ payable_amount_rial|floatformat:0|intcomma }} ريال
+                        </td>
+                    </tr>
+                </table>
+            {% endwith %}
 
         {% else %}
             <!-- ===== فاکتور کیف پول ===== -->

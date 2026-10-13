@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django_jalali.admin.filters import JDateFieldListFilter
 from core.utils.admin_utils import format_datetime
-from ..models import (
+from windirect.subscriptions.models import (
     SubscriptionPlan,
     SubscriptionOffer,
     SubscriptionAccount,

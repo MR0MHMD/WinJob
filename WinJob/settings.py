@@ -34,7 +34,14 @@ INSTALLED_APPS = [
     "advertisers.apps.AdvertisersConfig",
     "influencers.apps.InfluencersConfig",
     "campaigns.apps.CampaignsConfig",
+    "windirect.connections.apps.ConnectionsConfig",
+    "windirect.comments.apps.CommentsConfig",
+    "windirect.direct.apps.DirectConfig",
+    "windirect.showcases.apps.ShowcasesConfig",
+    "windirect.forms.apps.FormsConfig",
+    "windirect.subscriptions.apps.SubscriptionsConfig",
     "windirect.apps.WindirectConfig",
+
     "blog.apps.BlogConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
@@ -89,9 +96,34 @@ DAISY_SETTINGS = {
             'name': 'کمپین ها',
             'hide': None,
         },
-        'windirect': {
+        'windirect_connections': {
+            'icon': 'bi bi-instagram',
+            'name': 'وین دایرکت ـ اتصالات',
+            'hide': None,
+        },
+        'windirect_comments': {
+            'icon': 'bi bi-chat-square-text',
+            'name': 'وین دایرکت ـ کامنت هوشمند',
+            'hide': None,
+        },
+        'windirect_direct': {
             'icon': 'bi bi-chat-dots-fill',
-            'name': 'وین دایرکت',
+            'name': 'وین دایرکت ـ دایرکت هوشمند',
+            'hide': None,
+        },
+        'windirect_showcases': {
+            'icon': 'bi bi-grid',
+            'name': 'وین دایرکت ـ ویترین‌ساز',
+            'hide': None,
+        },
+        'windirect_forms': {
+            'icon': 'bi bi-ui-checks',
+            'name': 'وین دایرکت ـ فرم‌ساز',
+            'hide': None,
+        },
+        'windirect_subscriptions': {
+            'icon': 'bi bi-credit-card',
+            'name': 'وین دایرکت ـ اشتراک‌ها',
             'hide': None,
         },
         'blog': {
@@ -254,7 +286,7 @@ if not BALE_BOT_TOKEN:
 SITE_URL = os.environ.get("SITE_URL", "https://winjob.ir")
 
 
-# ========== تنظیمات Celery ==========
+# ========== تنظیمات Celery ==========r
 CELERY_ENABLED = os.environ.get('CELERY_ENABLED', 'False') == 'True'
 
 if CELERY_ENABLED:
@@ -272,3 +304,13 @@ USE_N8N_VERIFICATION = os.getenv('USE_N8N_VERIFICATION', 'False') == 'True'
 N8N_VERIFICATION_WEBHOOK_URL = os.getenv('N8N_VERIFICATION_WEBHOOK_URL', '')
 N8N_CAMPAIGN_REPORT_WEBHOOK = os.getenv("N8N_CAMPAIGN_REPORT_WEBHOOK")
 N8N_CALLBACK_SECRET = os.getenv("N8N_CALLBACK_SECRET")
+
+INSTAGRAM_APP_ID = "2314804449342444"  # Instagram App ID
+INSTAGRAM_APP_SECRET = "a63de2736714d45fd1eacafa8fc81094"
+INSTAGRAM_REDIRECT_URI = "https://winjob.ir/windirect/instagram/callback/"
+
+# ==================== BoxAPI ====================
+BOXAPI_API_KEY = "ad2676fd907da9b39961411f142852b171e6ae0a865b0ce4826d3fcec9d71170"
+BOXAPI_BASE_URL = "https://api.sendbox.chat/api/v1"
+BOXAPI_OAUTH_URL = "https://api.sendbox.chat/instagram-oauth"
+BOXAPI_WEBHOOK_SECRET = "whsec_4f0cedcf2ed4d22c10e87409cfe0e33b058bbeed4ccab25bdf38dbade6777136"
