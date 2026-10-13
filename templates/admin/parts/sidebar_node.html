@@ -1,0 +1,42 @@
+{% if node.children %}
+    <li class="mb-2">
+        <details {% if node.sidebar_active %}open{% endif %}>
+            <summary>
+                <i class="{{ node.icon }}"></i>
+                {{ node.name }}
+            </summary>
+            <ul>
+                {% for child in node.children %}
+                    {% include "admin/parts/sidebar_node.html" with node=child only %}
+                {% endfor %}
+            </ul>
+        </details>
+    </li>
+{% elif node.models|length == 1 and not node.force_folder %}
+    <li>
+        <a href="{{ node.models.0.sidebar_url }}"
+           class="{% if node.models.0.sidebar_active %}menu-active{% endif %}">
+            <i class="{{ node.icon }}"></i>
+            {{ node.name }}
+        </a>
+    </li>
+{% else %}
+    <li class="mb-2">
+        <details {% if node.sidebar_active %}open{% endif %}>
+            <summary>
+                <i class="{{ node.icon }}"></i>
+                {{ node.name }}
+            </summary>
+            <ul>
+                {% for model in node.models %}
+                    <li class="model-{{ model.object_name|lower }}">
+                        <a href="{{ model.sidebar_url }}"
+                           class="{% if model.sidebar_active %}menu-active{% endif %}">
+                            {{ model.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </details>
+    </li>
+{% endif %}
