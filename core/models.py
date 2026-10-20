@@ -61,6 +61,15 @@ class Platform(models.Model):
 class Province(models.Model):
     name = models.CharField("نام", max_length=100, unique=True)
     slug = models.SlugField("اسلاگ", max_length=120, unique=True, blank=True)
+    # ===== جدید: شناسه عددی منبع رسمی =====
+    source_id = models.CharField(
+        "شناسه منبع",
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="شناسه عددی از منبع sajaddp (مثل 100 برای مرکزی)",
+    )
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
@@ -82,6 +91,25 @@ class Province(models.Model):
                 i += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+
+class City(models.Model):
+    """شهرهای ایران — هر شهر به یک استان وصله"""
+    province = models.ForeignKey("Province", on_delete=models.CASCADE, related_name="cities", verbose_name=_("استان"), )
+    name = models.CharField(_("نام شهر"), max_length=100, db_index=True)
+    slug = models.SlugField(_("اسلاگ"), max_length=100, allow_unicode=True)
+
+    class Meta:
+        verbose_name = _("شهر")
+        verbose_name_plural = _("شهرها")
+        ordering = ["province", "name"]
+        unique_together = [["province", "slug"]]
+        indexes = [
+            models.Index(fields=["province", "name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.province.name})"
 
 
 class ContentServiceType(models.Model):

@@ -117,7 +117,7 @@ class AutomationAdmin(admin.ModelAdmin):
                 "fields": (
                     "direct_message_kind",
                     "direct_message_text",
-                    "direct_message_url",
+                    "media_upload",
                 ),
                 "classes": ("collapse",),
             },

@@ -1,0 +1,1004 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}سفارشات من | وین مارکت{% endblock %}
+
+{% block extra_style %}
+<style>
+:root {
+    --mk-primary: #fd5631;
+    --mk-accent: #5d3cf2;
+    --mk-success: #07c98b;
+    --mk-warning: #fdbc31;
+    --mk-danger: #f23c49;
+    --mk-bg: #1f1b2d;
+    --mk-border: rgba(255,255,255,0.08);
+    --mk-muted: rgba(255,255,255,0.6);
+    --mk-dim: rgba(255,255,255,0.4);
+}
+body { background: var(--mk-bg) !important; }
+.page-wrapper { padding: 0 !important; }
+
+/* BREADCRUMB */
+.ol-breadcrumb-wrap {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border-bottom: 1px solid var(--mk-border);
+    padding: 1rem 0;
+    margin-top: 4.5rem;
+}
+.ol-breadcrumb {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    font-size: 0.85rem; color: var(--mk-dim);
+    list-style: none; padding: 0; margin: 0;
+}
+.ol-breadcrumb a { color: var(--mk-muted); text-decoration: none; }
+.ol-breadcrumb a:hover { color: var(--mk-primary); }
+.ol-breadcrumb .sep { color: rgba(255,255,255,0.2); font-size: 0.7rem; }
+.ol-breadcrumb .active { color: #fff; font-weight: 600; }
+
+/* HEADER */
+.ol-header {
+    padding: 2rem 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.ol-title {
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.ol-title i { color: var(--mk-primary); }
+.ol-title .count {
+    padding: 0.35rem 0.9rem;
+    border-radius: 50rem;
+    background: rgba(253,86,49,0.15);
+    color: var(--mk-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.ol-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.ol-continue-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.85rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+.ol-continue-btn:hover {
+    background: rgba(253,86,49,0.12);
+    border-color: rgba(253,86,49,0.4);
+    color: var(--mk-primary);
+    text-decoration: none;
+}
+.ol-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.85rem;
+    background: rgba(253,86,49,0.1);
+    border: 1px solid rgba(253,86,49,0.35);
+    color: var(--mk-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+    position: relative;
+}
+.ol-filter-btn:hover {
+    background: rgba(253,86,49,0.18);
+    color: #fff;
+}
+.ol-filter-btn .filter-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 50rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #1f1b2d;
+}
+
+/* STATS */
+.ol-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+.ol-stat {
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    transition: all 0.25s ease;
+}
+.ol-stat:hover {
+    transform: translateY(-3px);
+    border-color: rgba(253,86,49,0.3);
+}
+.ol-stat-label {
+    color: var(--mk-dim);
+    font-size: 0.7rem;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+}
+.ol-stat-label i { color: var(--mk-primary); font-size: 0.8rem; }
+.ol-stat-value {
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1;
+}
+.ol-stat-value.success { color: var(--mk-success); }
+.ol-stat-value.info { color: #6e9cff; }
+.ol-stat-value.primary { color: var(--mk-primary); }
+.ol-stat-value.warning { color: var(--mk-warning); }
+
+/* ORDER CARDS */
+.ol-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.ol-card {
+    display: block;
+    padding: 1.35rem 1.5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.ol-card::before {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--mk-primary), var(--mk-accent));
+    opacity: 0.35;
+    transition: opacity 0.3s ease;
+}
+.ol-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(253,86,49,0.3);
+    box-shadow: 0 18px 40px -18px rgba(0,0,0,0.5);
+    text-decoration: none;
+}
+.ol-card:hover::before { opacity: 0.85; }
+
+.ol-card.is-canceled {
+    opacity: 0.75;
+}
+.ol-card.is-canceled::before {
+    background: linear-gradient(90deg, #6c757d, #495057);
+    opacity: 0.3;
+}
+
+.ol-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+}
+.ol-card-num {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+.ol-card-num .label {
+    color: var(--mk-dim);
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.ol-card-num .value {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    direction: ltr;
+    text-align: right;
+}
+.ol-card-num .date {
+    color: var(--mk-muted);
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+}
+.ol-card-num .date i {
+    color: var(--mk-primary);
+    font-size: 0.7rem;
+}
+
+/* STATUS BADGE */
+.ol-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 50rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ol-status.paid {
+    color: var(--mk-success);
+    background: rgba(7,201,139,0.12);
+    border: 1px solid rgba(7,201,139,0.3);
+}
+.ol-status.processing {
+    color: #6e9cff;
+    background: rgba(60,118,242,0.12);
+    border: 1px solid rgba(60,118,242,0.3);
+}
+.ol-status.shipped {
+    color: #b8a5ff;
+    background: rgba(93,60,242,0.15);
+    border: 1px solid rgba(93,60,242,0.35);
+}
+.ol-status.delivered {
+    color: var(--mk-success);
+    background: rgba(7,201,139,0.12);
+    border: 1px solid rgba(7,201,139,0.3);
+}
+.ol-status.canceled {
+    color: var(--mk-danger);
+    background: rgba(242,60,73,0.12);
+    border: 1px solid rgba(242,60,73,0.3);
+}
+.ol-status.returned {
+    color: #ff8c4a;
+    background: rgba(255,140,74,0.12);
+    border: 1px solid rgba(255,140,74,0.3);
+}
+
+/* BODY */
+.ol-card-body {
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
+}
+
+.ol-thumbs {
+    display: flex;
+    align-items: center;
+}
+.ol-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 0.85rem;
+    background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.05));
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #1f1b2d;
+    flex-shrink: 0;
+    margin-left: -12px;
+    transition: transform 0.25s ease;
+    position: relative;
+    z-index: 1;
+}
+.ol-thumb:first-child { margin-left: 0; z-index: 3; }
+.ol-thumb:nth-child(2) { z-index: 2; }
+.ol-thumb:nth-child(3) { z-index: 1; }
+.ol-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.ol-thumb i {
+    color: rgba(255,255,255,0.2);
+    font-size: 1.4rem;
+}
+.ol-thumb.more {
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.ol-card-info { min-width: 0; }
+.ol-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: var(--mk-muted);
+    font-size: 0.82rem;
+    margin-bottom: 0.5rem;
+}
+.ol-card-meta .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.ol-card-meta .item i {
+    color: var(--mk-primary);
+    font-size: 0.85rem;
+}
+.ol-card-meta .item.supplier i { color: var(--mk-success); }
+.ol-card-info .first-title {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.ol-card-price {
+    text-align: left;
+    min-width: 140px;
+}
+.ol-card-price .label {
+    color: var(--mk-dim);
+    font-size: 0.7rem;
+    margin-bottom: 0.3rem;
+}
+.ol-card-price .value {
+    color: var(--mk-primary);
+    font-size: 1.15rem;
+    font-weight: 900;
+    text-shadow: 0 0 20px rgba(253,86,49,0.3);
+    white-space: nowrap;
+}
+.ol-card-price .value .currency {
+    font-size: 0.75rem;
+    color: var(--mk-muted);
+    font-weight: 500;
+    margin-right: 0.2rem;
+}
+
+/* EMPTY */
+.ol-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    border-radius: 1.5rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px dashed rgba(255,255,255,0.1);
+}
+.ol-empty-icon {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    color: var(--mk-primary);
+}
+.ol-empty h3 {
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+}
+.ol-empty p {
+    color: var(--mk-muted);
+    font-size: 0.9rem;
+    max-width: 420px;
+    margin: 0 auto 1.75rem;
+    line-height: 1.8;
+}
+.ol-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 2rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 12px 30px rgba(253,86,49,0.35);
+    border: 0;
+    cursor: pointer;
+}
+.ol-empty-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(253,86,49,0.5);
+    color: #fff;
+    text-decoration: none;
+}
+
+/* PAGINATION */
+.ol-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 2rem;
+}
+.ol-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 0.75rem;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: var(--mk-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+.ol-page-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    text-decoration: none;
+}
+.ol-page-btn.active {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(253,86,49,0.35);
+}
+
+/* FILTER MODAL */
+#olFilterModal .modal-content {
+    background: linear-gradient(180deg, #1f1b2d, #17141f);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    overflow: hidden;
+}
+#olFilterModal .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(253,86,49,0.06), transparent);
+}
+#olFilterModal .modal-title {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+#olFilterModal .modal-title i { color: var(--mk-primary); }
+#olFilterModal .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+    opacity: 0.7;
+}
+#olFilterModal .modal-body {
+    padding: 1.5rem;
+}
+#olFilterModal .modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.2);
+    gap: 0.5rem;
+}
+
+.ol-filter-group {
+    margin-bottom: 1.5rem;
+}
+.ol-filter-group:last-child { margin-bottom: 0; }
+.ol-filter-label {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.ol-filter-label i { color: var(--mk-primary); font-size: 0.9rem; }
+
+.ol-filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.ol-filter-option {
+    position: relative;
+    display: inline-block;
+}
+.ol-filter-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.ol-filter-option label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    color: var(--mk-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.ol-filter-option label:hover {
+    border-color: rgba(253,86,49,0.35);
+    background: rgba(253,86,49,0.05);
+    color: #fff;
+}
+.ol-filter-option input:checked + label {
+    border-color: var(--mk-primary);
+    background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.08));
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(253,86,49,0.1);
+}
+.ol-filter-option label .count {
+    padding: 0.05rem 0.45rem;
+    border-radius: 50rem;
+    background: rgba(255,255,255,0.08);
+    font-size: 0.65rem;
+}
+.ol-filter-option input:checked + label .count {
+    background: rgba(255,255,255,0.2);
+}
+
+.ol-modal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.35rem;
+    border-radius: 0.85rem;
+    font-weight: 800;
+    font-size: 0.88rem;
+    cursor: pointer;
+    border: 0;
+    transition: all 0.25s ease;
+    font-family: inherit;
+    text-decoration: none;
+}
+.ol-modal-btn.primary {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(253,86,49,0.35);
+}
+.ol-modal-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(253,86,49,0.5);
+    color: #fff;
+}
+.ol-modal-btn.ghost {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.ol-modal-btn.ghost:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+/* RESPONSIVE */
+@media (max-width: 991.98px) {
+    .ol-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 767.98px) {
+    .ol-card-body {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .ol-card-price { text-align: right; }
+    .ol-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 575.98px) {
+    .ol-stats { gap: 0.75rem; }
+    .ol-stat { padding: 0.85rem; }
+    .ol-stat-value { font-size: 1.25rem; }
+    .ol-card { padding: 1.15rem; }
+    .ol-thumb { width: 48px; height: 48px; }
+    .ol-header-actions { width: 100%; }
+    .ol-filter-btn, .ol-continue-btn { flex: 1; justify-content: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ol-breadcrumb-wrap">
+    <div class="container">
+        <ol class="ol-breadcrumb">
+            <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li class="active">سفارشات من</li>
+        </ol>
+    </div>
+</div>
+
+<section style="padding-bottom: 4rem;">
+    <div class="container">
+
+        <!-- ==================== Header ==================== -->
+        <div class="ol-header">
+            <h1 class="ol-title">
+                <i class="bi bi-bag-check-fill"></i>
+                سفارشات من
+                <span class="count">{{ counts.total }} سفارش</span>
+            </h1>
+            <div class="ol-header-actions">
+                <button type="button" class="ol-filter-btn" id="olFilterBtn">
+                    <i class="bi bi-funnel-fill"></i>
+                    فیلتر
+                    {% if current_status %}
+                        <span class="filter-badge">۱</span>
+                    {% endif %}
+                </button>
+                <a href="{% url 'market:landing' %}" class="ol-continue-btn">
+                    <i class="bi bi-shop-window"></i>
+                    ادامه خرید
+                </a>
+            </div>
+        </div>
+
+        <!-- ==================== Stats ==================== -->
+        <div class="ol-stats">
+            <div class="ol-stat">
+                <div class="ol-stat-label"><i class="bi bi-box-seam"></i> کل</div>
+                <div class="ol-stat-value">{{ counts.total }}</div>
+            </div>
+            <div class="ol-stat">
+                <div class="ol-stat-label"><i class="bi bi-check-circle-fill"></i> پرداخت‌شده</div>
+                <div class="ol-stat-value success">{{ counts.paid }}</div>
+            </div>
+            <div class="ol-stat">
+                <div class="ol-stat-label"><i class="bi bi-box-seam"></i> آماده‌سازی</div>
+                <div class="ol-stat-value info">{{ counts.processing }}</div>
+            </div>
+            <div class="ol-stat">
+                <div class="ol-stat-label"><i class="bi bi-truck"></i> ارسال‌شده</div>
+                <div class="ol-stat-value warning">{{ counts.shipped }}</div>
+            </div>
+            <div class="ol-stat">
+                <div class="ol-stat-label"><i class="bi bi-bag-check-fill"></i> تحویل‌شده</div>
+                <div class="ol-stat-value primary">{{ counts.delivered }}</div>
+            </div>
+        </div>
+
+        <!-- ==================== Orders List ==================== -->
+        {% if orders %}
+            <div class="ol-list">
+                {% for order in orders %}
+                    <a href="{% url 'market:order_detail' order.pk %}"
+                       class="ol-card
+                           {% if order.status == 'canceled' or order.status == 'returned' %}is-canceled{% endif %}">
+
+                        <!-- Head -->
+                        <div class="ol-card-head">
+                            <div class="ol-card-num">
+                                <span class="label">
+                                    <i class="bi bi-hash"></i>
+                                    شماره سفارش
+                                </span>
+                                <span class="value">
+                                    {% if order.number %}{{ order.number }}{% else %}WM-{{ order.pk }}{% endif %}
+                                </span>
+                                <span class="date">
+                                    <i class="bi bi-calendar3"></i>
+                                    {{ order.created_at }}
+                                </span>
+                            </div>
+                            <span class="ol-status {{ order.status }}">
+                                {% if order.status == 'paid' %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                {% elif order.status == 'processing' %}
+                                    <i class="bi bi-box-seam"></i>
+                                {% elif order.status == 'shipped' %}
+                                    <i class="bi bi-truck"></i>
+                                {% elif order.status == 'delivered' %}
+                                    <i class="bi bi-bag-check-fill"></i>
+                                {% elif order.status == 'canceled' %}
+                                    <i class="bi bi-x-circle-fill"></i>
+                                {% elif order.status == 'returned' %}
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                {% endif %}
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="ol-card-body">
+                            <div class="ol-thumbs">
+                                {% for item in order.items.all|slice:":3" %}
+                                    <div class="ol-thumb">
+                                        {% if item.product.main_image %}
+                                            <img src="{{ item.product.main_image.url }}" alt="{{ item.product_title }}">
+                                        {% else %}
+                                            <i class="bi bi-bag"></i>
+                                        {% endif %}
+                                    </div>
+                                {% empty %}
+                                    <div class="ol-thumb">
+                                        <i class="bi bi-bag"></i>
+                                    </div>
+                                {% endfor %}
+                                {% if order.items_count > 3 %}
+                                    <div class="ol-thumb more">
+                                        +{{ order.items_count|add:"-3" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="ol-card-info">
+                                <div class="ol-card-meta">
+                                    <span class="item">
+                                        <i class="bi bi-box"></i>
+                                        {{ order.items_count }} آیتم
+                                    </span>
+                                    {% if order.suppliers_count > 0 %}
+                                        <span class="item supplier">
+                                            <i class="bi bi-shop"></i>
+                                            {{ order.suppliers_count }} فروشنده
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {% if order.first_item_title %}
+                                    <div class="first-title">
+                                        {{ order.first_item_title }}
+                                        {% if order.items_count > 1 %}
+                                            و {{ order.items_count|add:"-1" }} محصول دیگر
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="ol-card-price">
+                                <div class="label">مبلغ کل</div>
+                                <div class="value">
+                                    {{ order.total_amount|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </a>
+                {% endfor %}
+            </div>
+
+            <!-- ==================== Pagination ==================== -->
+            {% if is_paginated %}
+                <div class="ol-pagination">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}" class="ol-page-btn">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="ol-page-btn active">{{ num }}</span>
+                        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                            <a href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}" class="ol-page-btn">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}" class="ol-page-btn">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+        {% else %}
+            <!-- ==================== Empty ==================== -->
+            <div class="ol-empty">
+                <div class="ol-empty-icon">
+                    <i class="bi bi-bag-x"></i>
+                </div>
+                <h3>
+                    {% if current_status %}
+                        سفارشی با این وضعیت پیدا نشد
+                    {% else %}
+                        هنوز سفارشی ثبت نکردی!
+                    {% endif %}
+                </h3>
+                <p>
+                    {% if current_status %}
+                        فیلتر رو تغییر بده یا همه سفارشات رو ببین.
+                    {% else %}
+                        وقتی اولین سفارشت رو ثبت کنی، اینجا می‌تونی وضعیتش رو دنبال کنی،
+                        روش ارسال رو ببینی و بعد از دریافت، مرسوله رو تأیید کنی.
+                    {% endif %}
+                </p>
+                {% if current_status %}
+                    <a href="{% url 'market:order_list' %}" class="ol-empty-btn">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        نمایش همه سفارشات
+                    </a>
+                {% else %}
+                    <a href="{% url 'market:landing' %}" class="ol-empty-btn">
+                        <i class="bi bi-shop-window"></i>
+                        مشاهده محصولات وین مارکت
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}
+
+{% block modals %}
+    <!-- FILTER MODAL -->
+    <div class="modal fade" id="olFilterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-funnel-fill"></i>
+                        فیلتر سفارشات
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="olFilterForm" method="GET" action="{% url 'market:order_list' %}">
+
+                        <div class="ol-filter-group">
+                            <div class="ol-filter-label">
+                                <i class="bi bi-tag-fill"></i>
+                                وضعیت سفارش
+                            </div>
+                            <div class="ol-filter-options">
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="" id="olStatusAll"
+                                           {% if not current_status %}checked{% endif %}>
+                                    <label for="olStatusAll">
+                                        <i class="bi bi-grid-3x3-gap"></i>
+                                        همه
+                                        <span class="count">{{ counts.total }}</span>
+                                    </label>
+                                </div>
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="paid" id="olStatusPaid"
+                                           {% if current_status == 'paid' %}checked{% endif %}>
+                                    <label for="olStatusPaid">
+                                        <i class="bi bi-check-circle"></i>
+                                        پرداخت‌شده
+                                        <span class="count">{{ counts.paid }}</span>
+                                    </label>
+                                </div>
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="processing" id="olStatusProcessing"
+                                           {% if current_status == 'processing' %}checked{% endif %}>
+                                    <label for="olStatusProcessing">
+                                        <i class="bi bi-box-seam"></i>
+                                        آماده‌سازی
+                                        <span class="count">{{ counts.processing }}</span>
+                                    </label>
+                                </div>
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="shipped" id="olStatusShipped"
+                                           {% if current_status == 'shipped' %}checked{% endif %}>
+                                    <label for="olStatusShipped">
+                                        <i class="bi bi-truck"></i>
+                                        ارسال‌شده
+                                        <span class="count">{{ counts.shipped }}</span>
+                                    </label>
+                                </div>
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="delivered" id="olStatusDelivered"
+                                           {% if current_status == 'delivered' %}checked{% endif %}>
+                                    <label for="olStatusDelivered">
+                                        <i class="bi bi-bag-check"></i>
+                                        تحویل‌شده
+                                        <span class="count">{{ counts.delivered }}</span>
+                                    </label>
+                                </div>
+                                <div class="ol-filter-option">
+                                    <input type="radio" name="status" value="canceled" id="olStatusCanceled"
+                                           {% if current_status == 'canceled' %}checked{% endif %}>
+                                    <label for="olStatusCanceled">
+                                        <i class="bi bi-x-circle"></i>
+                                        لغو‌شده
+                                        <span class="count">{{ counts.canceled }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'market:order_list' %}" class="ol-modal-btn ghost">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        پاک کردن فیلتر
+                    </a>
+                    <button type="submit" form="olFilterForm" class="ol-modal-btn primary">
+                        <i class="bi bi-check-lg"></i>
+                        اعمال فیلتر
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    // ============================================
+    // Filter Modal
+    // ============================================
+    const filterBtn = document.getElementById('olFilterBtn');
+    const filterModalEl = document.getElementById('olFilterModal');
+    let filterModal = null;
+
+    filterBtn && filterBtn.addEventListener('click', function() {
+        if (!filterModal) {
+            filterModal = new bootstrap.Modal(filterModalEl);
+        }
+        filterModal.show();
+    });
+
+    // ============================================
+    // Auto-submit on radio change
+    // ============================================
+    document.querySelectorAll('#olFilterForm input[name="status"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (filterModal) filterModal.hide();
+            document.getElementById('olFilterForm').submit();
+        });
+    });
+
+})();
+</script>
+{% endblock %}

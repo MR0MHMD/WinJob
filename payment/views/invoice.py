@@ -15,6 +15,55 @@ from django.db import transaction
 from django.db.models import Q
 
 
+# ============================================================
+# helper: ساخت context اقلام فاکتور وین مارکت
+# ============================================================
+def _build_market_invoice_items(invoice):
+    """
+    از OrderItem ها، اطلاعات اقلام + قیمت با/بدون تخفیف رو می‌سازه
+    """
+    order = invoice.market_order
+    if not order:
+        return {
+            'market_order': None,
+            'market_items': [],
+            'market_total_without_discount': 0,
+            'market_total_with_discount': 0,
+            'market_discount_amount': 0,
+        }
+
+    items_data = []
+    total_without_discount = 0
+    total_with_discount = 0
+
+    for item in order.items.select_related('product', 'variant').all():
+        base_unit = item.product.base_price if item.product else item.unit_price
+        qty = item.quantity
+        line_without = base_unit * qty
+        line_with = item.subtotal
+
+        items_data.append({
+            'product_title': item.product_title,
+            'variant_info': item.variant_info,
+            'quantity': qty,
+            'unit_price': item.unit_price,
+            'base_unit_price': base_unit,
+            'line_without_discount': line_without,
+            'line_with_discount': line_with,
+            'has_discount': line_without > line_with,
+        })
+        total_without_discount += line_without
+        total_with_discount += line_with
+
+    return {
+        'market_order': order,
+        'market_items': items_data,
+        'market_total_without_discount': total_without_discount,
+        'market_total_with_discount': total_with_discount,
+        'market_discount_amount': max(total_without_discount - total_with_discount, 0),
+    }
+
+
 @login_required
 def invoice_list(request):
     """لیست فاکتورهای کاربر (هم کمپین و هم کیف پول)"""
@@ -26,7 +75,7 @@ def invoice_list(request):
     type_filter = request.GET.get('type')
     if type_filter == 'campaign':
         invoices = invoices.filter(type=Invoice.Type.CAMPAIGN)
-    elif type_filter in ('wallet', 'windirect', 'content_order'):
+    elif type_filter in ('wallet', 'windirect', 'content_order', 'market_order'):
         invoices = invoices.filter(type=type_filter)
 
     status_filter = request.GET.get('status')
@@ -35,15 +84,19 @@ def invoice_list(request):
     elif status_filter == 'unpaid':
         invoices = invoices.filter(is_paid=False)
 
+    # آمار از queryset پایه (بدون فیلتر) تا ارقام ثابت بمونن
+    base_qs = Invoice.objects.filter(user=request.user)
+
     context = {
         'invoices': invoices,
         'type_filter': type_filter,
         'status_filter': status_filter,
-        'total_count': invoices.count(),
-        'paid_count': invoices.filter(is_paid=True).count(),
-        'unpaid_count': invoices.filter(is_paid=False).count(),
-        'campaign_count': invoices.filter(type=Invoice.Type.CAMPAIGN).count(),
-        'wallet_count': invoices.filter(type=Invoice.Type.WALLET).count(),
+        'total_count': base_qs.count(),
+        'paid_count': base_qs.filter(is_paid=True).count(),
+        'unpaid_count': base_qs.filter(is_paid=False).count(),
+        'campaign_count': base_qs.filter(type=Invoice.Type.CAMPAIGN).count(),
+        'wallet_count': base_qs.filter(type=Invoice.Type.WALLET).count(),
+        'market_order_count': base_qs.filter(type=Invoice.Type.MARKET_ORDER).count(),
     }
 
     return render(request, 'payment/invoices/invoice_list.html', context)
@@ -63,6 +116,10 @@ def invoice_detail(request, invoice_id):
             'subscription_order',
             'subscription_order__offer__plan',
             'content_order',
+            'market_order',
+        ).prefetch_related(
+            'market_order__items__product',
+            'market_order__items__variant',
         ),
         id=invoice_id,
         user=request.user
@@ -82,7 +139,12 @@ def invoice_detail(request, invoice_id):
         'is_campaign_invoice': invoice.type == Invoice.Type.CAMPAIGN,
         'is_windirect_invoice': invoice.type == Invoice.Type.WINDIRECT,
         'is_content_order_invoice': invoice.type == Invoice.Type.CONTENT_ORDER,
+        'is_market_order_invoice': invoice.type == Invoice.Type.MARKET_ORDER,
     }
+
+    # اطلاعات اضافی برای فاکتور وین مارکت
+    if invoice.type == Invoice.Type.MARKET_ORDER:
+        context.update(_build_market_invoice_items(invoice))
 
     # اطلاعات اضافی برای فاکتور کمپین
     if invoice.type == Invoice.Type.CAMPAIGN and invoice.campaign:
@@ -128,6 +190,7 @@ def invoice_print(request, invoice_id):
             'content_order__plan',
             'subscription_order',
             'subscription_order__offer__plan',
+            'market_order',
         ),
         id=invoice_id,
         user=request.user
@@ -233,6 +296,46 @@ def invoice_print(request, invoice_id):
             'payable_amount_words': payable_amount_words,
         }
 
+        return render(request, 'payment/invoices/invoice_print.html', context)
+
+    # ============================================================
+    # ۳.۵ فاکتور سفارش وین مارکت
+    # ============================================================
+    if invoice.type == Invoice.Type.MARKET_ORDER:
+        ctx = _build_market_invoice_items(invoice)
+
+        # تبدیل به ریال
+        def convert_to_rial(value):
+            return int(value or 0) * 10
+
+        items_rial = []
+        for it in ctx['market_items']:
+            items_rial.append({
+                **it,
+                'unit_price_rial': convert_to_rial(it['unit_price']),
+                'base_unit_price_rial': convert_to_rial(it['base_unit_price']),
+                'line_without_discount_rial': convert_to_rial(it['line_without_discount']),
+                'line_with_discount_rial': convert_to_rial(it['line_with_discount']),
+            })
+
+        total_without_rial = convert_to_rial(ctx['market_total_without_discount'])
+        total_with_rial = convert_to_rial(ctx['market_total_with_discount'])
+        discount_rial = convert_to_rial(ctx['market_discount_amount'])
+        payable_amount_rial = convert_to_rial(invoice.payable_amount)
+
+        payable_amount_words = number_to_words(payable_amount_rial, 'ریال')
+
+        context = {
+            'invoice': invoice,
+            'market_order': ctx['market_order'],
+            'market_items': items_rial,
+            'is_market_order_invoice': True,
+            'market_total_without_discount_rial': total_without_rial,
+            'market_total_with_discount_rial': total_with_rial,
+            'market_discount_amount_rial': discount_rial,
+            'payable_amount_rial': payable_amount_rial,
+            'payable_amount_words': payable_amount_words,
+        }
         return render(request, 'payment/invoices/invoice_print.html', context)
 
     # ============================================================

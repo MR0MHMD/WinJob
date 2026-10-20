@@ -34,13 +34,13 @@ INSTALLED_APPS = [
     "advertisers.apps.AdvertisersConfig",
     "influencers.apps.InfluencersConfig",
     "campaigns.apps.CampaignsConfig",
+    "windirect.common.apps.CommonConfig",
     "windirect.connections.apps.ConnectionsConfig",
     "windirect.comments.apps.CommentsConfig",
     "windirect.direct.apps.DirectConfig",
     "windirect.showcases.apps.ShowcasesConfig",
     "windirect.forms.apps.FormsConfig",
     "windirect.subscriptions.apps.SubscriptionsConfig",
-    "windirect.apps.WindirectConfig",
 
     "blog.apps.BlogConfig",
     "content_team.apps.ContentTeamConfig",
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "gamification.apps.GamificationConfig",
     "support.apps.SupportConfig",
     "payment.apps.PaymentConfig",
+    "market.apps.MarketConfig"
 ]
 
 DAISY_SETTINGS = {
@@ -96,34 +97,34 @@ DAISY_SETTINGS = {
             'name': 'کمپین ها',
             'hide': None,
         },
-        'windirect_connections': {
+        'connections': {
             'icon': 'bi bi-instagram',
-            'name': 'وین دایرکت ـ اتصالات',
+            'name': 'وین دایرکت | اتصالات',
             'hide': None,
         },
-        'windirect_comments': {
+        'comments': {
             'icon': 'bi bi-chat-square-text',
-            'name': 'وین دایرکت ـ کامنت هوشمند',
+            'name': 'وین دایرکت | کامنت هوشمند',
             'hide': None,
         },
-        'windirect_direct': {
+        'direct': {
             'icon': 'bi bi-chat-dots-fill',
-            'name': 'وین دایرکت ـ دایرکت هوشمند',
+            'name': 'وین دایرکت | دایرکت هوشمند',
             'hide': None,
         },
-        'windirect_showcases': {
+        'showcases': {
             'icon': 'bi bi-grid',
-            'name': 'وین دایرکت ـ ویترین‌ساز',
+            'name': 'وین دایرکت | ویترین ساز',
             'hide': None,
         },
-        'windirect_forms': {
+        'forms': {
             'icon': 'bi bi-ui-checks',
-            'name': 'وین دایرکت ـ فرم‌ساز',
+            'name': 'وین دایرکت | فرم ساز',
             'hide': None,
         },
-        'windirect_subscriptions': {
+        'subscriptions': {
             'icon': 'bi bi-credit-card',
-            'name': 'وین دایرکت ـ اشتراک‌ها',
+            'name': 'وین دایرکت | اشتراک ها',
             'hide': None,
         },
         'blog': {
@@ -217,6 +218,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
                 'support.context_processors.support_menu',
+                'market.context_processors.cart_context',
             ],
         },
     },
@@ -304,6 +306,7 @@ USE_N8N_VERIFICATION = os.getenv('USE_N8N_VERIFICATION', 'False') == 'True'
 N8N_VERIFICATION_WEBHOOK_URL = os.getenv('N8N_VERIFICATION_WEBHOOK_URL', '')
 N8N_CAMPAIGN_REPORT_WEBHOOK = os.getenv("N8N_CAMPAIGN_REPORT_WEBHOOK")
 N8N_CALLBACK_SECRET = os.getenv("N8N_CALLBACK_SECRET")
+N8N_API_TOKEN = os.environ.get('n8n_API_TOKEN', 'change-me-in-production')
 
 INSTAGRAM_APP_ID = "2314804449342444"  # Instagram App ID
 INSTAGRAM_APP_SECRET = "a63de2736714d45fd1eacafa8fc81094"
@@ -314,3 +317,12 @@ BOXAPI_API_KEY = "ad2676fd907da9b39961411f142852b171e6ae0a865b0ce4826d3fcec9d711
 BOXAPI_BASE_URL = "https://api.sendbox.chat/api/v1"
 BOXAPI_OAUTH_URL = "https://api.sendbox.chat/instagram-oauth"
 BOXAPI_WEBHOOK_SECRET = "whsec_4f0cedcf2ed4d22c10e87409cfe0e33b058bbeed4ccab25bdf38dbade6777136"
+
+
+# Minipay / VPOS
+MINIPAY_BASE_URL = os.environ.get("MINIPAY_BASE_URL", "https://api.minipay.me/api/v1")
+MINIPAY_BRANCH_ID = os.environ.get("MINIPAY_BRANCH_ID", "")
+MINIPAY_USERNAME = os.environ.get("MINIPAY_USERNAME", "")
+MINIPAY_PASSWORD = os.environ.get("MINIPAY_PASSWORD", "")
+MINIPAY_API_KEY = os.environ.get("MINIPAY_API_KEY", "")
+MINIPAY_TIMEOUT = 30

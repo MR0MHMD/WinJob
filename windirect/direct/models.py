@@ -1,3 +1,5 @@
+# windirect/direct/models
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -34,14 +36,14 @@ class DirectRule(PanelAsset):
     )
     reply_text = models.TextField(_("متن پاسخ"), max_length=1000, blank=True)
     showcase = models.ForeignKey(
-        "windirect_showcases.Showcase",
+        "showcases.Showcase",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         verbose_name=_("ویترین"),
     )
     form = models.ForeignKey(
-        "windirect_forms.ConversationForm",
+        "forms.ConversationForm",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -79,7 +81,7 @@ class DirectMessageEvent(models.Model):
     """پیام نمونه و خروجی ثبت‌شده برای جلوگیری از اجرای تکراری."""
 
     connection = models.ForeignKey(
-        "windirect_connections.InstagramConnection",
+        "connections.InstagramConnection",
         on_delete=models.PROTECT,
         verbose_name=_("حساب"),
     )

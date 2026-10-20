@@ -1,0 +1,1707 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}محصولات من | پنل فروشندگی{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* market/static/market/css/seller/products.css */
+
+        /* ==================== Base ==================== */
+        .products-page {
+            margin-top: 2.5rem;
+            padding-bottom: 3rem;
+        }
+
+        /* ==================== Header ==================== */
+        .products-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.75rem;
+        }
+
+        .products-count-badge {
+            display: inline-block;
+            padding: 0.15rem 0.65rem;
+            border-radius: 2rem;
+            background: rgba(253, 86, 49, 0.15);
+            color: #fd5631;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-right: 0.4rem;
+        }
+
+        .btn-outline-primary .filter-active-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fd5631;
+            margin-right: 0.35rem;
+            animation: pulseDot 1.5s infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scale(1.3);
+            }
+        }
+
+        /* ==================== Stats Cards ==================== */
+        .products-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .products-stat-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.25s ease;
+        }
+
+        .products-stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(253, 86, 49, 0.3);
+        }
+
+        .products-stat-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            color: #fd5631;
+            flex-shrink: 0;
+        }
+
+        .stat-active .products-stat-icon {
+            background: linear-gradient(135deg, rgba(7, 201, 139, 0.15), rgba(5, 150, 105, 0.1));
+            color: #07c98b;
+        }
+
+        .stat-draft .products-stat-icon {
+            background: linear-gradient(135deg, rgba(253, 188, 49, 0.15), rgba(253, 86, 49, 0.1));
+            color: #fdbc31;
+        }
+
+        .stat-inactive .products-stat-icon {
+            background: linear-gradient(135deg, rgba(150, 145, 164, 0.15), rgba(100, 95, 115, 0.1));
+            color: #9691a4;
+        }
+
+        .products-stat-value {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .products-stat-label {
+            color: #9691a4;
+            font-size: 0.78rem;
+            margin-top: 0.2rem;
+        }
+
+        /* ==================== Toolbar ==================== */
+        .products-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .products-toolbar-info {
+            color: #9691a4;
+            font-size: 0.85rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.65rem;
+        }
+
+        .view-toggle-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9691a4;
+            background: transparent;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 1.05rem;
+        }
+
+        .view-toggle-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.06);
+            text-decoration: none;
+        }
+
+        .view-toggle-btn.active {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(253, 86, 49, 0.35);
+        }
+
+        /* ==================== Active Filters ==================== */
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 2rem;
+            background: rgba(253, 86, 49, 0.1);
+            border: 1px solid rgba(253, 86, 49, 0.25);
+            color: #fd5631;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .filter-pill-remove {
+            color: #fd5631;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(253, 86, 49, 0.15);
+            font-size: 0.6rem;
+            transition: all 0.2s ease;
+        }
+
+        .filter-pill-remove:hover {
+            background: #fd5631;
+            color: #fff;
+        }
+
+        .filter-pill-clear {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 2rem;
+            color: #9691a4;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        .filter-pill-clear:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+            text-decoration: none;
+        }
+
+        /* ==================== TABLE VIEW ==================== */
+        .table-wrapper {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .products-table thead {
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .products-table thead th {
+            padding: 1rem 1rem;
+            color: #9691a4;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .products-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s ease;
+        }
+
+        .products-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .products-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .products-table tbody td {
+            padding: 0.9rem 1rem;
+            vertical-align: middle;
+            color: #e5e7eb;
+            font-size: 0.88rem;
+        }
+
+        .table-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 0.65rem;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.05));
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .table-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .table-thumb i {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 1.4rem;
+        }
+
+        .table-title-link {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.3rem;
+            transition: color 0.2s ease;
+        }
+
+        .table-title-link:hover {
+            color: #fd5631;
+        }
+
+        .table-title-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            font-size: 0.72rem;
+            color: #9691a4;
+        }
+
+        .table-title-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .table-title-meta i {
+            font-size: 0.7rem;
+        }
+
+        .discount-badge {
+            color: #f23c49 !important;
+            font-weight: 700;
+        }
+
+        .category-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 2rem;
+            background: rgba(93, 60, 242, 0.1);
+            border: 1px solid rgba(93, 60, 242, 0.25);
+            color: #a78bfa;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .price-display .price-old {
+            color: #9691a4;
+            text-decoration: line-through;
+            font-size: 0.72rem;
+        }
+
+        .price-display .price-new,
+        td .price-new {
+            color: #fd5631;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .stock-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.6rem;
+            border-radius: 2rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .stock-ok {
+            background: rgba(7, 201, 139, 0.1);
+            color: #07c98b;
+        }
+
+        .stock-low {
+            background: rgba(253, 188, 49, 0.1);
+            color: #fdbc31;
+        }
+
+        .stock-out {
+            background: rgba(242, 60, 73, 0.1);
+            color: #f23c49;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-badge.status-active {
+            background: rgba(7, 201, 139, 0.12);
+            color: #07c98b;
+            border: 1px solid rgba(7, 201, 139, 0.3);
+        }
+
+        .status-badge.status-draft {
+            background: rgba(253, 188, 49, 0.12);
+            color: #fdbc31;
+            border: 1px solid rgba(253, 188, 49, 0.3);
+        }
+
+        .status-badge.status-inactive {
+            background: rgba(150, 145, 164, 0.12);
+            color: #9691a4;
+            border: 1px solid rgba(150, 145, 164, 0.25);
+        }
+
+        .status-badge.status-scheduled {
+            background: rgba(60, 118, 242, 0.12);
+            color: #6e9cff;
+            border: 1px solid rgba(60, 118, 242, 0.3);
+        }
+
+        .status-badge.status-sold_out {
+            background: rgba(242, 60, 73, 0.12);
+            color: #f23c49;
+            border: 1px solid rgba(242, 60, 73, 0.3);
+        }
+
+        .sold-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #9691a4;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .sold-count i {
+            color: #fd5631;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.35rem;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #9691a4;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0;
+        }
+
+        .action-btn:hover {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .action-edit:hover {
+            background: rgba(253, 86, 49, 0.15);
+            border-color: rgba(253, 86, 49, 0.4);
+            color: #fd5631;
+        }
+
+        .action-view:hover {
+            background: rgba(60, 118, 242, 0.15);
+            border-color: rgba(60, 118, 242, 0.4);
+            color: #6e9cff;
+        }
+
+        .action-delete:hover {
+            background: rgba(242, 60, 73, 0.15);
+            border-color: rgba(242, 60, 73, 0.4);
+            color: #f23c49;
+        }
+
+        /* ==================== CARD VIEW ==================== */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .product-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(253, 86, 49, 0.3);
+            box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.5);
+        }
+
+        .product-card.is-inactive {
+            opacity: 0.72;
+        }
+
+        .product-card-head {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            left: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+            gap: 0.5rem;
+        }
+
+        .product-card-discount {
+            padding: 0.3rem 0.6rem;
+            border-radius: 2rem;
+            background: linear-gradient(135deg, #f23c49, #e64a2a);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(242, 60, 73, 0.4);
+            white-space: nowrap;
+        }
+
+        .product-card-image {
+            display: block;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.06), rgba(93, 60, 242, 0.04));
+            overflow: hidden;
+            position: relative;
+            text-decoration: none;
+        }
+
+        .product-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .product-card-image img {
+            transform: scale(1.06);
+        }
+
+        .product-card-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 3rem;
+        }
+
+        .product-card-body {
+            padding: 1rem 1.1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .product-card-title {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.7rem;
+            transition: color 0.2s ease;
+        }
+
+        .product-card-title:hover {
+            color: #fd5631;
+        }
+
+        .product-card-category {
+            color: #9691a4;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .product-card-price {
+            margin-top: auto;
+            padding-top: 0.4rem;
+        }
+
+        .product-card-price .price-old {
+            color: #9691a4;
+            text-decoration: line-through;
+            font-size: 0.75rem;
+            margin-bottom: 0.15rem;
+        }
+
+        .product-card-price .price-new {
+            color: #fd5631;
+            font-weight: 900;
+            font-size: 1.05rem;
+            text-shadow: 0 0 20px rgba(253, 86, 49, 0.3);
+        }
+
+        .product-card-price .currency {
+            color: #9691a4;
+            font-size: 0.72rem;
+            font-weight: 500;
+            margin-right: 0.2rem;
+        }
+
+        .product-card-meta {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 0.6rem;
+            border-top: 1px dashed rgba(255, 255, 255, 0.06);
+            font-size: 0.72rem;
+            color: #9691a4;
+        }
+
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .meta-item i {
+            font-size: 0.75rem;
+        }
+
+        .product-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            padding: 0.85rem 1.1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .card-action-btn {
+            flex: 1;
+            padding: 0.55rem 0.75rem;
+            border-radius: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #9691a4;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .card-action-btn.primary {
+            background: rgba(253, 86, 49, 0.1);
+            border-color: rgba(253, 86, 49, 0.3);
+            color: #fd5631;
+        }
+
+        .card-action-btn.primary:hover {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            border-color: transparent;
+            color: #fff;
+            text-decoration: none;
+            box-shadow: 0 6px 16px rgba(253, 86, 49, 0.35);
+        }
+
+        .card-action-btn:not(.primary):hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            text-decoration: none;
+        }
+
+        .card-action-btn.danger:hover {
+            background: rgba(242, 60, 73, 0.15);
+            border-color: rgba(242, 60, 73, 0.4);
+            color: #f23c49;
+        }
+
+        /* ==================== Empty State ==================== */
+        .products-empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .products-empty-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            color: #fd5631;
+        }
+
+        /* ==================== Pagination ==================== */
+        .products-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.35rem;
+            margin-top: 2rem;
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 0.7rem;
+            border-radius: 0.6rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #9691a4;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .page-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .page-btn.active {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(253, 86, 49, 0.35);
+        }
+
+        /* ==================== Filter Modal ==================== */
+        .filter-modal-content {
+            background: linear-gradient(180deg, #1f1b2d, #17141f);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+        }
+
+        .filter-modal-header {
+            padding: 1.35rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .filter-icon-wrapper {
+            width: 44px;
+            height: 44px;
+            border-radius: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            color: #fd5631;
+            font-size: 1.15rem;
+        }
+
+        .filter-modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            gap: 0.5rem;
+        }
+
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 0.88rem;
+            transition: all 0.25s ease;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .filter-input:focus {
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.04);
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.1);
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-input option {
+            background: #1f1b2d;
+            color: #fff;
+        }
+
+        .filter-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-radio {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .filter-radio input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .filter-radio span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.65rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            color: #9691a4;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .filter-radio span:hover {
+            color: #fff;
+            border-color: rgba(253, 86, 49, 0.35);
+            background: rgba(253, 86, 49, 0.05);
+        }
+
+        .filter-radio input:checked + span {
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.08));
+            border-color: #fd5631;
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.1);
+        }
+
+        .option-count {
+            padding: 0.05rem 0.45rem;
+            border-radius: 2rem;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 0.65rem;
+        }
+
+        .filter-radio input:checked + span .option-count {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ==================== Delete Modal ==================== */
+        .delete-modal-content {
+            background: linear-gradient(180deg, #1f1b2d, #17141f);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+        }
+
+        .delete-modal-header {
+            padding: 1.5rem 1.5rem 0;
+            border-bottom: none;
+        }
+
+        .delete-modal-body {
+            padding: 0 1.75rem 1rem;
+            text-align: center;
+        }
+
+        .delete-icon-wrap {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.15rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(242, 60, 73, 0.15), rgba(220, 38, 38, 0.1));
+            border: 2px solid rgba(242, 60, 73, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #f23c49;
+            animation: deleteIconPulse 2s infinite;
+        }
+
+        @keyframes deleteIconPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(242, 60, 73, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 16px rgba(242, 60, 73, 0);
+            }
+        }
+
+        .delete-title {
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 900;
+            margin-bottom: 0.6rem;
+        }
+
+        .delete-text {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.9rem;
+            line-height: 1.9;
+            margin-bottom: 1rem;
+        }
+
+        .delete-text strong {
+            color: #fd5631;
+        }
+
+        .delete-warning {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(253, 188, 49, 0.08);
+            border: 1px solid rgba(253, 188, 49, 0.25);
+            color: #fdbc31;
+            font-size: 0.78rem;
+            line-height: 1.7;
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        .delete-warning i {
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .delete-modal-footer {
+            padding: 1rem 1.75rem 1.75rem;
+            border-top: none;
+            gap: 0.6rem;
+        }
+
+        /* ==================== Responsive ==================== */
+        @media (max-width: 991.98px) {
+            .products-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .products-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .products-header .d-flex {
+                width: 100%;
+            }
+
+            .products-header .btn {
+                flex: 1;
+            }
+
+            .products-toolbar {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch;
+            }
+
+            .view-toggle {
+                align-self: flex-end;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .products-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .product-card-body {
+                padding: 0.75rem;
+            }
+
+            .product-card-actions {
+                padding: 0.65rem 0.75rem;
+            }
+
+            .card-action-btn {
+                padding: 0.45rem 0.5rem;
+                font-size: 0.7rem;
+            }
+
+            .card-action-btn span {
+                display: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 products-page">
+
+        <!-- Breadcrumb -->
+        <ol class="breadcrumb breadcrumb-light mb-4">
+            <li class="breadcrumb-item">
+                <a href="{% url 'core:home' %}">خانه</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'market:landing' %}">وین‌مارکت</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'market:seller_dashboard' %}">پنل فروشندگی</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">محصولات من</li>
+        </ol>
+
+        <!-- Header -->
+        <div class="products-header">
+            <div>
+                <h3 class="text-light mb-1">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    محصولات من
+                    <span class="products-count-badge">{{ counts.total }}</span>
+                </h3>
+                <p class="text-muted small mb-0">مدیریت محصولات فروشگاه شما</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#filterProductModal">
+                    <i class="bi bi-funnel me-1"></i>
+                    فیلتر
+                    {% if has_active_filters %}
+                        <span class="filter-active-dot"></span>
+                    {% endif %}
+                </button>
+                <a href="{% url 'market:seller_product_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    محصول جدید
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="products-stats">
+            <div class="products-stat-card">
+                <div class="products-stat-icon"><i class="bi bi-box-seam"></i></div>
+                <div>
+                    <div class="products-stat-value">{{ counts.total }}</div>
+                    <div class="products-stat-label">کل محصولات</div>
+                </div>
+            </div>
+            <div class="products-stat-card stat-active">
+                <div class="products-stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div>
+                    <div class="products-stat-value">{{ counts.active }}</div>
+                    <div class="products-stat-label">فعال</div>
+                </div>
+            </div>
+            <div class="products-stat-card stat-draft">
+                <div class="products-stat-icon"><i class="bi bi-pencil-square"></i></div>
+                <div>
+                    <div class="products-stat-value">{{ counts.draft }}</div>
+                    <div class="products-stat-label">پیش‌نویس</div>
+                </div>
+            </div>
+            <div class="products-stat-card stat-inactive">
+                <div class="products-stat-icon"><i class="bi bi-slash-circle"></i></div>
+                <div>
+                    <div class="products-stat-value">{{ counts.inactive }}</div>
+                    <div class="products-stat-label">غیرفعال</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Toggle + Info -->
+        {% if products %}
+            <div class="products-toolbar">
+                <div class="products-toolbar-info">
+                    <i class="bi bi-list-ul me-1"></i>
+                    {{ page_obj.paginator.count }} محصول
+                    {% if has_active_filters %}
+                        <span class="text-muted">· فیلتر فعال</span>
+                    {% endif %}
+                </div>
+                <div class="view-toggle">
+                    <a href="?{% if query_params %}{{ query_params }}&{% endif %}view=card"
+                       class="view-toggle-btn {% if view_mode == 'card' %}active{% endif %}"
+                       title="نمایش کارتی">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                    </a>
+                    <a href="?{% if query_params %}{{ query_params }}&{% endif %}view=table"
+                       class="view-toggle-btn {% if view_mode == 'table' %}active{% endif %}"
+                       title="نمایش جدولی">
+                        <i class="bi bi-list-ul"></i>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Active Filters Pills -->
+        {% if has_active_filters %}
+            <div class="active-filters">
+                {% if current_search %}
+                    <span class="filter-pill">
+                <i class="bi bi-search"></i>
+                جستجو: «{{ current_search }}»
+                <a href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}{% if current_sort != 'newest' %}sort={{ current_sort }}&{% endif %}view={{ view_mode }}"
+                   class="filter-pill-remove">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </span>
+                {% endif %}
+                {% if current_status %}
+                    <span class="filter-pill">
+                <i class="bi bi-tag"></i>
+                وضعیت:
+                        {% for value, label in status_choices %}
+                            {% if value == current_status %}{{ label }}{% endif %}
+                        {% endfor %}
+                        <a href="?{% if current_search %}q={{ current_search }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}{% if current_sort != 'newest' %}sort={{ current_sort }}&{% endif %}view={{ view_mode }}"
+                           class="filter-pill-remove">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </span>
+                {% endif %}
+                {% if current_category %}
+                    <span class="filter-pill">
+                <i class="bi bi-tag-fill"></i>
+                دسته:
+                        {% for cat in categories %}
+                            {% if cat.id|stringformat:"s" == current_category %}{{ cat.name }}{% endif %}
+                        {% endfor %}
+                        <a href="?{% if current_search %}q={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_sort != 'newest' %}sort={{ current_sort }}&{% endif %}view={{ view_mode }}"
+                           class="filter-pill-remove">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </span>
+                {% endif %}
+                <a href="?view={{ view_mode }}" class="filter-pill-clear">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    پاک کردن همه
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- ==================== TABLE VIEW ==================== -->
+        {% if view_mode == 'table' %}
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="products-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 70px;">تصویر</th>
+                            <th>نام محصول</th>
+                            <th style="width: 130px;">دسته</th>
+                            <th style="width: 130px;">قیمت</th>
+                            <th style="width: 100px;">موجودی</th>
+                            <th style="width: 120px;">وضعیت</th>
+                            <th style="width: 90px;">فروش</th>
+                            <th style="width: 140px;">عملیات</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for product in products %}
+                            <tr>
+                                <td>
+                                    <div class="table-thumb">
+                                        {% if product.main_image %}
+                                            <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                                        {% else %}
+                                            <i class="bi bi-bag"></i>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-title">
+                                        <a href="#" class="table-title-link">{{ product.title|truncatechars:50 }}</a>
+                                        <div class="table-title-meta">
+                                            <span><i class="bi bi-hash"></i> {{ product.id }}</span>
+                                            <span><i class="bi bi-calendar3"></i> {{ product.created_at|date:"Y/m/d" }}</span>
+                                            {% if product.discount_price %}
+                                                <span class="discount-badge">
+                                            <i class="bi bi-tag-fill"></i>
+                                            {{ product.discount_percent }}٪ تخفیف
+                                        </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if product.category %}
+                                        <span class="category-chip">
+                                    {% if product.category.icon %}<i class="{{ product.category.icon }}"></i>{% endif %}
+                                            {{ product.category.name }}
+                                </span>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.discount_price %}
+                                        <div class="price-display">
+                                            <div class="price-old">{{ product.base_price|intcomma }}</div>
+                                            <div class="price-new">{{ product.final_price|intcomma }} ت</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="price-new">{{ product.base_price|intcomma }} ت</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.stock == 0 %}
+                                        <span class="stock-badge stock-out">ناموجود</span>
+                                    {% elif product.stock < 5 %}
+                                        <span class="stock-badge stock-low">{{ product.stock }} عدد</span>
+                                    {% else %}
+                                        <span class="stock-badge stock-ok">{{ product.stock }} عدد</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                            <span class="status-badge status-{{ product.status }}">
+                                {% if product.status == 'active' %}<i class="bi bi-check-circle-fill"></i>{% endif %}
+                                {% if product.status == 'draft' %}<i class="bi bi-pencil-square"></i>{% endif %}
+                                {% if product.status == 'inactive' %}<i class="bi bi-slash-circle"></i>{% endif %}
+                                {% if product.status == 'scheduled' %}<i class="bi bi-clock-fill"></i>{% endif %}
+                                {% if product.status == 'sold_out' %}<i class="bi bi-x-circle-fill"></i>{% endif %}
+                                {{ product.get_status_display }}
+                            </span>
+                                </td>
+                                <td>
+                            <span class="sold-count">
+                                <i class="bi bi-bag-check"></i>
+                                {{ product.sold_qty|default:0 }}
+                            </span>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="{% url 'market:seller_product_update' product.pk %}"
+                                           class="action-btn action-edit" title="ویرایش">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'market:product_detail' product.slug product.pk %}"
+                                           target="_blank" class="action-btn action-view" title="مشاهده">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="action-btn action-delete js-delete-product"
+                                                data-product-id="{{ product.id }}"
+                                                data-product-title="{{ product.title }}"
+                                                title="حذف">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <!-- ==================== CARD VIEW ==================== -->
+            <div class="products-grid">
+                {% for product in products %}
+                    <div class="product-card {% if product.status == 'inactive' %}is-inactive{% endif %}">
+                        <div class="product-card-head">
+                <span class="status-badge status-{{ product.status }}">
+                    {% if product.status == 'active' %}<i class="bi bi-check-circle-fill"></i>{% endif %}
+                    {% if product.status == 'draft' %}<i class="bi bi-pencil-square"></i>{% endif %}
+                    {% if product.status == 'inactive' %}<i class="bi bi-slash-circle"></i>{% endif %}
+                    {% if product.status == 'scheduled' %}<i class="bi bi-clock-fill"></i>{% endif %}
+                    {% if product.status == 'sold_out' %}<i class="bi bi-x-circle-fill"></i>{% endif %}
+                    {{ product.get_status_display }}
+                </span>
+                            {% if product.discount_price %}
+                                <span class="product-card-discount">
+                    {{ product.discount_percent }}٪
+                </span>
+                            {% endif %}
+                        </div>
+
+                        <a href="#" class="product-card-image">
+                            {% if product.main_image %}
+                                <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                            {% else %}
+                                <div class="product-card-image-placeholder">
+                                    <i class="bi bi-bag"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+
+                        <div class="product-card-body">
+                            <a href="#" class="product-card-title">{{ product.title|truncatechars:60 }}</a>
+
+                            {% if product.category %}
+                                <div class="product-card-category">
+                                    {% if product.category.icon %}<i class="{{ product.category.icon }}"></i>{% endif %}
+                                    {{ product.category.name }}
+                                </div>
+                            {% endif %}
+
+                            <div class="product-card-price">
+                                {% if product.discount_price %}
+                                    <div class="price-old">{{ product.base_price|intcomma }}</div>
+                                {% endif %}
+                                <div class="price-new">
+                                    {{ product.final_price|intcomma }}
+                                    <span class="currency">تومان</span>
+                                </div>
+                            </div>
+
+                            <div class="product-card-meta">
+                                <div class="meta-item">
+                                    {% if product.stock == 0 %}
+                                        <i class="bi bi-x-circle text-danger"></i>
+                                        <span class="text-danger">ناموجود</span>
+                                    {% elif product.stock < 5 %}
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                        <span class="text-warning">{{ product.stock }} عدد</span>
+                                    {% else %}
+                                        <i class="bi bi-box-seam text-success"></i>
+                                        <span>{{ product.stock }} عدد</span>
+                                    {% endif %}
+                                </div>
+                                <div class="meta-item">
+                                    <i class="bi bi-bag-check"></i>
+                                    <span>{{ product.sold_qty|default:0 }} فروش</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="product-card-actions">
+                            <a href="{% url 'market:seller_product_update' product.pk %}"
+                               class="card-action-btn primary">
+                                <i class="bi bi-pencil"></i>
+                                ویرایش
+                            </a>
+                            <a href="{% url 'market:product_detail' product.slug product.pk %}"
+                               target="_blank"
+                               class="card-action-btn">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <button type="button"
+                                    class="card-action-btn danger js-delete-product"
+                                    data-product-id="{{ product.id }}"
+                                    data-product-title="{{ product.title }}">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav class="products-pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?
+                            {% if query_params %}{{ query_params }}&{% endif %}view={{ view_mode }}&page={{ page_obj.previous_page_number }}"
+                       class="page-btn">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <a href="?
+                                {% if query_params %}{{ query_params }}&{% endif %}view={{ view_mode }}&page={{ num }}"
+                           class="page-btn">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a href="?
+                            {% if query_params %}{{ query_params }}&{% endif %}view={{ view_mode }}&page={{ page_obj.next_page_number }}"
+                       class="page-btn">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+
+        <!-- Empty State -->
+        {% if not products %}
+            <div class="products-empty">
+                <div class="products-empty-icon">
+                    <i class="bi bi-box"></i>
+                </div>
+                {% if has_active_filters %}
+                    <h4 class="text-white mb-2">محصولی با این فیلترها پیدا نشد</h4>
+                    <p class="text-muted mb-4">فیلترها رو تغییر بده یا همه محصولات رو ببین.</p>
+                    <a href="?view={{ view_mode }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        نمایش همه محصولات
+                    </a>
+                {% else %}
+                    <h4 class="text-white mb-2">هنوز محصولی ثبت نکردی!</h4>
+                    <p class="text-muted mb-4">اولین محصولت رو اضافه کن تا توی وین‌مارکت به فروش برسه.</p>
+                    <a href="{% url 'market:seller_product_create' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        افزودن اولین محصول
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- ==================== FILTER MODAL ==================== -->
+    <div class="modal fade" id="filterProductModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content filter-modal-content">
+                <div class="modal-header filter-modal-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="filter-icon-wrapper">
+                            <i class="bi bi-funnel-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title text-white mb-0">فیلتر محصولات</h5>
+                            <p class="text-muted small mb-0 mt-1">جستجو را دقیق کنید</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form method="get" action="{% url 'market:seller_product_list' %}" id="filterProductForm">
+                    <input type="hidden" name="view" value="{{ view_mode }}">
+
+                    <div class="modal-body pt-2">
+                        <!-- Search -->
+                        <div class="filter-field mb-4">
+                            <label for="fp_search" class="filter-label">
+                                <i class="bi bi-search me-1"></i>
+                                جستجو در نام محصول
+                            </label>
+                            <input type="text"
+                                   name="q"
+                                   id="fp_search"
+                                   value="{{ current_search }}"
+                                   class="filter-input"
+                                   placeholder="نام محصول یا بخشی از آن...">
+                        </div>
+
+                        <!-- Status -->
+                        <div class="filter-field mb-4">
+                            <label class="filter-label">
+                                <i class="bi bi-tag me-1"></i>
+                                وضعیت محصول
+                            </label>
+                            <div class="filter-options">
+                                <label class="filter-radio">
+                                    <input type="radio" name="status" value=""
+                                           {% if not current_status %}checked{% endif %}>
+                                    <span>همه <span class="option-count">{{ counts.total }}</span></span>
+                                </label>
+                                {% for value, label in status_choices %}
+                                    <label class="filter-radio">
+                                        <input type="radio" name="status" value="{{ value }}"
+                                               {% if current_status == value %}checked{% endif %}>
+                                        <span>{{ label }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="filter-field mb-4">
+                            <label for="fp_category" class="filter-label">
+                                <i class="bi bi-grid me-1"></i>
+                                دسته‌بندی
+                            </label>
+                            <select name="category" id="fp_category" class="filter-input">
+                                <option value="">همه دسته‌ها</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}"
+                                            {% if current_category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Sort -->
+                        <div class="filter-field">
+                            <label for="fp_sort" class="filter-label">
+                                <i class="bi bi-sort-down me-1"></i>
+                                مرتب‌سازی بر اساس
+                            </label>
+                            <select name="sort" id="fp_sort" class="filter-input">
+                                <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>جدیدترین
+                                </option>
+                                <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>قدیمی‌ترین
+                                </option>
+                                <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>
+                                    گران‌ترین
+                                </option>
+                                <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>
+                                    ارزان‌ترین
+                                </option>
+                                <option value="best_selling" {% if current_sort == 'best_selling' %}selected{% endif %}>
+                                    پرفروش‌ترین
+                                </option>
+                                <option value="name" {% if current_sort == 'name' %}selected{% endif %}>نام (الفبا)
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer filter-modal-footer">
+                        <a href="?view={{ view_mode }}" class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-rotate-right me-1"></i>
+                            بازنشانی
+                        </a>
+                        <button type="submit" class="btn btn-primary px-5">
+                            <i class="bi bi-check-lg me-1"></i>
+                            اعمال فیلتر
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DELETE CONFIRM MODAL ==================== -->
+    <div class="modal fade" id="deleteProductModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content delete-modal-content">
+                <div class="modal-header delete-modal-header">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body delete-modal-body">
+                    <div class="delete-icon-wrap">
+                        <i class="bi bi-trash3-fill"></i>
+                    </div>
+                    <h5 class="delete-title">حذف محصول</h5>
+                    <p class="delete-text">
+                        آیا از حذف محصول
+                        <strong id="deleteProductTitle"></strong>
+                        مطمئنی؟
+                    </p>
+                    <div class="delete-warning">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <div>
+                            اگه این محصول سفارش داشته باشه، فقط غیرفعال می‌شه و از فروشگاه حذف می‌شه.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer delete-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal">
+                        انصراف
+                    </button>
+                    <button type="button" class="btn btn-danger flex-fill" id="confirmDeleteProductBtn">
+                        <span class="spinner-border spinner-border-sm me-1 d-none"></span>
+                        <i class="bi bi-trash3 me-1"></i>
+                        حذف کن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+    // market/static/market/js/seller/products.js
+
+(function () {
+    'use strict';
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    function getCsrf() {
+        if (csrf) return csrf;
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        return '';
+    }
+
+    function toast(msg, type = 'info') {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(msg, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + msg);
+    }
+
+    // ============================================
+    // DELETE PRODUCT
+    // ============================================
+    const deleteModalEl = document.getElementById('deleteProductModal');
+    const deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
+    const deleteTitleEl = document.getElementById('deleteProductTitle');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteProductBtn');
+
+    let pendingDeleteId = null;
+
+    document.querySelectorAll('.js-delete-product').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pendingDeleteId = this.dataset.productId;
+            deleteTitleEl.textContent = this.dataset.productTitle || '';
+            deleteModal && deleteModal.show();
+        });
+    });
+
+    confirmDeleteBtn && confirmDeleteBtn.addEventListener('click', function () {
+        if (!pendingDeleteId) return;
+
+        const btn = this;
+        const spinner = btn.querySelector('.spinner-border');
+        const icon = btn.querySelector('.bi');
+
+        btn.disabled = true;
+        spinner && spinner.classList.remove('d-none');
+        icon && icon.classList.add('d-none');
+
+        fetch(`/market/seller/products/${pendingDeleteId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then(r => r.json())
+            .then(data => {
+                deleteModal && deleteModal.hide();
+                btn.disabled = false;
+                spinner && spinner.classList.add('d-none');
+                icon && icon.classList.remove('d-none');
+
+                if (data.success) {
+                    toast(data.message || 'محصول حذف شد', 'success');
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    toast(data.message || 'خطا در حذف محصول', 'error');
+                }
+                pendingDeleteId = null;
+            })
+            .catch(() => {
+                btn.disabled = false;
+                spinner && spinner.classList.add('d-none');
+                icon && icon.classList.remove('d-none');
+                toast('ارتباط با سرور برقرار نشد', 'error');
+            });
+    });
+
+    // ============================================
+    // AUTO-SUBMIT FILTER ON RADIO CHANGE
+    // ============================================
+    document.querySelectorAll('#filterProductForm input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            // Auto-submit فقط برای وضعیت (چون کاربر بعد از کلیک، انتظار داره فوری اعمال بشه)
+            // ولی چون ترکیبی هست، فعلاً به‌صورت دستی submit می‌کنیم با دکمه
+        });
+    });
+
+})();
+    </script>
+{% endblock %}

@@ -1,0 +1,1784 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}{{ product.title }} | وین مارکت{% endblock %}
+{% block description %}{{ product.short_description|default:product.title }}{% endblock %}
+
+{% block extra_style %}
+    <style>
+        :root {
+            --mk-primary: #fd5631;
+            --mk-primary-dark: #e64a2a;
+            --mk-accent: #5d3cf2;
+            --mk-blue: #3c76f2;
+            --mk-success: #07c98b;
+            --mk-warning: #fdbc31;
+            --mk-danger: #f23c49;
+            --mk-bg: #1f1b2d;
+            --mk-border: rgba(255, 255, 255, 0.08);
+            --mk-muted: rgba(255, 255, 255, 0.6);
+            --mk-dim: rgba(255, 255, 255, 0.4);
+        }
+
+        body { background: var(--mk-bg) !important; }
+        .page-wrapper { padding: 0 !important; }
+
+        /* BREADCRUMB */
+        .pd-breadcrumb-wrap {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+            border-bottom: 1px solid var(--mk-border);
+            padding: 1rem 0;
+            margin-top: 4.5rem;
+        }
+        .pd-breadcrumb {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+            font-size: 0.85rem; color: var(--mk-dim);
+            list-style: none; padding: 0; margin: 0;
+        }
+        .pd-breadcrumb a {
+            color: var(--mk-muted); text-decoration: none;
+            transition: color 0.25s ease;
+            display: inline-flex; align-items: center; gap: 0.3rem;
+        }
+        .pd-breadcrumb a:hover { color: var(--mk-primary); }
+        .pd-breadcrumb .sep { color: rgba(255,255,255,0.2); font-size: 0.7rem; }
+        .pd-breadcrumb .active {
+            color: #fff; font-weight: 600;
+            max-width: 240px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        /* MAIN */
+        .pd-main { padding: 2.5rem 0 4rem; }
+        .pd-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* GALLERY */
+        .pd-gallery { position: sticky; top: 6rem; }
+        .pd-gallery-main {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(253,86,49,0.06), rgba(93,60,242,0.04));
+            border: 1px solid var(--mk-border);
+            overflow: hidden;
+            cursor: zoom-in;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pd-gallery-main::before {
+            content: ""; position: absolute; inset: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(253,86,49,0.15), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(93,60,242,0.15), transparent 40%);
+            pointer-events: none;
+        }
+        .pd-gallery-main img {
+            position: relative;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+        }
+        .pd-gallery-main.zoomed img { transform: scale(2); }
+        .pd-gallery-placeholder {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+            font-size: 8rem; color: rgba(255,255,255,0.1);
+        }
+        .pd-gallery-actions {
+            position: absolute; top: 1rem; left: 1rem;
+            display: flex; flex-direction: column; gap: 0.5rem;
+            z-index: 3;
+        }
+        .pd-gallery-action {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(20,20,35,0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1rem;
+            transition: all 0.25s ease;
+        }
+        .pd-gallery-action:hover {
+            background: var(--mk-primary);
+            border-color: var(--mk-primary);
+            transform: scale(1.08);
+        }
+        .pd-gallery-action.active {
+            background: var(--mk-danger);
+            border-color: var(--mk-danger);
+        }
+        .pd-thumbs {
+            display: flex; gap: 0.75rem;
+            margin-top: 1rem;
+            overflow-x: auto; padding-bottom: 0.5rem;
+            scroll-snap-type: x mandatory;
+        }
+        .pd-thumbs::-webkit-scrollbar { height: 6px; }
+        .pd-thumbs::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .pd-thumbs::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #fd5631, #5d3cf2); border-radius: 10px; }
+        .pd-thumb {
+            flex: 0 0 90px; height: 90px;
+            border-radius: 0.85rem;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.03);
+            overflow: hidden; cursor: pointer;
+            scroll-snap-align: start;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .pd-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+        .pd-thumb:hover img { transform: scale(1.08); }
+        .pd-thumb.active {
+            border-color: var(--mk-primary);
+            box-shadow: 0 0 0 3px rgba(253,86,49,0.15);
+        }
+
+        /* INFO */
+        .pd-info { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .pd-campaign-bar {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.9rem 1.15rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.1));
+            border: 1px solid rgba(253,86,49,0.35);
+            color: #fff;
+        }
+        .pd-campaign-bar > i {
+            color: var(--mk-primary); font-size: 1.4rem;
+            animation: flameFlicker 1.5s infinite;
+        }
+        @keyframes flameFlicker {
+            0%,100% { transform: scale(1); filter: brightness(1); }
+            50%     { transform: scale(1.15); filter: brightness(1.3); }
+        }
+        .pd-campaign-bar .txt { flex: 1; font-size: 0.85rem; }
+        .pd-campaign-bar .txt strong { color: var(--mk-primary); }
+        .pd-campaign-bar .timer-mini {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 50rem;
+            background: rgba(0,0,0,0.3);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+            direction: ltr;
+            letter-spacing: 1px;
+        }
+
+        .pd-title {
+            font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+            font-weight: 800; color: #fff;
+            line-height: 1.4; margin: 0;
+        }
+        .pd-meta {
+            display: flex; flex-wrap: wrap;
+            align-items: center; gap: 1.25rem;
+            font-size: 0.85rem; color: var(--mk-dim);
+        }
+        .pd-meta-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .pd-meta-item i { color: var(--mk-primary); }
+        .pd-meta-item.success i { color: var(--mk-success); }
+        .pd-rating-inline {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 50rem;
+            background: rgba(253,188,49,0.1);
+            border: 1px solid rgba(253,188,49,0.25);
+        }
+        .pd-rating-inline .stars { color: var(--mk-warning); font-size: 0.85rem; letter-spacing: 1px; }
+        .pd-rating-inline .num { color: #fff; font-weight: 700; font-size: 0.9rem; }
+        .pd-rating-inline .count { color: var(--mk-dim); font-size: 0.75rem; }
+
+        .pd-short-desc {
+            color: var(--mk-muted); font-size: 0.95rem;
+            line-height: 1.9; padding: 0.85rem 1rem;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.02);
+            border-left: 3px solid var(--mk-primary);
+        }
+
+        .pd-price-box {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 1rem; padding: 1.25rem 1.5rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid var(--mk-border);
+            flex-wrap: wrap;
+        }
+        .pd-price-left { display: flex; flex-direction: column; gap: 0.35rem; }
+        .pd-price-old { color: var(--mk-dim); font-size: 0.9rem; text-decoration: line-through; }
+        .pd-price-new {
+            display: flex; align-items: baseline; gap: 0.4rem;
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 900; color: var(--mk-primary);
+            text-shadow: 0 0 25px rgba(253,86,49,0.4);
+            line-height: 1;
+        }
+        .pd-price-new .currency { font-size: 0.85rem; color: var(--mk-muted); font-weight: 500; }
+        .pd-price-discount {
+            padding: 0.5rem 0.9rem;
+            border-radius: 50rem;
+            background: linear-gradient(135deg, #f23c49, #e64a2a);
+            color: #fff; font-weight: 800; font-size: 0.85rem;
+            box-shadow: 0 8px 20px rgba(242,60,73,0.35);
+        }
+
+        .pd-stock-alert {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.7rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.85rem; font-weight: 700;
+        }
+        .pd-stock-alert.warn {
+            background: rgba(253,188,49,0.1);
+            border: 1px solid rgba(253,188,49,0.3);
+            color: var(--mk-warning);
+        }
+        .pd-stock-alert.danger {
+            background: rgba(242,60,73,0.1);
+            border: 1px solid rgba(242,60,73,0.3);
+            color: var(--mk-danger);
+        }
+        .pd-stock-alert.success {
+            background: rgba(7,201,139,0.1);
+            border: 1px solid rgba(7,201,139,0.3);
+            color: var(--mk-success);
+        }
+
+        /* Variants */
+        .pd-variants-section { display: flex; flex-direction: column; gap: 1rem; }
+        .pd-variant-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.9rem; font-weight: 700; color: #fff;
+        }
+        .pd-variant-label .key { color: var(--mk-muted); font-weight: 500; }
+        .pd-variant-options { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+        .pd-variant-btn {
+            padding: 0.55rem 1.15rem;
+            border-radius: 0.75rem;
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.1);
+            color: #fff; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .pd-variant-btn:hover:not(:disabled) {
+            border-color: var(--mk-primary);
+            background: rgba(253,86,49,0.08);
+            transform: translateY(-2px);
+        }
+        .pd-variant-btn.active {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(253,86,49,0.35);
+        }
+        .pd-variant-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        /* Quantity */
+        .pd-qty-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 1.5rem; flex-wrap: wrap;
+        }
+        .pd-qty-label {
+            color: var(--mk-muted); font-size: 0.9rem; font-weight: 600;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .pd-qty-control {
+            display: inline-flex; align-items: center;
+            border-radius: 0.85rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--mk-border);
+            overflow: hidden;
+        }
+        .pd-qty-btn {
+            width: 42px; height: 42px;
+            background: transparent; border: 0;
+            color: #fff; font-size: 1.2rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .pd-qty-btn:hover:not(:disabled) {
+            background: rgba(253,86,49,0.15);
+            color: var(--mk-primary);
+        }
+        .pd-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .pd-qty-input {
+            width: 60px; text-align: center;
+            background: transparent; border: 0;
+            color: #fff; font-size: 1rem; font-weight: 700;
+            padding: 0; outline: none;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-qty-input::-webkit-outer-spin-button,
+        .pd-qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+
+        /* Actions */
+        .pd-actions {
+            display: flex; align-items: center; gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .pd-btn-cart {
+            flex: 1; min-width: 220px;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.65rem;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff; font-weight: 800; font-size: 1rem;
+            text-decoration: none;
+            border: 0; cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 30px rgba(253,86,49,0.35);
+            position: relative; overflow: hidden;
+        }
+        .pd-btn-cart:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(253,86,49,0.55);
+            color: #fff;
+        }
+        .pd-btn-cart:disabled {
+            background: linear-gradient(135deg, #4b5563, #374151);
+            box-shadow: none; cursor: not-allowed;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* 🎯 حالت "مشاهده در سبد" */
+        .pd-btn-cart.in-cart {
+            background: linear-gradient(135deg, #07c98b, #059669);
+            box-shadow: 0 12px 30px rgba(7,201,153,0.4);
+        }
+        .pd-btn-cart.in-cart:hover:not(:disabled) {
+            box-shadow: 0 18px 45px rgba(7,201,153,0.6);
+        }
+        .pd-btn-cart.in-cart .spinner {
+            border-color: rgba(255,255,255,0.4);
+            border-top-color: #fff;
+        }
+
+        .pd-btn-cart.loading { pointer-events: none; opacity: 0.8; }
+        .pd-btn-cart .spinner {
+            display: none;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .pd-btn-cart.loading .spinner { display: inline-block; }
+        .pd-btn-cart.loading .icon,
+        .pd-btn-cart.loading .text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pd-btn-icon {
+            width: 52px; height: 52px;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--mk-border);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.15rem;
+            transition: all 0.25s ease;
+        }
+        .pd-btn-icon:hover {
+            background: rgba(253,86,49,0.1);
+            border-color: var(--mk-primary);
+            color: var(--mk-primary);
+            transform: translateY(-2px);
+        }
+        .pd-btn-icon.active {
+            background: var(--mk-danger);
+            border-color: var(--mk-danger);
+            color: #fff;
+        }
+
+        .pd-trust-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--mk-border);
+        }
+        .pd-trust-item {
+            display: flex; flex-direction: column;
+            align-items: center; text-align: center;
+            gap: 0.4rem; padding: 0.5rem;
+        }
+        .pd-trust-item i { font-size: 1.4rem; color: var(--mk-primary); }
+        .pd-trust-item span { color: var(--mk-muted); font-size: 0.75rem; line-height: 1.4; font-weight: 600; }
+
+        /* Vendor */
+        .pd-vendor-card {
+            padding: 1.25rem; border-radius: 1.25rem;
+            background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid var(--mk-border);
+            display: flex; align-items: center; gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .pd-vendor-avatar {
+            position: relative; flex-shrink: 0;
+            width: 60px; height: 60px; border-radius: 50%;
+        }
+        .pd-vendor-avatar img {
+            width: 100%; height: 100%;
+            border-radius: 50%; object-fit: cover;
+            border: 2px solid rgba(253,86,49,0.3);
+        }
+        .pd-vendor-avatar .fallback {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.15));
+            color: var(--mk-primary); font-size: 1.5rem;
+            border: 2px solid rgba(253,86,49,0.3);
+        }
+        .pd-vendor-avatar .verified {
+            position: absolute; bottom: -2px; left: -2px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--mk-success); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; border: 2px solid var(--mk-bg);
+        }
+        .pd-vendor-info { flex: 1; min-width: 0; }
+        .pd-vendor-info h6 {
+            color: #fff; font-size: 0.95rem; font-weight: 700;
+            margin: 0 0 0.25rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .pd-vendor-info p { color: var(--mk-dim); font-size: 0.75rem; margin: 0; }
+        .pd-vendor-cta {
+            flex-shrink: 0;
+            padding: 0.6rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(253,86,49,0.1);
+            border: 1px solid rgba(253,86,49,0.3);
+            color: var(--mk-primary);
+            font-size: 0.8rem; font-weight: 700;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            transition: all 0.25s ease;
+        }
+        .pd-vendor-cta:hover {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            border-color: transparent;
+            color: #fff; transform: translateY(-2px);
+        }
+
+        /* TABS */
+        .pd-tabs-section {
+            margin-top: 4rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid var(--mk-border);
+            overflow: hidden;
+        }
+        .pd-tabs-nav {
+            display: flex; background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--mk-border);
+            overflow-x: auto;
+        }
+        .pd-tabs-nav::-webkit-scrollbar { display: none; }
+        .pd-tab-btn {
+            flex-shrink: 0;
+            padding: 1.1rem 1.75rem;
+            background: transparent; border: 0;
+            color: var(--mk-muted);
+            font-size: 0.95rem; font-weight: 700;
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            transition: all 0.25s ease;
+            position: relative; white-space: nowrap;
+        }
+        .pd-tab-btn::after {
+            content: "";
+            position: absolute; bottom: -1px; right: 0; left: 0;
+            height: 3px; background: var(--mk-primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            border-radius: 3px 3px 0 0;
+        }
+        .pd-tab-btn:hover { color: #fff; }
+        .pd-tab-btn.active { color: var(--mk-primary); }
+        .pd-tab-btn.active::after { transform: scaleX(1); }
+        .pd-tab-btn .count {
+            padding: 0.15rem 0.55rem;
+            border-radius: 50rem;
+            background: rgba(253,86,49,0.15);
+            color: var(--mk-primary);
+            font-size: 0.7rem; font-weight: 800;
+        }
+        .pd-tab-panel {
+            display: none; padding: 2rem;
+            animation: fadeInUp 0.4s ease;
+        }
+        .pd-tab-panel.active { display: block; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .pd-description {
+            color: var(--mk-muted); font-size: 0.95rem; line-height: 2;
+        }
+        .pd-description p { margin-bottom: 1rem; }
+        .pd-description h1, .pd-description h2, .pd-description h3 {
+            color: #fff; margin: 1.5rem 0 0.75rem;
+        }
+
+        .pd-features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+        .pd-feature-item {
+            display: flex; align-items: flex-start; gap: 0.85rem;
+            padding: 1rem 1.15rem;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--mk-border);
+            transition: all 0.25s ease;
+        }
+        .pd-feature-item:hover {
+            border-color: rgba(253,86,49,0.35);
+            background: rgba(253,86,49,0.04);
+            transform: translateY(-2px);
+        }
+        .pd-feature-item .icon-wrap {
+            flex-shrink: 0;
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.1));
+            color: var(--mk-primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .pd-feature-item .info { flex: 1; min-width: 0; }
+        .pd-feature-item .key { color: var(--mk-dim); font-size: 0.75rem; margin-bottom: 0.2rem; }
+        .pd-feature-item .value { color: #fff; font-weight: 700; font-size: 0.9rem; word-break: break-word; }
+
+        /* Reviews */
+        .pd-reviews-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+        }
+        .pd-reviews-summary {
+            padding: 1.5rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(145deg, rgba(253,86,49,0.06), rgba(93,60,242,0.03));
+            border: 1px solid rgba(253,86,49,0.2);
+            height: fit-content;
+            position: sticky; top: 6rem;
+        }
+        .pd-rating-big {
+            text-align: center;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1rem;
+        }
+        .pd-rating-big .num {
+            font-size: 3.5rem; font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, #fff, #fdbc31);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .pd-rating-big .stars {
+            color: var(--mk-warning); font-size: 1.1rem;
+            letter-spacing: 2px; margin: 0.5rem 0;
+        }
+        .pd-rating-big .count { color: var(--mk-dim); font-size: 0.8rem; }
+        .pd-rating-dist { display: flex; flex-direction: column; gap: 0.6rem; }
+        .pd-rating-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            align-items: center; gap: 0.5rem;
+            font-size: 0.75rem; color: var(--mk-muted);
+        }
+        .pd-rating-row .bar {
+            height: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50rem;
+            overflow: hidden;
+        }
+        .pd-rating-row .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fdbc31, #fd5631);
+            border-radius: 50rem;
+            transition: width 1s ease;
+        }
+        .pd-reviews-list { display: flex; flex-direction: column; gap: 1rem; }
+        .pd-review-card {
+            padding: 1.25rem 1.5rem;
+            border-radius: 1.25rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--mk-border);
+            transition: all 0.25s ease;
+        }
+        .pd-review-card:hover { border-color: rgba(253,86,49,0.25); }
+        .pd-review-header {
+            display: flex; align-items: center; gap: 0.85rem;
+            margin-bottom: 0.85rem; flex-wrap: wrap;
+        }
+        .pd-review-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, #fd5631, #5d3cf2);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1rem; flex-shrink: 0;
+        }
+        .pd-review-author { flex: 1; min-width: 0; }
+        .pd-review-author .name {
+            color: #fff; font-weight: 700; font-size: 0.9rem;
+            margin-bottom: 0.15rem;
+            display: flex; align-items: center; gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .pd-review-author .verified {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 50rem;
+            background: rgba(7,201,139,0.15);
+            color: var(--mk-success);
+            font-size: 0.65rem; font-weight: 800;
+            border: 1px solid rgba(7,201,139,0.3);
+        }
+        .pd-review-author .date { color: var(--mk-dim); font-size: 0.72rem; }
+        .pd-review-stars { color: var(--mk-warning); font-size: 0.85rem; letter-spacing: 1px; }
+        .pd-review-body {
+            color: var(--mk-muted); font-size: 0.9rem;
+            line-height: 1.9; white-space: pre-wrap; word-break: break-word;
+        }
+
+        /* Review Form */
+        .pd-review-form-wrap {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 1.25rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--mk-border);
+        }
+        .pd-review-form-title {
+            color: #fff; font-size: 1rem; font-weight: 700;
+            margin-bottom: 1.15rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .pd-review-form-title i { color: var(--mk-primary); }
+        .pd-star-selector {
+            display: inline-flex; gap: 0.35rem;
+            direction: ltr; margin-bottom: 1.15rem;
+        }
+        .pd-star-selector button {
+            background: transparent; border: 0;
+            color: rgba(255,255,255,0.15);
+            font-size: 2rem; cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0; line-height: 1;
+        }
+        .pd-star-selector button:hover,
+        .pd-star-selector button.hover,
+        .pd-star-selector button.active {
+            color: var(--mk-warning);
+            transform: scale(1.15);
+            text-shadow: 0 0 20px rgba(253,188,49,0.6);
+        }
+        .pd-textarea {
+            width: 100%; min-height: 120px;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--mk-border);
+            color: #fff; font-size: 0.9rem;
+            line-height: 1.8; resize: vertical;
+            font-family: inherit; margin-bottom: 1rem;
+            transition: all 0.25s ease;
+        }
+        .pd-textarea:focus {
+            outline: none;
+            border-color: var(--mk-primary);
+            background: rgba(253,86,49,0.04);
+            box-shadow: 0 0 0 4px rgba(253,86,49,0.1);
+        }
+        .pd-textarea::placeholder { color: var(--mk-dim); }
+        .pd-login-notice {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            background: rgba(60,118,242,0.08);
+            border: 1px solid rgba(60,118,242,0.3);
+            color: var(--mk-muted); font-size: 0.9rem;
+        }
+        .pd-login-notice i { color: var(--mk-blue); font-size: 1.5rem; }
+        .pd-login-notice a { color: var(--mk-blue); font-weight: 700; text-decoration: none; }
+        .pd-login-notice a:hover { text-decoration: underline; }
+
+        /* LIGHTBOX */
+        .pd-lightbox {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center; justify-content: center;
+            padding: 2rem;
+            animation: lbFadeIn 0.3s ease;
+        }
+        .pd-lightbox.show { display: flex; }
+        @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .pd-lightbox img {
+            max-width: 90vw; max-height: 85vh;
+            border-radius: 1rem;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+            animation: lbZoomIn 0.35s ease;
+        }
+        @keyframes lbZoomIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+        .pd-lightbox-close {
+            position: absolute; top: 1.5rem; left: 1.5rem;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-size: 1.4rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s ease;
+        }
+        .pd-lightbox-close:hover {
+            background: var(--mk-danger);
+            border-color: var(--mk-danger);
+            transform: rotate(90deg);
+        }
+        .pd-lightbox-nav {
+            position: absolute; top: 50%;
+            transform: translateY(-50%);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-size: 1.4rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s ease;
+        }
+        .pd-lightbox-nav:hover {
+            background: var(--mk-primary);
+            border-color: var(--mk-primary);
+        }
+        .pd-lightbox-prev { right: 1.5rem; }
+        .pd-lightbox-next { left: 1.5rem; }
+
+        /* RESPONSIVE */
+        @media (max-width: 991.98px) {
+            .pd-breadcrumb-wrap { margin-top: 4rem; }
+            .pd-grid { grid-template-columns: 1fr; gap: 2rem; }
+            .pd-gallery { position: static; }
+            .pd-gallery-main { max-width: 500px; margin: 0 auto; }
+            .pd-reviews-layout { grid-template-columns: 1fr; }
+            .pd-reviews-summary { position: static; }
+            .pd-tab-panel { padding: 1.5rem; }
+            .pd-vendor-card { flex-wrap: wrap; }
+        }
+        /* RESPONSIVE SAFETY: prevent grid/flex children from widening the viewport */
+        .pd-main, .pd-main .container, .pd-grid, .pd-grid > *,
+        .pd-info, .pd-gallery, .pd-price-box, .pd-actions,
+        .pd-tab-panel, .pd-vendor-card { min-width: 0; }
+        .pd-main { overflow-x: clip; }
+        .pd-grid > * { max-width: 100%; }
+        .pd-title, .pd-short-desc, .pd-tab-panel, .pd-vendor-card,
+        .pd-meta-item, .pd-price-box { overflow-wrap: anywhere; }
+        .pd-gallery-main img { max-width: 100%; }
+        .pd-thumbs { max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+        .pd-actions > * { min-width: 0; }
+        .pd-btn-cart, .pd-btn-icon { max-width: 100%; }
+        .pd-lightbox { padding: clamp(.75rem, 3vw, 2rem); }
+        .pd-lightbox img { max-width: 100%; max-height: 82dvh; object-fit: contain; }
+
+        /* Keep the mini-cart modal inside the visible mobile viewport */
+        #mkMiniCartModal { padding: 0 !important; overflow-y: auto; overscroll-behavior: contain; }
+        #mkMiniCartModal .modal-dialog { width: min(460px, calc(100% - 1rem)); max-width: none; margin: .5rem auto; }
+        #mkMiniCartModal .modal-content { min-width: 0; max-height: calc(100dvh - 1rem); }
+        #mkMiniCartModal .modal-body { min-height: 0; overscroll-behavior: contain; }
+
+        @media (max-width: 575.98px) {
+            .pd-main { padding: 1rem 0 2rem; }
+            .pd-breadcrumb-wrap { padding: .7rem 0; }
+            .pd-breadcrumb { gap: .35rem; font-size: .72rem; }
+            .pd-breadcrumb .active { max-width: 42vw; }
+            .pd-grid { gap: 1.25rem; }
+            .pd-gallery-main { width: 100%; border-radius: 1rem; }
+            .pd-info { gap: 1rem; }
+            .pd-title { font-size: clamp(1.15rem, 5vw, 1.5rem); line-height: 1.55; }
+            .pd-meta { gap: .55rem .85rem; }
+            .pd-campaign-bar { flex-wrap: wrap; padding: .75rem; gap: .5rem; }
+            .pd-campaign-bar .timer-mini { max-width: 100%; }
+            .pd-price-box { align-items: stretch; gap: .75rem; }
+            .pd-price-left { min-width: 0; }
+            .pd-price-new { flex-wrap: wrap; font-size: clamp(1.35rem, 6vw, 1.75rem); }
+            .pd-actions { gap: .6rem; }
+            .pd-tab-nav { max-width: 100%; overflow-x: auto; }
+            .pd-tab-btn { white-space: nowrap; }
+            #mkMiniCartModal .modal-dialog { width: calc(100% - .75rem); margin: .375rem auto; }
+            #mkMiniCartModal .modal-content { max-height: calc(100dvh - .75rem); border-radius: 1rem; }
+            #mkMiniCartModal .modal-header { padding: .85rem 1rem; }
+            #mkMiniCartModal .modal-body { padding: .75rem; max-height: none; overflow-y: auto; }
+            #mkMiniCartModal .modal-footer { padding: .85rem; }
+            .mk-mini-item { gap: .6rem; padding: .65rem; }
+            .mk-mini-item-img { width: 58px; height: 58px; }
+            .mk-mini-item-title { font-size: .8rem; padding-left: 1.35rem; }
+            .mk-mini-actions { gap: .45rem; }
+            .mk-mini-btn { min-width: 0; padding: .7rem .55rem; font-size: .8rem; }
+            .mk-mini-total { gap: .5rem; flex-wrap: wrap; }
+
+            .pd-thumb { flex: 0 0 70px; height: 70px; }
+            .pd-price-box { padding: 1rem; }
+            .pd-actions { flex-direction: column; }
+            .pd-btn-cart { min-width: 0; width: 100%; }
+            .pd-btn-icon { width: 100%; height: 48px; }
+            .pd-trust-grid { padding: 0.75rem; }
+            .pd-trust-item i { font-size: 1.15rem; }
+            .pd-trust-item span { font-size: 0.68rem; }
+            .pd-tab-btn { padding: 0.9rem 1.15rem; font-size: 0.85rem; }
+            .pd-features-grid { grid-template-columns: 1fr; }
+            .pd-lightbox { padding: 1rem; }
+            .pd-lightbox-nav { width: 44px; height: 44px; font-size: 1.15rem; }
+            .pd-lightbox-close { width: 40px; height: 40px; font-size: 1.15rem; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    {# داده‌های وضعیت سبد برای JS #}
+    <div id="pdCartState"
+         data-product-id="{{ product.id }}"
+         data-variant-ids="{{ cart_variant_ids|join:',' }}"
+         data-cart-url="{% url 'market:cart_detail' %}"
+         style="display:none;"></div>
+
+    <!-- BREADCRUMB -->
+    <div class="pd-breadcrumb-wrap">
+        <div class="container">
+            <ol class="pd-breadcrumb">
+                <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+                {% if product.category %}
+                    <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                    <li>
+                        <a href="#">
+                            {% if product.category.icon %}<i class="{{ product.category.icon }}"></i>{% endif %}
+                            {{ product.category.name }}
+                        </a>
+                    </li>
+                {% endif %}
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li class="active">{{ product.title }}</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- MAIN PRODUCT -->
+    <section class="pd-main">
+        <div class="container">
+            <div class="pd-grid">
+
+                <!-- GALLERY -->
+                <div class="pd-gallery">
+                    <div class="pd-gallery-main" id="pdGalleryMain">
+                        <div class="pd-gallery-actions">
+                            <button type="button" class="pd-gallery-action" id="pdFavBtn" title="افزودن به علاقه‌مندی">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            <button type="button" class="pd-gallery-action" id="pdShareBtn" title="اشتراک‌گذاری">
+                                <i class="bi bi-share"></i>
+                            </button>
+                        </div>
+
+                        {% if product.main_image %}
+                            <img src="{{ product.main_image.url }}"
+                                 alt="{{ product.title }}"
+                                 id="pdMainImage"
+                                 data-full="{{ product.main_image.url }}">
+                        {% else %}
+                            <div class="pd-gallery-placeholder">
+                                <i class="bi bi-bag-heart"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if product.images.all %}
+                        <div class="pd-thumbs" id="pdThumbs">
+                            {% if product.main_image %}
+                                <div class="pd-thumb active" data-src="{{ product.main_image.url }}">
+                                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                                </div>
+                            {% endif %}
+                            {% for img in product.images.all %}
+                                <div class="pd-thumb" data-src="{{ img.image.url }}">
+                                    <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.title }}">
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- INFO -->
+                <div class="pd-info">
+
+                    {% if is_in_campaign and campaign_end_ts %}
+                        <div class="pd-campaign-bar">
+                            <i class="bi bi-fire"></i>
+                            <div class="txt">
+                                <strong>این محصول توی کمپین ۳ روزه وین‌جاب فعاله!</strong>
+                                <br>
+                                <span style="color:rgba(255,255,255,0.6);font-size:0.78rem;">
+                                    فرصت رو از دست نده — تا پایان:
+                                </span>
+                            </div>
+                            <div class="timer-mini" id="pdTimer" data-end="{{ campaign_end_ts|unlocalize }}">
+                                <i class="bi bi-clock-history"></i>
+                                <span id="pd-timer-text">۰۰:۰۰:۰۰:۰۰</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <h1 class="pd-title">{{ product.title }}</h1>
+
+                    <div class="pd-meta">
+                        {% if avg_rating %}
+                            <span class="pd-rating-inline">
+                                <span class="stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= avg_rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </span>
+                                <span class="num">{{ avg_rating }}</span>
+                                <span class="count">({{ reviews_count }} نظر)</span>
+                            </span>
+                        {% else %}
+                            <span class="pd-rating-inline">
+                                <i class="bi bi-star"></i>
+                                <span class="count">هنوز نظری ثبت نشده</span>
+                            </span>
+                        {% endif %}
+
+                        {% if product.category %}
+                            <span class="pd-meta-item">
+                                {% if product.category.icon %}<i class="{{ product.category.icon }}"></i>{% endif %}
+                                {{ product.category.name }}
+                            </span>
+                        {% endif %}
+
+                        {% if product.supplier %}
+                            <span class="pd-meta-item success">
+                                <i class="bi bi-patch-check-fill"></i>
+                                {{ product.supplier.brand_name }}
+                            </span>
+                        {% endif %}
+
+                        <span class="pd-meta-item">
+                            <i class="bi bi-eye-fill"></i>
+                            {{ product.view_count }} بازدید
+                        </span>
+                    </div>
+
+                    {% if product.short_description %}
+                        <div class="pd-short-desc">{{ product.short_description }}</div>
+                    {% endif %}
+
+                    {% if total_stock <= 0 %}
+                        <div class="pd-stock-alert danger">
+                            <i class="bi bi-x-circle-fill"></i>
+                            این محصول در حال حاضر ناموجود است
+                        </div>
+                    {% elif total_stock < 5 %}
+                        <div class="pd-stock-alert warn">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            فقط {{ total_stock }} عدد در انبار باقی مانده!
+                        </div>
+                    {% else %}
+                        <div class="pd-stock-alert success">
+                            <i class="bi bi-check-circle-fill"></i>
+                            موجود در انبار — آماده ارسال
+                        </div>
+                    {% endif %}
+
+                    <div class="pd-price-box">
+                        <div class="pd-price-left">
+                            {% if product.discount_price %}
+                                <span class="pd-price-old">{{ product.base_price|intcomma }} تومان</span>
+                            {% endif %}
+                            <span class="pd-price-new">
+                                {{ product.final_price|intcomma }}
+                                <span class="currency">تومان</span>
+                            </span>
+                        </div>
+                        {% if product.discount_percent > 0 %}
+                            <span class="pd-price-discount">{{ product.discount_percent }}٪ تخفیف</span>
+                        {% endif %}
+                    </div>
+
+                    {% if product.variants.all %}
+                        <div class="pd-variants-section" id="pdVariantsSection">
+                            <div class="pd-variant-label">
+                                <i class="bi bi-palette-fill" style="color:var(--mk-primary);"></i>
+                                <span class="key">انتخاب کنید:</span>
+                            </div>
+                            <div class="pd-variant-options" id="pdVariantOptions">
+                                {% for variant in product.variants.all %}
+                                    <button type="button"
+                                            class="pd-variant-btn"
+                                            data-variant-id="{{ variant.id }}"
+                                            data-price="{{ variant.final_price|unlocalize }}"
+                                            data-stock="{{ variant.stock|unlocalize }}"
+                                            {% if variant.stock <= 0 %}disabled{% endif %}>
+                                        {% for k, v in variant.attributes.items %}
+                                            {{ v }}{% if not forloop.last %} / {% endif %}
+                                        {% endfor %}
+                                    </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="pd-qty-row">
+                        <div class="pd-qty-label">
+                            <i class="bi bi-boxes"></i> تعداد:
+                        </div>
+                        <div class="pd-qty-control">
+                            <button type="button" class="pd-qty-btn" id="pdQtyMinus">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number"
+                                   class="pd-qty-input"
+                                   id="pdQtyInput"
+                                   value="1"
+                                   min="1"
+                                   max="{{ total_stock }}"
+                                   readonly>
+                            <button type="button" class="pd-qty-btn" id="pdQtyPlus">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pd-actions">
+                        <button type="button"
+                                class="pd-btn-cart"
+                                id="pdAddToCartBtn"
+                                data-product-id="{{ product.id }}"
+                                data-mode="add"
+                                {% if total_stock <= 0 %}disabled{% endif %}>
+                            <span class="spinner"></span>
+                            <i class="bi bi-cart-plus-fill icon"></i>
+                            <span class="text">
+                                {% if total_stock > 0 %}افزودن به سبد خرید{% else %}ناموجود{% endif %}
+                            </span>
+                        </button>
+                        <button type="button" class="pd-btn-icon" id="pdCompareBtn" title="مقایسه">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="pd-trust-grid">
+                        <div class="pd-trust-item">
+                            <i class="bi bi-patch-check-fill"></i>
+                            <span>ضمانت اصالت</span>
+                        </div>
+                        <div class="pd-trust-item">
+                            <i class="bi bi-box-seam-fill"></i>
+                            <span>ارسال فروشنده</span>
+                        </div>
+                        <div class="pd-trust-item">
+                            <i class="bi bi-shield-lock-fill"></i>
+                            <span>پرداخت امن</span>
+                        </div>
+                    </div>
+
+                    {% if product.supplier %}
+                        <div class="pd-vendor-card">
+                            <div class="pd-vendor-avatar">
+                                {% if product.supplier.user.avatar %}
+                                    <img src="{{ product.supplier.user.avatar.url }}"
+                                         alt="{{ product.supplier.brand_name }}">
+                                {% else %}
+                                    <div class="fallback"><i class="bi bi-shop"></i></div>
+                                {% endif %}
+                                <div class="verified"><i class="bi bi-check-lg"></i></div>
+                            </div>
+                            <div class="pd-vendor-info">
+                                <h6>
+                                    {{ product.supplier.brand_name }}
+                                    <i class="bi bi-patch-check-fill" style="color:var(--mk-success);font-size:0.85rem;"></i>
+                                </h6>
+                                <p>
+                                    <i class="bi bi-box-seam"></i>
+                                    {{ vendor_products_count }} محصول
+                                    {% if product.supplier.user.province %}
+                                        · <i class="bi bi-geo-alt-fill"></i>
+                                        {{ product.supplier.user.province.name }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <a href="#" class="pd-vendor-cta">
+                                <i class="bi bi-shop-window"></i> مشاهده فروشگاه
+                            </a>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="pd-tabs-section">
+                <div class="pd-tabs-nav" role="tablist">
+                    <button type="button" class="pd-tab-btn active" data-tab="description">
+                        <i class="bi bi-file-text"></i> توضیحات
+                    </button>
+                    <button type="button" class="pd-tab-btn" data-tab="features">
+                        <i class="bi bi-list-check"></i> ویژگی‌ها
+                    </button>
+                    <button type="button" class="pd-tab-btn" data-tab="reviews">
+                        <i class="bi bi-chat-quote"></i> نظرات
+                        <span class="count">{{ reviews_count }}</span>
+                    </button>
+                </div>
+
+                <div class="pd-tab-panel active" id="pdTabDescription">
+                    <div class="pd-description">
+                        {% if product.description %}
+                            {{ product.description|linebreaks }}
+                        {% else %}
+                            <p class="text-muted">توضیحات تکمیلی برای این محصول ثبت نشده است.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="pd-tab-panel" id="pdTabFeatures">
+                    {% if product.features.all %}
+                        <div class="pd-features-grid">
+                            {% for feature in product.features.all %}
+                                <div class="pd-feature-item">
+                                    <div class="icon-wrap"><i class="bi bi-check2-circle"></i></div>
+                                    <div class="info">
+                                        <div class="key">{{ feature.feature.name }}</div>
+                                        <div class="value">
+                                            {{ feature.value }}
+                                            {% if feature.feature.unit %}{{ feature.feature.unit }}{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">ویژگی خاصی برای این محصول ثبت نشده است.</p>
+                    {% endif %}
+                </div>
+
+                <div class="pd-tab-panel" id="pdTabReviews">
+                    <div class="pd-reviews-layout">
+                        <div class="pd-reviews-summary">
+                            <div class="pd-rating-big">
+                                <div class="num">{{ avg_rating|default:"0" }}</div>
+                                <div class="stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= avg_rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="count">از {{ reviews_count }} نظر</div>
+                            </div>
+                            <div class="pd-rating-dist">
+                                {% for r in rating_distribution %}
+                                    <div class="pd-rating-row">
+                                        <span>{{ r.star }} ★</span>
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: {{ r.percent }}%;"></div>
+                                        </div>
+                                        <span style="text-align:left;">{{ r.count }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="pd-reviews-list" id="pdReviewsList">
+                                {% for review in reviews %}
+                                    <div class="pd-review-card">
+                                        <div class="pd-review-header">
+                                            <div class="pd-review-avatar">
+                                                {{ review.user.nickname|default:review.user.phone_number|slice:":1" }}
+                                            </div>
+                                            <div class="pd-review-author">
+                                                <div class="name">
+                                                    {{ review.user.nickname|default:review.user.phone_number }}
+                                                    {% if review.is_verified_buyer %}
+                                                        <span class="verified">
+                                                            <i class="bi bi-patch-check-fill"></i> خریدار تاییدشده
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="date">{{ review.created_at }}</div>
+                                            </div>
+                                            <div class="pd-review-stars">
+                                                {% for i in "12345" %}
+                                                    {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="pd-review-body">{{ review.comment }}</div>
+                                    </div>
+                                {% empty %}
+                                    <div class="text-center py-5 text-muted">
+                                        <i class="bi bi-chat-square-text" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:1rem;"></i>
+                                        هنوز نظری ثبت نشده. اولین نفر باش!
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="pd-review-form-wrap">
+                                {% if user.is_authenticated %}
+                                    <div class="pd-review-form-title">
+                                        <i class="bi bi-pencil-square"></i>
+                                        {% if user_review %}ویرایش نظر شما{% else %}ثبت نظر شما{% endif %}
+                                        {% if user_bought %}
+                                            <span class="verified" style="margin-right:auto;">
+                                                <i class="bi bi-patch-check-fill"></i> شما این محصول را خریده‌اید
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="pd-star-selector" id="pdStarSelector">
+                                        {% for i in "12345" %}
+                                            <button type="button"
+                                                    data-rating="{{ forloop.counter }}"
+                                                    {% if user_review and forloop.counter <= user_review.rating %}class="active"{% endif %}>
+                                                ★
+                                            </button>
+                                        {% endfor %}
+                                    </div>
+
+                                    <textarea class="pd-textarea"
+                                              id="pdReviewComment"
+                                              placeholder="تجربه‌ی خودت از این محصول رو بنویس...">{{ user_review.comment|default:"" }}</textarea>
+
+                                    <button type="button" class="pd-btn-cart" id="pdReviewSubmitBtn" style="min-width:0;">
+                                        <span class="spinner"></span>
+                                        <i class="bi bi-send-fill icon"></i>
+                                        <span class="text">{% if user_review %}ویرایش نظر{% else %}ثبت نظر{% endif %}</span>
+                                    </button>
+                                {% else %}
+                                    <div class="pd-login-notice">
+                                        <i class="bi bi-info-circle-fill"></i>
+                                        <div>
+                                            برای ثبت نظر و امتیاز، ابتدا
+                                            <a href="/accounts/login/?next={{ request.path }}">وارد شوید</a>
+                                            یا <a href="/accounts/register/">ثبت‌نام کنید</a>.
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- LIGHTBOX -->
+    <div class="pd-lightbox" id="pdLightbox">
+        <button type="button" class="pd-lightbox-close" id="pdLightboxClose">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <button type="button" class="pd-lightbox-nav pd-lightbox-prev" id="pdLightboxPrev">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+        <img src="" alt="" id="pdLightboxImage">
+        <button type="button" class="pd-lightbox-nav pd-lightbox-next" id="pdLightboxNext">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+    </div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+    'use strict';
+
+    /* ============================================
+       NOTIFICATION HELPER
+       ============================================ */
+    function notify(message, type = 'info') {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(message, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + message);
+    }
+
+    /* ============================================
+       CSRF
+       ============================================ */
+    const getCsrf = () => {
+        if (window.MKCart && window.MKCart.getCsrfToken) {
+            return window.MKCart.getCsrfToken();
+        }
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        return '';
+    };
+
+    /* ============================================
+       CART STATE (کدام variant ها در سبد هستن)
+       ============================================ */
+    const cartStateEl = document.getElementById('pdCartState');
+    const cartUrl = (cartStateEl && cartStateEl.dataset.cartUrl) || '/market/cart/';
+
+    // Set از variant_id (یا -1 برای بدون variant)
+    const cartVariantSet = new Set();
+    if (cartStateEl) {
+        const raw = (cartStateEl.dataset.variantIds || '').trim();
+        if (raw) {
+            raw.split(',').forEach(v => {
+                const n = parseInt(v.trim(), 10);
+                if (!isNaN(n)) cartVariantSet.add(n);
+            });
+        }
+    }
+
+    /* ============================================
+       CAMPAIGN TIMER
+       ============================================ */
+    const pdTimer = document.getElementById('pdTimer');
+    if (pdTimer) {
+        const endTime = parseInt(String(pdTimer.dataset.end).replace(/[^\d]/g, ''), 10);
+        const textEl = document.getElementById('pd-timer-text');
+
+        const toPersian = (n) => {
+            const p = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+            return String(n).padStart(2, '0').replace(/\d/g, d => p[d]);
+        };
+
+        const tick = () => {
+            const diff = endTime - Date.now();
+            if (diff <= 0) { textEl.textContent = 'پایان یافته'; return; }
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor((diff % 86400000) / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            textEl.textContent = `${toPersian(d)}:${toPersian(h)}:${toPersian(m)}:${toPersian(s)}`;
+        };
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    /* ============================================
+       GALLERY - THUMBNAILS
+       ============================================ */
+    const mainImage = document.getElementById('pdMainImage');
+    const thumbs = document.querySelectorAll('.pd-thumb');
+
+    thumbs.forEach(thumb => {
+        thumb.addEventListener('click', () => {
+            thumbs.forEach(t => t.classList.remove('active'));
+            thumb.classList.add('active');
+            const src = thumb.dataset.src;
+            if (mainImage && src) {
+                mainImage.src = src;
+                mainImage.dataset.full = src;
+            }
+        });
+    });
+
+    /* ============================================
+       GALLERY - ZOOM
+       ============================================ */
+    const galleryMain = document.getElementById('pdGalleryMain');
+    if (galleryMain && mainImage && window.matchMedia('(min-width: 992px)').matches) {
+        galleryMain.addEventListener('mousemove', (e) => {
+            const rect = galleryMain.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            mainImage.style.transformOrigin = `${x}% ${y}%`;
+        });
+        galleryMain.addEventListener('mouseenter', () => galleryMain.classList.add('zoomed'));
+        galleryMain.addEventListener('mouseleave', () => galleryMain.classList.remove('zoomed'));
+    }
+
+    /* ============================================
+       LIGHTBOX
+       ============================================ */
+    const lightbox = document.getElementById('pdLightbox');
+    const lightboxImg = document.getElementById('pdLightboxImage');
+    const lbClose = document.getElementById('pdLightboxClose');
+    const lbPrev = document.getElementById('pdLightboxPrev');
+    const lbNext = document.getElementById('pdLightboxNext');
+
+    const allImages = [];
+    if (mainImage) allImages.push(mainImage.dataset.full || mainImage.src);
+    document.querySelectorAll('.pd-thumb').forEach(t => {
+        if (t.dataset.src && !allImages.includes(t.dataset.src)) allImages.push(t.dataset.src);
+    });
+
+    let currentIndex = 0;
+
+    function openLightbox(src) {
+        if (!lightbox || !lightboxImg) return;
+        lightboxImg.src = src;
+        currentIndex = allImages.indexOf(src);
+        if (currentIndex === -1) currentIndex = 0;
+        lightbox.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        if (!lightbox) return;
+        lightbox.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    if (galleryMain && mainImage) {
+        galleryMain.addEventListener('click', (e) => {
+            if (e.target.closest('.pd-gallery-action')) return;
+            openLightbox(mainImage.dataset.full || mainImage.src);
+        });
+    }
+
+    lbClose && lbClose.addEventListener('click', closeLightbox);
+    lightbox && lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+    });
+    lbNext && lbNext.addEventListener('click', () => {
+        if (allImages.length <= 1) return;
+        currentIndex = (currentIndex + 1) % allImages.length;
+        lightboxImg.src = allImages[currentIndex];
+    });
+    lbPrev && lbPrev.addEventListener('click', () => {
+        if (allImages.length <= 1) return;
+        currentIndex = (currentIndex - 1 + allImages.length) % allImages.length;
+        lightboxImg.src = allImages[currentIndex];
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!lightbox || !lightbox.classList.contains('show')) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowRight') lbNext && lbNext.click();
+        if (e.key === 'ArrowLeft') lbPrev && lbPrev.click();
+    });
+
+    /* ============================================
+       FAVORITE
+       ============================================ */
+    const favBtn = document.getElementById('pdFavBtn');
+    favBtn && favBtn.addEventListener('click', () => {
+        favBtn.classList.toggle('active');
+        const icon = favBtn.querySelector('i');
+        if (favBtn.classList.contains('active')) {
+            icon.className = 'bi bi-heart-fill';
+            notify('به علاقه‌مندی‌ها اضافه شد ❤️', 'success');
+        } else {
+            icon.className = 'bi bi-heart';
+        }
+    });
+
+    /* ============================================
+       SHARE
+       ============================================ */
+    const shareBtn = document.getElementById('pdShareBtn');
+    shareBtn && shareBtn.addEventListener('click', async () => {
+        const shareData = {
+            title: document.title,
+            text: '{{ product.title|escapejs }}',
+            url: window.location.href,
+        };
+        if (navigator.share) {
+            try { await navigator.share(shareData); } catch (e) {}
+        } else {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                notify('لینک کپی شد ✅', 'success');
+            } catch (e) {
+                window.prompt('لینک را کپی کنید:', window.location.href);
+            }
+        }
+    });
+
+    /* ============================================
+       VARIANT SELECTION
+       ============================================ */
+    const variantBtns = document.querySelectorAll('.pd-variant-btn');
+    const priceNewEl = document.querySelector('.pd-price-new');
+    const qtyInput = document.getElementById('pdQtyInput');
+    let selectedVariantId = null;
+    let currentMaxStock = parseInt(qtyInput ? qtyInput.max : 1, 10) || 1;
+
+    /* ============================================
+       ADD TO CART BUTTON STATE
+       ============================================ */
+    const addBtn = document.getElementById('pdAddToCartBtn');
+    const addBtnIcon = addBtn ? addBtn.querySelector('.icon') : null;
+    const addBtnText = addBtn ? addBtn.querySelector('.text') : null;
+
+    function updateAddToCartButton() {
+        if (!addBtn || addBtn.disabled) return;
+
+        // کلید جستجو: اگه variant انتخاب شده از id اون، وگرنه -1
+        const key = selectedVariantId ? parseInt(selectedVariantId, 10) : -1;
+        const inCart = cartVariantSet.has(key);
+
+        if (inCart) {
+            addBtn.dataset.mode = 'view';
+            addBtn.classList.add('in-cart');
+            if (addBtnIcon) addBtnIcon.className = 'bi bi-bag-check-fill icon';
+            if (addBtnText) addBtnText.textContent = 'مشاهده در سبد خرید';
+        } else {
+            addBtn.dataset.mode = 'add';
+            addBtn.classList.remove('in-cart');
+            if (addBtnIcon) addBtnIcon.className = 'bi bi-cart-plus-fill icon';
+            if (addBtnText) addBtnText.textContent = 'افزودن به سبد خرید';
+        }
+    }
+
+    variantBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            variantBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedVariantId = btn.dataset.variantId;
+            currentMaxStock = parseInt(btn.dataset.stock, 10) || 0;
+
+            const newPrice = btn.dataset.price;
+            if (priceNewEl && newPrice) {
+                const priceFormatted = parseInt(newPrice, 10).toLocaleString('en-US');
+                const pricePersian = priceFormatted.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+                priceNewEl.innerHTML = pricePersian + ' <span class="currency">تومان</span>';
+            }
+
+            if (qtyInput) {
+                qtyInput.max = currentMaxStock;
+                qtyInput.value = currentMaxStock > 0 ? 1 : 0;
+            }
+            updateQtyButtons();
+            updateAddToCartButton();  // 🎯 مهم: با تغییر variant دکمه آپدیت میشه
+        });
+    });
+
+    /* ============================================
+       QUANTITY
+       ============================================ */
+    const qtyMinus = document.getElementById('pdQtyMinus');
+    const qtyPlus = document.getElementById('pdQtyPlus');
+
+    function updateQtyButtons() {
+        if (!qtyInput) return;
+        const val = parseInt(qtyInput.value, 10) || 1;
+        if (qtyMinus) qtyMinus.disabled = val <= 1;
+        if (qtyPlus) qtyPlus.disabled = val >= currentMaxStock;
+    }
+
+    qtyMinus && qtyMinus.addEventListener('click', () => {
+        if (!qtyInput) return;
+        let v = parseInt(qtyInput.value, 10) || 1;
+        if (v > 1) qtyInput.value = v - 1;
+        updateQtyButtons();
+    });
+
+    qtyPlus && qtyPlus.addEventListener('click', () => {
+        if (!qtyInput) return;
+        let v = parseInt(qtyInput.value, 10) || 1;
+        if (v < currentMaxStock) qtyInput.value = v + 1;
+        updateQtyButtons();
+    });
+
+    updateQtyButtons();
+    updateAddToCartButton();  // 🎯 اول لود صفحه هم اجرا بشه
+
+    /* ============================================
+       ADD TO CART
+       ============================================ */
+    addBtn && addBtn.addEventListener('click', () => {
+        // اگه قبلاً به سبد اضافه شده، برو به سبد
+        if (addBtn.dataset.mode === 'view') {
+            window.location.href = cartUrl;
+            return;
+        }
+
+        const productId = addBtn.dataset.productId;
+        const qty = qtyInput ? parseInt(qtyInput.value, 10) : 1;
+
+        if (variantBtns.length > 0 && !selectedVariantId) {
+            notify('لطفاً ابتدا تنوع محصول را انتخاب کنید', 'warning');
+            return;
+        }
+
+        addBtn.classList.add('loading');
+
+        const formData = new FormData();
+        formData.append('quantity', qty);
+        if (selectedVariantId) formData.append('variant_id', selectedVariantId);
+
+        fetch(`/market/cart/add/${productId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+        .then(r => r.json().then(data => ({ status: r.status, data })))
+        .then(({ status, data }) => {
+            addBtn.classList.remove('loading');
+
+            if (status === 401) {
+                notify('برای افزودن به سبد خرید، لطفاً وارد شوید', 'warning');
+                setTimeout(() => {
+                    window.location.href = `/accounts/login/?next=${encodeURIComponent(window.location.pathname)}`;
+                }, 1200);
+                return;
+            }
+
+            if (data.success) {
+                // آپدیت badge
+                if (window.MKCart && window.MKCart.updateCartBadge) {
+                    window.MKCart.updateCartBadge(data.cart_count);
+                }
+
+                // 🎯 اضافه کردن به Set وضعیت
+                const key = selectedVariantId ? parseInt(selectedVariantId, 10) : -1;
+                cartVariantSet.add(key);
+                updateAddToCartButton();  // → تبدیل به "مشاهده در سبد"
+
+                // باز کردن مودال mini cart
+                if (window.MKCart && typeof window.MKCart.openMiniCart === 'function') {
+                    window.MKCart.openMiniCart();
+                } else {
+                    notify(data.message || 'محصول به سبد خرید اضافه شد ✅', 'success');
+                }
+            } else {
+                notify(data.message || 'مشکلی پیش آمد', 'error');
+            }
+        })
+        .catch(() => {
+            addBtn.classList.remove('loading');
+            notify('ارتباط با سرور برقرار نشد', 'error');
+        });
+    });
+
+    /* ============================================
+       TABS
+       ============================================ */
+    document.querySelectorAll('.pd-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+            document.querySelectorAll('.pd-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.pd-tab-panel').forEach(p => p.classList.remove('active'));
+            const el = document.getElementById('pdTab' + target.charAt(0).toUpperCase() + target.slice(1));
+            if (el) el.classList.add('active');
+        });
+    });
+
+    /* ============================================
+       STAR SELECTOR
+       ============================================ */
+    const starSelector = document.getElementById('pdStarSelector');
+    let selectedRating = 0;
+    if (starSelector) {
+        const activeStar = starSelector.querySelector('button.active');
+        if (activeStar) selectedRating = parseInt(activeStar.dataset.rating, 10);
+
+        const starBtns = starSelector.querySelectorAll('button');
+        starBtns.forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                const r = parseInt(btn.dataset.rating, 10);
+                starBtns.forEach(b => {
+                    b.classList.toggle('hover', parseInt(b.dataset.rating, 10) <= r);
+                });
+            });
+            btn.addEventListener('click', () => {
+                selectedRating = parseInt(btn.dataset.rating, 10);
+                starBtns.forEach(b => {
+                    b.classList.toggle('active', parseInt(b.dataset.rating, 10) <= selectedRating);
+                });
+            });
+        });
+        starSelector.addEventListener('mouseleave', () => {
+            starBtns.forEach(b => b.classList.remove('hover'));
+        });
+    }
+
+    /* ============================================
+       REVIEW SUBMIT
+       ============================================ */
+    const reviewBtn = document.getElementById('pdReviewSubmitBtn');
+    const reviewComment = document.getElementById('pdReviewComment');
+
+    reviewBtn && reviewBtn.addEventListener('click', () => {
+        if (!selectedRating) {
+            notify('لطفاً امتیاز خود را انتخاب کنید', 'warning');
+            return;
+        }
+        const comment = (reviewComment.value || '').trim();
+        if (comment.length < 5) {
+            notify('متن نظر باید حداقل ۵ کاراکتر باشد', 'warning');
+            return;
+        }
+
+        reviewBtn.classList.add('loading');
+
+        const formData = new FormData();
+        formData.append('rating', selectedRating);
+        formData.append('comment', comment);
+
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(data => {
+            reviewBtn.classList.remove('loading');
+            if (data.success) {
+                notify(data.created ? 'نظر شما ثبت شد ✅' : 'نظر شما ویرایش شد ✅', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                notify(data.message || 'مشکلی پیش آمد', 'error');
+            }
+        })
+        .catch(() => {
+            reviewBtn.classList.remove('loading');
+            notify('ارتباط با سرور برقرار نشد', 'error');
+        });
+    });
+
+})();
+</script>
+{% endblock %}

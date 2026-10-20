@@ -1,12 +1,15 @@
 from influencers.models import Channel, ChannelReview, InfluencerProfile, ChannelBooking
 from content_team.models import ContentTeam, ContentPortfolio, ContentOrder
+from market.models import Product, OrderItem, Category, SupplierProfile
 from campaigns.models import CampaignClick, Campaign
 from django.views.generic import TemplateView
-from django.db.models import Count, Q, Avg
-from core.models import Platform
+from datetime import timezone as dt_timezone
+from django.db.models import Avg, Sum
 from django.shortcuts import render
 from django.utils import timezone
+from core.models import Platform
 from django.http import Http404
+from zoneinfo import ZoneInfo
 from blog.models import Post
 
 
@@ -59,6 +62,83 @@ def home(request):
          'text': 'کمپین معرفی سریال جدیدمون با وینجاب ۲.۵ میلیون بازدید ارگانیک گرفت.', 'rating': 4},
     ]
 
+    # ═══════════════════════════════════════════
+    # وین مارکت — داده‌های واقعی برای سکشن هوم
+    # ═══════════════════════════════════════════
+    market_now = timezone.now()
+
+    active_product = (
+        Product.objects
+        .filter(
+            status=Product.Status.ACTIVE,
+            campaign_start__lte=market_now,
+            campaign_end__gte=market_now,
+        )
+        .select_related("supplier", "category")
+        .prefetch_related("images", "variants", "features__feature")
+        .first()
+    )
+
+    if not active_product:
+        active_product = (
+            Product.objects
+            .filter(status=Product.Status.ACTIVE)
+            .select_related("supplier", "category")
+            .prefetch_related("images", "variants", "features__feature")
+            .first()
+        )
+
+    market_campaign = None
+    if active_product:
+        variants_stock = (
+                active_product.variants.aggregate(total=Sum("stock"))["total"] or 0
+        )
+        total_stock = (
+            variants_stock if active_product.variants.exists() else active_product.stock
+        )
+
+        sold = (
+                OrderItem.objects
+                .filter(
+                    product=active_product,
+                    order__status__in=["paid", "processing", "shipped", "delivered"],
+                )
+                .aggregate(total=Sum("quantity"))["total"]
+                or 0
+        )
+
+        initial_stock = total_stock + sold
+        progress = int((sold / initial_stock) * 100) if initial_stock else 0
+
+        campaign_end_ts = None
+        end_val = active_product.campaign_end
+        if end_val:
+            if hasattr(end_val, "tzinfo") and end_val.tzinfo is None:
+                try:
+                    end_val = end_val.replace(tzinfo=ZoneInfo("Asia/Tehran"))
+                except Exception:
+                    end_val = end_val.replace(tzinfo=dt_timezone.utc)
+            try:
+                campaign_end_ts = int(end_val.timestamp() * 1000)
+            except Exception:
+                campaign_end_ts = None
+
+        market_campaign = {
+            "product": active_product,
+            "stock": total_stock,
+            "sold": sold,
+            "progress": min(progress, 100),
+            "campaign_end_ts": campaign_end_ts,
+        }
+
+    market_vendors_qs = SupplierProfile.objects.filter(is_active=True)
+    market_vendors_count = market_vendors_qs.count()
+    market_vendors = (
+        market_vendors_qs
+        .annotate(products_count=Count("products", distinct=True))
+        .order_by("-created_at")[:4]
+    )
+
     context = {
         'total_campaigns': total_campaigns,
         'total_channels': total_channels,
@@ -72,6 +152,9 @@ def home(request):
         'brand_testimonials': brand_testimonials,
         'blog_posts': blog_posts,
         'now': timezone.now(),
+        'market_campaign': market_campaign,
+        'market_vendors': market_vendors,
+        'market_vendors_count': market_vendors_count,
     }
 
     return render(request, 'core/pages/index.html', context)

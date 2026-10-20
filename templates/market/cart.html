@@ -1,0 +1,1383 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}سبد خرید | وین مارکت{% endblock %}
+
+{% block extra_style %}
+    <style>
+        :root {
+            --mk-primary: #fd5631;
+            --mk-accent: #5d3cf2;
+            --mk-success: #07c98b;
+            --mk-warning: #fdbc31;
+            --mk-danger: #f23c49;
+            --mk-bg: #1f1b2d;
+            --mk-border: rgba(255, 255, 255, 0.08);
+            --mk-muted: rgba(255, 255, 255, 0.6);
+            --mk-dim: rgba(255, 255, 255, 0.4);
+        }
+
+        body {
+            background: var(--mk-bg) !important;
+        }
+
+        .page-wrapper {
+            padding: 0 !important;
+        }
+
+        /* BREADCRUMB */
+        .crt-breadcrumb-wrap {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+            border-bottom: 1px solid var(--mk-border);
+            padding: 1rem 0;
+            margin-top: 4.5rem;
+        }
+
+        .crt-breadcrumb {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--mk-dim);
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .crt-breadcrumb a {
+            color: var(--mk-muted);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: color 0.25s ease;
+        }
+
+        .crt-breadcrumb a:hover {
+            color: var(--mk-primary);
+        }
+
+        .crt-breadcrumb .sep {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.7rem;
+        }
+
+        .crt-breadcrumb .active {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* HEADER */
+        .crt-header {
+            padding: 2rem 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .crt-title {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 900;
+            color: #fff;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .crt-title i {
+            color: var(--mk-primary);
+        }
+
+        .crt-title .count {
+            padding: 0.35rem 0.9rem;
+            border-radius: 50rem;
+            background: rgba(253, 86, 49, 0.15);
+            color: var(--mk-primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .crt-clear-btn {
+            padding: 0.6rem 1.15rem;
+            border-radius: 0.85rem;
+            background: rgba(242, 60, 73, 0.1);
+            border: 1px solid rgba(242, 60, 73, 0.25);
+            color: var(--mk-danger);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.25s ease;
+        }
+
+        .crt-clear-btn:hover {
+            background: rgba(242, 60, 73, 0.2);
+            border-color: var(--mk-danger);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* MAIN GRID */
+        .crt-main {
+            padding-bottom: 4rem;
+        }
+
+        .crt-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 380px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        /* ITEMS */
+        .crt-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .crt-item {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr) auto;
+            gap: 1.25rem;
+            padding: 1.25rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--mk-border);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .crt-item:hover {
+            border-color: rgba(253, 86, 49, 0.25);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4);
+        }
+
+        .crt-item.removing {
+            opacity: 0;
+            transform: translateX(-30px);
+            pointer-events: none;
+        }
+
+        .crt-item-img {
+            border-radius: 1rem;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.05));
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1;
+            text-decoration: none;
+        }
+
+        .crt-item-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .crt-item:hover .crt-item-img img {
+            transform: scale(1.06);
+        }
+
+        .crt-item-img .placeholder {
+            font-size: 2.5rem;
+            color: rgba(255, 255, 255, 0.15);
+        }
+
+        .crt-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .crt-item-title {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: color 0.25s ease;
+        }
+
+        .crt-item-title:hover {
+            color: var(--mk-primary);
+        }
+
+        .crt-item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.85rem;
+            font-size: 0.78rem;
+            color: var(--mk-dim);
+        }
+
+        .crt-item-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .crt-item-meta i {
+            color: var(--mk-primary);
+            font-size: 0.75rem;
+        }
+
+        .crt-item-vendor {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 50rem;
+            background: rgba(7, 201, 139, 0.1);
+            border: 1px solid rgba(7, 201, 139, 0.25);
+            color: var(--mk-success);
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .crt-item-unit-price {
+            color: var(--mk-dim);
+            font-size: 0.82rem;
+        }
+
+        .crt-item-unit-price strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .crt-item-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.75rem;
+            min-width: 180px;
+        }
+
+        .crt-item-subtotal {
+            color: var(--mk-primary);
+            font-size: 1.15rem;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(253, 86, 49, 0.35);
+            white-space: nowrap;
+        }
+
+        .crt-item-subtotal .currency {
+            font-size: 0.75rem;
+            color: var(--mk-muted);
+            font-weight: 500;
+            margin-right: 0.2rem;
+        }
+
+        .crt-qty-control {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--mk-border);
+            overflow: hidden;
+        }
+
+        .crt-qty-btn {
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .crt-qty-btn:hover:not(:disabled) {
+            background: rgba(253, 86, 49, 0.15);
+            color: var(--mk-primary);
+        }
+
+        .crt-qty-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .crt-qty-input {
+            width: 44px;
+            text-align: center;
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 0;
+            outline: none;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .crt-qty-input::-webkit-inner-spin-button,
+        .crt-qty-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .crt-remove-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.65rem;
+            background: rgba(242, 60, 73, 0.08);
+            border: 1px solid rgba(242, 60, 73, 0.2);
+            color: var(--mk-danger);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.25s ease;
+        }
+
+        .crt-remove-btn:hover {
+            background: var(--mk-danger);
+            border-color: var(--mk-danger);
+            color: #fff;
+        }
+
+        /* ============================================================
+       UNDO TOAST (حذف با قابلیت بازگردانی)
+       ============================================================ */
+        .mk-undo-toast {
+            min-width: 300px;
+            max-width: 400px;
+            background: rgba(20, 20, 35, 0.96);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(242, 60, 73, 0.35);
+            margin-bottom: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            opacity: 0;
+            transform: translateX(110%);
+            transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            direction: rtl;
+            pointer-events: auto;
+        }
+
+        .mk-undo-toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .mk-undo-toast.hide {
+            opacity: 0;
+            transform: translateX(110%);
+        }
+
+        .mk-undo-content {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mk-undo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(242, 60, 73, 0.15);
+            color: #f23c49;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .mk-undo-text {
+            flex: 1;
+            color: #fff;
+            font-size: 0.88rem;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+        .mk-undo-btn {
+            background: rgba(253, 86, 49, 0.12);
+            border: 1px solid rgba(253, 86, 49, 0.35);
+            color: #fd5631;
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.55rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            white-space: nowrap;
+            pointer-events: auto;
+        }
+
+        .mk-undo-btn:hover {
+            background: #fd5631;
+            color: #fff;
+            border-color: #fd5631;
+        }
+
+        .mk-undo-progress {
+            height: 3px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mk-undo-progress-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #fd5631, #f23c49);
+            transform-origin: right center;
+            transition: transform 0.05s linear;
+        }
+
+        /* EMPTY */
+        .crt-empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .crt-empty-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            color: var(--mk-primary);
+            animation: emptyFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes emptyFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .crt-empty h3 {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+        }
+
+        .crt-empty p {
+            color: var(--mk-muted);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto 1.75rem;
+            line-height: 1.8;
+        }
+
+        .crt-empty-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.9rem 2rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 30px rgba(253, 86, 49, 0.35);
+            border: 0;
+            cursor: pointer;
+        }
+
+        .crt-empty-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(253, 86, 49, 0.5);
+            color: #fff;
+        }
+
+        /* SUMMARY */
+        .crt-summary {
+            position: sticky;
+            top: 6rem;
+            padding: 1.75rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--mk-border);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .crt-summary-title {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--mk-border);
+        }
+
+        .crt-summary-title i {
+            color: var(--mk-primary);
+        }
+
+        .crt-summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 0;
+            color: var(--mk-muted);
+            font-size: 0.9rem;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+        }
+
+        .crt-summary-row:last-of-type {
+            border-bottom: 0;
+        }
+
+        .crt-summary-row .lbl {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .crt-summary-row .lbl i {
+            color: var(--mk-primary);
+            font-size: 0.85rem;
+        }
+
+        .crt-summary-row .val {
+            color: #fff;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .crt-summary-row.total {
+            margin-top: 0.75rem;
+            padding: 1.25rem 0 0.85rem;
+            border-top: 2px solid rgba(253, 86, 49, 0.2);
+            border-bottom: 0;
+        }
+
+        .crt-summary-row.total .lbl {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .crt-summary-row.total .val {
+            color: var(--mk-primary);
+            font-size: 1.4rem;
+            font-weight: 900;
+            text-shadow: 0 0 25px rgba(253, 86, 49, 0.4);
+        }
+
+        .crt-summary-row.total .val .currency {
+            font-size: 0.8rem;
+            color: var(--mk-muted);
+            font-weight: 500;
+        }
+
+        .crt-summary-info {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.75rem 0.9rem;
+            border-radius: 0.85rem;
+            background: rgba(60, 118, 242, 0.08);
+            border: 1px solid rgba(60, 118, 242, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.78rem;
+            line-height: 1.6;
+            margin: 1rem 0;
+        }
+
+        .crt-summary-info i {
+            color: #3c76f2;
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .crt-checkout-btn {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 1.1rem 1.5rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 30px rgba(253, 86, 49, 0.4);
+            border: 0;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .crt-checkout-btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            animation: btnShine 3s infinite;
+        }
+
+        @keyframes btnShine {
+            0%, 50% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        .crt-checkout-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 45px rgba(253, 86, 49, 0.6);
+            color: #fff;
+        }
+
+        .crt-checkout-btn i {
+            font-size: 1.15rem;
+        }
+
+        .crt-continue-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            width: 100%;
+            padding: 0.85rem;
+            margin-top: 0.6rem;
+            color: var(--mk-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 0.85rem;
+            transition: all 0.25s ease;
+        }
+
+        .crt-continue-link:hover {
+            color: var(--mk-primary);
+            background: rgba(253, 86, 49, 0.05);
+        }
+
+        .crt-trust {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--mk-border);
+        }
+
+        .crt-trust-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.35rem;
+        }
+
+        .crt-trust-item i {
+            font-size: 1.25rem;
+            color: var(--mk-primary);
+        }
+
+        .crt-trust-item span {
+            font-size: 0.7rem;
+            color: var(--mk-muted);
+            font-weight: 600;
+        }
+
+        /* SUGGESTIONS */
+        .crt-suggestions {
+            margin-top: 3rem;
+        }
+
+        .crt-suggestions-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .crt-suggestions-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .crt-suggestions-sub {
+            color: var(--mk-muted);
+            font-size: 0.9rem;
+        }
+
+        .crt-suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+        }
+
+        .crt-suggestion {
+            border-radius: 1.25rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--mk-border);
+            overflow: hidden;
+            text-decoration: none;
+            transition: all 0.35s ease;
+            display: block;
+        }
+
+        .crt-suggestion:hover {
+            transform: translateY(-6px);
+            border-color: rgba(253, 86, 49, 0.3);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .crt-suggestion-img {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.06), rgba(93, 60, 242, 0.04));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .crt-suggestion-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .crt-suggestion:hover .crt-suggestion-img img {
+            transform: scale(1.08);
+        }
+
+        .crt-suggestion-img .placeholder {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.15);
+        }
+
+        .crt-suggestion-body {
+            padding: 1rem;
+        }
+
+        .crt-suggestion-title {
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1.5;
+            margin: 0 0 0.6rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.55rem;
+        }
+
+        .crt-suggestion-price {
+            display: flex;
+            align-items: baseline;
+            gap: 0.35rem;
+            color: var(--mk-primary);
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .crt-suggestion-price .currency {
+            font-size: 0.7rem;
+            color: var(--mk-muted);
+            font-weight: 500;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 991.98px) {
+            .crt-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .crt-summary {
+                position: static;
+            }
+
+            .crt-suggestions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .crt-item {
+                grid-template-columns: 90px 1fr;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .crt-item-actions {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                min-width: 0;
+                padding-top: 0.75rem;
+                border-top: 1px solid var(--mk-border);
+            }
+
+            .crt-item-subtotal {
+                font-size: 1rem;
+            }
+
+            .crt-summary {
+                padding: 1.25rem;
+            }
+
+            .crt-suggestions-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .crt-suggestions-title {
+                font-size: 1.15rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="crt-breadcrumb-wrap">
+        <div class="container">
+            <ol class="crt-breadcrumb">
+                <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li class="active">سبد خرید</li>
+            </ol>
+        </div>
+    </div>
+
+    <section class="crt-main">
+        <div class="container">
+
+            {% if items %}
+
+                <div class="crt-header">
+                    <h1 class="crt-title">
+                        <i class="bi bi-bag-check-fill"></i>
+                        سبد خرید شما
+                        <span class="count">{{ cart.items_count }} آیتم</span>
+                    </h1>
+                    <button type="button" class="crt-clear-btn" id="crtClearBtn">
+                        <i class="bi bi-trash3"></i> خالی کردن سبد
+                    </button>
+                </div>
+
+                <div class="crt-grid">
+
+                    <div class="crt-items" id="crtItems">
+                        {% for item in items %}
+                            <div class="crt-item"
+                                 data-item-id="{{ item.id }}"
+                                 data-max-stock="{{ item.variant.stock|default:item.product.stock|unlocalize }}">
+
+                                <a href="{% url 'market:product_detail' item.product.slug item.product.pk %}"
+                                   class="crt-item-img">
+                                    {% if item.product.main_image %}
+                                        <img src="{{ item.product.main_image.url }}" alt="{{ item.product.title }}">
+                                    {% else %}
+                                        <i class="bi bi-bag placeholder"></i>
+                                    {% endif %}
+                                </a>
+
+                                <div class="crt-item-info">
+                                    <a href="{% url 'market:product_detail' item.product.slug item.product.pk %}"
+                                       class="crt-item-title">
+                                        {{ item.product.title }}
+                                    </a>
+
+                                    <div class="crt-item-meta">
+                                        {% if item.variant %}
+                                            {% for k, v in item.variant.attributes.items %}
+                                                <span><i class="bi bi-tag-fill"></i> {{ k }}: {{ v }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                        {% if item.product.supplier %}
+                                            <span class="crt-item-vendor">
+                                    <i class="bi bi-patch-check-fill"></i>
+                                    {{ item.product.supplier.brand_name }}
+                                </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="crt-item-unit-price">
+                                        قیمت واحد: <strong>{{ item.unit_price|intcomma }}</strong> تومان
+                                    </div>
+                                </div>
+
+                                <div class="crt-item-actions">
+                                    <div class="crt-item-subtotal" data-subtotal="{{ item.subtotal|unlocalize }}">
+                                        {{ item.subtotal|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </div>
+
+                                    <div class="crt-qty-control">
+                                        <button type="button" class="crt-qty-btn" data-action="minus"
+                                                {% if item.quantity <= 1 %}disabled{% endif %}>
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number"
+                                               class="crt-qty-input"
+                                               value="{{ item.quantity }}"
+                                               min="1"
+                                               max="{{ item.variant.stock|default:item.product.stock }}"
+                                               readonly>
+                                        <button type="button" class="crt-qty-btn" data-action="plus">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+
+                                    <button type="button" class="crt-remove-btn" data-action="remove">
+                                        <i class="bi bi-x-lg"></i> حذف
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="crt-summary">
+                        <h5 class="crt-summary-title">
+                            <i class="bi bi-receipt"></i> خلاصه سفارش
+                        </h5>
+
+                        <div class="crt-summary-row">
+                    <span class="lbl">
+                        <i class="bi bi-box-seam"></i>
+                        جمع کالاها
+                    </span>
+                            <span class="val" id="crtItemsTotal">
+                        {{ items_total|intcomma }} <span class="currency">تومان</span>
+                    </span>
+                        </div>
+
+                        <div class="crt-summary-row">
+                            <span class="lbl">
+                                <i class="bi bi-truck"></i>
+                                هزینه ارسال
+                            </span>
+                            
+                            <span class="val" style="color: var(--mk-warning); font-size: 0.8rem;">
+                                پس‌کرایه 🚚
+                            </span>
+                        </div>
+
+                        <div class="crt-summary-row total">
+                            <span class="lbl">مبلغ قابل پرداخت:</span>
+                            <span class="val" id="crtGrandTotal">
+                        {{ grand_total|intcomma }}
+                        <span class="currency">تومان</span>
+                    </span>
+                        </div>
+
+                        <div class="crt-summary-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                ارسال سفارش‌ها توسط فروشنده انجام می‌شود. کد رهگیری پس از ارسال برای شما پیامک خواهد شد.
+                            </div>
+                        </div>
+
+                        <form method="post" action="{% url 'market:checkout_start' %}" style="display:contents;">
+                            {% csrf_token %}
+                            <button type="submit" class="crt-checkout-btn">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                ادامه فرآیند خرید
+                            </button>
+                        </form>
+                        <a href="{% url 'market:landing' %}" class="crt-continue-link">
+                            <i class="bi bi-arrow-right"></i> ادامه خرید
+                        </a>
+
+                        <div class="crt-trust">
+                            <div class="crt-trust-item">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span>پرداخت امن</span>
+                            </div>
+                            <div class="crt-trust-item">
+                                <i class="bi bi-patch-check-fill"></i>
+                                <span>ضمانت اصالت</span>
+                            </div>
+                            <div class="crt-trust-item">
+                                <i class="bi bi-box-seam-fill"></i>
+                                <span>ارسال فروشنده</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            {% else %}
+
+                <div class="crt-empty">
+                    <div class="crt-empty-icon">
+                        <i class="bi bi-bag-x"></i>
+                    </div>
+                    <h3>سبد خرید شما خالی است</h3>
+                    <p>
+                        هنوز هیچ محصولی به سبد اضافه نکرده‌اید. محصولات شگفت‌انگیز وین مارکت را ببینید و از تخفیف‌های
+                        ویژه بهره‌مند شوید.
+                    </p>
+                    <a href="{% url 'market:landing' %}" class="crt-empty-btn">
+                        <i class="bi bi-shop-window"></i> مشاهده محصولات وین مارکت
+                    </a>
+                </div>
+
+            {% endif %}
+
+            {% if items and suggestions %}
+                <div class="crt-suggestions">
+                    <div class="crt-suggestions-header">
+                        <h3 class="crt-suggestions-title">شاید اینا رو هم دوست داشته باشی</h3>
+                        <p class="crt-suggestions-sub">پیشنهادهای ویژه برای شما</p>
+                    </div>
+                    <div class="crt-suggestions-grid">
+                        {% for p in suggestions %}
+                            <a href="{% url 'market:product_detail' p.slug p.pk %}" class="crt-suggestion">
+                                <div class="crt-suggestion-img">
+                                    {% if p.main_image %}
+                                        <img src="{{ p.main_image.url }}" alt="{{ p.title }}">
+                                    {% else %}
+                                        <i class="bi bi-bag placeholder"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="crt-suggestion-body">
+                                    <h6 class="crt-suggestion-title">{{ p.title }}</h6>
+                                    <div class="crt-suggestion-price">
+                                        {{ p.final_price|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+    </section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    /* ============================================
+       HELPERS
+       ============================================ */
+    const getCsrf = () => {
+        if (window.MKCart && window.MKCart.getCsrfToken) return window.MKCart.getCsrfToken();
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        return '';
+    };
+
+    const toPersian = (n) => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
+    const formatPrice = (num) => {
+        return toPersian(parseInt(num, 10).toLocaleString('en-US'));
+    };
+
+    // toast ساده (بدون مودال)
+    function notify(message, type = 'info') {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(message, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + message);
+    }
+
+    /* ============================================
+       UNDO TOAST
+       ============================================ */
+    function showUndoToast(message, duration, onUndo, onCommit) {
+        const container = document.querySelector('.toast-container') ||
+                          (() => {
+                              const c = document.createElement('div');
+                              c.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                              c.style.zIndex = '1090';
+                              document.body.appendChild(c);
+                              return c;
+                          })();
+
+        const toast = document.createElement('div');
+        toast.className = 'mk-undo-toast';
+        toast.innerHTML = `
+            <div class="mk-undo-content">
+                <div class="mk-undo-icon"><i class="bi bi-trash3-fill"></i></div>
+                <div class="mk-undo-text">${message}</div>
+                <button type="button" class="mk-undo-btn">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    خنثی کردن
+                </button>
+            </div>
+            <div class="mk-undo-progress">
+                <div class="mk-undo-progress-bar"></div>
+            </div>
+        `;
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        const progressBar = toast.querySelector('.mk-undo-progress-bar');
+        progressBar.style.transform = 'scaleX(1)';
+        progressBar.style.transformOrigin = 'right center';
+        progressBar.style.transition = `transform ${duration}ms linear`;
+        requestAnimationFrame(() => {
+            progressBar.style.transform = 'scaleX(0)';
+        });
+
+        let undone = false;
+
+        const closeToast = () => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 400);
+        };
+
+        // Undo button
+        toast.querySelector('.mk-undo-btn').addEventListener('click', () => {
+            undone = true;
+            closeToast();
+            onUndo && onUndo();
+        });
+
+        // Timer
+        setTimeout(() => {
+            if (undone) return;
+            closeToast();
+            onCommit && onCommit();
+        }, duration);
+
+        return toast;
+    }
+
+    /* ============================================
+       UPDATE TOTALS (از سرور)
+       ============================================ */
+    function updateTotalsFromServer(data) {
+        if (typeof data.items_total === 'number') {
+            document.getElementById('crtItemsTotal').innerHTML =
+                formatPrice(data.items_total) + ' <span class="currency">تومان</span>';
+        }
+        if (typeof data.grand_total === 'number') {
+            document.getElementById('crtGrandTotal').innerHTML =
+                formatPrice(data.grand_total) + ' <span class="currency">تومان</span>';
+        }
+        if (typeof data.cart_count === 'number' && window.MKCart) {
+            window.MKCart.updateCartBadge(data.cart_count);
+        }
+    }
+
+    /* ============================================
+       ITEMS: qty +/-, remove
+       ============================================ */
+    document.querySelectorAll('.crt-item').forEach(itemEl => {
+        const itemId = itemEl.dataset.itemId;
+        const qtyInput = itemEl.querySelector('.crt-qty-input');
+        const minusBtn = itemEl.querySelector('[data-action="minus"]');
+        const plusBtn = itemEl.querySelector('[data-action="plus"]');
+        const removeBtn = itemEl.querySelector('[data-action="remove"]');
+        const subtotalEl = itemEl.querySelector('[data-subtotal]');
+        const maxStock = parseInt(itemEl.dataset.maxStock, 10) || 1;
+
+        function updateQtyButtons() {
+            const v = parseInt(qtyInput.value, 10) || 1;
+            if (minusBtn) minusBtn.disabled = v <= 1;
+            if (plusBtn) plusBtn.disabled = v >= maxStock;
+        }
+
+        let debounceTimer;
+
+        function sendUpdate(newQty) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch(`/market/cart/update/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrf(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `quantity=${newQty}`,
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        subtotalEl.dataset.subtotal = data.item_subtotal;
+                        subtotalEl.innerHTML =
+                            formatPrice(data.item_subtotal) +
+                            ' <span class="currency">تومان</span>';
+                        updateTotalsFromServer(data);
+                    } else {
+                        notify(data.message || 'به‌روزرسانی ناموفق بود', 'error');
+                        location.reload();
+                    }
+                })
+                .catch(() => {
+                    notify('ارتباط با سرور برقرار نشد', 'error');
+                });
+            }, 300);
+        }
+
+        minusBtn && minusBtn.addEventListener('click', () => {
+            let v = parseInt(qtyInput.value, 10) || 1;
+            if (v > 1) {
+                qtyInput.value = v - 1;
+                updateQtyButtons();
+                sendUpdate(v - 1);
+            }
+        });
+
+        plusBtn && plusBtn.addEventListener('click', () => {
+            let v = parseInt(qtyInput.value, 10) || 1;
+            if (v < maxStock) {
+                qtyInput.value = v + 1;
+                updateQtyButtons();
+                sendUpdate(v + 1);
+            }
+        });
+
+        /* ---------- REMOVE WITH UNDO ---------- */
+        removeBtn && removeBtn.addEventListener('click', () => {
+            // ۱. انیمیشن خارج شدن
+            itemEl.classList.add('removing');
+
+            // ۲. Undo toast
+            showUndoToast(
+                'محصول از سبد حذف شد',
+                5000,
+                // UNDO
+                () => {
+                    itemEl.classList.remove('removing');
+                    notify('حذف خنثی شد', 'info');
+                },
+                // COMMIT (بعد از 5 ثانیه)
+                () => {
+                    fetch(`/market/cart/remove/${itemId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrf(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            itemEl.remove();
+                            updateTotalsFromServer(data);
+                            if (document.querySelectorAll('.crt-item').length === 0) {
+                                setTimeout(() => window.location.reload(), 400);
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        notify('حذف ناموفق بود', 'error');
+                        itemEl.classList.remove('removing');
+                    });
+                }
+            );
+        });
+
+        updateQtyButtons();
+    });
+
+    /* ============================================
+       CLEAR CART (با undo)
+       ============================================ */
+    const clearBtn = document.getElementById('crtClearBtn');
+    clearBtn && clearBtn.addEventListener('click', () => {
+        const items = document.querySelectorAll('.crt-item');
+        if (items.length === 0) return;
+
+        // انیمیشن همه آیتم‌ها
+        items.forEach(el => el.classList.add('removing'));
+
+        showUndoToast(
+            'همه‌ی آیتم‌های سبد حذف شدند',
+            5000,
+            // UNDO
+            () => {
+                items.forEach(el => el.classList.remove('removing'));
+                notify('حذف خنثی شد', 'info');
+            },
+            // COMMIT
+            () => {
+                fetch('/market/cart/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrf(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (window.MKCart) window.MKCart.updateCartBadge(0);
+                        setTimeout(() => window.location.reload(), 400);
+                    }
+                })
+                .catch(() => {
+                    notify('خالی کردن سبد ناموفق بود', 'error');
+                    items.forEach(el => el.classList.remove('removing'));
+                });
+            }
+        );
+    });
+
+})();
+</script>
+{% endblock %}

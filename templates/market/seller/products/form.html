@@ -1,0 +1,1642 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}{% if is_edit %}ویرایش محصول{% else %}افزودن محصول{% endif %} | پنل فروشندگی{% endblock %}
+
+{% block extra_style %}
+    <style>
+        /* market/static/market/css/seller/product_form.css */
+
+        /* ==================== BASE ==================== */
+        .product-form-page {
+            margin-top: 2.5rem;
+            padding-bottom: 4rem;
+        }
+
+        /* ==================== HEADER ==================== */
+        .form-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.75rem;
+        }
+
+        /* ==================== GRID ==================== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .form-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .form-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: sticky;
+            top: 6rem;
+        }
+
+        /* ==================== SECTION ==================== */
+        .form-section {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .form-section.is-open {
+            border-color: rgba(253, 86, 49, 0.25);
+        }
+
+        .form-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+
+        .form-section-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .form-section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 0;
+        }
+
+        .section-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            color: #fd5631;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .form-section-title h5 {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+            margin: 0 0 0.15rem;
+        }
+
+        .section-subtitle {
+            color: #9691a4;
+            font-size: 0.78rem;
+            margin: 0;
+        }
+
+        .section-chevron {
+            color: #9691a4;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .form-section.is-open .section-chevron {
+            transform: rotate(180deg);
+            color: #fd5631;
+        }
+
+        .form-section-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            padding: 0 1.5rem;
+        }
+
+        .form-section.is-open .form-section-body {
+            max-height: 3000px;
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        /* ==================== FORM FIELDS ==================== */
+        .form-field {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-label .req {
+            color: #f23c49;
+            margin-right: 0.15rem;
+        }
+
+        .form-control-dark,
+        .form-select-dark {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        .form-control-dark:focus,
+        .form-select-dark:focus {
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+            caret-color: #fff !important;
+            border-color: #fd5631;
+            background: rgba(253, 86, 49, 0.04);
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.1);
+        }
+
+        /* انتخاب متن */
+        .form-control-dark::selection,
+        .form-select-dark::selection {
+            background: rgba(253, 86, 49, 0.4);
+            color: #fff;
+        }
+
+        .form-control-dark::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .form-select-dark option {
+            background: #1f1b2d;
+            color: #fff;
+        }
+
+        textarea.form-control-dark {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.8;
+        }
+
+        .field-error {
+            color: #f23c49;
+            font-size: 0.78rem;
+            margin-top: 0.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .field-error::before {
+            content: "\F33A";
+            font-family: "bootstrap-icons";
+        }
+
+        .field-hint {
+            color: #9691a4;
+            font-size: 0.75rem;
+            margin-top: 0.4rem;
+            line-height: 1.6;
+        }
+
+        .field-hint i {
+            color: #fd5631;
+            margin-left: 0.2rem;
+        }
+
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* ==================== CHAR COUNTER ==================== */
+        .char-counter {
+            color: #9691a4;
+            font-size: 0.72rem;
+            margin-top: 0.4rem;
+            text-align: left;
+        }
+
+        /* ==================== SLUG ==================== */
+        .slug-input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .slug-input-group .form-control-dark {
+            flex: 1;
+            direction: ltr;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .slug-generate-btn,
+        .slug-lock-btn {
+            width: 46px;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #9691a4;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .slug-generate-btn:hover {
+            background: rgba(253, 86, 49, 0.1);
+            border-color: rgba(253, 86, 49, 0.3);
+            color: #fd5631;
+        }
+
+        .slug-generate-btn.loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .slug-lock-btn {
+            color: #07c98b;
+        }
+
+        .slug-lock-btn.locked {
+            color: #fdbc31;
+        }
+
+        /* ==================== INPUT WITH UNIT ==================== */
+        .input-with-unit {
+            position: relative;
+        }
+
+        .input-with-unit .form-control-dark {
+            padding-left: 4.5rem;
+        }
+
+        .input-with-unit .unit {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9691a4;
+            font-size: 0.85rem;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        /* ==================== IMAGES ==================== */
+        .upload-zone {
+            position: relative;
+            padding: 2.5rem 1.5rem;
+            border-radius: 1.25rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            background: rgba(253, 86, 49, 0.05);
+            border-color: rgba(253, 86, 49, 0.5);
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.15rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fd5631;
+            font-size: 2.5rem;
+        }
+
+        .upload-text h6 {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .upload-text p {
+            color: #9691a4;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ==================== IMAGES GRID ==================== */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .image-tile {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .image-tile:hover {
+            border-color: rgba(253, 86, 49, 0.5);
+        }
+
+        .image-tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-tile.is-main {
+            border-color: #fd5631;
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.15);
+        }
+
+        .main-badge {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            left: 0.5rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.5rem;
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .image-action {
+            position: absolute;
+            top: 0.5rem;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            opacity: 0;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .image-tile:hover .image-action {
+            opacity: 1;
+        }
+
+        .image-action.set-main {
+            right: 0.5rem;
+        }
+
+        .image-action.set-main:hover {
+            background: #fd5631;
+            border-color: #fd5631;
+        }
+
+        .image-action.delete {
+            left: 0.5rem;
+        }
+
+        .image-action.delete:hover {
+            background: #f23c49;
+            border-color: #f23c49;
+        }
+
+        /* ==================== EXISTING IMAGES ==================== */
+        .existing-images-wrap {
+            margin-bottom: 1.5rem;
+        }
+
+        .existing-images-title,
+        .new-images-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .existing-images-title i,
+        .new-images-title i {
+            color: #fd5631;
+        }
+
+        .new-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 0.4rem;
+            border-radius: 2rem;
+            background: rgba(253, 86, 49, 0.15);
+            color: #fd5631;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .new-images-wrap {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* ==================== FEATURES ==================== */
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+            gap: 0.75rem;
+            align-items: stretch;
+            padding: 0.85rem;
+            border-radius: 0.85rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            animation: slideInFeature 0.3s ease;
+        }
+
+        @keyframes slideInFeature {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-remove {
+            width: 44px;
+            border-radius: 0.65rem;
+            background: rgba(242, 60, 73, 0.1);
+            border: 1px solid rgba(242, 60, 73, 0.2);
+            color: #f23c49;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .feature-remove:hover {
+            background: #f23c49;
+            color: #fff;
+            border-color: #f23c49;
+        }
+
+        .features-empty {
+            padding: 1.5rem;
+            border-radius: 0.85rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: #9691a4;
+            font-size: 0.85rem;
+        }
+
+        .features-empty i {
+            display: block;
+            font-size: 2rem;
+            color: rgba(253, 86, 49, 0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-add-feature {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+        }
+
+        /* ==================== SIDEBAR CARDS ==================== */
+        .form-side-card {
+            padding: 1.35rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .side-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .side-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            color: #fd5631;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .side-icon.info {
+            background: linear-gradient(135deg, rgba(60, 118, 242, 0.15), rgba(93, 60, 242, 0.1));
+            color: #6e9cff;
+        }
+
+        .side-card-header h6 {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .side-desc {
+            color: #9691a4;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        /* ==================== SHIPPING METHODS ==================== */
+        .shipping-methods-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .shipping-method-item {
+            position: relative;
+            display: block;
+            padding: 0.85rem 1rem;
+            border-radius: 0.85rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .shipping-method-item:hover {
+            border-color: rgba(253, 86, 49, 0.35);
+            background: rgba(253, 86, 49, 0.04);
+        }
+
+        .shipping-method-item input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .shipping-method-item:has(input:checked) {
+            border-color: #fd5631;
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.1), rgba(93, 60, 242, 0.05));
+            box-shadow: 0 0 0 3px rgba(253, 86, 49, 0.1);
+        }
+
+        .shipping-method-content {
+            padding-right: 1.75rem;
+            position: relative;
+        }
+
+        .shipping-method-content::before {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .shipping-method-item:has(input:checked) .shipping-method-content::before {
+            border-color: #fd5631;
+            background: radial-gradient(circle, #fd5631 40%, transparent 40%);
+        }
+
+        .shipping-method-name {
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .empty-shipping {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background: rgba(253, 188, 49, 0.08);
+            border: 1px solid rgba(253, 188, 49, 0.25);
+            color: #fdbc31;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .empty-shipping i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .empty-shipping p {
+            margin: 0;
+        }
+
+        /* ==================== INFO CARD ==================== */
+        .info-card {
+            background: linear-gradient(145deg, rgba(60, 118, 242, 0.06), rgba(93, 60, 242, 0.04));
+            border-color: rgba(60, 118, 242, 0.15);
+        }
+
+        .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .info-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.8rem;
+            line-height: 1.7;
+        }
+
+        .info-list li i {
+            color: #07c98b;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .info-list li strong {
+            color: #fff;
+        }
+
+        /* ==================== FORM ACTIONS ==================== */
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            position: sticky;
+            top: calc(6rem + 400px);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.9rem;
+            font-weight: 800;
+            font-size: 0.95rem;
+            border-radius: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-submit.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 991.98px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-sidebar {
+                position: static;
+            }
+
+            .form-actions {
+                position: static;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .form-section-header {
+                padding: 1rem;
+            }
+
+            .form-section-body {
+                padding: 0 1rem;
+            }
+
+            .form-section.is-open .form-section-body {
+                padding: 0 1rem 1rem;
+            }
+
+            .form-row-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .images-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 0.6rem;
+            }
+
+            .upload-zone {
+                padding: 1.5rem 1rem;
+            }
+
+            .upload-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+                margin-bottom: 0.85rem;
+            }
+
+            .form-page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .feature-row {
+                grid-template-columns: 1fr 44px;
+                gap: 0.5rem;
+            }
+
+            .feature-row > *:nth-child(2) {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4 product-form-page">
+
+        <!-- Breadcrumb -->
+        <ol class="breadcrumb breadcrumb-light mb-4">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'market:landing' %}">وین‌مارکت</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'market:seller_dashboard' %}">پنل فروشندگی</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'market:seller_product_list' %}">محصولات من</a></li>
+            <li class="breadcrumb-item active">{% if is_edit %}ویرایش{% else %}افزودن{% endif %} محصول</li>
+        </ol>
+
+        <!-- Header -->
+        <div class="form-page-header">
+            <div>
+                <h3 class="text-light mb-1">
+                    <i class="bi bi-{% if is_edit %}pencil-square{% else %}plus-circle{% endif %} text-primary me-2"></i>
+                    {% if is_edit %}ویرایش محصول{% else %}افزودن محصول جدید{% endif %}
+                </h3>
+                <p class="text-muted small mb-0">
+                    {% if is_edit %}
+                        در حال ویرایش: <strong class="text-white">{{ product.title }}</strong>
+                    {% else %}
+                        محصول شما پس از ثبت، در وضعیت <strong class="text-warning">پیش‌نویس</strong> ذخیره می‌شود و توسط
+                        ادمین بررسی و فعال خواهد شد.
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% url 'market:seller_product_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-right me-1"></i>
+                بازگشت
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="productForm" novalidate>
+            {% csrf_token %}
+            {{ form.main_image_index }}
+            {{ form.features_json }}
+            {{ form.images }}
+
+            {% if form.errors %}
+                <div style="padding: 1rem; border-radius: 1rem; background: rgba(242,60,73,0.1); border: 1px solid rgba(242,60,73,0.3); color: #f23c49; margin-bottom: 1rem;">
+                    <strong style="display:block; margin-bottom:0.5rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        خطاهای فرم:
+                    </strong>
+                    <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.85rem;">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>
+                                    <strong>{{ field }}:</strong> {{ error }}
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+
+                <!-- ==================== MAIN COLUMN ==================== -->
+                <div class="form-main">
+
+                    <!-- ========== SECTION 1: اطلاعات اصلی ========== -->
+                    <div class="form-section" data-section="basic">
+                        <div class="form-section-header" data-toggle-section>
+                            <div class="form-section-title">
+                                <div class="section-icon"><i class="bi bi-info-circle-fill"></i></div>
+                                <div>
+                                    <h5>اطلاعات اصلی</h5>
+                                    <p class="section-subtitle">عنوان، دسته‌بندی و توضیحات محصول</p>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-down section-chevron"></i>
+                        </div>
+                        <div class="form-section-body">
+
+                            <!-- Title -->
+                            <div class="form-field">
+                                <label class="form-label" for="id_title">
+                                    عنوان محصول <span class="req">*</span>
+                                </label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="field-error">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                                <div class="field-hint">مثلاً: جارو برقی شارژی</div>
+                            </div>
+                        
+                            <!-- Category -->
+                            <div class="form-field">
+                                <label class="form-label" for="id_category">
+                                    دسته‌بندی <span class="req">*</span>
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="field-error">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Short Description -->
+                            <div class="form-field">
+                                <label class="form-label" for="id_short_description">
+                                    توضیح کوتاه
+                                </label>
+                                {{ form.short_description }}
+                                <div class="char-counter">
+                                    <span id="shortDescCounter">0</span> / 300
+                                </div>
+                                {% if form.short_description.errors %}
+                                    <div class="field-error">{{ form.short_description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Description -->
+                            <div class="form-field">
+                                <label class="form-label" for="id_description">
+                                    توضیحات کامل
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="field-error">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ========== SECTION 2: قیمت و موجودی ========== -->
+                    <div class="form-section" data-section="pricing">
+                        <div class="form-section-header" data-toggle-section>
+                            <div class="form-section-title">
+                                <div class="section-icon"><i class="bi bi-cash-coin"></i></div>
+                                <div>
+                                    <h5>قیمت و موجودی</h5>
+                                    <p class="section-subtitle">قیمت پایه، تخفیف و موجودی انبار</p>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-down section-chevron"></i>
+                        </div>
+                        <div class="form-section-body">
+
+                            <div class="form-row-2">
+                                <!-- Base Price -->
+                                <div class="form-field">
+                                    <label class="form-label" for="id_base_price">
+                                        قیمت پایه <span class="req">*</span>
+                                    </label>
+                                    <div class="input-with-unit">
+                                        {{ form.base_price }}
+                                        <span class="unit">تومان</span>
+                                    </div>
+                                    {% if form.base_price.errors %}
+                                        <div class="field-error">{{ form.base_price.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Discount Price -->
+                                <div class="form-field">
+                                    <label class="form-label" for="id_discount_price">
+                                        قیمت با تخفیف
+                                    </label>
+                                    <div class="input-with-unit">
+                                        {{ form.discount_price }}
+                                        <span class="unit">تومان</span>
+                                    </div>
+                                    {% if form.discount_price.errors %}
+                                        <div class="field-error">{{ form.discount_price.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="field-hint">در صورت نداشتن تخفیف، خالی بگذارید.</div>
+                                </div>
+                            </div>
+
+                            <!-- Stock -->
+                            <div class="form-field">
+                                <label class="form-label" for="id_stock">
+                                    موجودی انبار <span class="req">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                    {{ form.stock }}
+                                    <span class="unit">عدد</span>
+                                </div>
+                                {% if form.stock.errors %}
+                                    <div class="field-error">{{ form.stock.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ========== SECTION 3: تصاویر ========== -->
+                    <div class="form-section" data-section="images">
+                        <div class="form-section-header" data-toggle-section>
+                            <div class="form-section-title">
+                                <div class="section-icon"><i class="bi bi-images"></i></div>
+                                <div>
+                                    <h5>تصاویر محصول</h5>
+                                    <p class="section-subtitle">تصویر اصلی + گالری (حداکثر ۱۰ تصویر)</p>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-down section-chevron"></i>
+                        </div>
+                        <div class="form-section-body">
+
+                            <!-- Existing Images (فقط در حالت edit) -->
+                            {% if is_edit and existing_images %}
+                                <div class="existing-images-wrap">
+                                    <div class="existing-images-title">
+                                        <i class="bi bi-collection"></i>
+                                        تصاویر فعلی محصول
+                                    </div>
+                                    <div class="images-grid" id="existingImagesGrid">
+
+                                        {% if product.main_image %}
+                                            <div class="image-tile is-main existing-tile" data-existing="main">
+                                                <img src="{{ product.main_image.url }}" alt="تصویر اصلی">
+                                                <div class="main-badge">
+                                                    <i class="bi bi-star-fill"></i>
+                                                    تصویر اصلی
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        {% for img in existing_images %}
+                                            <div class="image-tile existing-tile" data-image-id="{{ img.id }}">
+                                                <img src="{{ img.image.url }}" alt="گالری">
+                                                <button type="button" class="image-action set-main js-set-main-image"
+                                                        data-image-id="{{ img.id }}"
+                                                        title="تنظیم به عنوان تصویر اصلی">
+                                                    <i class="bi bi-star"></i>
+                                                </button>
+                                                <button type="button"
+                                                        class="image-action delete js-delete-existing-image"
+                                                        data-image-id="{{ img.id }}"
+                                                        title="حذف">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </div>
+                                        {% endfor %}
+
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Upload Zone -->
+                            <div class="upload-zone" id="uploadZone">
+                                <input type="file" id="id_images" name="images" accept="image/*" multiple
+                                       class="d-none">
+                                <div class="upload-zone-content">
+                                    <div class="upload-icon">
+                                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                                    </div>
+                                    <div class="upload-text">
+                                        <h6>تصاویر را اینجا بکشید و رها کنید</h6>
+                                        <p>یا کلیک کنید تا انتخاب کنید · JPG, PNG, WEBP · حداکثر ۵MB هر فایل</p>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary" id="browseBtn">
+                                        <i class="bi bi-folder2-open me-1"></i>
+                                        انتخاب تصاویر
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- New Images Preview -->
+                            <div class="new-images-wrap d-none" id="newImagesWrap">
+                                <div class="new-images-title">
+                                    <i class="bi bi-images"></i>
+                                    تصاویر جدید (پیش از آپلود)
+                                    <span class="new-count" id="newImagesCount">0</span>
+                                </div>
+                                <div class="field-hint mb-2">
+                                    <i class="bi bi-star-fill"></i>
+                                    روی هر تصویر کلیک کنید تا به عنوان <strong>تصویر اصلی</strong> انتخاب شود.
+                                </div>
+                                <div class="images-grid" id="newImagesGrid"></div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ========== SECTION 4: ویژگی‌ها ========== -->
+                    <div class="form-section" data-section="features">
+                        <div class="form-section-header" data-toggle-section>
+                            <div class="form-section-title">
+                                <div class="section-icon"><i class="bi bi-tags-fill"></i></div>
+                                <div>
+                                    <h5>ویژگی‌های محصول</h5>
+                                    <p class="section-subtitle">مشخصات فنی و ویژگی‌های محصول</p>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-down section-chevron"></i>
+                        </div>
+                        <div class="form-section-body">
+
+                            <div class="features-list" id="featuresList"></div>
+
+                            <button type="button" class="btn btn-outline-primary btn-add-feature" id="addFeatureBtn">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                افزودن ویژگی
+                            </button>
+
+                            <div class="field-hint mt-2">
+                                <i class="bi bi-info-circle"></i>
+                                اگه ویژگی مدنظرتون توی لیست نیست، با پشتیبانی تماس بگیرید.
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ==================== SIDEBAR ==================== -->
+                <div class="form-sidebar">
+
+                    <!-- ========== SECTION: روش‌های ارسال ========== -->
+                    <div class="form-side-card">
+                        <div class="side-card-header">
+                            <div class="side-icon"><i class="bi bi-truck"></i></div>
+                            <h6>روش‌های ارسال</h6>
+                        </div>
+                        <p class="side-desc">
+                            فروشنده‌ی گرامی، لطفاً مشخص کنید این محصول از چه طریق قابل ارسال است.
+                        </p>
+
+                        {% if form.shipping_methods.field.queryset.exists %}
+                            <div class="shipping-methods-list">
+                                {% for checkbox in form.shipping_methods %}
+                                    <label class="shipping-method-item">
+                                        {{ checkbox.tag }}
+                                        <div class="shipping-method-content">
+                                            <div class="shipping-method-name">{{ checkbox.choice_label }}</div>
+                                        </div>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-shipping">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <p>هیچ روش ارسالی توسط ادمین فعال نشده است.</p>
+                            </div>
+                        {% endif %}
+
+                        {% if form.shipping_methods.errors %}
+                            <div class="field-error">{{ form.shipping_methods.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ========== SECTION: راهنما ========== -->
+                    <div class="form-side-card info-card">
+                        <div class="side-card-header">
+                            <div class="side-icon info"><i class="bi bi-info-circle"></i></div>
+                            <h6>راهنمای ثبت محصول</h6>
+                        </div>
+                        <ul class="info-list">
+                            <li><i class="bi bi-check2"></i> محصول در حالت <strong>پیش‌نویس</strong> ذخیره می‌شود.</li>
+                            <li><i class="bi bi-check2"></i> ادمین پس از بررسی، محصول را فعال می‌کند.</li>
+                            <li><i class="bi bi-check2"></i> اطمینان حاصل کنید تصاویر واضح و با کیفیت هستند.</li>
+                            <li><i class="bi bi-check2"></i> قیمت را به تومان وارد کنید.</li>
+                        </ul>
+                    </div>
+
+                    <!-- ========== SECTION: دکمه‌ها ========== -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-submit" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm me-1 d-none" id="submitSpinner"></span>
+                            <i class="bi bi-check-circle me-1" id="submitIcon"></i>
+                            <span id="submitText">
+                            {% if is_edit %}ذخیره تغییرات{% else %}ثبت محصول{% endif %}
+                        </span>
+                        </button>
+                        <a href="{% url 'market:seller_product_list' %}" class="btn btn-outline-secondary">
+                            انصراف
+                        </a>
+                    </div>
+
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+
+    <!-- ========== Features Data (برای JS) ========== -->
+    {% if is_edit %}
+        {{ existing_features_json|json_script:"featuresData" }}
+    {% endif %}
+
+    <div id="featuresOptions" class="d-none">
+        {% for f in features %}
+            <option value="{{ f.id }}" data-name="{{ f.name }}" data-unit="{{ f.unit }}">
+                {{ f.name }}{% if f.unit %} ({{ f.unit }}){% endif %}</option>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+(function () {
+    'use strict';
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    function getCsrf() {
+        if (csrf) return csrf;
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        return '';
+    }
+
+    function toast(msg, type = 'info') {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(msg, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + msg);
+    }
+
+    // =========================================================
+    // 1. SECTIONS (accordion)
+    // =========================================================
+    const sections = document.querySelectorAll('.form-section');
+    sections.forEach(section => {
+        const header = section.querySelector('[data-toggle-section]');
+        if (!header) return;
+        header.addEventListener('click', function () {
+            section.classList.toggle('is-open');
+        });
+    });
+
+    const basicSection = document.querySelector('.form-section[data-section="basic"]');
+    if (basicSection) basicSection.classList.add('is-open');
+
+    // =========================================================
+    // 2. PRICE INPUTS — auto thousand separator
+    // =========================================================
+    function formatPrice(el) {
+        let value = el.value.replace(/[^\d]/g, '');
+        if (value === '') {
+            el.value = '';
+            return;
+        }
+        // حذف صفرهای ابتدایی
+        value = value.replace(/^0+/, '') || '0';
+        const num = parseInt(value, 10);
+        el.value = num.toLocaleString('en-US');
+    }
+
+    document.querySelectorAll('.price-input').forEach(input => {
+        // فرمت اولیه (در حالت edit)
+        formatPrice(input);
+
+        input.addEventListener('input', function () {
+            formatPrice(this);
+        });
+
+        // فقط اعداد و کلیدهای کنترلی
+        input.addEventListener('keypress', function (e) {
+            const char = String.fromCharCode(e.which);
+            if (!/[0-9]/.test(char) && e.which !== 0 && e.which !== 8) {
+                e.preventDefault();
+            }
+        });
+
+        // جلوگیری از paste غیرعددی
+        input.addEventListener('paste', function (e) {
+            const pasted = (e.clipboardData || window.clipboardData).getData('text');
+            if (!/^[\d,٬\s]+$/.test(pasted)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // =========================================================
+    // 3. CHAR COUNTER (short_description)
+    // =========================================================
+    const shortDescInput = document.getElementById('id_short_description');
+    const shortDescCounter = document.getElementById('shortDescCounter');
+    if (shortDescInput && shortDescCounter) {
+        const updateCounter = () => {
+            shortDescCounter.textContent = shortDescInput.value.length;
+        };
+        shortDescInput.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+
+    // =========================================================
+    // 4. IMAGES — upload, preview, main selection
+    // =========================================================
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('id_images');
+    const browseBtn = document.getElementById('browseBtn');
+    const newImagesWrap = document.getElementById('newImagesWrap');
+    const newImagesGrid = document.getElementById('newImagesGrid');
+    const newImagesCount = document.getElementById('newImagesCount');
+    const mainIndexInput = document.getElementById('id_main_image_index');
+
+    let uploadedFiles = [];
+    let mainIndex = 0;
+
+    function renderPreviews() {
+        if (!newImagesGrid) return;
+        newImagesGrid.innerHTML = '';
+
+        if (uploadedFiles.length === 0) {
+            newImagesWrap?.classList.add('d-none');
+            if (newImagesCount) newImagesCount.textContent = '0';
+            if (mainIndexInput) mainIndexInput.value = '0';
+            return;
+        }
+
+        newImagesWrap?.classList.remove('d-none');
+        if (newImagesCount) newImagesCount.textContent = String(uploadedFiles.length);
+
+        uploadedFiles.forEach((file, idx) => {
+            const tile = document.createElement('div');
+            tile.className = 'image-tile' + (idx === mainIndex ? ' is-main' : '');
+            tile.dataset.index = String(idx);
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            tile.appendChild(img);
+
+            if (idx === mainIndex) {
+                const badge = document.createElement('div');
+                badge.className = 'main-badge';
+                badge.innerHTML = '<i class="bi bi-star-fill"></i> تصویر اصلی';
+                tile.appendChild(badge);
+            }
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'image-action delete';
+            delBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                uploadedFiles.splice(idx, 1);
+                if (mainIndex === idx) mainIndex = 0;
+                else if (mainIndex > idx) mainIndex -= 1;
+                if (mainIndex >= uploadedFiles.length) mainIndex = 0;
+                syncFileInput();
+                renderPreviews();
+            });
+            tile.appendChild(delBtn);
+
+            tile.addEventListener('click', () => {
+                mainIndex = idx;
+                if (mainIndexInput) mainIndexInput.value = String(idx);
+                renderPreviews();
+            });
+
+            newImagesGrid.appendChild(tile);
+        });
+
+        if (mainIndexInput) mainIndexInput.value = String(mainIndex);
+    }
+
+    function syncFileInput() {
+        // ساخت DataTransfer
+        const dt = new DataTransfer();
+        uploadedFiles.forEach(f => dt.items.add(f));
+        if (fileInput) {
+            try {
+                fileInput.files = dt.files;
+            } catch (err) {
+                console.warn('DataTransfer assignment failed:', err);
+            }
+        }
+    }
+
+    function addFiles(files) {
+        // files می‌تونه Array یا FileList باشه
+        const arr = Array.isArray(files) ? files : Array.from(files);
+
+        const valid = arr.filter(f => {
+            if (!f.type.startsWith('image/')) {
+                toast(`فایل «${f.name}» تصویر نیست`, 'warning');
+                return false;
+            }
+            if (f.size > 5 * 1024 * 1024) {
+                toast(`حجم «${f.name}» بیشتر از ۵ مگابایت است`, 'warning');
+                return false;
+            }
+            return true;
+        });
+
+        const maxNew = 10 - uploadedFiles.length;
+        if (valid.length > maxNew) {
+            toast(`حداکثر ۱۰ تصویر مجاز است`, 'warning');
+        }
+
+        uploadedFiles.push(...valid.slice(0, maxNew));
+        syncFileInput();
+        renderPreviews();
+    }
+
+    browseBtn && browseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput?.click();
+    });
+
+    uploadZone && uploadZone.addEventListener('click', () => {
+        fileInput?.click();
+    });
+
+    // ⭐ FIX اصلی: ذخیره فایل‌ها قبل از reset
+    fileInput && fileInput.addEventListener('change', function () {
+        const files = Array.from(this.files);
+        this.value = '';  // reset برای امکان انتخاب مجدد همون فایل
+        addFiles(files);
+    });
+
+    // Drag & drop
+    uploadZone && ['dragenter', 'dragover'].forEach(evt => {
+        uploadZone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.classList.add('dragover');
+        });
+    });
+
+    uploadZone && ['dragleave', 'drop'].forEach(evt => {
+        uploadZone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.classList.remove('dragover');
+        });
+    });
+
+    uploadZone && uploadZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files) {
+            addFiles(Array.from(dt.files));
+        }
+    });
+
+    // =========================================================
+    // 5. EXISTING IMAGES — delete + set main (AJAX)
+    // =========================================================
+    const existingImagesGrid = document.getElementById('existingImagesGrid');
+    const isEditMode = {% if is_edit %}true{% else %}false{% endif %};
+
+    if (existingImagesGrid && isEditMode) {
+        existingImagesGrid.addEventListener('click', function (e) {
+            const delBtn = e.target.closest('.js-delete-existing-image');
+            const mainBtn = e.target.closest('.js-set-main-image');
+
+            if (delBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const imageId = delBtn.dataset.imageId;
+                if (!imageId) return;
+                if (!confirm('این تصویر حذف شود؟')) return;
+
+                fetch(`/market/seller/products/images/${imageId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrf(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            toast(data.message || 'تصویر حذف شد', 'success');
+                            delBtn.closest('.image-tile')?.remove();
+                        } else {
+                            toast(data.message || 'خطا در حذف', 'error');
+                        }
+                    })
+                    .catch(() => toast('ارتباط برقرار نشد', 'error'));
+            }
+
+            if (mainBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const imageId = mainBtn.dataset.imageId;
+                if (!imageId) return;
+
+                fetch(`/market/seller/products/{{ product.id }}/set-main-image/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrf(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `image_id=${encodeURIComponent(imageId)}`,
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            toast(data.message || 'تصویر اصلی تغییر کرد', 'success');
+                            setTimeout(() => window.location.reload(), 600);
+                        } else {
+                            toast(data.message || 'خطا', 'error');
+                        }
+                    })
+                    .catch(() => toast('ارتباط برقرار نشد', 'error'));
+            }
+        });
+    }
+
+    // =========================================================
+    // 6. FEATURES — add/remove rows
+    // =========================================================
+    const featuresList = document.getElementById('featuresList');
+    const addFeatureBtn = document.getElementById('addFeatureBtn');
+    const featuresHidden = document.getElementById('id_features_json');
+    const featuresOptionsEl = document.getElementById('featuresOptions');
+
+    let featuresData = [];
+
+    try {
+        const initialEl = document.getElementById('featuresData');
+        if (initialEl) {
+            featuresData = JSON.parse(initialEl.textContent) || [];
+        }
+    } catch (e) {
+        featuresData = [];
+    }
+
+    const featureOptionsHTML = featuresOptionsEl ? featuresOptionsEl.innerHTML : '';
+
+    function renderFeatures() {
+        if (!featuresList) return;
+        featuresList.innerHTML = '';
+
+        if (featuresData.length === 0) {
+            featuresList.innerHTML = `
+                <div class="features-empty">
+                    <i class="bi bi-tags"></i>
+                    هنوز ویژگی‌ای اضافه نکردی
+                </div>
+            `;
+            updateFeaturesHidden();
+            return;
+        }
+
+        featuresData.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'feature-row';
+            row.innerHTML = `
+                <select class="form-select-dark feature-select">
+                    <option value="">انتخاب ویژگی...</option>
+                    ${featureOptionsHTML}
+                </select>
+                <input type="text" class="form-control-dark feature-value"
+                       placeholder="مقدار ویژگی" maxlength="100">
+                <button type="button" class="feature-remove" title="حذف">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            `;
+
+            const select = row.querySelector('.feature-select');
+            const valueInput = row.querySelector('.feature-value');
+            const removeBtn = row.querySelector('.feature-remove');
+
+            if (item.feature_id) select.value = String(item.feature_id);
+            valueInput.value = item.value || '';
+
+            select.addEventListener('change', () => {
+                featuresData[idx].feature_id = select.value ? parseInt(select.value, 10) : null;
+                updateFeaturesHidden();
+            });
+
+            valueInput.addEventListener('input', () => {
+                featuresData[idx].value = valueInput.value;
+                updateFeaturesHidden();
+            });
+
+            removeBtn.addEventListener('click', () => {
+                featuresData.splice(idx, 1);
+                renderFeatures();
+            });
+
+            featuresList.appendChild(row);
+        });
+
+        updateFeaturesHidden();
+    }
+
+    function updateFeaturesHidden() {
+        if (!featuresHidden) return;
+        const clean = featuresData.filter(f => f.feature_id && f.value && f.value.trim());
+        featuresHidden.value = JSON.stringify(clean);
+    }
+
+    addFeatureBtn && addFeatureBtn.addEventListener('click', () => {
+        featuresData.push({feature_id: null, value: ''});
+        renderFeatures();
+    });
+
+    renderFeatures();
+
+    // =========================================================
+    // 7. SUBMIT
+    // =========================================================
+    const productForm = document.getElementById('productForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitSpinner = document.getElementById('submitSpinner');
+    const submitIcon = document.getElementById('submitIcon');
+
+    productForm && productForm.addEventListener('submit', function () {
+        submitBtn?.classList.add('loading');
+        if (submitBtn) submitBtn.disabled = true;
+        submitSpinner?.classList.remove('d-none');
+        submitIcon?.classList.add('d-none');
+
+        if (mainIndexInput) {
+            mainIndexInput.value = String(mainIndex);
+        }
+    });
+
+})();
+</script>
+{% endblock %}

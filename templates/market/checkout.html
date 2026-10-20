@@ -1,0 +1,1305 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}تکمیل خرید | وین مارکت{% endblock %}
+
+{% block extra_style %}
+    <style>
+        :root {
+            --mk-primary: #fd5631;
+            --mk-accent: #5d3cf2;
+            --mk-success: #07c98b;
+            --mk-warning: #fdbc31;
+            --mk-danger: #f23c49;
+            --mk-bg: #1f1b2d;
+            --mk-border: rgba(255, 255, 255, 0.08);
+            --mk-muted: rgba(255, 255, 255, 0.6);
+            --mk-dim: rgba(255, 255, 255, 0.4);
+        }
+
+        body {
+            background: var(--mk-bg) !important;
+        }
+
+        .page-wrapper {
+            padding: 0 !important;
+        }
+
+        /* BREADCRUMB */
+        .ck-breadcrumb-wrap {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+            border-bottom: 1px solid var(--mk-border);
+            padding: 1rem 0;
+            margin-top: 4.5rem;
+        }
+
+        .ck-breadcrumb {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--mk-dim);
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .ck-breadcrumb a {
+            color: var(--mk-muted);
+            text-decoration: none;
+        }
+
+        .ck-breadcrumb a:hover {
+            color: var(--mk-primary);
+        }
+
+        .ck-breadcrumb .sep {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.7rem;
+        }
+
+        .ck-breadcrumb .active {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* STEPS */
+        .ck-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem 0 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .ck-step {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.6rem 1.15rem;
+            border-radius: 50rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--mk-border);
+            color: var(--mk-dim);
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .ck-step .num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--mk-dim);
+            font-size: 0.75rem;
+            font-weight: 900;
+        }
+
+        .ck-step.active {
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.15), rgba(93, 60, 242, 0.1));
+            border-color: rgba(253, 86, 49, 0.4);
+            color: #fff;
+        }
+
+        .ck-step.active .num {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+        }
+
+        .ck-step.done .num {
+            background: linear-gradient(135deg, #07c98b, #059669);
+            color: #fff;
+        }
+
+        .ck-step.done {
+            color: var(--mk-success);
+            border-color: rgba(7, 201, 139, 0.35);
+        }
+
+        .ck-step-line {
+            width: 40px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+        }
+
+        @media (max-width: 575.98px) {
+            .ck-step-line {
+                width: 20px;
+            }
+
+            .ck-step {
+                padding: 0.5rem 0.85rem;
+                font-size: 0.78rem;
+            }
+        }
+
+        /* MAIN */
+        .ck-main {
+            padding-bottom: 4rem;
+        }
+
+        .ck-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 380px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        /* CARD */
+        .ck-card {
+            padding: 1.75rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--mk-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .ck-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0 0 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--mk-border);
+        }
+
+        .ck-card-title i {
+            color: var(--mk-primary);
+            font-size: 1.25rem;
+        }
+
+        .ck-card-title .count {
+            margin-right: auto;
+            padding: 0.2rem 0.7rem;
+            border-radius: 50rem;
+            background: rgba(253, 86, 49, 0.15);
+            color: var(--mk-primary);
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        /* ADDRESS LIST */
+        .ck-addresses {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .ck-address-item {
+            position: relative;
+            padding: 1.15rem 1.25rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.25s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .ck-address-item:hover {
+            border-color: rgba(253, 86, 49, 0.35);
+            background: rgba(253, 86, 49, 0.04);
+        }
+
+        .ck-address-item.selected {
+            border-color: var(--mk-primary);
+            background: linear-gradient(135deg, rgba(253, 86, 49, 0.08), rgba(93, 60, 242, 0.04));
+            box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.1);
+        }
+
+        .ck-address-radio {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            margin-top: 0.15rem;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+
+        .ck-address-item.selected .ck-address-radio {
+            border-color: var(--mk-primary);
+        }
+
+        .ck-address-item.selected .ck-address-radio::after {
+            content: "";
+            position: absolute;
+            inset: 3px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+        }
+
+        .ck-address-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ck-address-head {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .ck-address-title {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .ck-address-badge {
+            padding: 0.15rem 0.55rem;
+            border-radius: 50rem;
+            background: rgba(7, 201, 139, 0.15);
+            color: var(--mk-success);
+            font-size: 0.7rem;
+            font-weight: 800;
+            border: 1px solid rgba(7, 201, 139, 0.3);
+        }
+
+        .ck-address-text {
+            color: var(--mk-muted);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            margin-bottom: 0.3rem;
+        }
+
+        .ck-address-meta {
+            color: var(--mk-dim);
+            font-size: 0.75rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.85rem;
+        }
+
+        .ck-address-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .ck-address-meta i {
+            color: var(--mk-primary);
+            font-size: 0.7rem;
+        }
+
+        .ck-address-actions {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            display: flex;
+            gap: 0.35rem;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .ck-address-item:hover .ck-address-actions {
+            opacity: 1;
+        }
+
+        .ck-address-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .ck-address-btn:hover {
+            background: rgba(253, 86, 49, 0.15);
+            border-color: var(--mk-primary);
+            color: var(--mk-primary);
+        }
+
+        .ck-address-btn.danger:hover {
+            background: rgba(242, 60, 73, 0.15);
+            border-color: var(--mk-danger);
+            color: var(--mk-danger);
+        }
+
+        /* ADD NEW BUTTON */
+        .ck-add-address {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            background: rgba(253, 86, 49, 0.08);
+            border: 1.5px dashed rgba(253, 86, 49, 0.4);
+            color: var(--mk-primary);
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-top: 1rem;
+        }
+
+        .ck-add-address:hover:not(:disabled) {
+            background: rgba(253, 86, 49, 0.15);
+            border-style: solid;
+            transform: translateY(-2px);
+        }
+
+        .ck-add-address:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* FORM */
+        .ck-form {
+            display: none;
+        }
+
+        .ck-form.open {
+            display: block;
+        }
+
+        .ck-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .ck-form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .ck-field label {
+            display: block;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .ck-field label .req {
+            color: var(--mk-danger);
+            margin-right: 0.15rem;
+        }
+
+        .ck-field input,
+        .ck-field textarea,
+        .ck-field select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--mk-border);
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        .ck-field input::placeholder,
+        .ck-field textarea::placeholder {
+            color: var(--mk-dim);
+        }
+
+        .ck-field input:focus,
+        .ck-field textarea:focus,
+        .ck-field select:focus {
+            border-color: var(--mk-primary);
+            background: rgba(253, 86, 49, 0.04);
+            box-shadow: 0 0 0 4px rgba(253, 86, 49, 0.1);
+        }
+
+        .ck-field select option {
+            background: #1f1b2d;
+            color: #fff;
+        }
+
+        .ck-field select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ck-field .err {
+            display: none;
+            color: var(--mk-danger);
+            font-size: 0.75rem;
+            margin-top: 0.3rem;
+        }
+
+        .ck-field.has-error input,
+        .ck-field.has-error textarea,
+        .ck-field.has-error select {
+            border-color: var(--mk-danger);
+        }
+
+        .ck-field.has-error .err {
+            display: block;
+        }
+
+        .ck-form-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+            justify-content: flex-end;
+        }
+
+        .ck-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.85rem;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 0;
+            transition: all 0.25s ease;
+            font-family: inherit;
+        }
+
+        .ck-btn.primary {
+            background: linear-gradient(135deg, #fd5631, #f23c49);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(253, 86, 49, 0.35);
+        }
+
+        .ck-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(253, 86, 49, 0.5);
+            color: #fff;
+        }
+
+        .ck-btn.primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ck-btn.ghost {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ck-btn.ghost:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* SIDEBAR */
+        .ck-sidebar {
+            position: sticky;
+            top: 6rem;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--mk-border);
+        }
+
+        .ck-sidebar-title {
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+            margin: 0 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--mk-border);
+        }
+
+        .ck-sidebar-title i {
+            color: var(--mk-primary);
+        }
+
+        .ck-side-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+        }
+
+        .ck-side-item:last-of-type {
+            border-bottom: 0;
+        }
+
+        .ck-side-img {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 0.6rem;
+            background: rgba(255, 255, 255, 0.03);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ck-side-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ck-side-img i {
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 1.25rem;
+        }
+
+        .ck-side-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ck-side-name {
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .ck-side-qty {
+            color: var(--mk-dim);
+            font-size: 0.72rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ck-side-price {
+            color: var(--mk-primary);
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .ck-total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            color: var(--mk-muted);
+            font-size: 0.85rem;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+        }
+
+        .ck-total-row:last-of-type {
+            border-bottom: 0;
+        }
+
+        .ck-total-row.grand {
+            margin-top: 0.5rem;
+            padding: 1rem 0 0.5rem;
+            border-top: 2px solid rgba(253, 86, 49, 0.2);
+            border-bottom: 0;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .ck-total-row.grand .val {
+            color: var(--mk-primary);
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 991.98px) {
+            .ck-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ck-sidebar {
+                position: static;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .ck-main {
+                padding: 0 0 3rem;
+            }
+
+            .ck-card {
+                padding: 1.25rem;
+            }
+
+            .ck-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ck-form-grid .full {
+                grid-column: 1;
+            }
+
+            .ck-step-line {
+                width: 15px;
+            }
+        }
+
+        /* ============================================================
+           LOADING STATE — کارت آدرس
+           ============================================================ */
+        .ck-address-item.loading {
+            pointer-events: none;
+            opacity: 0.65;
+        }
+
+        .ck-address-item.loading::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 28px;
+            height: 28px;
+            margin: -14px 0 0 -14px;
+            border: 2.5px solid rgba(253, 86, 49, 0.2);
+            border-top-color: #fd5631;
+            border-radius: 50%;
+            animation: ckSpin 0.7s linear infinite;
+            z-index: 10;
+        }
+
+        @keyframes ckSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="ck-breadcrumb-wrap">
+        <div class="container">
+            <ol class="ck-breadcrumb">
+                <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li><a href="{% url 'market:cart_detail' %}">سبد خرید</a></li>
+                <li class="sep"><i class="bi bi-chevron-left"></i></li>
+                <li class="active">تکمیل خرید</li>
+            </ol>
+        </div>
+    </div>
+
+    <section class="ck-main">
+        <div class="container">
+
+            <!-- STEPS -->
+            <div class="ck-steps">
+                <div class="ck-step active">
+                    <span class="num">۱</span>
+                    <span>آدرس ارسال</span>
+                </div>
+                <div class="ck-step-line"></div>
+                <div class="ck-step">
+                    <span class="num">۲</span>
+                    <span>تایید سفارش</span>
+                </div>
+                <div class="ck-step-line"></div>
+                <div class="ck-step">
+                    <span class="num">۳</span>
+                    <span>پرداخت</span>
+                </div>
+            </div>
+
+            <form id="ckAddressForm" novalidate>
+                {% csrf_token %}
+                <div class="ck-grid">
+
+                    <!-- MAIN CONTENT -->
+                    <div>
+                        <!-- ADDRESSES LIST -->
+                        {% if addresses_count > 0 %}
+                            <div class="ck-card">
+                                <h3 class="ck-card-title">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    آدرس‌های شما
+                                    <span class="count">{{ addresses_count }}</span>
+                                </h3>
+
+                                <div class="ck-addresses" id="ckAddresses">
+                                    {% for addr in addresses %}
+                                        <div class="ck-address-item {% if addr.is_default %}selected{% endif %}"
+                                             data-address-id="{{ addr.id }}">
+                                            <div class="ck-address-radio"></div>
+                                            <div class="ck-address-body">
+                                                <div class="ck-address-head">
+                                                    {% if addr.title %}
+                                                        <span class="ck-address-title">{{ addr.title }}</span>
+                                                    {% else %}
+                                                        <span class="ck-address-title">آدرس</span>
+                                                    {% endif %}
+                                                    {% if addr.is_default %}
+                                                        <span class="ck-address-badge">پیش‌فرض</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="ck-address-text">
+                                                    {{ addr.province.name }} — {{ addr.city.name }} — {{ addr.address }}
+                                                    {% if addr.plaque %} — پلاک {{ addr.plaque }}{% endif %}
+                                                    {% if addr.unit %} — واحد {{ addr.unit }}{% endif %}
+                                                </div>
+                                                <div class="ck-address-meta">
+                                                    {% if addr.postal_code %}
+                                                        <span><i
+                                                                class="bi bi-mailbox"></i> کدپستی: {{ addr.postal_code }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="ck-address-actions">
+                                                <button type="button" class="ck-address-btn"
+                                                        data-action="edit"
+                                                        data-address-id="{{ addr.id }}"
+                                                        title="ویرایش">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button" class="ck-address-btn danger"
+                                                        data-action="delete"
+                                                        data-address-id="{{ addr.id }}"
+                                                        title="حذف">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                {% if can_add_more %}
+                                    <button type="button" class="ck-add-address" id="ckAddAddressBtn">
+                                        <i class="bi bi-plus-circle"></i>
+                                        افزودن آدرس جدید
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- ADDRESS FORM -->
+                        <div class="ck-card ck-form {% if addresses_count == 0 %}open{% endif %}"
+                             id="ckAddressFormCard">
+                            <h3 class="ck-card-title">
+                                <i class="bi bi-plus-circle-fill"></i>
+                                <span id="ckFormTitle">{% if addresses_count == 0 %}آدرس ارسال{% else %}آدرس
+                                    جدید{% endif %}</span>
+                            </h3>
+
+                            <div class="ck-form-grid">
+                                <div class="ck-field full">
+                                    <label for="ck_title">عنوان آدرس (اختیاری)</label>
+                                    <input type="text" id="ck_title" name="title" maxlength="50"
+                                           placeholder="مثلاً: خانه، محل کار">
+                                </div>
+
+                                <div class="ck-field">
+                                    <label for="ck_province">استان <span class="req">*</span></label>
+                                    <select id="ck_province" name="province">
+                                        <option value="">— انتخاب استان —</option>
+                                        {% for p in provinces %}
+                                            <option value="{{ p.id }}">{{ p.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="err"></div>
+                                </div>
+
+                                <div class="ck-field">
+                                    <label for="ck_city">شهر <span class="req">*</span></label>
+                                    <select id="ck_city" name="city" disabled>
+                                        <option value="">— ابتدا استان را انتخاب کنید —</option>
+                                    </select>
+                                    <div class="err"></div>
+                                </div>
+
+                                <div class="ck-field full">
+                                    <label for="ck_address">آدرس دقیق <span class="req">*</span></label>
+                                    <textarea id="ck_address" name="address" rows="3"
+                                              placeholder="خیابان، کوچه، ..."></textarea>
+                                    <div class="err"></div>
+                                </div>
+
+                                <div class="ck-field">
+                                    <label for="ck_plaque">پلاک</label>
+                                    <input type="text" id="ck_plaque" name="plaque" maxlength="10"
+                                           placeholder="مثلاً: 12">
+                                </div>
+
+                                <div class="ck-field">
+                                    <label for="ck_unit">واحد</label>
+                                    <input type="text" id="ck_unit" name="unit" maxlength="10"
+                                           placeholder="مثلاً: 3">
+                                </div>
+
+                                <div class="ck-field full">
+                                    <label for="ck_postal_code">کد پستی</label>
+                                    <input type="text" id="ck_postal_code" name="postal_code" maxlength="10"
+                                           placeholder="۱۰ رقم">
+                                    <div class="err"></div>
+                                </div>
+                            </div>
+
+                            <div class="ck-form-actions">
+                                {% if addresses_count > 0 %}
+                                    <button type="button" class="ck-btn ghost" id="ckCancelFormBtn">
+                                        <i class="bi bi-x-lg"></i> انصراف
+                                    </button>
+                                {% endif %}
+                                <button type="button" class="ck-btn primary" id="ckSaveAddressBtn">
+                                    <i class="bi bi-check-lg"></i>
+                                    <span id="ckSaveBtnText">ذخیره و ادامه</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SIDEBAR -->
+                    <div>
+                        <div class="ck-sidebar">
+                            <h4 class="ck-sidebar-title">
+                                <i class="bi bi-bag-check-fill"></i>
+                                خلاصه سفارش
+                            </h4>
+
+                            {% for item in cart_items %}
+                                <div class="ck-side-item">
+                                    <div class="ck-side-img">
+                                        {% if item.product.main_image %}
+                                            <img src="{{ item.product.main_image.url }}" alt="">
+                                        {% else %}
+                                            <i class="bi bi-bag"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ck-side-info">
+                                        <div class="ck-side-name">{{ item.product.title }}</div>
+                                        <div class="ck-side-qty">
+                                            <span>{{ item.quantity }} عدد</span>
+                                            <span class="ck-side-price">{{ item.subtotal|intcomma }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+
+                            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--mk-border);">
+                                <div class="ck-total-row">
+                                    <span>جمع کالاها</span>
+                                    <span>{{ items_total|intcomma }} ت</span>
+                                </div>
+                                
+                                <div class="ck-total-row">
+                                    <span>هزینه ارسال</span>
+                                    <span style="color: var(--mk-warning); font-size: 0.8rem;">پس‌کرایه 🚚</span>
+                                </div>
+                                
+                                <div class="ck-total-row grand">
+                                    <span>مبلغ قابل پرداخت</span>
+                                    <span class="val">{{ grand_total|intcomma }} ت</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block modals %}
+    <!-- DELETE CONFIRM MODAL -->
+    <div class="modal fade" id="ckDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background:linear-gradient(180deg,#1f1b2d,#17141f);border:1px solid rgba(255,255,255,0.08);border-radius:1.25rem;">
+                <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <h5 class="modal-title" style="color:#fff;">
+                        <i class="bi bi-exclamation-triangle-fill" style="color:#f23c49;"></i>
+                        حذف آدرس
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="filter:invert(1) grayscale(1) brightness(2);"></button>
+                </div>
+                <div class="modal-body" style="color:rgba(255,255,255,0.7);">
+                    آیا از حذف این آدرس مطمئن هستید؟ این عمل قابل بازگشت نیست.
+                </div>
+                <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,0.08);">
+                    <button type="button" class="ck-btn ghost" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="ck-btn primary" id="ckConfirmDeleteBtn"
+                            style="background:linear-gradient(135deg,#f23c49,#e64a2a);box-shadow:0 8px 20px rgba(242,60,73,0.4);">
+                        <i class="bi bi-trash3"></i> حذف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const citiesUrl = "{% url 'market:cities_by_province' %}";
+    const useUrlBase = "/market/checkout/address/use/";
+    const saveUrl = "{% url 'market:address_save' %}";
+    const updateUrlBase = "/market/checkout/address/update/";
+    const deleteUrlBase = "/market/checkout/address/delete/";
+
+    const form = document.getElementById('ckAddressForm');
+    const formCard = document.getElementById('ckAddressFormCard');
+    const formTitle = document.getElementById('ckFormTitle');
+    const saveBtn = document.getElementById('ckSaveAddressBtn');
+    const saveBtnText = document.getElementById('ckSaveBtnText');
+    const cancelFormBtn = document.getElementById('ckCancelFormBtn');
+    const addAddressBtn = document.getElementById('ckAddAddressBtn');
+
+    const provinceSel = document.getElementById('ck_province');
+    const citySel = document.getElementById('ck_city');
+
+    let editingAddressId = null;
+    let pendingDeleteId = null;
+    let citiesLoaded = null; // Promise cache برای استان فعلی
+
+    // ============================================
+    // Toast helper
+    // ============================================
+    function toast(msg, type) {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(msg, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + msg);
+    }
+
+    // ============================================
+    // City Loader (Promise-based)
+    // ============================================
+    function loadCities(provinceId) {
+        // اگه استان خالیه
+        if (!provinceId) {
+            citySel.innerHTML = '<option value="">— ابتدا استان را انتخاب کنید —</option>';
+            citySel.disabled = true;
+            return Promise.resolve();
+        }
+
+        citySel.disabled = true;
+        citySel.innerHTML = '<option value="">— در حال بارگذاری... —</option>';
+
+        return fetch(`${citiesUrl}?province_id=${provinceId}`)
+            .then(r => r.json())
+            .then(data => {
+                citySel.innerHTML = '<option value="">— انتخاب شهر —</option>';
+                (data.cities || []).forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = c.name;
+                    citySel.appendChild(o);
+                });
+                citySel.disabled = false;
+            })
+            .catch(() => {
+                citySel.innerHTML = '<option value="">— خطا در بارگذاری —</option>';
+            });
+    }
+
+    // ============================================
+    // Province → City
+    // ============================================
+    provinceSel.addEventListener('change', function() {
+        loadCities(this.value);
+    });
+
+    // ============================================
+    // Reset form
+    // ============================================
+    function resetForm() {
+        editingAddressId = null;
+        document.getElementById('ck_title').value = '';
+        provinceSel.value = '';
+        citySel.innerHTML = '<option value="">— ابتدا استان را انتخاب کنید —</option>';
+        citySel.disabled = true;
+        document.getElementById('ck_address').value = '';
+        document.getElementById('ck_plaque').value = '';
+        document.getElementById('ck_unit').value = '';
+        document.getElementById('ck_postal_code').value = '';
+        document.querySelectorAll('.ck-field.has-error').forEach(el => el.classList.remove('has-error'));
+        saveBtnText.textContent = 'ذخیره و ادامه';
+        formTitle.textContent = 'آدرس جدید';
+    }
+
+    // ============================================
+    // Open / Close Form
+    // ============================================
+    function openForm() {
+        formCard.classList.add('open');
+        formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function closeForm() {
+        formCard.classList.remove('open');
+        resetForm();
+    }
+
+    addAddressBtn && addAddressBtn.addEventListener('click', function() {
+        resetForm();
+        openForm();
+    });
+
+    cancelFormBtn && cancelFormBtn.addEventListener('click', function() {
+        closeForm();
+    });
+
+    // ============================================
+    // Mark Error
+    // ============================================
+    function markError(fieldId, message) {
+        const input = document.getElementById(fieldId);
+        if (!input) return;
+        const wrap = input.closest('.ck-field');
+        if (wrap) {
+            wrap.classList.add('has-error');
+            const err = wrap.querySelector('.err');
+            if (err) err.textContent = message;
+        }
+    }
+
+    // ============================================
+    // Save / Update Address
+    // ============================================
+    function submitAddressForm() {
+        const formData = new FormData();
+        formData.append('title', document.getElementById('ck_title').value.trim());
+        formData.append('province', provinceSel.value);
+        formData.append('city', citySel.value);
+        formData.append('address', document.getElementById('ck_address').value.trim());
+        formData.append('plaque', document.getElementById('ck_plaque').value.trim());
+        formData.append('unit', document.getElementById('ck_unit').value.trim());
+        formData.append('postal_code', document.getElementById('ck_postal_code').value.trim());
+
+        // validation
+        let hasError = false;
+        document.querySelectorAll('.ck-field.has-error').forEach(el => el.classList.remove('has-error'));
+
+        if (!formData.get('province')) {
+            markError('ck_province', 'انتخاب استان الزامی است');
+            hasError = true;
+        }
+        if (!formData.get('city')) {
+            markError('ck_city', 'انتخاب شهر الزامی است');
+            hasError = true;
+        }
+        if (!formData.get('address')) {
+            markError('ck_address', 'آدرس دقیق الزامی است');
+            hasError = true;
+        }
+        if (hasError) return;
+
+        saveBtn.disabled = true;
+        saveBtnText.textContent = 'در حال ذخیره...';
+
+        const url = editingAddressId ? (updateUrlBase + editingAddressId + '/') : saveUrl;
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(data => {
+            saveBtn.disabled = false;
+            saveBtnText.textContent = 'ذخیره و ادامه';
+
+            if (data.success) {
+                useAddress(data.address_id);
+            } else {
+                if (data.errors) {
+                    for (const [field, errs] of Object.entries(data.errors)) {
+                        markError('ck_' + field, Array.isArray(errs) ? errs[0] : errs);
+                    }
+                } else {
+                    toast(data.message || 'خطا در ذخیره آدرس', 'error');
+                }
+            }
+        })
+        .catch(() => {
+            saveBtn.disabled = false;
+            saveBtnText.textContent = 'ذخیره و ادامه';
+            toast('ارتباط با سرور برقرار نشد', 'error');
+        });
+    }
+
+    saveBtn.addEventListener('click', submitAddressForm);
+
+    // 🎯 Submit با Enter
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitAddressForm();
+    });
+
+    // ============================================
+    // Select Address (click on card)
+    // ============================================
+    const addressesWrap = document.getElementById('ckAddresses');
+    addressesWrap && addressesWrap.addEventListener('click', function(e) {
+        const editBtn = e.target.closest('[data-action="edit"]');
+        const delBtn = e.target.closest('[data-action="delete"]');
+        const card = e.target.closest('.ck-address-item');
+
+        if (editBtn) {
+            e.stopPropagation();
+            openEditAddress(editBtn.dataset.addressId);
+            return;
+        }
+        if (delBtn) {
+            e.stopPropagation();
+            pendingDeleteId = delBtn.dataset.addressId;
+            new bootstrap.Modal(document.getElementById('ckDeleteModal')).show();
+            return;
+        }
+        if (card) {
+            useAddress(card.dataset.addressId);
+        }
+    });
+
+    // ============================================
+    // Use Address (با loading state)
+    // ============================================
+    function useAddress(addressId) {
+        const card = document.querySelector(`.ck-address-item[data-address-id="${addressId}"]`);
+        if (card) card.classList.add('loading');
+
+        fetch(useUrlBase + addressId + '/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                if (card) card.classList.remove('loading');
+                toast('خطا در انتخاب آدرس', 'error');
+            }
+        })
+        .catch(() => {
+            if (card) card.classList.remove('loading');
+            toast('ارتباط با سرور برقرار نشد', 'error');
+        });
+    }
+
+    // ============================================
+    // Edit Address (Promise-based cities)
+    // ============================================
+    async function openEditAddress(addressId) {
+        try {
+            const res = await fetch(`/market/api/address/${addressId}/`);
+            const data = await res.json();
+            if (!data.success) {
+                toast('خطا در بارگذاری', 'error');
+                return;
+            }
+
+            const a = data.address;
+            editingAddressId = addressId;
+            formTitle.textContent = 'ویرایش آدرس';
+            saveBtnText.textContent = 'ذخیره تغییرات';
+
+            document.getElementById('ck_title').value = a.title || '';
+            provinceSel.value = a.province_id;
+
+            // ✅ صبر می‌کنیم تا شهرها لود شن
+            await loadCities(a.province_id);
+
+            // حالا شهر رو ست کن
+            if (a.city_id) {
+                citySel.value = String(a.city_id);
+            }
+
+            document.getElementById('ck_address').value = a.address || '';
+            document.getElementById('ck_plaque').value = a.plaque || '';
+            document.getElementById('ck_unit').value = a.unit || '';
+            document.getElementById('ck_postal_code').value = a.postal_code || '';
+
+            openForm();
+        } catch (err) {
+            toast('خطا در بارگذاری آدرس', 'error');
+        }
+    }
+
+    // ============================================
+    // Delete Address
+    // ============================================
+    const confirmDeleteBtn = document.getElementById('ckConfirmDeleteBtn');
+    confirmDeleteBtn && confirmDeleteBtn.addEventListener('click', function() {
+        if (!pendingDeleteId) return;
+
+        const id = pendingDeleteId;
+        const card = document.querySelector(`.ck-address-item[data-address-id="${id}"]`);
+
+        // ⏳ حالت لودینگ روی دکمه
+        confirmDeleteBtn.disabled = true;
+        const originalHTML = confirmDeleteBtn.innerHTML;
+        confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> حذف...';
+
+        fetch(deleteUrlBase + id + '/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(r => r.json())
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('ckDeleteModal')).hide();
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.innerHTML = originalHTML;
+
+            if (data.success) {
+                if (card) {
+                    card.style.transition = 'all 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(-30px)';
+                    setTimeout(() => {
+                        card.remove();
+                        const remaining = document.querySelectorAll('.ck-address-item').length;
+                        if (remaining === 0) {
+                            window.location.reload();
+                        }
+                    }, 300);
+                }
+                toast('آدرس حذف شد', 'success');
+            } else {
+                toast(data.message || 'خطا در حذف', 'error');
+            }
+            pendingDeleteId = null;
+        })
+        .catch(() => {
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.innerHTML = originalHTML;
+            toast('ارتباط با سرور برقرار نشد', 'error');
+        });
+    });
+
+})();
+</script>
+{% endblock %}

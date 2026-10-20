@@ -1,5 +1,3 @@
-import os
-
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -30,7 +28,7 @@ class Automation(models.Model):
 
     # ==================== مالکیت و نام ====================
     connection = models.ForeignKey(
-        "windirect_connections.InstagramConnection",
+        "connections.InstagramConnection",
         on_delete=models.CASCADE,
         related_name="automations",
         verbose_name=_("حساب اینستاگرام"),
@@ -161,9 +159,9 @@ class Automation(models.Model):
 
             # ===== صوت/تصویر/ویدیو =====
             elif self.direct_message_kind in (
-                self.DirectKind.AUDIO,
-                self.DirectKind.IMAGE,
-                self.DirectKind.VIDEO,
+                    self.DirectKind.AUDIO,
+                    self.DirectKind.IMAGE,
+                    self.DirectKind.VIDEO,
             ):
                 # چک کن فایل مدیا وصل شده
                 if not self.media_upload:
@@ -261,7 +259,7 @@ class CommentEvent(models.Model):
     """کامنت ثبت‌شده برای اجرای یکتای قوانین یک حساب."""
 
     connection = models.ForeignKey(
-        "windirect_connections.InstagramConnection",
+        "connections.InstagramConnection",
         on_delete=models.CASCADE,
         related_name="comment_events",
         verbose_name=_("حساب اینستاگرام"),

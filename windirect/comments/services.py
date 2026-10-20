@@ -59,11 +59,8 @@ def _build_direct_payload(automation, assume_followed=False):
     # صوت/تصویر/ویدیو
     # URL فایل رو از direct_message_file بگیر
     file_url = ""
-    if automation.direct_message_file:
-        try:
-            file_url = automation.direct_message_file.url
-        except ValueError:
-            file_url = ""
+    if automation.media_upload:
+        file_url = automation.media_upload.boxapi_url
 
     return {
         "channel": "direct",

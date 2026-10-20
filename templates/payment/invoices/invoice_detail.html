@@ -9,6 +9,8 @@
         فاکتور اشتراک وین دایرکت {{ invoice.invoice_number }} | WinJob
     {% elif invoice.type == 'content_order' %}
         فاکتور سفارش محتوا {{ invoice.invoice_number }} | WinJob
+    {% elif invoice.type == 'market_order' %}
+        فاکتور سفارش وین‌مارکت {{ invoice.invoice_number }} | WinJob
     {% else %}
         فاکتور شارژ کیف پول {{ invoice.invoice_number }} | WinJob
     {% endif %}
@@ -22,7 +24,7 @@
             margin-top: 1rem;
             padding: 1rem 0;
         }
-        
+
         .payment-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -32,25 +34,25 @@
             padding: 1rem 1.25rem;
             border: 1px solid rgba(255, 255, 255, 0.06);
         }
-        
+
         .payment-info-item {
             display: flex;
             flex-direction: column;
             gap: 0.15rem;
         }
-        
+
         .payment-info-label {
             font-size: 0.7rem;
             color: #9ca3af;
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
-        
+
         .payment-info-value {
             font-size: 0.9rem;
             color: #e5e7eb;
         }
-        
+
         .payment-info-value .badge {
             font-size: 0.7rem;
             padding: 0.25rem 0.7rem;
@@ -67,6 +69,7 @@
             border-radius: 12px;
             margin-bottom: 1rem;
         }
+
         .wd-plan-summary-icon {
             width: 56px;
             height: 56px;
@@ -79,26 +82,31 @@
             font-size: 1.5rem;
             flex-shrink: 0;
         }
+
         .wd-plan-summary-content {
             flex: 1;
         }
+
         .wd-plan-summary-name {
             font-size: 1.15rem;
             font-weight: 700;
             color: #fff;
             margin: 0 0 0.25rem;
         }
+
         .wd-plan-summary-meta {
             color: #9691a4;
             font-size: 0.85rem;
             margin: 0;
         }
+
         .wd-features-list {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 0.5rem;
             margin-top: 1rem;
         }
+
         .wd-feature-row {
             display: flex;
             align-items: center;
@@ -107,9 +115,19 @@
             font-size: 0.85rem;
             padding: 0.4rem 0;
         }
-        .wd-feature-row i { color: #07c98b; font-size: 0.9rem; }
-        .wd-feature-row.is-disabled { color: #666276; }
-        .wd-feature-row.is-disabled i { color: #666276; }
+
+        .wd-feature-row i {
+            color: #07c98b;
+            font-size: 0.9rem;
+        }
+
+        .wd-feature-row.is-disabled {
+            color: #666276;
+        }
+
+        .wd-feature-row.is-disabled i {
+            color: #666276;
+        }
 
         .wd-active-period {
             background: linear-gradient(135deg, rgba(7, 201, 139, 0.08), rgba(60, 118, 242, 0.08));
@@ -120,6 +138,7 @@
             align-items: center;
             gap: 0.85rem;
         }
+
         .wd-active-period-icon {
             width: 40px;
             height: 40px;
@@ -132,24 +151,31 @@
             font-size: 1.15rem;
             flex-shrink: 0;
         }
-        .wd-active-period-content { flex: 1; min-width: 0; }
+
+        .wd-active-period-content {
+            flex: 1;
+            min-width: 0;
+        }
+
         .wd-active-period-title {
             color: #fff;
             font-weight: 600;
             font-size: 0.9rem;
             margin: 0 0 0.15rem;
         }
+
         .wd-active-period-meta {
             color: #9691a4;
             font-size: 0.8rem;
             margin: 0;
         }
-        
+
         @media (max-width: 576px) {
             .payment-info-grid {
                 grid-template-columns: 1fr;
                 gap: 0.5rem;
             }
+
             .wd-features-list {
                 grid-template-columns: 1fr;
             }
@@ -182,8 +208,13 @@
                             <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-1 rounded-pill">
                                 <i class="fi-gift me-1"></i> فاکتور اشتراک وین دایرکت
                             </span>
+                        {% elif invoice.type == 'market_order' %}
+                            <span class="badge bg-secondary bg-opacity-25 text-light px-3 py-1 rounded-pill"
+                                  style="background: rgba(192, 132, 252, 0.2) !important; color: #c084fc !important;">
+                                <i class="fi-shopping-bag me-1"></i> فاکتور وین‌مارکت
+                            </span>
                         {% endif %}
-                    
+
                         {% if invoice.is_paid %}
                             <span class="invoice-status-badge paid">
                                 <span class="dot"></span>
@@ -246,7 +277,8 @@
                                 <div class="text-secondary small">پلتفرم</div>
                                 <div class="info-value">
                                     {% if invoice.campaign.platform.logo %}
-                                        <img src="{{ invoice.campaign.platform.logo.url }}" width="24" class="me-2" alt="">
+                                        <img src="{{ invoice.campaign.platform.logo.url }}" width="24" class="me-2"
+                                             alt="">
                                     {% endif %}
                                     {{ invoice.campaign.platform.name }}
                                 </div>
@@ -282,7 +314,7 @@
                             <i class="fi-gift text-warning"></i>
                             اطلاعات اشتراک
                         </div>
-                        
+
                         {% with order=invoice.subscription_order quote=order.quote %}
                             <div class="wd-plan-summary">
                                 <div class="wd-plan-summary-icon">
@@ -398,6 +430,102 @@
                         </div>
                     </div>
 
+                {% elif invoice.type == 'market_order' and market_order %}
+                    <!-- ===== اطلاعات سفارش وین‌مارکت ===== -->
+                    <div class="info-card mb-4">
+                        <div class="info-title">
+                            <i class="fi-shopping-bag" style="color:#c084fc;"></i>
+                            اطلاعات سفارش وین‌مارکت
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">شناسه سفارش</div>
+                                <div class="info-value">
+                                    <a href="{% url 'market:order_detail' market_order.id %}">
+                                        #{{ market_order.id }}
+                                        <i class="fi-external-link ms-1" style="font-size:0.7rem;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">وضعیت سفارش</div>
+                                <div class="info-value">
+                                    <span class="badge bg-secondary bg-opacity-25 text-light">
+                                        {{ market_order.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">تاریخ ثبت</div>
+                                <div class="info-value">{{ market_order.created_at|jformat:"%Y/%m/%d - %H:%M" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">تعداد اقلام</div>
+                                <div class="info-value">{{ market_items|length }} قلم کالا</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== جدول اقلام ===== -->
+                    <div class="info-card mb-4">
+                        <div class="info-title">
+                            <i class="fi-list" style="color:#c084fc;"></i>
+                            اقلام سفارش
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                <thead>
+                                <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.08);">
+                                    <th style="padding:0.75rem 0.5rem; color:#9ca3af; font-weight:600; text-align:right; font-size:0.75rem;">
+                                        #
+                                    </th>
+                                    <th style="padding:0.75rem 0.5rem; color:#9ca3af; font-weight:600; text-align:right; font-size:0.75rem;">
+                                        محصول
+                                    </th>
+                                    <th style="padding:0.75rem 0.5rem; color:#9ca3af; font-weight:600; text-align:center; font-size:0.75rem;">
+                                        تعداد
+                                    </th>
+                                    <th style="padding:0.75rem 0.5rem; color:#9ca3af; font-weight:600; text-align:left; font-size:0.75rem;">
+                                        قیمت واحد
+                                    </th>
+                                    <th style="padding:0.75rem 0.5rem; color:#9ca3af; font-weight:600; text-align:left; font-size:0.75rem;">
+                                        جمع
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in market_items %}
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:0.75rem 0.5rem; color:#9ca3af;">{{ forloop.counter }}</td>
+                                        <td style="padding:0.75rem 0.5rem;">
+                                            <div style="color:#fff; font-weight:600;">{{ item.product_title }}</div>
+                                            {% if item.variant_info %}
+                                                <div style="color:#9ca3af; font-size:0.75rem; margin-top:0.15rem;">{{ item.variant_info }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding:0.75rem 0.5rem; text-align:center; color:#e5e7eb;">{{ item.quantity }}</td>
+                                        <td style="padding:0.75rem 0.5rem; text-align:left;">
+                                            {% if item.has_discount %}
+                                                <div style="color:#f87171; text-decoration:line-through; font-size:0.75rem;">
+                                                    {{ item.base_unit_price|floatformat:0|intcomma }}
+                                                </div>
+                                                <div style="color:#34d399; font-weight:600;">
+                                                    {{ item.unit_price|floatformat:0|intcomma }}
+                                                </div>
+                                            {% else %}
+                                                <div style="color:#e5e7eb;">{{ item.unit_price|floatformat:0|intcomma }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding:0.75rem 0.5rem; text-align:left; color:#fff; font-weight:700;">
+                                            {{ item.line_with_discount|floatformat:0|intcomma }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 {% else %}
                     <!-- ===== اطلاعات شارژ کیف پول ===== -->
                     <div class="info-card mb-4">
@@ -472,14 +600,69 @@
                 <div class="cost-breakdown-card">
                     <h6 class="text-light mb-3">
                         <i class="fi-calculator text-primary me-2"></i>
-                        {% if invoice.type == 'campaign' or invoice.type == 'content_order' or invoice.type == 'windirect' %}
-                            جزئیات هزینه‌ها
-                        {% else %}
+                        {% if invoice.type == 'wallet' %}
                             جزئیات فاکتور
+                        {% else %}
+                            جزئیات هزینه‌ها
                         {% endif %}
                     </h6>
 
-                    {% if invoice.type == 'windirect' %}
+                    {% if invoice.type == 'market_order' %}
+                        <!-- ===== فاکتور وین‌مارکت ===== -->
+                        <div class="d-flex justify-content-between my-3">
+                            <span class="label text-light">
+                                <i class="fi-shopping-bag" style="color:#c084fc;"></i>
+                                جمع کالاها (بدون تخفیف)
+                            </span>
+                            <span class="value fw-bold text-light">
+                                {{ market_total_without_discount|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                        {% if market_discount_amount > 0 %}
+                            <div class="d-flex justify-content-between my-3">
+                                <span class="label text-success">
+                                    <i class="fi-ticket me-1"></i> سود شما از تخفیف‌ها
+                                </span>
+                                <span class="value text-success">
+                                    - {{ market_discount_amount|floatformat:0|intcomma }}
+                                    <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                </span>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between my-3">
+                            <span class="label text-light">
+                                <i class="fi-shopping-bag"></i>
+                                جمع کالاها (با تخفیف)
+                            </span>
+                            <span class="value fw-bold text-light">
+                                {{ market_total_with_discount|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between my-3">
+                            <span class="label text-light">
+                                <i class="fi-truck"></i> هزینه ارسال
+                            </span>
+                            <span class="value text-warning" style="font-size:0.85rem;">
+                                پس‌کرایه 🚚
+                            </span>
+                        </div>
+
+                        <div class="cost-divider"></div>
+
+                        <div class="d-flex justify-content-between my-3 text-accent">
+                            <span class="label fw-bold fs-4">مبلغ قابل پرداخت</span>
+                            <span class="value fw-bold fs-4">
+                                {{ invoice.payable_amount|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-accent.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                    {% elif invoice.type == 'windirect' %}
                         <!-- ===== فاکتور اشتراک وین دایرکت ===== -->
                         <div class="d-flex justify-content-between my-3">
                             <span class="label text-light">
@@ -717,7 +900,7 @@
                                 <i class="fi-check-circle text-success me-2"></i>
                                 اطلاعات پرداخت
                             </h6>
-                            
+
                             {% with payment=invoice.payments.first %}
                                 {% if payment %}
                                     <div class="payment-info-grid">
@@ -733,7 +916,7 @@
                                                 {% endif %}
                                             </span>
                                         </div>
-                                        
+
                                         {% if payment.ref_id %}
                                             <div class="payment-info-item">
                                                 <span class="payment-info-label">کد پیگیری</span>
@@ -742,35 +925,36 @@
                                                 </span>
                                             </div>
                                         {% endif %}
-                                        
+
                                         {% if payment.authority and payment.payment_method == 'gateway' %}
                                             <div class="payment-info-item">
                                                 <span class="payment-info-label">شماره تراکنش</span>
-                                                <span class="payment-info-value" dir="ltr" style="font-size:0.8rem; word-break:break-all;">
+                                                <span class="payment-info-value" dir="ltr"
+                                                      style="font-size:0.8rem; word-break:break-all;">
                                                     {{ payment.authority }}
                                                 </span>
                                             </div>
                                         {% endif %}
-                                        
+
                                         <div class="payment-info-item">
                                             <span class="payment-info-label">شماره فاکتور</span>
                                             <span class="payment-info-value">{{ invoice.invoice_number }}</span>
                                         </div>
-                                        
+
                                         {% if invoice.paid_at %}
                                             <div class="payment-info-item">
                                                 <span class="payment-info-label">تاریخ پرداخت</span>
                                                 <span class="payment-info-value">{{ invoice.paid_at|jformat:"%Y/%m/%d - %H:%M" }}</span>
                                             </div>
                                         {% endif %}
-                                        
+
                                         <div class="payment-info-item">
                                             <span class="payment-info-label">مبلغ پرداخت شده</span>
                                             <span class="payment-info-value fw-bold text-success">
                                                 {{ payment.amount|floatformat:0|intcomma }} تومان
                                             </span>
                                         </div>
-                                        
+
                                         <div class="payment-info-item">
                                             <span class="payment-info-label">وضعیت</span>
                                             <span class="payment-info-value">
@@ -796,7 +980,13 @@
 
                     <!-- ===== دکمه‌های اکشن ===== -->
                     <div class="action-bar">
-                        {% if invoice.type == 'windirect' %}
+                        {% if invoice.type == 'market_order' and invoice.market_order %}
+                            <a href="{% url 'market:order_detail' invoice.market_order.id %}"
+                               class="btn btn-primary flex-fill">
+                                <i class="fi-shopping-bag me-2"></i>
+                                مشاهده سفارش وین‌مارکت
+                            </a>
+                        {% elif invoice.type == 'windirect' %}
                             <a href="{% url 'windirect:subscription_order' invoice.subscription_order.pk %}"
                                class="btn btn-primary flex-fill">
                                 <i class="fi-eye me-2"></i>

@@ -4,5 +4,4 @@ from django.apps import AppConfig
 class ConnectionsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "windirect.connections"
-    label = "windirect_connections"
-    verbose_name = "وین دایرکت ـ اتصالات"
+    verbose_name = "وین دایرکت | اتصالات"

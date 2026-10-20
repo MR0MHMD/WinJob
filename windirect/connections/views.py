@@ -1,50 +1,34 @@
 """مدیریت اتصال حساب‌های اینستاگرام به وین دایرکت."""
-
+import base64
+import json
 import logging
-from datetime import timedelta
-from urllib.parse import urlencode
-
+import time
+import urllib.parse
 import requests
-from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.db.models import Count
+from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods, require_POST
+# from eventlet.green import urllib
 
 from windirect.common.context import owner_context
 from windirect.subscriptions.services import current_period
+from .boxapi import request_list_posts
 from .models import InstagramConnection
 from .forms import InstagramConnectionForm
 from .services import register_connection
-
-import base64
-import hashlib
-import hmac
-import json
-from urllib.parse import urlencode
-
-import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Count
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 
-logger = logging.getLogger(__name__)
+from .webhook_handlers import route_webhook
 
+logger = logging.getLogger(__name__)
 
 # ==================== ثابت‌های Instagram ====================
 INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize"
@@ -60,16 +44,11 @@ INSTAGRAM_SCOPES = [
     "instagram_business_manage_insights",
 ]
 
-import requests
-from django.core.files.base import ContentFile
-
 
 def _fetch_and_save_profile_picture(connection, username):
     """
     عکس پروفایل رو از BoxAPI می‌گیره و توی سرور ذخیره می‌کنه.
     """
-    import base64
-    from django.conf import settings
 
     boxapi_username = getattr(settings, "BOXAPI_USERNAME", "")
     boxapi_password = getattr(settings, "BOXAPI_PASSWORD", "")
@@ -139,6 +118,7 @@ def _request_profile_via_boxapi(account_id):
     except Exception:
         logger.exception("خطا در درخواست get_profile از BoxAPI")
 
+
 def _download_and_save_profile_picture(connection, pic_url):
     """عکس رو دانلود و توی ImageField ذخیره می‌کنه."""
     try:
@@ -152,6 +132,7 @@ def _download_and_save_profile_picture(connection, pic_url):
         logger.warning("✅ Profile pic saved for @%s", connection.username)
     except Exception:
         logger.exception("خطا در دانلود عکس پروفایل")
+
 
 @login_required(login_url="accounts:login")
 @require_http_methods(["GET", "POST"])
@@ -204,9 +185,9 @@ def connections(request):
     disconnected_count = owner_connections.filter(status="disconnected").count()
 
     total_rules_count = (
-        InstagramConnection.objects
-        .filter(owner=request.user)
-        .aggregate(total=Count("automations"))["total"] or 0
+            InstagramConnection.objects
+            .filter(owner=request.user)
+            .aggregate(total=Count("automations"))["total"] or 0
     )
 
     has_active_subscription = period is not None
@@ -269,9 +250,6 @@ def instagram_connect(request):
     """
     کاربر را به لینک اختصاصی BoxAPI می‌فرستد.
     """
-    import urllib.parse
-    import requests
-    from django.conf import settings
 
     api_key = getattr(settings, "BOXAPI_API_KEY", "")
     base_url = getattr(settings, "BOXAPI_BASE_URL", "https://api.sendbox.chat/api/v1")
@@ -330,8 +308,8 @@ def instagram_connect(request):
         return redirect("windirect:connections")
 
     oauth_url = (
-        data.get("data", {}).get("instagram_oauth_url")
-        or data.get("instagram_oauth_url")
+            data.get("data", {}).get("instagram_oauth_url")
+            or data.get("instagram_oauth_url")
     )
 
     if not oauth_url:
@@ -415,14 +393,6 @@ def instagram_callback(request):
     return redirect("windirect:connections")
 
 
-import json
-import time
-
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-
-
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def instagram_webhook(request):
@@ -465,8 +435,6 @@ def instagram_webhook(request):
             time.monotonic() - started,
         )
 
-        from .webhook_handlers import route_webhook
-
         route_started = time.monotonic()
         success = route_webhook(payload)
 
@@ -506,8 +474,6 @@ def instagram_posts_load(request):
     شروع درخواست لیست پست‌ها از BoxAPI.
     پاسخ آسنکرون از طریق Webhook میاد.
     """
-    from django.core.cache import cache
-    from .boxapi import request_list_posts
 
     connection_id = request.POST.get("connection_id")
     if not connection_id:
@@ -571,7 +537,6 @@ def instagram_posts_status(request):
     """
     بررسی وضعیت لیست پست‌ها (برای polling).
     """
-    from django.core.cache import cache
 
     connection_id = request.GET.get("connection_id")
     if not connection_id:

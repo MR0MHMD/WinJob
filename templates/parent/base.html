@@ -59,11 +59,15 @@
         {% include 'partials/page_loading.html' %}
 
         <header class="navbar navbar-expand-lg navbar-dark header fixed-top" data-scroll-header>
-            {% include 'partials/header.html' %}
+            {% block header_content %}
+                {% include 'partials/header.html' %}
+            {% endblock %}
         </header>
 
         {# ============ سایدبار دسکتاپ ============ #}
-        {% include 'partials/sidebar.html' %}
+        {% block sidebar_content %}
+            {% include 'partials/sidebar.html' %}
+        {% endblock %}
 
         <main class="page-wrapper bg-dark" style="padding: 2.5rem 0 6rem">
             {% if messages %}
@@ -76,12 +80,16 @@
             {% block content %} {% endblock %}
         </main>
 
-        <footer class="footer bg-faded-light mt-3">
-            {% include 'partials/footer.html' %}
-        </footer>
+        {% block footer_wrapper %}
+            <footer class="footer bg-faded-light mt-3">
+                {% block footer_content %}
+                    {% include 'partials/footer.html' %}
+                {% endblock %}
+            </footer>
+        {% endblock %}
 
         <!-- ==================== کانتینر Toast Notifications ==================== -->
-        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090; direction: ltr;">
+        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 20000; direction: ltr;">
             <!-- Toasts به صورت داینامیک اینجا اضافه می‌شن -->
         </div>
         
@@ -296,6 +304,8 @@
                 }
             });
         </script>
+        
+        {% block modals %}{% endblock %}
 
         {% block script %}{% endblock %}
 

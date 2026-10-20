@@ -1,3 +1,5 @@
+# windirect/common/models
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
@@ -7,7 +9,7 @@ class PanelAsset(models.Model):
     """اطلاعات مشترک ابزارهای قابل استفاده در قوانین دایرکت."""
 
     connection = models.ForeignKey(
-        "windirect_connections.InstagramConnection",
+        "connections.InstagramConnection",
         on_delete=models.PROTECT,
         verbose_name=_("حساب اینستاگرام"),
     )

@@ -1,0 +1,182 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'partials/css/sidebar.css' %}">
+
+{% with url_ns=request.resolver_match.namespace url_name=request.resolver_match.url_name %}
+
+<aside class="wj-sidebar" id="wjSidebar" dir="rtl">
+
+    {# ============ برند ============ #}
+    <div class="wj-sidebar-brand">
+        <span class="wj-sidebar-brand-text">وین مارکت</span>
+        <i class="bi bi-bag-heart-fill"></i>
+    </div>
+
+    <nav class="wj-sidebar-nav">
+
+        {# ============ بالا: خانه + پنل پشتیبانی ============ #}
+        <ul class="wj-sidebar-list wj-sidebar-list-support">
+            <li class="wj-sidebar-item">
+                <a href="{% url 'core:home' %}"
+                   class="wj-sidebar-link {% if url_ns == 'core' and url_name == 'home' %}active{% endif %}">
+                    <span class="wj-sidebar-icon"><i class="bi bi-house-door"></i></span>
+                    <span class="wj-sidebar-text">خانه</span>
+                </a>
+            </li>
+
+            {% if request.user.is_authenticated and request.user.has_support_access %}
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'support:dashboard' %}" class="wj-sidebar-link">
+                        <span class="wj-sidebar-icon"><i class="bi bi-shield-lock-fill"></i></span>
+                        <span class="wj-sidebar-text">پنل پشتیبانی</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+
+        {# ============ وین مارکت (شامل داشبورد) ============ #}
+        {% if request.user.is_authenticated %}
+            <div class="wj-sidebar-group">
+                <span class="wj-sidebar-group-title">وین مارکت</span>
+                <ul class="wj-sidebar-list">
+
+                    {# داشبورد - اولین آیتم #}
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'accounts:dashboard_router' %}"
+                           class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'dashboard_router' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-speedometer2"></i></span>
+                            <span class="wj-sidebar-text">داشبورد</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'market:landing' %}"
+                           class="wj-sidebar-link {% if url_ns == 'market' and url_name == 'landing' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+                            <span class="wj-sidebar-text">لیست محصولات</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'market:cart_detail' %}"
+                           class="wj-sidebar-link {% if url_ns == 'market' and url_name == 'cart_detail' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-bag"></i></span>
+                            <span class="wj-sidebar-text">سبد خرید</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a  href="{% url 'market:order_list' %}" class="wj-sidebar-link">
+                            <span class="wj-sidebar-icon"><i class="bi bi-receipt"></i></span>
+                            <span class="wj-sidebar-text">سفارشات من</span>
+                        </a>
+                    </li>
+
+                    {% if request.user.market_role and request.user.market_role != 'buyer' %}
+                        <li class="wj-sidebar-item">
+                            <a href="#" class="wj-sidebar-link">
+                                <span class="wj-sidebar-icon"><i class="bi bi-shop"></i></span>
+                                <span class="wj-sidebar-text">پنل فروشندگی</span>
+                            </a>
+                        </li>
+                        <li class="wj-sidebar-item">
+                            <a href="#" class="wj-sidebar-link">
+                                <span class="wj-sidebar-icon"><i class="bi bi-box-seam"></i></span>
+                                <span class="wj-sidebar-text">محصولات من</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# ============ خدمات ما ============ #}
+        <div class="wj-sidebar-group">
+            <span class="wj-sidebar-group-title">سایر خدمات ما</span>
+            <ul class="wj-sidebar-list">
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:home' %}" class="wj-sidebar-link">
+                        <span class="wj-sidebar-icon"><i class="bi bi-megaphone"></i></span>
+                        <span class="wj-sidebar-text">وین ادز</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:content_production_landing' %}" class="wj-sidebar-link">
+                        <span class="wj-sidebar-icon"><i class="bi bi-camera-reels"></i></span>
+                        <span class="wj-sidebar-text">وین مدیا</span>
+                    </a>
+                </li>
+                <li class="wj-sidebar-item">
+                    <a href="{% url 'core:windirect_landing' %}" class="wj-sidebar-link">
+                        <span class="wj-sidebar-icon"><i class="bi bi-chat-dots"></i></span>
+                        <span class="wj-sidebar-text">وین دایرکت</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        {# ============ پنل من ============ #}
+        {% if request.user.is_authenticated %}
+            <div class="wj-sidebar-group">
+                <span class="wj-sidebar-group-title">پنل من</span>
+                <ul class="wj-sidebar-list">
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'accounts:edit_profile' %}"
+                           class="wj-sidebar-link {% if url_ns == 'accounts' and url_name == 'edit_profile' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-person-gear"></i></span>
+                            <span class="wj-sidebar-text">اطلاعات فردی</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'payment:invoice_list' %}"
+                           class="wj-sidebar-link {% if url_ns == 'payment' and url_name == 'invoice_list' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-receipt"></i></span>
+                            <span class="wj-sidebar-text">فاکتورها</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'tickets:ticket_list' %}"
+                           class="wj-sidebar-link {% if url_ns == 'tickets' %}active{% endif %}">
+                            <span class="wj-sidebar-icon"><i class="bi bi-headset"></i></span>
+                            <span class="wj-sidebar-text">پشتیبانی</span>
+                        </a>
+                    </li>
+
+                    <li class="wj-sidebar-item">
+                        <a href="{% url 'accounts:logout' %}"
+                           class="wj-sidebar-link wj-sidebar-link-danger">
+                            <span class="wj-sidebar-icon"><i class="bi bi-box-arrow-right"></i></span>
+                            <span class="wj-sidebar-text">خروج</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
+
+    </nav>
+</aside>
+
+<style>
+/* رنگ قرمز برای لینک خروج */
+.wj-sidebar-link-danger {
+    color: #f23c49 !important;
+}
+.wj-sidebar-link-danger:hover {
+    background: linear-gradient(135deg, rgba(242, 60, 73, 0.15), rgba(242, 60, 73, 0.08)) !important;
+    color: #f23c49 !important;
+}
+.wj-sidebar-link-danger .wj-sidebar-icon {
+    background: rgba(242, 60, 73, 0.08);
+    color: #f23c49;
+}
+.wj-sidebar-link-danger:hover .wj-sidebar-icon {
+    background: linear-gradient(135deg, #f23c49, #e64a2a);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(242, 60, 73, 0.3);
+}
+</style>
+
+{% endwith %}

@@ -1,9 +1,8 @@
-"""پلن‌ها، دوره‌های دسترسی و سوابق خرید و معرفی وین دایرکت."""
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
 
@@ -390,10 +389,13 @@ class WindirectCoupon(models.Model):
 
     def is_valid(self, now=None):
         """اعتبار کد رو چک می‌کنه."""
+        # ایمپورت داخلی برای جلوگیری از circular import
+        from windirect.subscriptions.services import _as_datetime
+
         now = now or timezone.now()
         if not self.is_active:
             return False
-        if self.expires_at and as_datetime(self.expires_at) <= now:
+        if self.expires_at and _as_datetime(self.expires_at) <= now:
             return False
         if self.max_uses and self.used_count >= self.max_uses:
             return False

@@ -35,10 +35,11 @@ class Wallet(models.Model):
 
 class Invoice(models.Model):
     class Type(models.TextChoices):
-        CAMPAIGN = 'campaign', 'فاکتور کمپین'
-        WALLET = 'wallet', 'فاکتور شارژ کیف پول'
-        WINDIRECT = 'windirect', 'فاکتور اشتراک وین دایرکت'
-        CONTENT_ORDER = 'content_order', 'فاکتور سفارش محتوا'  # ✅ جدید
+        CAMPAIGN = 'campaign', _('فاکتور کمپین')
+        WALLET = 'wallet', _('فاکتور شارژ کیف پول')
+        WINDIRECT = 'windirect', _('فاکتور اشتراک وین دایرکت')
+        CONTENT_ORDER = 'content_order', _('فاکتور سفارش محتوا')
+        MARKET_ORDER = 'market_order', _('فاکتور سفارش وین مارکت')  # ✅ جدید
 
     # ========== فیلدهای اصلی ==========
     type = models.CharField(
@@ -77,8 +78,17 @@ class Invoice(models.Model):
         blank=True
     )
 
+    # ========== ارتباط با سفارش وین مارکت (اختیاری) ==========
+    market_order = models.OneToOneField(
+        'market.Order',
+        on_delete=models.CASCADE,
+        related_name='invoice',
+        verbose_name=_('سفارش وین مارکت'),
+        null=True, blank=True,
+    )
+
     subscription_order = models.OneToOneField(
-        'windirect_subscriptions.SubscriptionOrder',
+        'subscriptions.SubscriptionOrder',
         on_delete=models.PROTECT,
         related_name='invoice',
         null=True, blank=True,
@@ -216,6 +226,17 @@ class Invoice(models.Model):
         verbose_name="آخرین بروزرسانی"
     )
 
+    # ========== مبالغ تفکیکی (برای فاکتورهای وین مارکت) ==========
+    items_total = models.PositiveBigIntegerField(
+        _('جمع کالاها'),
+        default=0,
+        help_text=_('جمع کالاها قبل از هزینه ارسال و تخفیف'),
+    )
+    shipping_cost = models.PositiveBigIntegerField(
+        _('هزینه ارسال'),
+        default=0,
+    )
+
     class Meta:
         verbose_name = "فاکتور"
         verbose_name_plural = "فاکتورها"
@@ -242,6 +263,7 @@ class Invoice(models.Model):
             cls.Type.CAMPAIGN: 'CMP',
             cls.Type.WALLET: 'WAL',
             cls.Type.CONTENT_ORDER: 'CTO',
+            cls.Type.MARKET_ORDER: 'MKT',  # ← جدید
         }
         prefix = prefix_map.get(invoice_type, 'INV')
         return f"{prefix}-{year}{month}{day}-{invoice_id}"
@@ -257,6 +279,12 @@ class Invoice(models.Model):
     @property
     def is_content_order_invoice(self):
         return self.type == self.Type.CONTENT_ORDER
+
+
+    @property
+    def is_market_order_invoice(self):
+        return self.type == self.Type.MARKET_ORDER
+
 
     @property
     def is_commission_paid(self):
@@ -541,6 +569,12 @@ class Transaction(models.Model):
         INFLUENCER_WITHDRAWAL = 'influencer_withdrawal', _('تسویه ناشر')
         CONTENT_TEAM_WITHDRAWAL = 'content_team_withdrawal', _('تسویه تیم محتوا')
 
+        MARKET_ORDER_PAYMENT = 'market_order_payment', _('پرداخت سفارش وین مارکت')
+        MARKET_ORDER_REFUND = 'market_order_refund', _('بازگشت وجه سفارش وین مارکت')
+        MARKET_ORDER_SUPPLIER_PAYMENT = 'market_order_supplier_payment', _('واریز به کیف پول فروشنده')
+
+        SUPPLIER_WITHDRAWAL = 'supplier_withdrawal', _('تسویه فروشنده')
+
         # ===== جدید: کمیسیون =====
         COMMISSION_CEO = 'commission_ceo', _('کمیسیون مدیرعامل')
         COMMISSION_DEVELOPER = 'commission_developer', _('کمیسیون توسعه‌دهنده')
@@ -655,6 +689,10 @@ class Transaction(models.Model):
             self.Type.CAMPAIGN_REFUND,
             self.Type.INFLUENCER_PAYMENT,
             self.Type.TEAM_PAYMENT,
+            # ===== جدید =====
+            self.Type.MARKET_ORDER_REFUND,
+            self.Type.MARKET_ORDER_SUPPLIER_PAYMENT,
+            # ===== کمیسیون‌ها =====
             self.Type.COMMISSION_CEO,
             self.Type.COMMISSION_DEVELOPER,
             self.Type.COMMISSION_PUBLISH_MANAGER,
@@ -668,7 +706,15 @@ class Transaction(models.Model):
         """آیا این تراکنش خروجی است؟"""
         if not self.type:
             return True
-        return self.type in [self.Type.WITHDRAW, self.Type.CAMPAIGN_PAYMENT, self.Type.GATEWAY_PAYMENT, self.Type.SUBSCRIPTION_PAYMENT, self.Type.SUBSCRIPTION_GATEWAY]
+        return self.type in [
+            self.Type.WITHDRAW,
+            self.Type.CAMPAIGN_PAYMENT,
+            self.Type.GATEWAY_PAYMENT,
+            self.Type.SUBSCRIPTION_PAYMENT,
+            self.Type.SUBSCRIPTION_GATEWAY,
+            self.Type.MARKET_ORDER_PAYMENT,
+            self.Type.SUPPLIER_WITHDRAWAL,
+        ]
 
     @property
     def sign_display(self):
@@ -775,6 +821,7 @@ class WithdrawalRequest(models.Model):
     class Type(models.TextChoices):
         INFLUENCER = 'influencer', _('تسویه ناشر')
         CONTENT_TEAM = 'content_team', _('تسویه تیم محتوا')
+        SUPPLIER = 'supplier', _('تسویه فروشنده')
 
     # ارتباط با کاربر و حساب بانکی
     user = models.ForeignKey(

@@ -30,6 +30,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         HUMAN_MEDIA_MANAGER = 'human_media_manager', _('مدیر انسان رسانه')
         REGIONAL_MANAGER = 'regional_manager', _('مدیر استانی')
 
+    class MarketRole(models.TextChoices):
+        BUYER = 'buyer', _('خریدار')
+        SUPPLIER = 'supplier', _('تامین ‌کننده')
+        VENDOR = 'vendor', _('فروشنده')
+
     # ==================== فیلدهای اصلی ====================
     bale_chat_id = models.CharField(
         _('شناسه ربات بله'),
@@ -100,6 +105,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         help_text=_('نقش کاربر در پنل پشتیبانی و دسترسی‌ها')
     )
 
+    market_role = models.CharField(
+        _('نقش در وین ‌مارکت'),
+        max_length=20,
+        choices=MarketRole.choices,
+        default=MarketRole.BUYER,
+        db_index=True,
+        help_text=_('نقش کاربر در بخش فروشگاه وین مارکت')
+    )
+
     # ==================== تاریخ‌ها ====================
     date_joined = jmodels.jDateTimeField(
         _('تاریخ عضویت'),
@@ -162,6 +176,24 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def is_team_member(self):
         """آیا این کاربر عضو تیم تولید محتواست؟"""
         return hasattr(self, "team_member")
+
+    # ==================== نقش های مارکت ====================
+    @property
+    def is_supplier(self):
+        return self.market_role == self.MarketRole.SUPPLIER
+
+    @property
+    def is_vendor(self):
+        return self.market_role == self.MarketRole.VENDOR
+
+    @property
+    def is_buyer(self):
+        return self.market_role == self.MarketRole.BUYER
+
+    @property
+    def can_supply(self):
+        """آیا این کاربر می‌تونه محصول تامین کنه؟"""
+        return self.market_role in [self.MarketRole.SUPPLIER, self.MarketRole.VENDOR]
 
     # ==================== Properties: نقش‌های سازمانی ====================
     @property
@@ -248,6 +280,42 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         # اجرای validation
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class Address(models.Model):
+    """آدرس‌های کاربر — هر کاربر می‌تونه چندین آدرس داشته باشه"""
+    user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name="addresses", verbose_name=_("کاربر"), )
+    title = models.CharField(_("عنوان آدرس"), max_length=50, blank=True, help_text=_("مثلاً: خانه، محل کار"), )
+    province = models.ForeignKey("core.Province", on_delete=models.PROTECT, related_name="addresses", verbose_name=_("استان"), )
+    city = models.ForeignKey("core.City", on_delete=models.PROTECT, related_name="addresses", verbose_name=_("شهر"), )
+    address = models.TextField(_("آدرس دقیق"))
+    plaque = models.CharField(_("پلاک"), max_length=10, blank=True)
+    unit = models.CharField(_("واحد"), max_length=10, blank=True)
+    postal_code = models.CharField(_("کد پستی"), max_length=10, blank=True)
+    is_default = models.BooleanField(_("آدرس پیش‌فرض"), default=False)
+    created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True)
+    updated_at = jmodels.jDateTimeField(_("تاریخ ویرایش"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("آدرس")
+        verbose_name_plural = _("آدرس‌ها")
+        ordering = ["-is_default", "-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.province.name} / {self.city.name}"
+
+    def save(self, *args, **kwargs):
+        # فقط یک آدرس پیش‌فرض برای هر کاربر
+        if self.is_default:
+            Address.objects.filter(user=self.user).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.city and self.province and self.city.province_id != self.province_id:
+            raise ValidationError({
+                "city": _("شهر انتخاب شده با استان مطابقت ندارد.")
+            })
 
 
 class OTPRequest(models.Model):

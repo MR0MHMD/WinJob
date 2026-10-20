@@ -1,0 +1,1089 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}جزئیات سفارش | وین مارکت{% endblock %}
+
+{% block extra_style %}
+<style>
+:root {
+    --mk-primary: #fd5631;
+    --mk-accent: #5d3cf2;
+    --mk-success: #07c98b;
+    --mk-warning: #fdbc31;
+    --mk-danger: #f23c49;
+    --mk-bg: #1f1b2d;
+    --mk-border: rgba(255,255,255,0.08);
+    --mk-muted: rgba(255,255,255,0.6);
+    --mk-dim: rgba(255,255,255,0.4);
+}
+body { background: var(--mk-bg) !important; }
+.page-wrapper { padding: 0 !important; }
+
+/* BREADCRUMB */
+.od-breadcrumb-wrap {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border-bottom: 1px solid var(--mk-border);
+    padding: 1rem 0;
+    margin-top: 4.5rem;
+}
+.od-breadcrumb {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    font-size: 0.85rem; color: var(--mk-dim);
+    list-style: none; padding: 0; margin: 0;
+}
+.od-breadcrumb a { color: var(--mk-muted); text-decoration: none; }
+.od-breadcrumb a:hover { color: var(--mk-primary); }
+.od-breadcrumb .sep { color: rgba(255,255,255,0.2); font-size: 0.7rem; }
+.od-breadcrumb .active { color: #fff; font-weight: 600; }
+
+/* HEADER */
+.od-header {
+    padding: 2rem 0 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.od-header-info { flex: 1; min-width: 0; }
+.od-header-label {
+    color: var(--mk-dim);
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.od-header-label i { color: var(--mk-primary); }
+.od-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin: 0 0 0.4rem;
+    letter-spacing: 0.5px;
+    direction: ltr;
+    text-align: right;
+}
+.od-header-date {
+    color: var(--mk-muted);
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.od-header-date i { color: var(--mk-primary); font-size: 0.75rem; }
+.od-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+}
+.od-back-btn:hover {
+    background: rgba(253,86,49,0.1);
+    border-color: rgba(253,86,49,0.4);
+    color: var(--mk-primary);
+    text-decoration: none;
+}
+
+/* TIMELINE */
+.od-timeline-wrap {
+    padding: 1.75rem 1.5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    margin-bottom: 1.5rem;
+}
+.od-timeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    position: relative;
+}
+.od-tl-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.6rem;
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+}
+.od-tl-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+.od-tl-step.done .od-tl-circle {
+    background: linear-gradient(135deg, #07c98b, #059669);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(7,201,139,0.35);
+}
+.od-tl-step.current .od-tl-circle {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(253,86,49,0.45);
+    animation: odTlPulse 2s infinite;
+}
+@keyframes odTlPulse {
+    0%, 100% { box-shadow: 0 8px 20px rgba(253,86,49,0.45), 0 0 0 0 rgba(253,86,49,0.5); }
+    50%      { box-shadow: 0 8px 20px rgba(253,86,49,0.45), 0 0 0 10px rgba(253,86,49,0); }
+}
+.od-tl-label {
+    color: var(--mk-dim);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+.od-tl-step.done .od-tl-label,
+.od-tl-step.current .od-tl-label { color: #fff; }
+.od-tl-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    align-self: flex-start;
+    margin-top: 24px;
+    border-radius: 2px;
+    position: relative;
+    z-index: 1;
+}
+.od-tl-line.done { background: linear-gradient(90deg, #07c98b, #059669); }
+
+/* CANCELED BANNER */
+.od-canceled {
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    background: rgba(242,60,73,0.08);
+    border: 1px solid rgba(242,60,73,0.25);
+    color: var(--mk-danger);
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+}
+.od-canceled i { font-size: 1.3rem; }
+
+/* GRID */
+.od-grid {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 380px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* CARD */
+.od-card {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    margin-bottom: 1.25rem;
+}
+.od-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0 0 1.15rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--mk-border);
+}
+.od-card-title i { color: var(--mk-primary); font-size: 1.15rem; }
+.od-card-title .badge-count {
+    margin-right: auto;
+    padding: 0.2rem 0.7rem;
+    border-radius: 50rem;
+    background: rgba(253,86,49,0.15);
+    color: var(--mk-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+/* ADDRESS */
+.od-address-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.5rem;
+}
+.od-addr-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.od-addr-row.full { grid-column: 1 / -1; }
+.od-addr-label {
+    color: var(--mk-dim);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.od-addr-label i { color: var(--mk-primary); font-size: 0.75rem; }
+.od-addr-value {
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    font-weight: 500;
+}
+
+/* PACKAGE */
+.od-package {
+    padding: 1.15rem 1.25rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--mk-border);
+    margin-bottom: 0.85rem;
+}
+.od-package:last-child { margin-bottom: 0; }
+.od-package-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+}
+.od-package-head > i {
+    color: var(--mk-primary);
+    font-size: 1.15rem;
+}
+.od-package-name {
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+.od-package-count {
+    margin-right: auto;
+    color: var(--mk-dim);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.od-ship-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 50rem;
+    background: rgba(253,188,49,0.12);
+    border: 1px solid rgba(253,188,49,0.3);
+    color: var(--mk-warning);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.od-ship-badge i { font-size: 0.85rem; }
+
+.od-item {
+    display: grid;
+    grid-template-columns: 56px minmax(0,1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.05);
+}
+.od-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.od-item:first-child { padding-top: 0; }
+.od-item-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.05));
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.od-item-img img { width: 100%; height: 100%; object-fit: cover; }
+.od-item-img i { color: rgba(255,255,255,0.15); font-size: 1.4rem; }
+.od-item-info { min-width: 0; }
+.od-item-title {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 0.25rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.od-item-meta {
+    color: var(--mk-dim);
+    font-size: 0.72rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.od-item-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+.od-item-meta i { color: var(--mk-primary); font-size: 0.7rem; }
+.od-item-price {
+    color: var(--mk-primary);
+    font-size: 0.92rem;
+    font-weight: 800;
+    text-align: left;
+    white-space: nowrap;
+}
+.od-item-price .currency {
+    font-size: 0.68rem;
+    color: var(--mk-muted);
+    font-weight: 500;
+    margin-right: 0.15rem;
+}
+
+/* NOTE */
+.od-note {
+    padding: 1rem 1.15rem;
+    border-radius: 0.85rem;
+    background: rgba(60,118,242,0.06);
+    border: 1px solid rgba(60,118,242,0.2);
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+.od-note-empty {
+    padding: 1rem 1.15rem;
+    border-radius: 0.85rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed var(--mk-border);
+    color: var(--mk-dim);
+    font-size: 0.82rem;
+    font-style: italic;
+    text-align: center;
+}
+
+/* SIDEBAR */
+.od-sidebar {
+    position: sticky;
+    top: 6rem;
+}
+.od-side-card {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    margin-bottom: 1rem;
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.4);
+}
+.od-side-title {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin: 0 0 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--mk-border);
+}
+.od-side-title i { color: var(--mk-primary); }
+
+.od-total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.65rem 0;
+    color: var(--mk-muted);
+    font-size: 0.85rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+}
+.od-total-row:last-of-type { border-bottom: 0; }
+.od-total-row.grand {
+    margin-top: 0.5rem;
+    padding: 1rem 0 0.5rem;
+    border-top: 2px solid rgba(253,86,49,0.2);
+    border-bottom: 0;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+}
+.od-total-row.grand .val {
+    color: var(--mk-primary);
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+.od-total-row .afterpay {
+    color: var(--mk-warning);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+/* CONFIRM BUTTON */
+.od-confirm-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1rem 1.5rem;
+    margin-top: 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #07c98b, #059669);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 12px 30px rgba(7,201,139,0.35);
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
+}
+.od-confirm-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 45px rgba(7,201,139,0.55);
+    color: #fff;
+}
+.od-confirm-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.od-confirm-btn .spinner {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: odSpin 0.8s linear infinite;
+}
+.od-confirm-btn.loading .spinner { display: inline-block; }
+.od-confirm-btn.loading .icon { display: none; }
+@keyframes odSpin { to { transform: rotate(360deg); } }
+
+.od-delivered-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 1.15rem;
+    border-radius: 0.85rem;
+    background: rgba(7,201,139,0.08);
+    border: 1px solid rgba(7,201,139,0.25);
+    color: var(--mk-success);
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-top: 1rem;
+}
+.od-delivered-badge i { font-size: 1.3rem; }
+
+/* INVOICE LINK */
+.od-invoice-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 0.85rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--mk-border);
+    color: #fff;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.od-invoice-link:hover {
+    background: rgba(253,86,49,0.08);
+    border-color: rgba(253,86,49,0.35);
+    color: var(--mk-primary);
+    text-decoration: none;
+}
+.od-invoice-link .left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.od-invoice-link .left i { color: var(--mk-primary); font-size: 1.15rem; }
+.od-invoice-link .num {
+    color: var(--mk-dim);
+    font-size: 0.72rem;
+    direction: ltr;
+    margin-top: 0.15rem;
+}
+
+/* CONFIRM DELIVERY MODAL */
+#odConfirmModal .modal-content {
+    background: linear-gradient(180deg, #1f1b2d, #17141f);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    overflow: hidden;
+}
+#odConfirmModal .modal-header {
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 0;
+    justify-content: center;
+    position: relative;
+}
+#odConfirmModal .btn-close {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    filter: invert(1) grayscale(1) brightness(2);
+    opacity: 0.6;
+}
+#odConfirmModal .btn-close:hover { opacity: 1; }
+#odConfirmModal .modal-body {
+    padding: 0 1.75rem 1rem;
+    text-align: center;
+}
+#odConfirmModal .modal-footer {
+    padding: 1rem 1.75rem 1.75rem;
+    border-top: 0;
+    display: flex;
+    gap: 0.6rem;
+}
+
+.od-confirm-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.15rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(7,201,139,0.15), rgba(5,150,105,0.1));
+    border: 2px solid rgba(7,201,139,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--mk-success);
+    animation: odConfirmPulse 2s infinite;
+}
+@keyframes odConfirmPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(7,201,139,0.4); }
+    50%      { box-shadow: 0 0 0 16px rgba(7,201,139,0); }
+}
+.od-confirm-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 900;
+    margin-bottom: 0.6rem;
+}
+.od-confirm-text {
+    color: var(--mk-muted);
+    font-size: 0.9rem;
+    line-height: 1.9;
+    margin-bottom: 1rem;
+}
+.od-confirm-text strong { color: var(--mk-primary); }
+.od-confirm-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(253,188,49,0.08);
+    border: 1px solid rgba(253,188,49,0.25);
+    color: var(--mk-warning);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    text-align: right;
+    margin-top: 1rem;
+}
+.od-confirm-warning i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.od-modal-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.85rem;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 0;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+.od-modal-btn.primary {
+    background: linear-gradient(135deg, #07c98b, #059669);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(7,201,139,0.35);
+}
+.od-modal-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(7,201,139,0.55);
+    color: #fff;
+}
+.od-modal-btn.primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.od-modal-btn.ghost {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.od-modal-btn.ghost:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+.od-modal-btn .spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: odSpin 0.8s linear infinite;
+}
+.od-modal-btn.loading .spinner { display: inline-block; }
+.od-modal-btn.loading .btn-text { display: none; }
+
+/* RESPONSIVE */
+@media (max-width: 991.98px) {
+    .od-grid { grid-template-columns: 1fr; }
+    .od-sidebar { position: static; }
+}
+@media (max-width: 575.98px) {
+    .od-header { padding: 1.5rem 0 1rem; }
+    .od-title { font-size: 1.15rem; }
+    .od-card { padding: 1.15rem; }
+    .od-address-grid { grid-template-columns: 1fr; }
+    .od-timeline { gap: 0.25rem; }
+    .od-tl-circle { width: 38px; height: 38px; font-size: 0.9rem; }
+    .od-tl-label { font-size: 0.65rem; }
+    .od-tl-line { margin-top: 19px; }
+    .od-item { grid-template-columns: 48px 1fr; gap: 0.75rem; }
+    .od-item-price { grid-column: 2; text-align: right; font-size: 0.82rem; }
+    .od-item-img { width: 48px; height: 48px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="od-breadcrumb-wrap">
+    <div class="container">
+        <ol class="od-breadcrumb">
+            <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li><a href="{% url 'market:order_list' %}">سفارشات من</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li class="active">
+                {% if order.number %}{{ order.number }}{% else %}WM-{{ order.pk }}{% endif %}
+            </li>
+        </ol>
+    </div>
+</div>
+
+<section style="padding-bottom: 4rem;">
+    <div class="container">
+
+        <!-- ==================== Header ==================== -->
+        <div class="od-header">
+            <div class="od-header-info">
+                <div class="od-header-label">
+                    <i class="bi bi-hash"></i>
+                    شماره سفارش
+                </div>
+                <h1 class="od-title">
+                    {% if order.number %}{{ order.number }}{% else %}WM-{{ order.pk }}{% endif %}
+                </h1>
+                <div class="od-header-date">
+                    <i class="bi bi-calendar3"></i>
+                    {{ order.created_at }}
+                </div>
+            </div>
+            <a href="{% url 'market:order_list' %}" class="od-back-btn">
+                <i class="bi bi-arrow-right"></i>
+                بازگشت به سفارشات
+            </a>
+        </div>
+
+        <!-- ==================== Canceled Banner ==================== -->
+        {% if is_canceled %}
+            <div class="od-canceled">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div>
+                    این سفارش
+                    {% if order.status == 'canceled' %}لغو{% else %}مرجوع{% endif %}
+                    شده است.
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- ==================== Timeline ==================== -->
+        {% if not is_canceled %}
+            <div class="od-timeline-wrap">
+                <div class="od-timeline">
+                    {% for step in steps %}
+                        <div class="od-tl-step
+                            {% if step.done %}done{% endif %}
+                            {% if not step.done and forloop.counter == 3 and order.status == 'paid' %}current{% endif %}">
+                            <div class="od-tl-circle">
+                                {% if step.done %}
+                                    <i class="bi bi-check-lg"></i>
+                                {% else %}
+                                    <i class="bi {{ step.icon }}"></i>
+                                {% endif %}
+                            </div>
+                            <div class="od-tl-label">{{ step.label }}</div>
+                        </div>
+                        {% if not forloop.last %}
+                            <div class="od-tl-line {% if step.done and steps|length > forloop.counter %}done{% endif %}"></div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- ==================== Grid ==================== -->
+        <div class="od-grid">
+
+            <!-- ==================== MAIN ==================== -->
+            <div>
+
+                <!-- ========== Address ========== -->
+                {% if order.order_address %}
+                    <div class="od-card">
+                        <h3 class="od-card-title">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            آدرس گیرنده
+                        </h3>
+
+                        <div class="od-address-grid">
+                            <div class="od-addr-row">
+                                <span class="od-addr-label">
+                                    <i class="bi bi-person-fill"></i>
+                                    نام گیرنده
+                                </span>
+                                <span class="od-addr-value">{{ order.order_address.receiver_name }}</span>
+                            </div>
+                            <div class="od-addr-row">
+                                <span class="od-addr-label">
+                                    <i class="bi bi-telephone-fill"></i>
+                                    شماره تماس
+                                </span>
+                                <span class="od-addr-value" style="direction:ltr; text-align:right;">
+                                    {{ order.order_address.receiver_phone }}
+                                </span>
+                            </div>
+                            <div class="od-addr-row full">
+                                <span class="od-addr-label">
+                                    <i class="bi bi-geo"></i>
+                                    آدرس کامل
+                                </span>
+                                <span class="od-addr-value">
+                                    {{ order.order_address.province.name }} —
+                                    {{ order.order_address.city.name }} —
+                                    {{ order.order_address.address }}
+                                    {% if order.order_address.plaque %} — پلاک {{ order.order_address.plaque }}{% endif %}
+                                    {% if order.order_address.unit %} — واحد {{ order.order_address.unit }}{% endif %}
+                                </span>
+                            </div>
+                            {% if order.order_address.postal_code %}
+                                <div class="od-addr-row">
+                                    <span class="od-addr-label">
+                                        <i class="bi bi-mailbox"></i>
+                                        کد پستی
+                                    </span>
+                                    <span class="od-addr-value" style="direction:ltr; text-align:right;">
+                                        {{ order.order_address.postal_code }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- ========== Packages ========== -->
+                <div class="od-card">
+                    <h3 class="od-card-title">
+                        <i class="bi bi-box-seam-fill"></i>
+                        بسته‌های ارسال
+                        <span class="badge-count">{{ supplier_groups|length }} بسته</span>
+                    </h3>
+
+                    {% for grp in supplier_groups %}
+                        <div class="od-package">
+                            <div class="od-package-head">
+                                <i class="bi bi-shop"></i>
+                                <span class="od-package-name">{{ grp.supplier_name }}</span>
+                                <span class="od-package-count">{{ grp.items|length }} آیتم</span>
+
+                                {% if grp.shipping %}
+                                    <span class="od-ship-badge">
+                                        {% if grp.shipping.shipping_method.icon %}
+                                            <i class="{{ grp.shipping.shipping_method.icon }}"></i>
+                                        {% else %}
+                                            <i class="bi bi-truck"></i>
+                                        {% endif %}
+                                        {{ grp.shipping.method_name }}
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            {% for item in grp.items %}
+                                <div class="od-item">
+                                    <div class="od-item-img">
+                                        {% if item.product.main_image %}
+                                            <img src="{{ item.product.main_image.url }}" alt="{{ item.product_title }}">
+                                        {% else %}
+                                            <i class="bi bi-bag"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="od-item-info">
+                                        <div class="od-item-title">{{ item.product_title }}</div>
+                                        <div class="od-item-meta">
+                                            {% if item.variant_info %}
+                                                <span>
+                                                    <i class="bi bi-tag-fill"></i>
+                                                    {{ item.variant_info }}
+                                                </span>
+                                            {% endif %}
+                                            <span>
+                                                <i class="bi bi-123"></i>
+                                                {{ item.quantity }} ×
+                                                {{ item.unit_price|intcomma }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="od-item-price">
+                                        {{ item.subtotal|intcomma }}
+                                        <span class="currency">تومان</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- ========== Note ========== -->
+                <div class="od-card">
+                    <h3 class="od-card-title">
+                        <i class="bi bi-chat-left-text-fill"></i>
+                        یادداشت شما
+                    </h3>
+
+                    {% if order.customer_note %}
+                        <div class="od-note">{{ order.customer_note }}</div>
+                    {% else %}
+                        <div class="od-note-empty">
+                            یادداشتی برای این سفارش ثبت نکردی.
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- ==================== SIDEBAR ==================== -->
+            <div class="od-sidebar">
+
+                <!-- ========== Financial ========== -->
+                <div class="od-side-card">
+                    <h4 class="od-side-title">
+                        <i class="bi bi-receipt"></i>
+                        خلاصه مالی
+                    </h4>
+
+                    <div class="od-total-row">
+                        <span>جمع کالاها</span>
+                        <span>{{ items_total|intcomma }} ت</span>
+                    </div>
+                    <div class="od-total-row">
+                        <span>هزینه ارسال</span>
+                        <span class="afterpay">پس‌کرایه 🚚</span>
+                    </div>
+                    <div class="od-total-row grand">
+                        <span>مبلغ پرداختی</span>
+                        <span class="val">{{ grand_total|intcomma }} ت</span>
+                    </div>
+
+                    {% if order.payment_ref_id %}
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed rgba(255,255,255,0.06);">
+                            <div style="color:var(--mk-dim);font-size:0.72rem;font-weight:700;margin-bottom:0.35rem;">
+                                <i class="bi bi-shield-check" style="color:var(--mk-success);"></i>
+                                کد پیگیری پرداخت
+                            </div>
+                            <div style="color:#fff;font-size:0.85rem;font-weight:700;direction:ltr;text-align:right;">
+                                {{ order.payment_ref_id }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ========== Invoice Link ========== -->
+                {% if invoice %}
+                    <a href="{% url 'payment:invoice_detail' invoice.id %}" class="od-invoice-link">
+                        <div class="left">
+                            <i class="bi bi-file-earmark-text-fill"></i>
+                            <div>
+                                <div>مشاهده فاکتور</div>
+                                <div class="num">{{ invoice.invoice_number }}</div>
+                            </div>
+                        </div>
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                {% endif %}
+
+                <!-- ========== Confirm Delivery ========== -->
+                <div class="od-side-card" style="margin-top:1rem;">
+                    {% if can_confirm_delivery %}
+                        <h4 class="od-side-title">
+                            <i class="bi bi-bag-check-fill"></i>
+                            تأیید دریافت
+                        </h4>
+                        <p style="color:var(--mk-muted);font-size:0.82rem;line-height:1.8;margin-bottom:0;">
+                            اگه مرسوله به دستت رسیده و از کیفیتش مطمئن شدی، تأیید کن تا
+                            پرداخت به فروشنده انجام بشه.
+                        </p>
+                        <button type="button" class="od-confirm-btn" id="odOpenConfirmModal">
+                            <i class="bi bi-bag-check-fill icon"></i>
+                            <span>مرسوله به دستم رسید</span>
+                        </button>
+                    {% elif order.delivered_confirmed_at %}
+                        <div class="od-delivered-badge">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <div>
+                                <div>تحویل تأیید شد</div>
+                                <div style="font-size:0.72rem;opacity:0.8;margin-top:0.2rem;">
+                                    {{ order.delivered_confirmed_at }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block modals %}
+
+    <!-- ============================================================
+         CONFIRM DELIVERY MODAL
+         ============================================================ -->
+    <div class="modal fade" id="odConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="od-confirm-icon">
+                        <i class="bi bi-bag-check-fill"></i>
+                    </div>
+                    <h5 class="od-confirm-title">تأیید دریافت مرسوله</h5>
+                    <p class="od-confirm-text">
+                        آیا مطمئنی که مرسوله سفارش
+                        <strong>{% if order.number %}{{ order.number }}{% else %}WM-{{ order.pk }}{% endif %}</strong>
+                        به دستت رسیده و از کیفیتش راضی هستی؟
+                    </p>
+                    <div class="od-confirm-warning">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <div>
+                            بعد از تأیید، مبلغ سفارش به کیف پول فروشنده‌ها واریز می‌شود
+                            و این عملیات <strong>قابل بازگشت نیست</strong>.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="od-modal-btn ghost" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                        انصراف
+                    </button>
+                    <button type="button" class="od-modal-btn primary" id="odConfirmDeliveryBtn">
+                        <span class="spinner"></span>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span class="btn-text">بله، تأیید می‌کنم</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    function getCsrf() {
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        return '';
+    }
+
+    // ============================================
+    // Confirm Delivery Modal
+    // ============================================
+    const openConfirmBtn = document.getElementById('odOpenConfirmModal');
+    const confirmModalEl = document.getElementById('odConfirmModal');
+    const confirmDeliveryBtn = document.getElementById('odConfirmDeliveryBtn');
+    let confirmModal = null;
+
+    openConfirmBtn && openConfirmBtn.addEventListener('click', function() {
+        if (!confirmModal) {
+            confirmModal = new bootstrap.Modal(confirmModalEl);
+        }
+        confirmModal.show();
+    });
+
+    confirmDeliveryBtn && confirmDeliveryBtn.addEventListener('click', function() {
+        confirmDeliveryBtn.classList.add('loading');
+        confirmDeliveryBtn.disabled = true;
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'market:order_confirm_delivery' order.pk %}";
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCsrf();
+
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+})();
+</script>
+{% endblock %}

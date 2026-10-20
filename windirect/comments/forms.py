@@ -175,8 +175,8 @@ class AutomationForm(forms.ModelForm):
             ):
                 # چک کن یا URL جدید داره یا فایل قدیمی
                 instance_url = ""
-                if self.instance.pk:
-                    instance_url = self.instance.direct_message_file_url or ""
+                if self.instance.pk and self.instance.media_upload:
+                    instance_url = self.instance.media_upload.boxapi_url
 
                 has_url = bool(file_url) or bool(instance_url)
 

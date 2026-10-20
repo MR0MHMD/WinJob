@@ -445,3 +445,52 @@ def create_subscription_invoice(order):
         invoice.invoice_number = Invoice.generate_invoice_number(invoice.pk, invoice.created_at, Invoice.Type.WINDIRECT)
         invoice.save(update_fields=['invoice_number'])
     return invoice
+
+
+def create_market_order_invoice(order):
+    """
+    ساخت فاکتور برای سفارش وین مارکت
+
+    فیلدهایی که پر می‌شن:
+    - market_order, items_total, total_amount, payable_amount
+    - is_paid, paid_at (در صورت پرداخت)
+
+    توجه:
+    - shipping_cost صفر می‌مونه چون پس‌کرایه است
+    - discount_amount صفر می‌مونه چون تخفیف‌ها از قبل روی unit_price اعمال شدن
+    """
+    # محاسبه items_total از OrderItem ها
+    items_total = sum(
+        item.subtotal for item in order.items.all()
+    )
+
+    invoice, created = Invoice.objects.get_or_create(
+        market_order=order,
+        defaults={
+            'type': Invoice.Type.MARKET_ORDER,
+            'user': order.user,
+            'items_total': items_total,
+            'shipping_cost': 0,
+            'discount_amount': 0,
+            'total_amount': items_total,
+            'payable_amount': items_total,
+            'description': f"فاکتور سفارش وین مارکت #{order.id}",
+            'is_paid': False,
+        }
+    )
+
+    if created:
+        invoice.invoice_number = Invoice.generate_invoice_number(
+            invoice.id,
+            invoice.created_at,
+            Invoice.Type.MARKET_ORDER
+        )
+        invoice.save(update_fields=['invoice_number'])
+    else:
+        # اگه قبلاً ساخته شده بود، مقادیر رو آپدیت کن
+        invoice.items_total = items_total
+        invoice.total_amount = items_total
+        invoice.payable_amount = items_total
+        invoice.save(update_fields=['items_total', 'total_amount', 'payable_amount'])
+
+    return invoice

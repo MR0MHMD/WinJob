@@ -1,0 +1,569 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'partials/css/header.css' %}">
+
+<style>
+/* ============================================================
+   هدر شفاف در بالای صفحه + بک‌گراند هنگام اسکرول
+   ============================================================ */
+.navbar-dark.header {
+    background-color: transparent !important;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.navbar-dark.header.navbar-stuck {
+    background-color: #1f1b2d !important;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   دکمه‌های آیکونی هدر (زنگوله + سبد) — هم‌اندازه و یکسان
+   ============================================================ */
+.hdr-icon-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    padding: 0;
+}
+.hdr-icon-btn:hover {
+    background: rgba(253, 86, 49, 0.12);
+    border-color: rgba(253, 86, 49, 0.4);
+    color: #fd5631;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+.hdr-icon-btn i {
+    font-size: 1.05rem;
+}
+.hdr-icon-btn .hdr-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 50rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #1f1b2d;
+    box-shadow: 0 4px 10px rgba(253, 86, 49, 0.5);
+}
+
+</style>
+
+<div class="container px-4">
+    <div class="d-flex align-items-center justify-content-between w-100 py-2">
+
+        {# ============ راست: لوگو ============ #}
+        <div class="d-flex align-items-center">
+            <a href="{% url 'core:home' %}" class="logo-wrapper d-flex align-items-center text-decoration-none">
+                <div class="logo-icon-wrapper">
+                    <img src="{% static 'finder/img/logo/logo.webp' %}" width="100" alt="WinJob" class="logo-img">
+                </div>
+            </a>
+        </div>
+
+        {# ============ چپ: زنگوله + سبد + پروفایل + همبرگر ============ #}
+        <div class="d-flex align-items-center gap-3">
+
+            <div class="d-none d-lg-flex align-items-center gap-2">
+                {% if not user.is_authenticated %}
+                    <a href="{% url 'accounts:login' %}"
+                       class="btn btn-primary rounded-pill px-4 py-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-box-arrow-in-right fs-sm"></i>
+                        <span class="btn-login-text">ورود / ثبت نام</span>
+                        <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                {% else %}
+
+                    {# ---- زنگوله نوتیف ---- #}
+                    <a href="{% url 'notifications:list' %}" class="hdr-icon-btn" title="اعلان‌ها">
+                        <i class="bi bi-bell"></i>
+                        {% if unread_notifications_count %}
+                            <span class="hdr-badge">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </a>
+
+                    {# ---- سبد خرید (لینک به صفحه سبد) ---- #}
+                    <a href="{% url 'market:cart_detail' %}" class="hdr-icon-btn" title="سبد خرید">
+                        <i class="bi bi-bag"></i>
+                        <span class="hdr-badge" data-cart-count
+                              style="{% if not cart_items_count %}display:none;{% endif %}">
+                            {{ cart_items_count|default:0 }}
+                        </span>
+                    </a>
+
+                    {# ---- دراپ‌داون پروفایل ---- #}
+                    <div class="dropdown dropdown-hover">
+                        <a href="{% url 'accounts:dashboard_router' %}"
+                           class="btn user-avatar-only p-0 border-0"
+                           role="button"
+                           aria-haspopup="true"
+                           aria-expanded="false"
+                           id="userProfileDropdown">
+                            <div class="user-avatar-wrapper">
+                                {% if user.avatar %}
+                                    <img src="{{ user.avatar.url }}" class="user-avatar-img" alt="User">
+                                {% else %}
+                                    <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-person text-white fs-sm"></i>
+                                    </div>
+                                {% endif %}
+                                <span class="user-status online"></span>
+                            </div>
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end mt-2 p-2"
+                            style="min-width: 260px"
+                            aria-labelledby="userProfileDropdown">
+
+                            {# --- هدر: آواتار + نام + شماره --- #}
+                            <li class="px-3 py-3 text-center">
+                                <div class="user-avatar-wrapper mb-2 mx-auto d-inline-block">
+                                    {% if user.avatar %}
+                                        <img src="{{ user.avatar.url }}"
+                                             class="user-avatar-img user-avatar-img-drop" alt="User">
+                                    {% else %}
+                                        <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                                             style="width: 60px; height: 60px;">
+                                            <i class="bi bi-person text-white fs-4"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <h6 class="text-white mb-0 mt-2">{{ user.nickname|default:"کاربر" }}</h6>
+                                <span class="text-success fs-xs">{{ user.phone_number }}</span>
+                            </li>
+
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# --- کیف پول --- #}
+                            {% if request.user.wallet %}
+                                <li class="px-3 py-2">
+                                    <a class="text-decoration-none d-flex align-items-center gap-2"
+                                       href="{% url 'payment:wallet_dashboard' %}">
+                                        <i class="bi bi-wallet2 text-primary fs-5"></i>
+                                        <div>
+                                            {% if request.user.wallet.balance == 0 %}
+                                                <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
+                                            {% else %}
+                                                <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
+                                                <span class="fw-bold text-white">{{ request.user.wallet.balance }} تومان</span>
+                                            {% endif %}
+                                        </div>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# --- خروج --- #}
+                            <li>
+                                <a class="dropdown-item rounded-3"
+                                   style="color: var(--fi-danger) !important;"
+                                   href="{% url 'accounts:logout' %}">
+                                    <i class="bi bi-box-arrow-right me-2"></i>خروج
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+
+            {# ---- موبایل: همبرگر ---- #}
+            <button class="btn d-lg-none p-0 border-0 hamburger-btn" type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#mobileMenu">
+                <div class="hamburger-icon">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================================================================
+     OFFCANVAS موبایل (نسخه مارکت)
+     ================================================================== -->
+<div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="mobileMenu">
+    <div class="offcanvas-header border-bottom border-light">
+        <h5 class="offcanvas-title text-white">
+            <img src="{% static 'finder/img/logo/logo.webp' %}" height="130" width="130" alt="WinJob" class="me-2">
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body" style="padding-bottom: 2rem">
+        <nav class="mobile-nav">
+            <ul class="nav flex-column gap-1">
+
+                {# ---- پنل پشتیبانی (اگه دسترسی داشت) ---- #}
+                {% if request.user.is_authenticated and request.user.has_support_access %}
+                    <li class="nav-item">
+                        <a class="nav-link mobile-nav-link d-flex align-items-center gap-3 text-warning"
+                           href="{% url 'support:dashboard' %}">
+                            <i class="bi bi-shield-lock-fill fs-5"></i>
+                            <span>پنل پشتیبانی</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# ---- داشبورد ---- #}
+                {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
+                           href="{% url 'accounts:dashboard_router' %}">
+                            <i class="bi bi-speedometer2 fs-5"></i>
+                            <span>داشبورد</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# ---- لیست محصولات ---- #}
+                <li class="nav-item">
+                    <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
+                       href="{% url 'market:landing' %}">
+                        <i class="bi bi-grid-3x3-gap-fill fs-5"></i><span>لیست محصولات</span>
+                    </a>
+                </li>
+
+                {# ---- سبد خرید ---- #}
+                {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
+                           href="{% url 'market:cart_detail' %}">
+                            <i class="bi bi-bag fs-5"></i><span>سبد خرید</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# ---- سفارشات من ---- #}
+                <li class="nav-item">
+                    <a href="{% url 'market:order_list' %}" class="nav-link mobile-nav-link d-flex align-items-center gap-3">
+                        <i class="bi bi-receipt fs-5"></i><span>سفارشات من</span>
+                    </a>
+                </li>
+
+                {# ---- خدمات ما ---- #}
+                <li class="nav-item">
+                    <a class="nav-link mobile-nav-link d-flex align-items-center gap-3"
+                       data-bs-toggle="collapse" href="#mobileServices">
+                        <i class="bi bi-grid fs-5"></i><span>خدمات ما</span>
+                        <i class="bi bi-chevron-down ms-auto fs-xs transition-transform"></i>
+                    </a>
+                    <div class="collapse" id="mobileServices">
+                        <div class="ps-4 py-2">
+                            <a href="#" class="mobile-sub-link">
+                                <i class="bi bi-megaphone me-2"></i>وین ادز
+                            </a>
+                            <a href="#" class="mobile-sub-link">
+                                <i class="bi bi-camera-reels me-2"></i>وین مدیا
+                            </a>
+                            <a href="#" class="mobile-sub-link">
+                                <i class="bi bi-chat-dots me-2"></i>وین دایرکت
+                            </a>
+                            <a href="{% url 'market:landing' %}" class="mobile-sub-link">
+                                <i class="bi bi-shop-window me-2"></i>وین مارکت
+                            </a>
+                        </div>
+                    </div>
+                </li>
+
+                {# ---- لینک‌های فروشنده ---- #}
+                {% if user.is_authenticated and user.market_role and user.market_role != 'buyer' %}
+                    <li class="nav-item">
+                        <a class="nav-link mobile-nav-link d-flex align-items-center gap-3 text-primary" href="#">
+                            <i class="bi bi-shop fs-5"></i><span>پنل فروشندگی</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link mobile-nav-link d-flex align-items-center gap-3" href="#">
+                            <i class="bi bi-box-seam fs-5"></i><span>محصولات من</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+
+            <hr class="border-light my-4">
+
+            <div class="mobile-user-section">
+                {% if not user.is_authenticated %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-person fs-1 text-muted mb-3 d-block"></i>
+                        <p class="text-muted mb-3">برای استفاده از تمام امکانات وارد شوید</p>
+                        <a href="{% url 'accounts:login' %}" class="btn btn-primary rounded-pill px-5 py-2 w-100">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>ورود / ثبت نام
+                        </a>
+                    </div>
+                {% else %}
+                    {# ---- پروفایل ---- #}
+                    <div class="text-center mb-4">
+                        <div class="user-avatar-wrapper mb-3 mx-auto d-inline-block">
+                            {% if user.avatar %}
+                                <img src="{{ user.avatar.url }}" class="user-avatar-img user-avatar-img-drop"
+                                     alt="User" width="70" height="70">
+                            {% else %}
+                                <div class="user-avatar-placeholder bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                                     style="width: 70px; height: 70px;">
+                                    <i class="bi bi-person text-white fs-3"></i>
+                                </div>
+                            {% endif %}
+                            <span class="user-status online" style="width: 14px; height: 14px;"></span>
+                        </div>
+                        <h6 class="text-white mb-1">{{ user.nickname|default:"کاربر" }}</h6>
+                        <span class="text-success fs-xs">{{ user.phone_number }}</span>
+
+                        <div class="d-flex justify-content-center gap-2 mt-3">
+                            <a href="{% url 'notifications:list' %}"
+                               class="hdr-icon-btn position-relative">
+                                <i class="bi bi-bell"></i>
+                                {% if unread_notifications_count %}
+                                    <span class="hdr-badge">{{ unread_notifications_count }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'market:cart_detail' %}"
+                               class="hdr-icon-btn position-relative">
+                                <i class="bi bi-bag"></i>
+                                {% if cart_items_count %}
+                                    <span class="hdr-badge">{{ cart_items_count }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <hr class="border-light my-2">
+
+                    {# ---- کیف پول ---- #}
+                    {% if request.user.wallet %}
+                        <div class="px-3 py-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-wallet2 text-primary fs-5"></i>
+                                <div>
+                                    <a class="text-decoration-none" href="{% url 'payment:wallet_dashboard' %}">
+                                        {% if request.user.wallet.balance == 0 %}
+                                            <span class="text-light fs-sm d-block opacity-75">کیف پول شما خالی است</span>
+                                        {% else %}
+                                            <span class="text-light fs-sm d-block opacity-75">اعتبار کیف پول</span>
+                                            <span class="fw-bold text-white">{{ request.user.wallet.balance }} تومان</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <hr class="border-light my-2">
+
+                    {# ---- لیست لینک‌ها ---- #}
+                    <div class="list-group list-group-flush bg-transparent">
+                        <a href="{% url 'core:home' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                            <i class="bi bi-house-door me-2"></i>خانه
+                        </a>
+                        <a href="{% url 'accounts:edit_profile' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                            <i class="bi bi-person-gear me-2"></i>اطلاعات فردی
+                        </a>
+                        <a href="{% url 'payment:invoice_list' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                            <i class="bi bi-receipt me-2"></i>فاکتورها
+                        </a>
+                        <a href="{% url 'tickets:ticket_list' %}"
+                           class="list-group-item bg-transparent text-white border-light rounded-3 mb-1">
+                            <i class="bi bi-headset me-2"></i>پشتیبانی
+                        </a>
+                        <a href="{% url 'accounts:logout' %}"
+                           class="list-group-item bg-transparent text-danger border-light rounded-3">
+                            <i class="bi bi-box-arrow-right me-2"></i>خروج
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </nav>
+    </div>
+</div>
+
+<!-- ==================================================================
+     GLOBAL CART JS
+     ================================================================== -->
+<script>
+(function () {
+    'use strict';
+
+    window.MKCart = window.MKCart || {};
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const cookies = decodeURIComponent(document.cookie).split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length);
+        }
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        return input ? input.value : '';
+    }
+    window.MKCart.getCsrfToken = getCsrfToken;
+
+    function toPersianNum(n) {
+        return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    }
+    window.MKCart.toPersianNum = toPersianNum;
+
+    function updateCartBadge(count) {
+        document.querySelectorAll('[data-cart-count]').forEach(el => {
+            el.textContent = toPersianNum(count);
+            el.style.display = count > 0 ? '' : 'none';
+        });
+    }
+    window.MKCart.updateCartBadge = updateCartBadge;
+
+    // ---------- Modal (lazy init) ----------
+    let miniModal = null;
+
+    function ensureMiniModal() {
+        if (miniModal) return miniModal;
+        const el = document.getElementById('mkMiniCartModal');
+        if (el && window.bootstrap) {
+            miniModal = new bootstrap.Modal(el);
+        }
+        return miniModal;
+    }
+
+    function loadMiniCart() {
+        const miniBody = document.getElementById('mkMiniBody');
+        const miniFooter = document.getElementById('mkMiniFooter');
+        const miniCountBadge = document.getElementById('mkMiniCountBadge');
+        const miniTotalVal = document.getElementById('mkMiniTotalVal');
+        if (!miniBody) return;
+
+        fetch('/market/cart/mini/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.text())
+        .then(html => {
+            miniBody.innerHTML = html;
+            const countEl = miniBody.querySelector('[data-mini-count]');
+            const totalEl = miniBody.querySelector('[data-mini-total]');
+            if (countEl && miniCountBadge) {
+                miniCountBadge.textContent = toPersianNum(countEl.dataset.miniCount);
+            }
+            if (totalEl && miniTotalVal) {
+                miniTotalVal.innerHTML =
+                    toPersianNum(parseInt(totalEl.dataset.miniTotal, 10).toLocaleString('en-US')) +
+                    ' <span class="currency">تومان</span>';
+            }
+            const hasItems = miniBody.querySelectorAll('.mk-mini-item').length > 0;
+            if (miniFooter) miniFooter.style.display = hasItems ? '' : 'none';
+
+            miniBody.querySelectorAll('.mk-mini-item-remove').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.itemId;
+                    removeMiniItem(id, btn.closest('.mk-mini-item'));
+                });
+            });
+        })
+        .catch(() => {
+            miniBody.innerHTML =
+                '<div class="mk-mini-empty"><i class="bi bi-x-circle"></i>' +
+                '<h6>خطا</h6><p>مشکلی پیش آمد</p></div>';
+        });
+    }
+
+    function removeMiniItem(itemId, itemEl) {
+        fetch(`/market/cart/remove/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const miniBody = document.getElementById('mkMiniBody');
+                const miniFooter = document.getElementById('mkMiniFooter');
+                const miniCountBadge = document.getElementById('mkMiniCountBadge');
+                const miniTotalVal = document.getElementById('mkMiniTotalVal');
+
+                itemEl.style.transition = 'all 0.3s ease';
+                itemEl.style.opacity = '0';
+                itemEl.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    itemEl.remove();
+                    updateCartBadge(data.cart_count);
+                    if (miniTotalVal) {
+                        miniTotalVal.innerHTML =
+                            toPersianNum(parseInt(data.cart_total, 10).toLocaleString('en-US')) +
+                            ' <span class="currency">تومان</span>';
+                    }
+                    if (miniCountBadge) miniCountBadge.textContent = toPersianNum(data.cart_count);
+                    if (miniBody && miniBody.querySelectorAll('.mk-mini-item').length === 0) {
+                        if (miniFooter) miniFooter.style.display = 'none';
+                        loadMiniCart();
+                    }
+                }, 300);
+            }
+        })
+        .catch(() => {});
+    }
+
+    function openMiniCart() {
+        const m = ensureMiniModal();
+        if (!m) {
+            // fallback اگه bootstrap نبود
+            console.warn('Bootstrap Modal not available');
+            return;
+        }
+        m.show();
+        loadMiniCart();
+    }
+
+    window.MKCart.openMiniCart = openMiniCart;
+    window.MKCart.loadMiniCart = loadMiniCart;
+})();
+
+// ---- پروفایل دراپ‌داون ----
+document.addEventListener('DOMContentLoaded', function () {
+    const profileDropdown = document.querySelector('.dropdown-hover');
+    if (!profileDropdown) return;
+
+    const dropdownToggle = profileDropdown.querySelector('a[role="button"]');
+    const dropdownMenu = profileDropdown.querySelector('.dropdown-menu');
+    let hideTimeout;
+
+    dropdownToggle.addEventListener('mouseenter', function () {
+        clearTimeout(hideTimeout);
+        const d = bootstrap.Dropdown.getInstance(dropdownToggle);
+        d ? d.show() : new bootstrap.Dropdown(dropdownToggle).show();
+    });
+    dropdownMenu.addEventListener('mouseenter', function () {
+        clearTimeout(hideTimeout);
+        const d = bootstrap.Dropdown.getInstance(dropdownToggle);
+        if (d) d.show();
+    });
+    profileDropdown.addEventListener('mouseleave', function (e) {
+        const rt = e.relatedTarget;
+        if (rt && (profileDropdown.contains(rt) || rt.closest('.dropdown-hover'))) return;
+        hideTimeout = setTimeout(function () {
+            const d = bootstrap.Dropdown.getInstance(dropdownToggle);
+            if (d) d.hide();
+        }, 300);
+    });
+    dropdownMenu.addEventListener('click', function () {
+        clearTimeout(hideTimeout);
+    });
+});
+</script>

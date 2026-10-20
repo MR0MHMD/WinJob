@@ -1,8 +1,9 @@
 {% extends 'parent/base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}خانه{% endblock %}
-{% block description %}وینجاب؛ مدیریت کمپین‌های تبلیغاتی، تولید محتوا و آشنایی با وین دایرکت، راهکار در حال توسعه برای پاسخ‌گویی به تعامل‌های اینستاگرام.{% endblock %}
+{% block description %}وینجاب؛ مدیریت کمپین‌های تبلیغاتی، تولید محتوا و آشنایی با وین دایرکت، راهکار در حال توسعه برای
+    پاسخ‌گویی به تعامل‌های اینستاگرام.{% endblock %}
 
 {% block extra_style %}
     <link rel="stylesheet" href="{% static 'core/css/pages/index/base.css' %}">
@@ -11,6 +12,7 @@
     <link rel="stylesheet" href="{% static 'core/css/pages/index/testimonials.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/pages/index/responsive.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/pages/windirect.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/pages/index/win_market.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -47,11 +49,11 @@
                 </div>
                 <div>
                     <div class="platform-image-wrapper">
-                        <img 
-                            id="platformHeroImage"
-                            src="{% static 'landing/bale/bale-hero.webp' %}"
-                            alt="پلتفرم تبلیغاتی"
-                            class="platform-hero-image"
+                        <img
+                                id="platformHeroImage"
+                                src="{% static 'landing/bale/bale-hero.webp' %}"
+                                alt="پلتفرم تبلیغاتی"
+                                class="platform-hero-image"
                         >
                     </div>
                 </div>
@@ -159,8 +161,8 @@
             </div>
         </div>
     </section>
-    
-        <!-- ========== هوش مصنوعی ========== -->
+
+    <!-- ========== هوش مصنوعی ========== -->
     <section class="ai-section">
         <div class="container">
             <div class="text-center mb-5">
@@ -226,19 +228,19 @@
                 <div class="ai-features">
                     <div class="ai-feature-card scroll-reveal" data-ai-delay="0">
                         <div class="ai-feature-num">۰۱</div>
-                        
+
                         <div class="d-flex align-items-center gap-2">
                             <div class="ai-feature-icon ai-icon-primary">
                                 <i class="bi bi-search"></i>
                             </div>
                             <h3 class="ai-feature-title">بررسی هوشمند محتوا</h3>
                         </div>
-                        
+
                         <p class="ai-feature-desc">
                             هوش مصنوعی هر محتوا رو قبل از تأیید نهایی، از نظر کیفیت، انطباق
                             با قوانین و تناسب با برند بررسی می‌کنه.
                         </p>
-                        
+
                         <div class="ai-feature-tag">
                             <span>✓ تشخیص تخلف</span>
                             <span>✓ بررسی کیفیت</span>
@@ -327,17 +329,284 @@
         </div>
     </section>
 
+    <!-- ========== وین مارکت ========== -->
+    <section class="wm-section" aria-labelledby="wm-title">
+        <div class="container">
+
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="component-badge mb-4">
+                    <span>وین مارکت</span>
+                </div>
+                <h2 class="wm-title text-white mb-3" id="wm-title">
+                    هر <span class="wm-gradient">۳ روز</span>، یک پیشنهاد شگفت‌انگیز
+                </h2>
+                <p class="wm-subtitle">
+                    به‌جای سردرگمی بین هزاران محصول، ما فقط بهترین‌ها رو انتخاب می‌کنیم — هر ۳ روز یک پیشنهاد ویژه با
+                    تخفیف باورنکردنی و ارسال مستقیم توسط فروشنده تاییدشده.
+                </p>
+            </div>
+
+            <!-- Main Showcase -->
+            <div class="wm-showcase">
+
+                <!-- Content -->
+                <div class="wm-content">
+                <span class="wm-live-badge">
+                    <span class="dot"></span>
+                    پیشنهاد ویژه فعال
+                    {% if market_campaign.campaign_end_ts %}
+                        · <span id="wmCountdown"
+                                data-end="{{ market_campaign.campaign_end_ts|unlocalize }}">—</span>
+                    {% endif %}
+                </span>
+
+                    <h3 class="wm-content-title">
+                        {% if market_campaign %}
+                            کمپین شگفت‌انگیز وین مارکت
+                        {% else %}
+                            به‌زودی کمپین بعدی
+                        {% endif %}
+                    </h3>
+
+                    <p class="wm-content-desc">
+                        {% if market_campaign %}
+                            هر ۳ روز، یک محصول با کیفیت تضمین‌شده و قیمت باورنکردنی، همراه با ارسال مستقیم توسط فروشنده
+                            تاییدشده — بدون واسطه، بدون نگرانی.
+                        {% else %}
+                            کمپین فعالی در حال حاضر وجود ندارد، اما به‌زودی محصول شگفت‌انگیز بعدی رو اینجا معرفی
+                            می‌کنیم.
+                        {% endif %}
+                    </p>
+
+                    <ul class="wm-features">
+                        <li>
+                            <span class="wm-feature-icon"><i class="bi bi-box-seam-fill"></i></span>
+                            <div>
+                                <strong>ارسال مستقیم توسط فروشنده</strong>
+                                <span>سفارش از انبار فروشنده، با کد رهگیری</span>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="wm-feature-icon"><i class="bi bi-credit-card-2-front-fill"></i></span>
+                            <div>
+                                <strong>پرداخت اقساطی</strong>
+                                <span>ویژه بازنشستگان تامین اجتماعی و گروه‌های خاص</span>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="wm-feature-icon"><i class="bi bi-patch-check-fill"></i></span>
+                            <div>
+                                <strong>ضمانت اصالت کالا</strong>
+                                <span>همه فروشندگان توسط وین‌جاب تایید شده‌اند</span>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div class="wm-actions">
+                        {% if market_campaign %}
+                            <a href="{% url 'market:landing' %}"
+                               class="wm-btn">
+                                مشاهده بیشتر
+                                <i class="bi bi-arrow-left"></i>
+                                <span class="wm-btn-shine"></span>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'market:landing' %}" class="wm-btn">
+                                ورود به وین مارکت
+                                <i class="bi bi-arrow-left"></i>
+                                <span class="wm-btn-shine"></span>
+                            </a>
+                        {% endif %}
+                        <span class="wm-note">
+                        <i class="bi bi-clock-history"></i>
+                            {% if market_campaign %}فرصت محدود{% else %}به‌زودی{% endif %}
+                    </span>
+                    </div>
+                </div>
+
+                <!-- Visual -->
+                <div class="wm-visual" id="wmVisual">
+                    <div class="wm-visual-glow"></div>
+
+                    {% if market_campaign %}
+                        <!-- ===== کارت محصول واقعی ===== -->
+                        <div class="wm-product-card" id="wmProductCard">
+
+                            <div class="wm-product-badge">
+                                <i class="bi bi-fire"></i>
+                                پیشنهاد ویژه
+                            </div>
+
+                            {% if market_campaign.product.discount_percent > 0 %}
+                                <div class="wm-discount-tag">
+                                    <span class="value">{{ market_campaign.product.discount_percent }}٪</span>
+                                    <span class="label">تخفیف</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="wm-product-img">
+                                {% if market_campaign.product.main_image %}
+                                    <img src="{{ market_campaign.product.main_image.url }}"
+                                         alt="{{ market_campaign.product.title }}"
+                                         class="wm-product-real-image">
+                                {% else %}
+                                    <div class="wm-product-icon">
+                                        <i class="bi bi-bag-heart-fill"></i>
+                                    </div>
+                                    <div class="wm-product-rings">
+                                        <div class="ring ring-1"></div>
+                                        <div class="ring ring-2"></div>
+                                        <div class="ring ring-3"></div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="wm-product-info">
+                                <div class="wm-product-cat">
+                                    {% if market_campaign.product.category %}
+                                        {{ market_campaign.product.category.name }}
+                                    {% else %}
+                                        محصول شگفت‌انگیز
+                                    {% endif %}
+                                </div>
+                                <div class="wm-product-name">{{ market_campaign.product.title }}</div>
+
+                                <div class="wm-product-price">
+                                    {% if market_campaign.product.discount_price %}
+                                        <span class="price-old">{{ market_campaign.product.base_price }}</span>
+                                        <span class="price-new">
+                                    {{ market_campaign.product.discount_price }}
+                                    <small>تومان</small>
+                                </span>
+                                    {% else %}
+                                        <span class="price-new">
+                                    {{ market_campaign.product.base_price }}
+                                    <small>تومان</small>
+                                </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if market_campaign.stock or market_campaign.sold %}
+                                    <div class="wm-product-progress">
+                                        <div class="wm-progress-bar"
+                                             style="width: {{ market_campaign.progress }}%"></div>
+                                    </div>
+                                    <div class="wm-progress-label">
+                                        <span>{{ market_campaign.progress }}٪ فروش رفته</span>
+                                        <span>
+                                {% if market_campaign.stock %}
+                                    فقط {{ market_campaign.stock }} عدد
+                                {% else %}
+                                    آخرین فرصت
+                                {% endif %}
+                            </span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Floating Badges -->
+                        <div class="wm-float wm-float-1">
+                            <div class="wm-float-icon primary"><i class="bi bi-truck"></i></div>
+                            <div class="wm-float-text">
+                                <strong>ارسال سریع</strong>
+                                <span>
+                            {% if market_campaign.product.supplier.brand_name %}
+                                توسط {{ market_campaign.product.supplier.brand_name }}
+                            {% else %}
+                                توسط فروشنده
+                            {% endif %}
+                        </span>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        <!-- ===== حالت بدون کمپین ===== -->
+                        <div class="wm-product-card" id="wmProductCard">
+                            <div class="wm-product-badge">
+                                <i class="bi bi-hourglass-split"></i>
+                                به‌زودی
+                            </div>
+
+                            <div class="wm-product-img">
+                                <div class="wm-product-icon">
+                                    <i class="bi bi-bag-heart-fill"></i>
+                                </div>
+                                <div class="wm-product-rings">
+                                    <div class="ring ring-1"></div>
+                                    <div class="ring ring-2"></div>
+                                    <div class="ring ring-3"></div>
+                                </div>
+                            </div>
+
+                            <div class="wm-product-info">
+                                <div class="wm-product-cat">در حال آماده‌سازی</div>
+                                <div class="wm-product-name">پیشنهاد ویژه بعدی</div>
+                                <div class="wm-product-price">
+                                    <span class="price-new">به‌زودی <small>می‌رسد</small></span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="wm-float wm-float-2">
+                        <div class="wm-float-icon success"><i class="bi bi-shield-check"></i></div>
+                        <div class="wm-float-text">
+                            <strong>ضمانت اصالت</strong>
+                            <span>۱۰۰٪ اورجینال</span>
+                        </div>
+                    </div>
+
+                    <div class="wm-float wm-float-3">
+                        <div class="wm-float-icon accent"><i class="bi bi-headset"></i></div>
+                        <div class="wm-float-text">
+                            <strong>پشتیبانی ۲۴/۷</strong>
+                            <span>همیشه در دسترس</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Trust Strip -->
+            <div class="wm-trust">
+                <div class="wm-trust-card scroll-reveal">
+                    <div class="wm-trust-icon"><i class="bi bi-truck"></i></div>
+                    <h4>ارسال مستقیم</h4>
+                    <p>توسط فروشنده تایید شده</p>
+                </div>
+                <div class="wm-trust-card scroll-reveal">
+                    <div class="wm-trust-icon"><i class="bi bi-credit-card-fill"></i></div>
+                    <h4>پرداخت اقساطی</h4>
+                    <p>ویژه بازنشستگان تامین اجتماعی</p>
+                </div>
+                <div class="wm-trust-card scroll-reveal">
+                    <div class="wm-trust-icon"><i class="bi bi-patch-check-fill"></i></div>
+                    <h4>ضمانت اصالت</h4>
+                    <p>۱۰۰٪ اورجینال</p>
+                </div>
+                <div class="wm-trust-card scroll-reveal">
+                    <div class="wm-trust-icon"><i class="bi bi-headset"></i></div>
+                    <h4>پشتیبانی ۲۴/۷</h4>
+                    <p>همیشه کنارتیم</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ========== وین دایرکت ========== -->
     <section class="wd-home wd-shell" aria-labelledby="wd-home-title">
         <div class="container">
             <div class="component-badge mt-5">
-            <span>وین دایرکت</span>
-        </div>
+                <span>وین دایرکت</span>
+            </div>
             <div class="wd-home-panel" data-wd-reveal>
                 <div class="wd-home-copy">
                     <span class="wd-kicker"><i class="bi bi-chat-square-dots" aria-hidden="true"></i> تازه در وینجاب · وین دایرکت</span>
                     <h2 id="wd-home-title">وقتی مخاطب کامنت می‌گذارد، <span>گفت‌وگو تازه شروع می‌شود.</span></h2>
-                    <p>وین دایرکت برای ساخت مسیر پاسخ‌گویی به تعامل‌های اینستاگرام طراحی شده است: کلیدواژه را تعریف کنید، پاسخ مناسب را آماده کنید و نتیجهٔ هر اجرا را در یک مسیر روشن ببینید.</p>
+                    <p>وین دایرکت برای ساخت مسیر پاسخ‌گویی به تعامل‌های اینستاگرام طراحی شده است: کلیدواژه را تعریف
+                        کنید، پاسخ مناسب را آماده کنید و نتیجهٔ هر اجرا را در یک مسیر روشن ببینید.</p>
                     <div class="wd-home-points" aria-label="ویژگی‌های در حال توسعه">
                         <span><i class="bi bi-check2-circle" aria-hidden="true"></i> قوانین کلیدواژه</span>
                         <span><i class="bi bi-check2-circle" aria-hidden="true"></i> پاسخ متناسب با هر پست</span>
@@ -345,7 +614,8 @@
                     </div>
                     <div class="wd-home-actions">
                         <a href="{% url 'core:windirect_landing' %}"
-                           class="wd-button wd-button-primary">آشنایی با وین دایرکت <i class="bi bi-arrow-left" aria-hidden="true"></i></a>
+                           class="wd-button wd-button-primary">آشنایی با وین دایرکت <i class="bi bi-arrow-left"
+                                                                                       aria-hidden="true"></i></a>
                         <span class="wd-availability">اتصال و ارسال واقعی در حال آماده‌سازی است</span>
                     </div>
                 </div>
@@ -353,11 +623,15 @@
                     <div class="wd-orbit wd-orbit-one"></div>
                     <div class="wd-orbit wd-orbit-two"></div>
                     <div class="wd-home-flow">
-                        <div class="wd-flow-item"><span class="wd-flow-icon wd-flow-comment"><i class="bi bi-chat-left-text"></i></span><span>«قیمت این محصول؟»</span></div>
+                        <div class="wd-flow-item"><span class="wd-flow-icon wd-flow-comment"><i
+                                class="bi bi-chat-left-text"></i></span><span>«قیمت این محصول؟»</span></div>
                         <span class="wd-flow-line"><i></i></span>
-                        <div class="wd-flow-item wd-flow-match"><span class="wd-flow-icon"><i class="bi bi-stars"></i></span><span>کلیدواژه: قیمت</span><i class="bi bi-check-circle-fill wd-check"></i></div>
+                        <div class="wd-flow-item wd-flow-match"><span class="wd-flow-icon"><i
+                                class="bi bi-stars"></i></span><span>کلیدواژه: قیمت</span><i
+                                class="bi bi-check-circle-fill wd-check"></i></div>
                         <span class="wd-flow-line"><i></i></span>
-                        <div class="wd-flow-item"><span class="wd-flow-icon wd-flow-reply"><i class="bi bi-send"></i></span><span>پاسخ آماده شد</span></div>
+                        <div class="wd-flow-item"><span class="wd-flow-icon wd-flow-reply"><i
+                                class="bi bi-send"></i></span><span>پاسخ آماده شد</span></div>
                     </div>
                 </div>
             </div>
@@ -465,8 +739,8 @@
             </div>
         </div>
     </section>
-    
-            <!-- ========== تولید محتوا (سرویس مستقل) ========== -->
+
+    <!-- ========== تولید محتوا (سرویس مستقل) ========== -->
     <section class="content-production-section py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -544,7 +818,8 @@
                     <div class="content-card-content">
                         <h3 class="content-card-title">تیم‌های حرفه‌ای وینجاب</h3>
                         <p class="content-card-desc">
-                            با بیش از <strong class="text-primary">{{ total_teams|default:"۰" }}</strong> تیم متخصص تولید محتوا،
+                            با بیش از <strong class="text-primary">{{ total_teams|default:"۰" }}</strong> تیم متخصص
+                            تولید محتوا،
                             هر نوع محتوایی که نیاز داری رو با کیفیت و سرعت بالا تحویل می‌گیری.
                         </p>
                         <div class="content-card-tags">
@@ -556,7 +831,8 @@
             </div>
 
             <div class="text-center mt-5">
-                <a href="{% url 'core:content_production_landing' %}" class="btn btn-outline-gradient rounded-pill px-5">
+                <a href="{% url 'core:content_production_landing' %}"
+                   class="btn btn-outline-gradient rounded-pill px-5">
                     مشاهده بیشتر<i class="fi-arrow-left ms-1"></i>
                 </a>
             </div>
@@ -697,4 +973,5 @@
     <script src="{% static 'core/js/pages/index/slider_platforms.js' %}"></script>
     <script src="{% static 'core/js/pages/index/slider_testimonials.js' %}"></script>
     <script src="{% static 'core/js/pages/index/channels_drag.js' %}"></script>
+    <script src="{% static 'core/js/pages/index/win_market.js' %}"></script>
 {% endblock %}

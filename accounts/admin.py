@@ -14,7 +14,7 @@ from django_jalali.admin.filters import JDateFieldListFilter
 from payment.admin import TransactionInline
 from payment.models import Transaction
 from core.utils.admin_utils import format_datetime
-from .models import CustomUser, OTPRequest
+from .models import CustomUser, OTPRequest, Address
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 from .inline_admin import AdvertiserProfileInline, InfluencerProfileInline
 
@@ -431,6 +431,15 @@ class CustomUserAdmin(UserAdmin):
         if form.instance:
             from payment.models import Wallet
             Wallet.objects.get_or_create(user=form.instance)
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ("user", "province", "city", "is_default", "created_at")
+    list_filter = ("is_default", "province")
+    search_fields = ("user__phone_number", "user__nickname", "address", "postal_code")
+    autocomplete_fields = ("user", "province", "city")
+    list_editable = ("is_default",)
 
 
 # ==================== مدیریت OTP ====================

@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('payment', '0012_alter_transaction_type'),
-        ('windirect_subscriptions', '0001_initial'),
+        ('subscriptions', '0001_initial'),
     ]
 
     operations = [

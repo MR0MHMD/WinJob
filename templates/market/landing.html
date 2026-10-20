@@ -1,0 +1,1796 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+
+{% block title %}وین مارکت | فروشگاه هوشمند وین‌جاب{% endblock %}
+{% block description %}وین مارکت - هر ۳ روز یک محصول شگفت‌انگیز، ارسال مستقیم توسط فروشنده، پرداخت اقساطی{% endblock %}
+
+{% block extra_style %}
+<style>
+/* ============================================================
+   BASE VARIABLES — LIGHT THEME (with your own palette)
+   ============================================================ */
+:root {
+    --mk-primary: #fd5631;
+    --mk-primary-dark: #e64a2a;
+    --mk-accent: #5d3cf2;
+    --mk-blue: #3c76f2;
+    --mk-success: #07c98b;
+    --mk-warning: #fdbc31;
+    --mk-danger: #f23c49;
+    --mk-bg: #f9f8fa;
+    --mk-bg-2: #f5f4f8;
+    --mk-bg-card: #ffffff;
+    --mk-border: #efecf3;
+    --mk-text: #1f1b2d;
+    --mk-muted: #666276;
+    --mk-dim: #9691a4;
+    --mk-radius: 1.25rem;
+    --mk-shadow: 0 20px 40px -10px rgba(31, 27, 45, 0.08);
+    --mk-glow: 0 0 40px rgba(253, 86, 49, 0.15);
+}
+
+body.bg-dark,
+main.page-wrapper.bg-dark {
+    background: var(--mk-bg) !important;
+    color: var(--mk-text) !important;
+    overflow-x: hidden;
+}
+
+/* ============================================================
+   HERO CAMPAIGN
+   ============================================================ */
+.mk-hero {
+    min-height: 80vh;
+    padding: 4rem 0 5rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: transparent;
+}
+.mk-hero-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.mk-hero-bg .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.28;
+    animation: blobFloat 18s infinite ease-in-out;
+    transition: transform 0.6s ease-out;
+}
+.mk-blob-1 { width:500px; height:500px; background:radial-gradient(circle,#fd5631,transparent 70%); top:-150px; right:-100px; }
+.mk-blob-2 { width:600px; height:600px; background:radial-gradient(circle,#5d3cf2,transparent 70%); bottom:-200px; left:-150px; animation-delay:3s; }
+.mk-blob-3 { width:400px; height:400px; background:radial-gradient(circle,#3c76f2,transparent 70%); top:40%; left:40%; animation-delay:6s; }
+@keyframes blobFloat {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%     { transform: translate(50px,-60px) scale(1.1); }
+    66%     { transform: translate(-40px,40px) scale(0.95); }
+}
+.mk-grid-overlay {
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(31,27,45,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31,27,45,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+}
+
+.mk-campaign-badge i { font-size: 1.2rem; animation: flameFlicker 1.5s infinite; }
+@keyframes flameFlicker {
+    0%,100% { transform: scale(1); filter: brightness(1); }
+    50%     { transform: scale(1.15); filter: brightness(1.3); }
+}
+@keyframes pulseRing {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+.mk-product-visual {
+    position: relative; width: 100%; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+}
+.mk-glow-ring {
+    position: absolute; inset: 5%; border-radius: 50%;
+    background: conic-gradient(from 0deg, #fd5631, #5d3cf2, #3c76f2, #fd5631);
+    filter: blur(60px); opacity: 0.30;
+    animation: rotate 10s linear infinite;
+}
+@keyframes rotate { to { transform: rotate(360deg); } }
+.mk-product-image, .mk-product-placeholder {
+    position: relative; z-index: 2;
+    max-width: 85%; max-height: 85%;
+    border-radius: 2rem; object-fit: cover;
+    filter: drop-shadow(0 30px 60px rgba(31,27,45,0.15));
+}
+.mk-product-placeholder {
+    width: 60%; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(253,86,49,0.10), rgba(93,60,242,0.10));
+    border: 2px dashed rgba(31,27,45,0.15);
+    color: rgba(31,27,45,0.35); font-size: 5rem;
+}
+.mk-float { animation: floatY 4s ease-in-out infinite; }
+@keyframes floatY {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-20px); }
+}
+.mk-discount-badge {
+    position: absolute; top: 5%; left: 5%;
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff; z-index: 5;
+    box-shadow: 0 10px 30px rgba(253,86,49,0.35);
+    animation: pulseScale 2s ease-in-out infinite;
+}
+.mk-discount-badge .percent { font-size: 1.5rem; font-weight: 900; line-height: 1; }
+.mk-discount-badge .label { font-size: 0.7rem; margin-top: 2px; }
+@keyframes pulseScale {
+    0%,100% { transform: scale(1); }
+    50%     { transform: scale(1.08); }
+}
+
+/* ============================================================
+   PRODUCT GALLERY (thumbnails)
+   ============================================================ */
+.mk-product-gallery {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+    padding: 0 0.5rem;
+}
+.mk-gallery-thumb {
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 2px solid var(--mk-border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+    position: relative;
+}
+.mk-gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+.mk-gallery-thumb:hover {
+    border-color: rgba(253,86,49,0.5);
+    transform: translateY(-2px);
+}
+.mk-gallery-thumb.is-active {
+    border-color: var(--mk-primary);
+    box-shadow: 0 0 0 3px rgba(253,86,49,0.18);
+}
+
+@media (max-width: 575.98px) {
+    .mk-product-gallery { gap: 0.5rem; margin-top: 1rem; }
+    .mk-gallery-thumb { width: 60px; height: 60px; border-radius: 0.6rem; }
+}
+
+.mk-hero-title {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 900; line-height: 1.3;
+}
+.mk-hero-desc { color: var(--mk-muted); font-size: 1.05rem; line-height: 1.8; }
+
+.mk-timer-wrap {
+    display: inline-block; padding: 1.25rem 1.5rem;
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    border-radius: 1.25rem;
+    box-shadow: 0 4px 20px rgba(31,27,45,0.05);
+}
+.mk-timer-label {
+    color: var(--mk-muted); font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.4rem;
+}
+.mk-timer { display: flex; align-items: center; gap: 0.5rem; direction: ltr; }
+.mk-timer-unit {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 60px; padding: 0.5rem;
+    background: linear-gradient(145deg, rgba(253,86,49,0.08), rgba(93,60,242,0.06));
+    border: 1px solid rgba(253,86,49,0.20);
+    border-radius: 0.75rem;
+}
+.mk-timer-unit .num {
+    font-size: 1.75rem; font-weight: 900; color: var(--mk-text);
+    font-variant-numeric: tabular-nums; line-height: 1;
+}
+.mk-timer-unit .lbl { font-size: 0.7rem; color: var(--mk-dim); margin-top: 0.35rem; }
+.mk-timer-sep { color: rgba(31,27,45,0.3); font-size: 1.5rem; font-weight: 900; }
+
+.mk-old-price { color: var(--mk-dim); text-decoration: line-through; font-size: 1rem; margin-bottom: 0.35rem; }
+.mk-new-price {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 900; color: var(--mk-primary);
+    display: flex; align-items: baseline; gap: 0.4rem;
+    text-shadow: 0 0 30px rgba(253,86,49,0.15);
+}
+.mk-new-price .currency { font-size: 1rem; color: var(--mk-muted); font-weight: 500; }
+
+.mk-progress-track {
+    height: 8px; background: rgba(31,27,45,0.08);
+    border-radius: 50rem; overflow: hidden; position: relative;
+}
+.mk-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #fd5631, #fdbc31);
+    border-radius: 50rem; position: relative; transition: width 1s ease;
+}
+.mk-progress-fill::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    animation: shimmer 2s infinite;
+}
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* ============================================================
+   INSTALLMENT INFO BOX (4 installments from pension)
+   ============================================================ */
+.mk-installment-box {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, rgba(7,201,139,0.06), rgba(60,118,242,0.05)), #ffffff;
+    border: 1.5px solid rgba(7,201,139,0.25);
+    box-shadow: 0 10px 30px -10px rgba(7,201,139,0.15);
+    position: relative;
+    overflow: hidden;
+}
+.mk-installment-box::before {
+    content: "";
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(7,201,139,0.10), transparent 60%);
+    pointer-events: none;
+}
+.mk-installment-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1rem;
+}
+.mk-installment-header-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #07c98b, #059869);
+    color: #fff;
+    font-size: 1.2rem;
+    box-shadow: 0 6px 16px rgba(7,201,139,0.30);
+}
+.mk-installment-title {
+    color: var(--mk-text);
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0 0 0.25rem;
+    line-height: 1.4;
+}
+.mk-installment-subtitle {
+    color: var(--mk-muted);
+    font-size: 0.82rem;
+    margin: 0;
+    line-height: 1.5;
+}
+.mk-installment-body { position: relative; z-index: 1; }
+.mk-installment-calc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.85rem;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(7,201,139,0.15);
+    margin-bottom: 0.85rem;
+}
+.mk-installment-cell { flex: 1; text-align: center; }
+.mk-installment-cell .label {
+    display: block;
+    color: var(--mk-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.mk-installment-cell .value {
+    display: inline-block;
+    color: var(--mk-text);
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1.1;
+}
+.mk-installment-cell.highlight .value { color: var(--mk-success); }
+.mk-installment-cell .currency {
+    color: var(--mk-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.15rem;
+}
+.mk-installment-times {
+    color: var(--mk-dim);
+    font-size: 1.2rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.mk-installment-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    color: var(--mk-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin: 0;
+}
+.mk-installment-note i {
+    color: var(--mk-success);
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+.mk-installment-last {
+    display: block;
+    color: var(--mk-dim);
+    font-size: 0.75rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    .mk-installment-box { padding: 1rem; }
+    .mk-installment-header-icon { width: 38px; height: 38px; font-size: 1.05rem; }
+    .mk-installment-title { font-size: 0.92rem; }
+    .mk-installment-calc { padding: 0.75rem 0.5rem; gap: 0.5rem; }
+    .mk-installment-cell .value { font-size: 1.05rem; }
+}
+
+.mk-btn {
+    display: inline-flex; align-items: center; gap: 0.75rem;
+    padding: 1rem 2.5rem; border-radius: 1rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff; font-weight: 800; font-size: 1.05rem;
+    text-decoration: none; position: relative; overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(253,86,49,0.30);
+    border: 0; cursor: pointer;
+}
+.mk-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(253,86,49,0.45);
+    color: #fff;
+}
+.mk-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+.mk-btn-shine {
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: btnShine 3s infinite;
+}
+@keyframes btnShine { 0%,50% { left: -100%; } 100% { left: 100%; } }
+
+.mk-trust-mini {
+    display: flex; flex-wrap: wrap; gap: 1.25rem;
+    color: var(--mk-dim); font-size: 0.8rem;
+}
+.mk-trust-mini span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.mk-trust-mini i { color: var(--mk-primary); }
+
+/* ============================================================
+   SECTION HELPERS
+   ============================================================ */
+.mk-section { padding: 4rem 0; position: relative; }
+.mk-section-header { max-width: 700px; margin: 0 auto 3rem; text-align: center; }
+.mk-section-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 1.25rem; border-radius: 50rem;
+    background: rgba(253,86,49,0.08);
+    border: 1px solid rgba(253,86,49,0.25);
+    color: var(--mk-primary);
+    font-size: 0.85rem; font-weight: 700;
+}
+.mk-section-title {
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+    font-weight: 900; line-height: 1.3; color: var(--mk-text); margin-top: 1rem;
+}
+.mk-gradient-text {
+    background: linear-gradient(135deg, #fd5631 0%, #5d3cf2 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.mk-section-subtitle { color: var(--mk-muted); font-size: 1rem; line-height: 1.8; margin-top: 1rem; }
+
+/* ============================================================
+   TRUST BAR
+   ============================================================ */
+.mk-trust-bar {
+    background: linear-gradient(180deg, rgba(245,244,248,0.5), rgba(245,244,248,0.9));
+    border-top: 1px solid var(--mk-border);
+    border-bottom: 1px solid var(--mk-border);
+    padding: 2rem 0;
+}
+.mk-trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+.mk-trust-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.25rem; border-radius: 1rem;
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px -2px rgba(31,27,45,0.04);
+}
+.mk-trust-item:hover {
+    transform: translateY(-4px);
+    border-color: rgba(253,86,49,0.3);
+    background: #ffffff;
+    box-shadow: var(--mk-shadow);
+}
+.mk-trust-icon {
+    flex-shrink: 0; width: 52px; height: 52px;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(253,86,49,0.12), rgba(93,60,242,0.08));
+    border: 1px solid rgba(253,86,49,0.20);
+    color: var(--mk-primary); font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+.mk-trust-item:hover .mk-trust-icon {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff; transform: rotate(-6deg) scale(1.05);
+}
+.mk-trust-text h6 { color: var(--mk-text); font-size: 0.95rem; font-weight: 700; margin: 0 0 0.2rem; }
+.mk-trust-text p { color: var(--mk-dim); font-size: 0.8rem; margin: 0; line-height: 1.5; }
+
+/* ============================================================
+   FEATURES GRID
+   ============================================================ */
+.mk-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.mk-feature-card {
+    position: relative; padding: 2rem 1.75rem;
+    border-radius: 1.5rem;
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
+    box-shadow: 0 2px 8px -2px rgba(31,27,45,0.04);
+}
+.mk-feature-card:hover {
+    transform: translateY(-8px);
+    background: #ffffff;
+    box-shadow: var(--mk-shadow), 0 0 0 1px rgba(253,86,49,0.15);
+    border-color: rgba(253,86,49,0.25);
+}
+.mk-feature-highlight {
+    background: linear-gradient(145deg, rgba(253,86,49,0.05), rgba(93,60,242,0.03));
+    border-color: rgba(253,86,49,0.25);
+}
+.mk-feature-glow {
+    position: absolute; top: -50%; right: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(253,86,49,0.10), transparent 60%);
+    opacity: 0; transition: opacity 0.5s ease; pointer-events: none;
+}
+.mk-feature-card:hover .mk-feature-glow { opacity: 1; }
+.mk-feature-icon {
+    position: relative;
+    width: 64px; height: 64px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(253,86,49,0.12), rgba(93,60,242,0.08));
+    border: 1px solid rgba(253,86,49,0.22);
+    color: var(--mk-primary); font-size: 1.75rem;
+    margin-bottom: 1.25rem; transition: all 0.4s ease;
+}
+.mk-feature-card:hover .mk-feature-icon {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff; transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 10px 30px rgba(253,86,49,0.35);
+}
+.mk-feature-title { color: var(--mk-text); font-size: 1.15rem; font-weight: 800; margin-bottom: 0.75rem; }
+.mk-feature-desc { color: var(--mk-muted); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1rem; }
+.mk-feature-tag {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.85rem; border-radius: 50rem;
+    background: rgba(253,86,49,0.08); color: var(--mk-primary);
+    font-size: 0.75rem; font-weight: 700;
+    border: 1px solid rgba(253,86,49,0.18);
+}
+
+/* ============================================================
+   HOW IT WORKS
+   ============================================================ */
+.mk-how-wrap {
+    background:
+        radial-gradient(ellipse at top, rgba(93,60,242,0.05), transparent 50%),
+        radial-gradient(ellipse at bottom, rgba(253,86,49,0.04), transparent 50%);
+}
+.mk-steps-wrapper {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2rem; position: relative; padding-top: 1rem;
+}
+.mk-steps-line {
+    position: absolute; top: 60px; left: 16.67%; right: 16.67%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(253,86,49,0.25) 20%, rgba(253,86,49,0.25) 80%, transparent);
+    z-index: 0;
+}
+.mk-step-item { position: relative; z-index: 1; text-align: center; padding: 0 1rem; }
+.mk-step-number {
+    position: absolute; top: -10px; right: 50%; transform: translateX(50%);
+    font-size: 4rem; font-weight: 900; color: rgba(31,27,45,0.05);
+    line-height: 1; pointer-events: none; user-select: none;
+    font-family: 'vazir-bold', sans-serif;
+}
+.mk-step-icon {
+    position: relative;
+    width: 90px; height: 90px;
+    margin: 0 auto 1.25rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #ffffff;
+    border: 2px solid rgba(253,86,49,0.25);
+    color: var(--mk-primary); font-size: 2rem;
+    transition: all 0.4s ease;
+    box-shadow: 0 10px 30px rgba(31,27,45,0.06);
+}
+.mk-step-item:hover .mk-step-icon {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff; border-color: var(--mk-primary);
+    transform: translateY(-6px) scale(1.05);
+    box-shadow: 0 20px 40px rgba(253,86,49,0.3), 0 0 0 8px rgba(253,86,49,0.08);
+}
+.mk-step-title { color: var(--mk-text); font-size: 1.15rem; font-weight: 800; margin-bottom: 0.75rem; }
+.mk-step-desc { color: var(--mk-muted); font-size: 0.9rem; line-height: 1.7; max-width: 260px; margin: 0 auto; }
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+.mk-faq-list { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+.mk-faq-item {
+    border-radius: 1rem;
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    overflow: hidden; transition: all 0.3s ease;
+    box-shadow: 0 2px 8px -2px rgba(31,27,45,0.04);
+}
+.mk-faq-item.open { border-color: rgba(253,86,49,0.3); }
+.mk-faq-q {
+    padding: 1.25rem 1.5rem;
+    color: var(--mk-text); font-weight: 700; font-size: 0.95rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    transition: color 0.3s ease;
+}
+.mk-faq-q:hover { color: var(--mk-primary); }
+.mk-faq-q-icon {
+    flex-shrink: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(253,86,49,0.08);
+    color: var(--mk-primary);
+    transition: transform 0.3s ease;
+}
+.mk-faq-item.open .mk-faq-q-icon { transform: rotate(180deg); }
+.mk-faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    padding: 0 1.5rem;
+    color: var(--mk-muted); font-size: 0.9rem; line-height: 1.8;
+}
+.mk-faq-item.open .mk-faq-a { max-height: 300px; padding: 0 1.5rem 1.5rem; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .mk-hero { min-height: auto; padding: 3rem 0 4rem; }
+    .mk-product-visual { max-width: 400px; margin: 0 auto 2rem; }
+    .mk-timer-unit { min-width: 50px; padding: 0.4rem; }
+    .mk-timer-unit .num { font-size: 1.4rem; }
+    .mk-discount-badge { width: 70px; height: 70px; }
+    .mk-discount-badge .percent { font-size: 1.2rem; }
+    .mk-trust-grid { grid-template-columns: repeat(2, 1fr); }
+    .mk-features-grid { grid-template-columns: repeat(2, 1fr); }
+    .mk-steps-wrapper { grid-template-columns: 1fr; gap: 3rem; }
+    .mk-steps-line { display: none; }
+}
+@media (max-width: 575.98px) {
+    .mk-trust-grid { grid-template-columns: 1fr; }
+    .mk-features-grid { grid-template-columns: 1fr; }
+    .mk-section { padding: 3rem 0; }
+    .mk-section-title { font-size: 1.5rem; }
+    .mk-btn { padding: 0.9rem 1.75rem; font-size: 0.95rem; width: 100%; justify-content: center; }
+    .mk-timer { gap: 0.3rem; }
+    .mk-timer-sep { font-size: 1rem; }
+}
+
+.page-wrapper { padding: 0 !important; }
+
+/* Mobile campaign polish */
+@media (max-width: 768px) {
+    .mk-hero { min-height: 0; padding: 1.6rem 0 2.5rem; }
+    .mk-hero > .container { padding-left: 1rem; padding-right: 1rem; }
+    
+    .mk-campaign-badge i { flex: 0 0 auto; font-size: 1rem; }
+    .mk-hero .row.align-items-center {
+        --bs-gutter-x: 1rem;
+        --bs-gutter-y: 1.15rem;
+    }
+    .mk-hero {
+        background:
+            radial-gradient(ellipse at 12% 8%, rgba(253, 86, 49, .10), transparent 42%),
+            radial-gradient(ellipse at 88% 28%, rgba(242, 60, 73, .08), transparent 38%),
+            radial-gradient(ellipse at 52% 92%, rgba(93, 60, 242, .10), transparent 46%),
+            linear-gradient(155deg, #ffffff 0%, #f9f8fa 48%, #f5f4f8 100%);
+    }
+    .mk-hero-bg .blob { filter: blur(68px); opacity: .30; }
+    .mk-blob-1 { background: radial-gradient(circle, #fd5631 0%, rgba(253,86,49,.35) 35%, transparent 72%); }
+    .mk-blob-2 { background: radial-gradient(circle, #5d3cf2 0%, rgba(93,60,242,.30) 38%, transparent 72%); }
+    .mk-blob-3 { background: radial-gradient(circle, #3c76f2 0%, rgba(60,118,242,.25) 35%, transparent 72%); }
+    .mk-grid-overlay {
+        background-image:
+            linear-gradient(rgba(31,27,45,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(31,27,45,0.03) 1px, transparent 1px);
+        mask-image: radial-gradient(ellipse at center, black, transparent 82%);
+    }
+    .mk-product-visual {
+        width: min(100%, 360px);
+        height: auto;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
+        border-radius: 1.6rem;
+        isolation: isolate;
+    }
+    .mk-product-visual::before {
+        content: "";
+        position: absolute;
+        inset: 5%;
+        border-radius: 1.5rem;
+        background: linear-gradient(145deg, #ffffff, #faf9fc);
+        border: 1px solid var(--mk-border);
+        box-shadow: 0 18px 50px rgba(31, 27, 45, .08), inset 0 1px 0 #ffffff;
+        z-index: 0;
+    }
+    .mk-glow-ring { inset: 10%; filter: blur(38px); opacity: .30; }
+    .mk-product-image {
+        width: 82%;
+        height: 82%;
+        max-width: none;
+        max-height: none;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 1.2rem;
+        filter: drop-shadow(0 16px 28px rgba(31,27,45,.15));
+    }
+    .mk-product-placeholder {
+        width: 82%;
+        height: 82%;
+        aspect-ratio: 1 / 1;
+        border-radius: 1.2rem;
+    }
+    .mk-discount-badge {
+        top: 3%; left: 4%;
+        width: 66px; height: 66px;
+        box-shadow: 0 6px 18px rgba(253,86,49,.30);
+    }
+    .mk-discount-badge .percent { font-size: 1.1rem; }
+    .mk-discount-badge .label { font-size: .62rem; }
+    .mk-hero .col-lg-6.order-lg-1 { text-align: center; }
+    .mk-hero .col-lg-6.order-lg-1 > .mb-3 { margin-bottom: .8rem !important; }
+    .mk-hero-title {
+        font-size: clamp(1.45rem, 6vw, 2rem);
+        line-height: 1.45;
+        margin-bottom: .7rem !important;
+        overflow-wrap: anywhere;
+    }
+    .mk-hero-desc { font-size: .9rem; line-height: 1.8; margin-bottom: 1rem !important; }
+    .mk-timer-wrap {
+        display: block;
+        width: fit-content;
+        max-width: 100%;
+        margin: 0 auto 1.1rem !important;
+        padding: .8rem .65rem;
+        border-radius: 1rem;
+    }
+    .mk-timer-label { justify-content: center; font-size: .72rem; margin-bottom: .6rem; }
+    .mk-timer { justify-content: center; gap: .25rem; }
+    .mk-timer-unit { min-width: 0; flex: 1 1 0; padding: .45rem .25rem; border-radius: .6rem; }
+    .mk-timer-unit .num { font-size: clamp(1.05rem, 4.6vw, 1.35rem); }
+    .mk-timer-unit .lbl { font-size: .62rem; margin-top: .25rem; }
+    .mk-timer-sep { font-size: 1rem; }
+    .mk-new-price { justify-content: center; font-size: clamp(1.55rem, 6vw, 2rem); flex-wrap: wrap; }
+    .mk-old-price { font-size: .88rem; }
+    .mk-hero .d-flex.justify-content-between { gap: .6rem; text-align: right; }
+    .mk-hero .d-flex.justify-content-between > span { font-size: .72rem !important; }
+    .mk-hero .mk-btn { justify-content: center; width: 100%; max-width: 340px; padding: .9rem 1.25rem; font-size: .95rem; }
+    .mk-trust-mini { justify-content: center; gap: .55rem .9rem; font-size: .7rem; }
+}
+
+@media (max-width: 380px) {
+    .mk-product-visual { width: min(100%, 320px); aspect-ratio: 1 / 1; height: auto; }
+    .mk-timer-wrap { padding: .7rem .45rem; }
+    .mk-timer-unit .num { font-size: 1rem; }
+    .mk-trust-mini { gap: .45rem .65rem; }
+}
+
+/* Final mobile polish */
+@media (max-width: 767.98px) {
+    .mk-hero {
+        background:
+            radial-gradient(ellipse at 8% 5%, rgba(253, 86, 49, .12), transparent 38%),
+            radial-gradient(ellipse at 92% 18%, rgba(242, 60, 73, .10), transparent 39%),
+            radial-gradient(ellipse at 50% 78%, rgba(93, 60, 242, .12), transparent 46%),
+            radial-gradient(ellipse at 50% 42%, rgba(253, 86, 49, .06), transparent 55%),
+            linear-gradient(145deg, #ffffff 0%, #f9f8fa 42%, #f5f4f8 100%);
+    }
+    .mk-hero-bg .blob { opacity: .35; filter: blur(58px); }
+    .mk-grid-overlay {
+        background-image:
+            linear-gradient(rgba(31,27,45,0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(31,27,45,0.035) 1px, transparent 1px);
+    }
+    .mk-product-visual {
+        display: block;
+        position: relative;
+        width: min(100%, 360px);
+        aspect-ratio: 1 / 1;
+        height: auto;
+        overflow: visible;
+        border-radius: 1.6rem;
+        background: radial-gradient(circle at 50% 55%, rgba(253, 86, 49, .10), transparent 57%);
+    }
+    .mk-product-visual::before {
+        inset: 7%;
+        border-radius: 1.6rem;
+        background: linear-gradient(145deg, #ffffff, #f9f8fa);
+        border-color: rgba(253, 86, 49, .15);
+        box-shadow: 0 18px 45px rgba(31, 27, 45, .08), inset 0 1px 0 #ffffff;
+    }
+    .mk-product-image, .mk-product-placeholder {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 68%;
+        height: 68%;
+        max-width: none;
+        max-height: none;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 1.15rem;
+        transform: translate(-50%, -50%);
+        animation: none !important;
+        filter: drop-shadow(0 12px 24px rgba(31,27,45,.15));
+    }
+    .mk-product-placeholder { display: flex; }
+    .mk-discount-badge {
+        top: 3%;
+        left: 4%;
+        width: 58px;
+        height: 58px;
+        z-index: 6;
+        animation: none;
+        background: linear-gradient(135deg, #ff8a3d 0%, #ff4f70 55%, #e947a8 100%);
+        border: 2px solid rgba(255,255,255,.9);
+        box-shadow: 0 8px 22px rgba(255, 91, 105, .30), 0 0 0 5px rgba(255,255,255,.5);
+    }
+    .mk-discount-badge .percent { font-size: 1rem; }
+    .mk-discount-badge .label { font-size: .58rem; }
+}
+
+/* ============================================================
+   SUPPORT ORDER CARD (in campaign hero)
+   ============================================================ */
+.mk-support-order-card {
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.75rem 2rem;
+    border-radius: 1.5rem;
+    background: linear-gradient(135deg, rgba(253,86,49,0.06), rgba(93,60,242,0.05)), #ffffff;
+    border: 1px solid rgba(253,86,49,0.20);
+    box-shadow: 0 10px 40px -10px rgba(253,86,49,0.15);
+    position: relative;
+    overflow: hidden;
+    flex-wrap: wrap;
+}
+.mk-support-order-card::before {
+    content: "";
+    position: absolute;
+    top: -50%; right: -10%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(253,86,49,0.10), transparent 60%);
+    pointer-events: none;
+}
+.mk-support-order-content {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 260px;
+}
+.mk-support-order-icon {
+    flex-shrink: 0;
+    width: 60px; height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-size: 1.6rem;
+    box-shadow: 0 10px 25px rgba(253,86,49,0.30);
+}
+.mk-support-order-text h4 {
+    color: var(--mk-text);
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin: 0 0 0.35rem;
+}
+.mk-support-order-text p {
+    color: var(--mk-muted);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.6;
+}
+.mk-support-order-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 1.75rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 25px rgba(253,86,49,0.30);
+    position: relative;
+    z-index: 1;
+    font-family: inherit;
+}
+.mk-support-order-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(253,86,49,0.45);
+    color: #fff;
+}
+.mk-support-order-btn:active {
+    transform: translateY(-1px);
+}
+
+@media (max-width: 575.98px) {
+    .mk-support-order-card {
+        padding: 1.25rem;
+        text-align: center;
+        flex-direction: column;
+        margin-top: 2rem;
+    }
+    .mk-support-order-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .mk-support-order-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================================
+   SUPPORT ORDER MODAL
+   ============================================================ */
+#mkSupportOrderModal .modal-content {
+    border: 0;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(31,27,45,0.25);
+}
+#mkSupportOrderModal .modal-header {
+    background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.06));
+    border-bottom: 1px solid var(--mk-border);
+    padding: 1.25rem 1.5rem;
+}
+#mkSupportOrderModal .modal-title {
+    color: var(--mk-text);
+    font-weight: 800;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+#mkSupportOrderModal .modal-title i { color: var(--mk-primary); }
+#mkSupportOrderModal .modal-body { padding: 1.5rem; }
+.mk-modal-intro {
+    color: var(--mk-muted);
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    background: rgba(7,201,139,0.06);
+    border: 1px solid rgba(7,201,139,0.18);
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+.mk-modal-intro i {
+    color: var(--mk-success);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+#mkSupportOrderModal .form-label {
+    color: var(--mk-text);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+#mkSupportOrderModal .mk-form-input {
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--mk-text);
+    font-size: 0.95rem;
+    transition: all 0.25s ease;
+    direction: ltr;
+    text-align: right;
+    width: 100%;
+    font-family: inherit;
+}
+#mkSupportOrderModal .mk-form-input:focus {
+    border-color: var(--mk-primary);
+    box-shadow: 0 0 0 4px rgba(253,86,49,0.10);
+    background: #ffffff;
+    outline: none;
+}
+#mkSupportOrderModal .mk-form-input::placeholder { color: var(--mk-dim); }
+#mkSupportOrderModal .mk-form-input.is-invalid {
+    border-color: var(--mk-danger);
+    box-shadow: 0 0 0 4px rgba(242,60,73,0.08);
+}
+#mkSupportOrderModal .invalid-feedback {
+    color: var(--mk-danger);
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+}
+#mkSupportOrderModal .btn-close:focus { box-shadow: none; }
+
+/* ============================================================
+   LIGHT FOOTER (Enamad badge)
+   ============================================================ */
+.mk-footer {
+    background: #ffffff;
+    border-top: 1px solid var(--mk-border);
+    padding: 2.5rem 0 2rem;
+    margin-top: 4rem;
+    position: relative;
+}
+.mk-footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+}
+.mk-footer .badge-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid var(--mk-border);
+    border-radius: 1rem;
+    transition: all 0.25s ease;
+}
+.mk-footer .badge-placeholder:hover {
+    border-color: rgba(253,86,49,0.3);
+    box-shadow: 0 8px 24px -8px rgba(253,86,49,0.15);
+}
+.mk-footer .badge-placeholder img {
+    display: block;
+    max-height: 110px;
+    width: auto;
+    object-fit: contain;
+}
+.mk-footer .badge-placeholder a {
+    display: block;
+    line-height: 0;
+}
+
+@media (max-width: 575.98px) {
+    .mk-footer {
+        padding: 1.75rem 0 1.5rem;
+        margin-top: 2.5rem;
+    }
+    .mk-footer .badge-placeholder {
+        min-height: 90px;
+        padding: 0.5rem 0.9rem;
+    }
+    .mk-footer .badge-placeholder img {
+        max-height: 80px;
+    }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- =====================================================
+     HERO IMAGE SLIDER (TOP OF PAGE - IMAGE ONLY)
+     ===================================================== -->
+{#<section class="mk-hero-slider" id="mkHeroSlider" dir="ltr">#}
+{#    <div class="mk-hero-progress">#}
+{#        <div class="mk-hero-progress-bar" id="mkHeroProgress"></div>#}
+{#    </div>#}
+{##}
+{#    <div class="mk-hero-slider-track" id="mkHeroSliderTrack">#}
+{##}
+{#        <div class="mk-hero-slide">#}
+{#            <a href="#" class="mk-hero-slide-link" aria-label="اسلاید ۱">#}
+{#                <img src="{% static 'core/images/market/1-desktop.webp' %}" alt="بنر ۱" class="mk-hero-img-desktop">#}
+{#                <img src="{% static 'core/images/market/1-mobile.webp' %}" alt="بنر ۱ موبایل" class="mk-hero-img-mobile">#}
+{#            </a>#}
+{#        </div>#}
+{##}
+{#        <div class="mk-hero-slide">#}
+{#            <a href="#" class="mk-hero-slide-link" aria-label="اسلاید ۲">#}
+{#                <img src="{% static 'core/images/market/2-desktop.webp' %}" alt="بنر 2" class="mk-hero-img-desktop">#}
+{#                <img src="{% static 'core/images/market/2-mobile.webp' %}" alt="بنر 2 موبایل" class="mk-hero-img-mobile">#}
+{#            </a>#}
+{#        </div>#}
+{##}
+{#        <div class="mk-hero-slide">#}
+{#            <a href="#" class="mk-hero-slide-link" aria-label="اسلاید ۳">#}
+{#                <img src="{% static 'core/images/market/3-desktop.webp' %}" alt="بنر ۳" class="mk-hero-img-desktop">#}
+{#                <img src="{% static 'core/images/market/3-mobile.webp' %}" alt="بنر ۳ موبایل" class="mk-hero-img-mobile">#}
+{#            </a>#}
+{#        </div>#}
+{##}
+{#        <div class="mk-hero-slide">#}
+{#            <a href="#" class="mk-hero-slide-link" aria-label="اسلاید ۴">#}
+{#                <img src="{% static 'core/images/market/4-desktop.webp' %}" alt="بنر ۴" class="mk-hero-img-desktop">#}
+{#                <img src="{% static 'core/images/market/4-mobile.webp' %}" alt="بنر ۴ موبایل" class="mk-hero-img-mobile">#}
+{#            </a>#}
+{#        </div>#}
+{##}
+{#    </div>#}
+{##}
+{#    <button type="button" class="mk-hero-arrow mk-hero-prev" id="mkHeroPrev" aria-label="اسلاید قبلی">#}
+{#        <i class="bi bi-chevron-left"></i>#}
+{#    </button>#}
+{#    <button type="button" class="mk-hero-arrow mk-hero-next" id="mkHeroNext" aria-label="اسلاید بعدی">#}
+{#        <i class="bi bi-chevron-right"></i>#}
+{#    </button>#}
+{##}
+{#    <div class="mk-hero-dots" id="mkHeroDots"></div>#}
+{#</section>#}
+
+<!-- =====================================================
+     HERO CAMPAIGN (Product of the day)
+     ===================================================== -->
+<section class="mk-hero" id="mkHero">
+    <div class="mk-hero-bg">
+        <div class="blob mk-blob-1"></div>
+        <div class="blob mk-blob-2"></div>
+        <div class="blob mk-blob-3"></div>
+        <div class="mk-grid-overlay"></div>
+    </div>
+
+    <div class="container position-relative" style="z-index: 2;">
+        {% if campaign %}
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6 order-lg-2" data-mk-aos="fade-left" data-mk-delay="200">
+                <div class="mk-product-visual">
+                    <div class="mk-glow-ring"></div>
+                    {% if campaign.product.main_image %}
+                        <img id="mkMainImage" src="{{ campaign.product.main_image.url }}"
+                             alt="{{ campaign.product.title }}"
+                             class="mk-product-image mk-float">
+                    {% elif campaign.product.images.exists %}
+                        <img id="mkMainImage" src="{{ campaign.product.images.first.image.url }}"
+                             alt="{{ campaign.product.title }}"
+                             class="mk-product-image mk-float">
+                    {% else %}
+                        <div class="mk-product-placeholder mk-float">
+                            <i class="bi bi-bag-heart"></i>
+                        </div>
+                    {% endif %}
+
+                    {% if campaign.product.discount_percent > 0 %}
+                    <div class="mk-discount-badge">
+                        <span class="percent">{{ campaign.product.discount_percent }}٪</span>
+                        <span class="label">تخفیف</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if campaign.product.images.exists %}
+                <div class="mk-product-gallery" data-mk-aos="fade-up" data-mk-delay="250">
+                    {% if campaign.product.main_image %}
+                    <button type="button"
+                            class="mk-gallery-thumb is-active"
+                            data-img-src="{{ campaign.product.main_image.url }}"
+                            aria-label="تصویر اصلی">
+                        <img src="{{ campaign.product.main_image.url }}" alt="">
+                    </button>
+                    {% endif %}
+                    {% for img in campaign.product.images.all %}
+                    <button type="button"
+                            class="mk-gallery-thumb {% if not campaign.product.main_image and forloop.first %}is-active{% endif %}"
+                            data-img-src="{{ img.image.url }}"
+                            aria-label="تصویر {{ forloop.counter }}">
+                        <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:campaign.product.title }}">
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-6 order-lg-1" data-mk-aos="fade-right">
+                <h2 class="mk-hero-title mb-3">{{ campaign.product.title }}</h2>
+
+                {% if campaign.product.short_description %}
+                <p class="mk-hero-desc mb-4">{{ campaign.product.short_description }}</p>
+                {% endif %}
+
+                <div class="mk-timer-wrap mb-4" data-mk-aos="fade-up" data-mk-delay="300">
+                    <div class="mk-timer-label">
+                        <i class="bi bi-clock-history"></i>
+                        فرصت باقی‌مانده تا پایان کمپین
+                    </div>
+                    <div class="mk-timer" id="mkTimer" data-end="{{ campaign.campaign_end_ts|unlocalize }}">
+                        <div class="mk-timer-unit"><span class="num" id="t-days">۰۰</span><span class="lbl">روز</span></div>
+                        <div class="mk-timer-sep">:</div>
+                        <div class="mk-timer-unit"><span class="num" id="t-hours">۰۰</span><span class="lbl">ساعت</span></div>
+                        <div class="mk-timer-sep">:</div>
+                        <div class="mk-timer-unit"><span class="num" id="t-mins">۰۰</span><span class="lbl">دقیقه</span></div>
+                        <div class="mk-timer-sep">:</div>
+                        <div class="mk-timer-unit"><span class="num" id="t-secs">۰۰</span><span class="lbl">ثانیه</span></div>
+                    </div>
+                </div>
+
+                <div class="mb-4" data-mk-aos="fade-up" data-mk-delay="400">
+                    {% if campaign.product.discount_price %}
+                        <div class="mk-old-price">{{ campaign.product.base_price|intcomma }} تومان</div>
+                        <div class="mk-new-price">
+                            {{ campaign.product.discount_price|intcomma }}
+                            <span class="currency">تومان</span>
+                        </div>
+                    {% else %}
+                        <div class="mk-new-price">
+                            {{ campaign.product.base_price|intcomma }}
+                            <span class="currency">تومان</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if campaign.stock %}
+                <div class="mb-4" data-mk-aos="fade-up" data-mk-delay="500">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">
+                            <i class="bi bi-cart-check"></i> {{ campaign.sold }} فروش رفته
+                        </span>
+                        <span class="text-warning small fw-bold">
+                            فقط {{ campaign.stock }} عدد باقی‌مانده!
+                        </span>
+                    </div>
+                    <div class="mk-progress-track">
+                        <div class="mk-progress-fill" style="width: {{ campaign.progress }}%;"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if installment_plan %}
+                <div class="mk-installment-box" data-mk-aos="fade-up" data-mk-delay="550">
+                    <div class="mk-installment-header">
+                        <div class="mk-installment-header-icon">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <div>
+                            <h4 class="mk-installment-title">خرید آسان با {{ installment_plan.count }} قسط از حقوق بازنشستگی</h4>
+                            <p class="mk-installment-subtitle">
+                                فقط کافیه بازنشسته تامین اجتماعی باشید — بقیه‌اش با ما!
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mk-installment-body">
+                        <div class="mk-installment-calc">
+                            <div class="mk-installment-cell">
+                                <span class="label">مبلغ هر قسط</span>
+                                <span class="value">{{ installment_plan.regular|intcomma }}</span>
+                                <span class="currency">تومان</span>
+                            </div>
+                            <div class="mk-installment-times">×</div>
+                            <div class="mk-installment-cell highlight">
+                                <span class="label">تعداد اقساط</span>
+                                <span class="value">{{ installment_plan.count }}</span>
+                            </div>
+                        </div>
+                        {% if not installment_plan.is_uniform %}
+                        <span class="mk-installment-last">
+                            آخرین قسط: {{ installment_plan.last|intcomma }} تومان
+                        </span>
+                        {% endif %}
+                        <p class="mk-installment-note">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>
+                                بدون نیاز به چک، ضامن یا هیچ مدرک اضافه —
+                                مبلغ اقساط به صورت خودکار از حقوق ماهانه شما کسر می‌شه.
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div data-mk-aos="fade-up" data-mk-delay="650">
+                    {% if campaign_product_url %}
+                        <a href="{{ campaign_product_url }}" class="mk-btn">
+                            <i class="bi bi-credit-card-2-front-fill"></i>
+                            سفارش اقساطی با مینی‌پی
+                            <span class="mk-btn-shine"></span>
+                        </a>
+                    {% endif %}
+                    <div class="mk-trust-mini mt-3">
+                        <span><i class="bi bi-patch-check-fill"></i> ضمانت اصالت</span>
+                        <span><i class="bi bi-box-seam"></i> ارسال توسط فروشنده</span>
+                        <span><i class="bi bi-shield-lock-fill"></i> پرداخت امن</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- باکس سفارش توسط پشتیبان -->
+        <div class="mk-support-order-card" data-mk-aos="fade-up" data-mk-delay="700">
+            <div class="mk-support-order-content">
+                <div class="mk-support-order-icon">
+                    <i class="bi bi-headset"></i>
+                </div>
+                <div class="mk-support-order-text">
+                    <h4>خرید اینترنتی برایتان سخت است؟</h4>
+                    <p>خودمان ثبتش می‌کنیم! کارشناسان ما با شما تماس می‌گیرند و سفارشتان را ثبت می‌کنند.</p>
+                </div>
+            </div>
+            <button type="button" class="mk-support-order-btn"
+                    data-bs-toggle="modal" data-bs-target="#mkSupportOrderModal">
+                <i class="bi bi-telephone-fill"></i>
+                خرید ثبت سفارش توسط پشتیبان سایت
+            </button>
+        </div>
+        {% else %}
+        <div class="text-center py-5" data-mk-aos="zoom-in">
+            <div class="mk-product-placeholder mx-auto mb-4" style="width:180px;height:180px;font-size:4rem;">
+                <i class="bi bi-bag-heart"></i>
+            </div>
+            <h2 class="mk-hero-title mb-3">کمپین فعالی در حال حاضر وجود ندارد</h2>
+            <p class="mk-hero-desc mb-4">به‌زودی محصول شگفت‌انگیز بعدی رو اینجا معرفی می‌کنیم. منتظر باش! 🚀</p>
+            <a href="{% url 'market:landing' %}" class="mk-btn">
+                <i class="bi bi-arrow-clockwise"></i> بروزرسانی
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- =====================================================
+     TRUST BAR
+     ===================================================== -->
+<section class="mk-trust-bar">
+    <div class="container">
+        <div class="mk-trust-grid">
+            <div class="mk-trust-item" data-mk-aos="fade-up">
+                <div class="mk-trust-icon"><i class="bi bi-box-seam-fill"></i></div>
+                <div class="mk-trust-text">
+                    <h6>ارسال مستقیم توسط فروشنده</h6>
+                    <p>سفارش شما مستقیم از انبار فروشنده ارسال میشه</p>
+                </div>
+            </div>
+            <div class="mk-trust-item" data-mk-aos="fade-up" data-mk-delay="100">
+                <div class="mk-trust-icon"><i class="bi bi-patch-check-fill"></i></div>
+                <div class="mk-trust-text">
+                    <h6>ضمانت اصالت کالا</h6>
+                    <p>فروشندگان توسط وین‌جاب تایید شدن</p>
+                </div>
+            </div>
+            <div class="mk-trust-item" data-mk-aos="fade-up" data-mk-delay="200">
+                <div class="mk-trust-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="mk-trust-text">
+                    <h6>پرداخت امن</h6>
+                    <p>درگاه بانکی معتبر و رمزنگاری‌شده</p>
+                </div>
+            </div>
+            <div class="mk-trust-item" data-mk-aos="fade-up" data-mk-delay="300">
+                <div class="mk-trust-icon"><i class="bi bi-headset"></i></div>
+                <div class="mk-trust-text">
+                    <h6>پشتیبانی ۲۴/۷</h6>
+                    <p>همیشه کنارت هستیم</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =====================================================
+     FEATURES GRID
+     ===================================================== -->
+<section class="mk-section">
+    <div class="container">
+        <div class="mk-section-header" data-mk-aos="fade-up">
+            <span class="mk-section-badge"><i class="bi bi-star-fill"></i> چرا وین مارکت؟</span>
+            <h2 class="mk-section-title">تجربه‌ای متفاوت از <span class="mk-gradient-text">خرید آنلاین</span></h2>
+            <p class="mk-section-subtitle">ما فقط یه فروشگاه معمولی نیستیم؛ یه تجربه‌ی خرید هوشمند و امن رو برات فراهم کردیم</p>
+        </div>
+
+        <div class="mk-features-grid">
+            <div class="mk-feature-card mk-feature-highlight" data-mk-aos="fade-up">
+                <div class="mk-feature-glow"></div>
+                <div class="mk-feature-icon"><i class="bi bi-credit-card-2-front-fill"></i></div>
+                <h3 class="mk-feature-title">پرداخت اقساطی</h3>
+                <p class="mk-feature-desc">برای بازنشستگان و افراد خاص، امکان خرید با پرداخت اقساطی و بدون بهره فراهمه.</p>
+                <div class="mk-feature-tag"><i class="bi bi-check-circle-fill"></i> ویژه بازنشستگان</div>
+            </div>
+            <div class="mk-feature-card" data-mk-aos="fade-up" data-mk-delay="100">
+                <div class="mk-feature-icon"><i class="bi bi-box-seam-fill"></i></div>
+                <h3 class="mk-feature-title">ارسال مستقیم توسط فروشنده</h3>
+                <p class="mk-feature-desc">سفارش شما مستقیم از انبار فروشنده ارسال می‌شه و کد رهگیری برات پیامک می‌شه.</p>
+                <div class="mk-feature-tag"><i class="bi bi-truck"></i> توسط فروشنده</div>
+            </div>
+            <div class="mk-feature-card" data-mk-aos="fade-up" data-mk-delay="200">
+                <div class="mk-feature-icon"><i class="bi bi-patch-check-fill"></i></div>
+                <h3 class="mk-feature-title">ضمانت اصالت کالا</h3>
+                <p class="mk-feature-desc">همه فروشنده‌ها توسط تیم وین‌جاب بررسی و تایید شدن. بدون نگرانی خرید کن.</p>
+                <div class="mk-feature-tag"><i class="bi bi-shield-check"></i> ۱۰۰٪ اورجینال</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =====================================================
+     HOW IT WORKS
+     ===================================================== -->
+<section class="mk-section mk-how-wrap">
+    <div class="container">
+        <div class="mk-section-header" data-mk-aos="fade-up">
+            <span class="mk-section-badge"><i class="bi bi-diagram-3-fill"></i> فرآیند خرید</span>
+            <h2 class="mk-section-title">فقط <span class="mk-gradient-text">۳ مرحله</span> ساده تا خرید</h2>
+            <p class="mk-section-subtitle">از انتخاب تا تحویل، همه چیز رو برات ساده کردیم</p>
+        </div>
+
+        <div class="mk-steps-wrapper">
+            <div class="mk-steps-line"></div>
+            <div class="mk-step-item" data-mk-aos="fade-up">
+                <div class="mk-step-number">۰۱</div>
+                <div class="mk-step-icon"><i class="bi bi-hand-index-thumb-fill"></i></div>
+                <h4 class="mk-step-title">دکمه خرید را بزنید</h4>
+                <p class="mk-step-desc">روی دکمهٔ نارنجی «خرید اقساطی با مینی‌پی» بزنید تا وارد درگاه امن مینی‌پی شوید.</p>
+            </div>
+            <div class="mk-step-item" data-mk-aos="fade-up" data-mk-delay="150">
+                <div class="mk-step-number">۰۲</div>
+                <div class="mk-step-icon"><i class="bi bi-hash"></i></div>
+                <h4 class="mk-step-title">ورود با کد پیامکی</h4>
+                <p class="mk-step-desc">هویت شما در درگاه مینی‌پی با کد پیامک‌شده تأیید می‌شود و اعتبار شما بررسی می‌شود.</p>
+            </div>
+            <div class="mk-step-item" data-mk-aos="fade-up" data-mk-delay="300">
+                <div class="mk-step-number">۰۳</div>
+                <div class="mk-step-icon"><i class="bi bi-check-circle"></i></div>
+                <h4 class="mk-step-title">تأیید و پایان خرید</h4>
+                <p class="mk-step-desc">خرید نهایی می‌شود و کالا برایتان ارسال می‌شود. اقساط خودکار از حقوق کسر خواهد شد.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =====================================================
+     FAQ
+     ===================================================== -->
+<section class="mk-section" id="mkFaqSection">
+    <div class="container">
+        <div class="mk-section-header" data-mk-aos="fade-up">
+            <span class="mk-section-badge"><i class="bi bi-question-circle-fill"></i> سوالات متداول</span>
+            <h2 class="mk-section-title">هر چی می‌خوای <span class="mk-gradient-text">بدونی</span></h2>
+        </div>
+
+        <div class="mk-faq-list">
+            <div class="mk-faq-item" data-mk-aos="fade-up">
+                <div class="mk-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span>چه کسانی می‌توانند اقساطی خرید کنند؟</span>
+                    <div class="mk-faq-q-icon"><i class="bi bi-chevron-down"></i></div>
+                </div>
+                <div class="mk-faq-a">
+    همهٔ مستمری‌بگیران و بازنشستگان سازمان تأمین اجتماعی. نیازی به مراجعه به هیچ جایی یا انجام کار خاصی برای دریافت اعتبار نیست؛ اعتبار شما داخل درگاه مینی‌پی بررسی می‌شود.                
+                </div>
+            </div>
+            <div class="mk-faq-item" data-mk-aos="fade-up" data-mk-delay="100">
+                <div class="mk-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span>اقساط را چطور و کِی باید پرداخت کنم؟</span>
+                    <div class="mk-faq-q-icon"><i class="bi bi-chevron-down"></i></div>
+                </div>
+                <div class="mk-faq-a">
+                    هیچ کاری لازم نیست انجام دهید. اقساط هر ماه به‌صورت خودکار از حقوق شما کسر می‌شود؛ نه چک لازم است، نه ضامن، نه پرداخت دستی.
+                </div>
+            </div>
+            <div class="mk-faq-item" data-mk-aos="fade-up" data-mk-delay="200">
+                <div class="mk-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span>اگر یک قسط دیر شود، جریمه می‌شوم؟</span>
+                    <div class="mk-faq-q-icon"><i class="bi bi-chevron-down"></i></div>
+                </div>
+                <div class="mk-faq-a">
+                    خیر. چون کسر اقساط خودکار از حقوق انجام می‌شود، اصلاً تأخیری پیش نمی‌آید و نگرانی بابت جریمه وجود ندارد.
+                </div>
+            </div>
+            <div class="mk-faq-item" data-mk-aos="fade-up" data-mk-delay="300">
+                <div class="mk-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span>کالا چند روزه می‌رسد و هزینهٔ ارسال چقدر است؟</span>
+                    <div class="mk-faq-q-icon"><i class="bi bi-chevron-down"></i></div>
+                </div>
+                <div class="mk-faq-a">
+                    تهران و کرج ظرف ۴۸ ساعت کاری و سایر شهرها ظرف ۷۲ ساعت کاری تحویل داده می‌شود. هزینهٔ ارسال جداگانه است و هنگام تحویل کالا پرداخت می‌شود.
+                </div>
+            </div>
+            <div class="mk-faq-item" data-mk-aos="fade-up" data-mk-delay="400">
+                <div class="mk-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                    <span>خودم نمی‌توانم خرید کنم؛ کسی کمکم می‌کند؟</span>
+                    <div class="mk-faq-q-icon"><i class="bi bi-chevron-down"></i></div>
+                </div>
+                <div class="mk-faq-a">
+                    بله. کافی است روی دکمه ثبت سفارش توسط پشتیبان سایت رو بزند و شماره تماس و کد ملی خود را وارد کنید تا پشتیانان ما در اولین فرصت با شما تماس بگیرند و برایتان سفارش ثبت کنند.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block modals %}
+    {{ block.super }}
+    <!-- =====================================================
+         SUPPORT ORDER MODAL
+         ===================================================== -->
+    <div class="modal fade" id="mkSupportOrderModal" tabindex="-1"
+         aria-labelledby="mkSupportOrderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mkSupportOrderModalLabel">
+                        <i class="bi bi-headset"></i>
+                        ثبت سفارش توسط پشتیبان
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mk-modal-intro">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span>شماره تماس و کد ملی خود را وارد کنید. کارشناسان ما به زودی با شما تماس می‌گیرند و سفارشتان را نهایی می‌کنند.</span>
+                    </div>
+                    <form id="mkSupportOrderForm" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="mkPhone" class="form-label">شماره تلفن همراه</label>
+                            <input type="text"
+                                   class="mk-form-input"
+                                   id="mkPhone"
+                                   name="phone"
+                                   placeholder="09xxxxxxxxx"
+                                   maxlength="11"
+                                   inputmode="numeric"
+                                   autocomplete="tel"
+                                   required>
+                            <div class="invalid-feedback">شماره تلفن باید دقیقاً ۱۱ رقم و فقط شامل عدد باشد.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mkNationalId" class="form-label">کد ملی</label>
+                            <input type="text"
+                                   class="mk-form-input"
+                                   id="mkNationalId"
+                                   name="national_id"
+                                   placeholder="xxxxxxxxxx"
+                                   maxlength="10"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   required>
+                            <div class="invalid-feedback">کد ملی باید دقیقاً ۱۰ رقم و فقط شامل عدد باشد.</div>
+                        </div>
+                        <button type="submit" class="mk-btn w-100 justify-content-center mt-2">
+                            <i class="bi bi-send-fill"></i>
+                            ثبت درخواست
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    /* ============================================
+       MARKET TIMER
+       ============================================ */
+    const timerEl = document.getElementById('mkTimer');
+    if (timerEl) {
+        const rawEnd = (timerEl.dataset.end || '').replace(/,/g, '');
+        const endTime = parseInt(rawEnd, 10);
+        const daysEl  = document.getElementById('t-days');
+        const hoursEl = document.getElementById('t-hours');
+        const minsEl  = document.getElementById('t-mins');
+        const secsEl  = document.getElementById('t-secs');
+
+        const toPersian = (num) => {
+            const p = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+            return String(num).padStart(2, '0').replace(/\d/g, d => p[d]);
+        };
+
+        const tick = () => {
+            const diff = endTime - Date.now();
+            if (diff <= 0) {
+                [daysEl, hoursEl, minsEl, secsEl].forEach(el => el.textContent = '۰۰');
+                return;
+            }
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor((diff % 86400000) / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            daysEl.textContent  = toPersian(d);
+            hoursEl.textContent = toPersian(h);
+            minsEl.textContent  = toPersian(m);
+            secsEl.textContent  = toPersian(s);
+
+            if (diff < 3600000) {
+                timerEl.querySelectorAll('.mk-timer-unit').forEach(el => {
+                    el.style.borderColor = 'rgba(242,60,73,0.5)';
+                    el.style.boxShadow = '0 0 15px rgba(242,60,73,0.25)';
+                });
+            }
+        };
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    /* ============================================
+       SCROLL REVEAL
+       ============================================ */
+    const aosEls = document.querySelectorAll('[data-mk-aos]');
+    if ('IntersectionObserver' in window && aosEls.length) {
+        aosEls.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+            const type = el.dataset.mkAos;
+            if (type === 'fade-up')    el.style.transform = 'translateY(30px)';
+            if (type === 'fade-down')  el.style.transform = 'translateY(-30px)';
+            if (type === 'fade-left')  el.style.transform = 'translateX(30px)';
+            if (type === 'fade-right') el.style.transform = 'translateX(-30px)';
+            if (type === 'zoom-in')    el.style.transform = 'scale(0.9)';
+        });
+
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const delay = parseInt(entry.target.dataset.mkDelay || 0);
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'none';
+                    }, delay);
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        aosEls.forEach(el => obs.observe(el));
+    }
+
+    /* ============================================
+       LIVE VIEWERS COUNTER
+       ============================================ */
+    const liveViewers = document.getElementById('liveViewers');
+    if (liveViewers) {
+        const toPersianNum = (num) => {
+            const p = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+            return String(num).replace(/\d/g, d => p[d]);
+        };
+        let count = 124;
+        setInterval(() => {
+            count = Math.max(85, Math.min(180, count + Math.floor(Math.random() * 11) - 5));
+            liveViewers.textContent = toPersianNum(count);
+        }, 3000);
+    }
+
+    /* ============================================
+       PRODUCT IMAGE GALLERY
+       ============================================ */
+    (function initProductGallery() {
+        const gallery = document.querySelector('.mk-product-gallery');
+        const mainImage = document.getElementById('mkMainImage');
+        if (!gallery || !mainImage) return;
+
+        const thumbs = gallery.querySelectorAll('.mk-gallery-thumb');
+        if (!thumbs.length) return;
+
+        thumbs.forEach(thumb => {
+            thumb.addEventListener('click', function (e) {
+                e.preventDefault();
+                const newSrc = this.dataset.imgSrc;
+                if (!newSrc) return;
+
+                if (mainImage.getAttribute('src') === newSrc) {
+                    thumbs.forEach(t => t.classList.remove('is-active'));
+                    this.classList.add('is-active');
+                    return;
+                }
+
+                mainImage.style.transition = 'opacity 0.15s ease';
+                mainImage.style.opacity = '0.3';
+                setTimeout(() => {
+                    mainImage.setAttribute('src', newSrc);
+                    mainImage.style.opacity = '1';
+                }, 120);
+
+                thumbs.forEach(t => t.classList.remove('is-active'));
+                this.classList.add('is-active');
+            });
+        });
+    })();
+
+    /* ============================================
+       SUPPORT ORDER FORM (AJAX)
+       ============================================ */
+    (function initSupportOrderForm() {
+        const form = document.getElementById('mkSupportOrderForm');
+        if (!form) return;
+
+        const modalEl = document.getElementById('mkSupportOrderModal');
+        const phoneInput = document.getElementById('mkPhone');
+        const nationalIdInput = document.getElementById('mkNationalId');
+
+        if (!phoneInput || !nationalIdInput) return;
+
+        // فقط عدد قبول کن
+        [phoneInput, nationalIdInput].forEach(input => {
+            input.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '');
+                this.classList.remove('is-invalid');
+            });
+        });
+
+        // ابزار خواندن cookie برای CSRF
+        function getCookie(name) {
+            const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return m ? m.pop() : '';
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // اعتبارسنجی کلاینت
+            let isValid = true;
+
+            if (!/^09\d{9}$/.test(phoneInput.value.trim())) {
+                phoneInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                phoneInput.classList.remove('is-invalid');
+            }
+
+            if (!/^\d{10}$/.test(nationalIdInput.value.trim())) {
+                nationalIdInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                nationalIdInput.classList.remove('is-invalid');
+            }
+
+            if (!isValid) return;
+
+            // غیرفعال کردن دکمه حین ارسال
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> در حال ارسال...';
+
+            const csrfToken = (
+                form.querySelector('input[name="csrfmiddlewaretoken"]')?.value
+                || getCookie('csrftoken')
+            );
+
+            const payload = {
+                phone: phoneInput.value.trim(),
+                national_id: nationalIdInput.value.trim(),
+                product_id: {{ campaign.product.pk|default:"null" }},
+            };
+
+            fetch("{% url 'market:support_order_request' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(async r => ({ status: r.status, data: await r.json().catch(() => ({})) }))
+            .then(({ status, data }) => {
+                // خطای سرور یا اعتبارسنجی
+                if (!data.ok) {
+                    if (data.errors) {
+                        if (data.errors.phone) phoneInput.classList.add('is-invalid');
+                        if (data.errors.national_id) nationalIdInput.classList.add('is-invalid');
+                    }
+                    const msg = data.error
+                        || (data.errors && Object.values(data.errors)[0])
+                        || 'خطا در ثبت درخواست. لطفاً دوباره تلاش کنید.';
+                    if (typeof toastManager !== 'undefined') {
+                        toastManager.show(msg, 'error', 5000);
+                    } else if (typeof showNotificationModal !== 'undefined') {
+                        showNotificationModal('خطا', msg, 'error');
+                    }
+                    return;
+                }
+
+                // ✅ موفق
+                if (modalEl) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInstance.hide();
+                }
+
+                const successMsg = 'پشتیبانان ما به زودی با شما تماس می‌گیرند';
+
+                if (typeof toastManager !== 'undefined') {
+                    toastManager.show(successMsg, 'success', 6000);
+                } else if (typeof showNotificationModal !== 'undefined') {
+                    showNotificationModal('موفق', successMsg, 'success');
+                }
+
+                form.reset();
+            })
+            .catch(() => {
+                if (typeof toastManager !== 'undefined') {
+                    toastManager.show('ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.', 'error', 5000);
+                } else if (typeof showNotificationModal !== 'undefined') {
+                    showNotificationModal('خطا', 'ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.', 'error');
+                }
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+            });
+        });
+
+        // هنگام بسته شدن مودال فرم رو ریست کن
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                form.reset();
+                phoneInput.classList.remove('is-invalid');
+                nationalIdInput.classList.remove('is-invalid');
+            });
+        }
+    })();
+})();
+</script>
+{% endblock %}

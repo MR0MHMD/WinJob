@@ -5,12 +5,12 @@ from django import template
 register = template.Library()
 
 WINDIRECT_APPS = {
-    "windirect_connections": "اتصالات",
-    "windirect_comments": "کامنت هوشمند",
-    "windirect_direct": "دایرکت هوشمند",
-    "windirect_showcases": "ویترین‌ساز",
-    "windirect_forms": "فرم‌ساز",
-    "windirect_subscriptions": "اشتراک‌ها",
+    "connections": "اتصالات",
+    "comments": "کامنت هوشمند",
+    "direct": "دایرکت هوشمند",
+    "showcases": "ویترین‌ساز",
+    "forms": "فرم‌ساز",
+    "subscriptions": "اشتراک‌ها",
 }
 
 

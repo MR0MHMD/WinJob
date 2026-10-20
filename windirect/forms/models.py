@@ -1,3 +1,6 @@
+# windirect/forms/models
+
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -91,7 +94,7 @@ class FormSubmission(models.Model):
         verbose_name=_("فرم"),
     )
     connection = models.ForeignKey(
-        "windirect_connections.InstagramConnection",
+        "connections.InstagramConnection",
         on_delete=models.PROTECT,
         verbose_name=_("حساب"),
     )

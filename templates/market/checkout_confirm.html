@@ -1,0 +1,1149 @@
+{% extends "market/parent/base_market.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}تایید سفارش | وین مارکت{% endblock %}
+
+{% block extra_style %}
+<style>
+:root {
+    --mk-primary: #fd5631;
+    --mk-accent: #5d3cf2;
+    --mk-success: #07c98b;
+    --mk-warning: #fdbc31;
+    --mk-danger: #f23c49;
+    --mk-bg: #1f1b2d;
+    --mk-border: rgba(255,255,255,0.08);
+    --mk-muted: rgba(255,255,255,0.6);
+    --mk-dim: rgba(255,255,255,0.4);
+}
+body { background: var(--mk-bg) !important; }
+.page-wrapper { padding: 0 !important; }
+
+/* BREADCRUMB */
+.ck-breadcrumb-wrap {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border-bottom: 1px solid var(--mk-border);
+    padding: 1rem 0;
+    margin-top: 4.5rem;
+}
+.ck-breadcrumb {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    font-size: 0.85rem; color: var(--mk-dim);
+    list-style: none; padding: 0; margin: 0;
+}
+.ck-breadcrumb a { color: var(--mk-muted); text-decoration: none; }
+.ck-breadcrumb a:hover { color: var(--mk-primary); }
+.ck-breadcrumb .sep { color: rgba(255,255,255,0.2); font-size: 0.7rem; }
+.ck-breadcrumb .active { color: #fff; font-weight: 600; }
+
+/* STEPS */
+.ck-steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1rem; padding: 2rem 0 1.5rem; flex-wrap: wrap;
+}
+.ck-step {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.6rem 1.15rem; border-radius: 50rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--mk-border);
+    color: var(--mk-dim);
+    font-size: 0.85rem; font-weight: 700;
+    transition: all 0.3s ease;
+}
+.ck-step .num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.06);
+    color: var(--mk-dim);
+    font-size: 0.75rem; font-weight: 900;
+}
+.ck-step.active {
+    background: linear-gradient(135deg, rgba(253,86,49,0.15), rgba(93,60,242,0.1));
+    border-color: rgba(253,86,49,0.4);
+    color: #fff;
+}
+.ck-step.active .num { background: linear-gradient(135deg, #fd5631, #f23c49); color: #fff; }
+.ck-step.done .num { background: linear-gradient(135deg, #07c98b, #059669); color: #fff; }
+.ck-step.done { color: var(--mk-success); border-color: rgba(7,201,139,0.35); }
+.ck-step-line { width: 40px; height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+@media (max-width: 575.98px) {
+    .ck-step-line { width: 20px; }
+    .ck-step { padding: 0.5rem 0.85rem; font-size: 0.78rem; }
+}
+
+/* MAIN */
+.ck-main { padding-bottom: 4rem; }
+.ck-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* CARD */
+.ck-card {
+    padding: 1.75rem;
+    border-radius: 1.5rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    margin-bottom: 1.5rem;
+}
+.ck-card-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    color: #fff; font-size: 1.05rem; font-weight: 800;
+    margin: 0 0 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--mk-border);
+}
+.ck-card-title i { color: var(--mk-primary); font-size: 1.25rem; }
+.ck-card-title .badge-warn {
+    margin-right: auto;
+    padding: 0.2rem 0.7rem;
+    border-radius: 50rem;
+    background: rgba(253,188,49,0.15);
+    color: var(--mk-warning);
+    font-size: 0.7rem;
+    font-weight: 800;
+    border: 1px solid rgba(253,188,49,0.3);
+}
+
+/* ============================================================
+   ADDRESS SUMMARY
+   ============================================================ */
+.ck-address-summary {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 1.15rem 1.25rem; border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(7,201,139,0.06), rgba(7,201,139,0.02));
+    border: 1.5px solid rgba(7,201,139,0.25);
+    position: relative;
+}
+.ck-address-summary > .icon {
+    flex-shrink: 0;
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, #07c98b, #059669);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+}
+.ck-address-summary .body { flex: 1; min-width: 0; }
+.ck-address-summary .head {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 0.4rem; flex-wrap: wrap;
+}
+.ck-address-summary .title {
+    color: #fff; font-size: 0.95rem; font-weight: 700;
+}
+.ck-address-summary .badge-default {
+    padding: 0.15rem 0.55rem; border-radius: 50rem;
+    background: rgba(7,201,139,0.15);
+    color: var(--mk-success);
+    font-size: 0.7rem; font-weight: 800;
+    border: 1px solid rgba(7,201,139,0.3);
+}
+.ck-address-summary .text {
+    color: var(--mk-muted); font-size: 0.85rem;
+    line-height: 1.7; margin-bottom: 0.4rem;
+}
+.ck-address-summary .meta {
+    color: var(--mk-dim); font-size: 0.75rem;
+    display: flex; flex-wrap: wrap; gap: 0.85rem;
+}
+.ck-address-summary .meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.ck-address-summary .meta i { color: var(--mk-primary); font-size: 0.7rem; }
+
+.ck-change-address-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    margin-top: 1rem; padding: 0.6rem 1.1rem;
+    border-radius: 0.75rem;
+    background: rgba(253,86,49,0.08);
+    border: 1px dashed rgba(253,86,49,0.4);
+    color: var(--mk-primary);
+    font-weight: 700; font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+.ck-change-address-btn:hover {
+    background: rgba(253,86,49,0.15);
+    border-style: solid;
+    transform: translateY(-2px);
+}
+
+/* ============================================================
+   RECEIVER FIELDS
+   ============================================================ */
+.ck-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.ck-field label {
+    display: block;
+    color: #fff; font-size: 0.85rem; font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+.ck-field label .req { color: var(--mk-danger); margin-right: 0.15rem; }
+.ck-field input,
+.ck-field textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.25s ease;
+    outline: none;
+}
+.ck-field input::placeholder,
+.ck-field textarea::placeholder { color: var(--mk-dim); }
+.ck-field input:focus,
+.ck-field textarea:focus {
+    border-color: var(--mk-primary);
+    background: rgba(253,86,49,0.04);
+    box-shadow: 0 0 0 4px rgba(253,86,49,0.1);
+}
+
+/* ============================================================
+   PAYMENT METHOD (radio cards)
+   ============================================================ */
+.ck-pay-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.ck-pay-option {
+    position: relative;
+    display: block;
+    padding: 1.15rem 1.25rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,0.025);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.ck-pay-option:hover:not(.disabled) {
+    border-color: rgba(253,86,49,0.35);
+    background: rgba(253,86,49,0.04);
+}
+.ck-pay-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.ck-pay-option .ck-pay-inner {
+    display: flex; align-items: flex-start; gap: 1rem;
+}
+.ck-pay-option .ck-pay-icon {
+    flex-shrink: 0;
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: var(--mk-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    transition: all 0.25s ease;
+}
+.ck-pay-option .ck-pay-body { flex: 1; min-width: 0; }
+.ck-pay-option .ck-pay-title {
+    color: #fff; font-size: 0.92rem; font-weight: 700;
+    margin-bottom: 0.25rem;
+    display: flex; align-items: center; gap: 0.4rem;
+}
+.ck-pay-option .ck-pay-desc {
+    color: var(--mk-dim); font-size: 0.75rem;
+    line-height: 1.6;
+}
+.ck-pay-option .ck-pay-desc .ok { color: var(--mk-success); font-weight: 700; }
+.ck-pay-option .ck-pay-desc .err { color: var(--mk-danger); font-weight: 700; }
+.ck-pay-option .ck-pay-radio {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    position: relative;
+    transition: all 0.25s ease;
+    margin-top: 0.15rem;
+}
+.ck-pay-option:has(input:checked):not(.disabled) {
+    border-color: var(--mk-primary);
+    background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.04));
+    box-shadow: 0 0 0 4px rgba(253,86,49,0.1);
+}
+.ck-pay-option:has(input:checked):not(.disabled) .ck-pay-icon {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    border-color: transparent;
+    color: #fff;
+}
+.ck-pay-option:has(input:checked):not(.disabled) .ck-pay-radio {
+    border-color: var(--mk-primary);
+}
+.ck-pay-option:has(input:checked):not(.disabled) .ck-pay-radio::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+}
+
+/* Disabled (اقساطی + کیف پول ناکافی) */
+.ck-pay-option.disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: rgba(255,255,255,0.015);
+}
+.ck-pay-option.disabled .ck-pay-icon {
+    background: rgba(255,255,255,0.02);
+    color: rgba(255,255,255,0.25);
+}
+.ck-pay-option.disabled .ck-pay-radio {
+    border-color: rgba(255,255,255,0.1);
+}
+.ck-pay-badge-soon {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 50rem;
+    background: rgba(253,188,49,0.15);
+    color: var(--mk-warning);
+    font-size: 0.62rem;
+    font-weight: 800;
+    border: 1px solid rgba(253,188,49,0.3);
+}
+
+/* ============================================================
+   SHIPPING (per supplier)
+   ============================================================ */
+.ck-ship-info {
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 0.85rem;
+    background: rgba(253,188,49,0.08);
+    border: 1px solid rgba(253,188,49,0.25);
+    color: rgba(255,255,255,0.75);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+}
+.ck-ship-info > i {
+    color: var(--mk-warning);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+.ck-ship-info strong { color: var(--mk-warning); }
+
+.ck-supplier-block {
+    padding: 1.15rem 1.25rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--mk-border);
+    margin-bottom: 1rem;
+}
+.ck-supplier-block:last-child { margin-bottom: 0; }
+
+.ck-supplier-head {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+}
+.ck-supplier-head > i {
+    color: var(--mk-primary);
+    font-size: 1.1rem;
+}
+.ck-supplier-name {
+    color: #fff; font-size: 0.92rem; font-weight: 800;
+}
+.ck-supplier-items {
+    margin-right: auto;
+    color: var(--mk-dim); font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.ck-ship-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+.ck-ship-option {
+    position: relative;
+    display: block;
+    padding: 0.95rem 1rem;
+    border-radius: 0.85rem;
+    background: rgba(255,255,255,0.025);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.ck-ship-option:hover {
+    border-color: rgba(253,86,49,0.35);
+    background: rgba(253,86,49,0.04);
+}
+.ck-ship-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.ck-ship-option .ck-ship-inner {
+    display: flex; align-items: center; gap: 0.85rem;
+}
+.ck-ship-option .ck-ship-icon {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--mk-border);
+    color: var(--mk-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem;
+    transition: all 0.25s ease;
+}
+.ck-ship-option .ck-ship-body { flex: 1; min-width: 0; }
+.ck-ship-option .ck-ship-title {
+    color: #fff; font-size: 0.85rem; font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+.ck-ship-option .ck-ship-desc {
+    color: var(--mk-dim); font-size: 0.7rem;
+    line-height: 1.4;
+}
+.ck-ship-option .ck-ship-radio {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    position: relative;
+    transition: all 0.25s ease;
+}
+.ck-ship-option:has(input:checked) {
+    border-color: var(--mk-primary);
+    background: linear-gradient(135deg, rgba(253,86,49,0.08), rgba(93,60,242,0.04));
+    box-shadow: 0 0 0 3px rgba(253,86,49,0.1);
+}
+.ck-ship-option:has(input:checked) .ck-ship-icon {
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    border-color: transparent;
+    color: #fff;
+}
+.ck-ship-option:has(input:checked) .ck-ship-radio {
+    border-color: var(--mk-primary);
+}
+.ck-ship-option:has(input:checked) .ck-ship-radio::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+}
+
+.ck-ship-empty {
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(242,60,73,0.08);
+    border: 1px solid rgba(242,60,73,0.25);
+    color: var(--mk-danger);
+    font-size: 0.82rem;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.ck-sidebar {
+    position: sticky;
+    top: 6rem;
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--mk-border);
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+}
+.ck-sidebar-title {
+    color: #fff; font-size: 1rem; font-weight: 800;
+    margin: 0 0 1.25rem;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--mk-border);
+}
+.ck-sidebar-title i { color: var(--mk-primary); }
+
+.ck-side-item {
+    display: flex; gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.05);
+}
+.ck-side-item:last-of-type { border-bottom: 0; }
+.ck-side-img {
+    flex-shrink: 0;
+    width: 48px; height: 48px;
+    border-radius: 0.6rem;
+    background: rgba(255,255,255,0.03);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+}
+.ck-side-img img { width: 100%; height: 100%; object-fit: cover; }
+.ck-side-img i { color: rgba(255,255,255,0.15); font-size: 1.25rem; }
+.ck-side-info { flex: 1; min-width: 0; }
+.ck-side-name {
+    color: #fff; font-size: 0.82rem; font-weight: 700;
+    margin-bottom: 0.2rem;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.ck-side-qty {
+    color: var(--mk-dim); font-size: 0.72rem;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.ck-side-price { color: var(--mk-primary); font-weight: 800; font-size: 0.85rem; }
+
+.ck-total-row {
+    display: flex; justify-content: space-between;
+    padding: 0.6rem 0;
+    color: var(--mk-muted); font-size: 0.85rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+}
+.ck-total-row:last-of-type { border-bottom: 0; }
+.ck-total-row.grand {
+    margin-top: 0.5rem;
+    padding: 1rem 0 0.5rem;
+    border-top: 2px solid rgba(253,86,49,0.2);
+    border-bottom: 0;
+    color: #fff; font-size: 1rem; font-weight: 800;
+}
+.ck-total-row.grand .val {
+    color: var(--mk-primary);
+    font-size: 1.25rem; font-weight: 900;
+}
+.ck-total-row .afterpay {
+    color: var(--mk-warning);
+    font-size: 0.78rem; font-weight: 700;
+}
+
+/* PAY BUTTON */
+.ck-pay-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.1rem 1.5rem;
+    margin-top: 1.25rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #fd5631, #f23c49);
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 12px 30px rgba(253,86,49,0.4);
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
+}
+.ck-pay-btn::before {
+    content: "";
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: ckShine 3s infinite;
+}
+@keyframes ckShine {
+    0%, 50% { left: -100%; }
+    100% { left: 100%; }
+}
+.ck-pay-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 45px rgba(253,86,49,0.6);
+    color: #fff;
+}
+.ck-pay-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.ck-pay-btn .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: ckSpin 0.8s linear infinite;
+}
+.ck-pay-btn.loading .spinner { display: inline-block; }
+.ck-pay-btn.loading .icon { display: none; }
+@keyframes ckSpin { to { transform: rotate(360deg); } }
+
+.ck-pay-trust {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    color: var(--mk-dim);
+    font-size: 0.72rem;
+}
+.ck-pay-trust span {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.ck-pay-trust i { color: var(--mk-success); }
+
+/* CONFIRM MODAL */
+#ckWalletConfirmModal .modal-content {
+    background: linear-gradient(180deg, #1f1b2d, #17141f);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.25rem;
+}
+#ckWalletConfirmModal .modal-header {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 1.15rem 1.35rem;
+}
+#ckWalletConfirmModal .modal-body {
+    padding: 1.35rem;
+    color: rgba(255,255,255,0.75);
+    font-size: 0.92rem;
+    line-height: 1.8;
+}
+#ckWalletConfirmModal .modal-footer {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 1rem 1.35rem;
+    gap: 0.5rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 991.98px) {
+    .ck-grid { grid-template-columns: 1fr; }
+    .ck-sidebar { position: static; }
+    .ck-pay-options { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 575.98px) {
+    .ck-main { padding: 0 0 3rem; }
+    .ck-card { padding: 1.25rem; }
+    .ck-form-grid { grid-template-columns: 1fr; }
+    .ck-pay-options { grid-template-columns: 1fr; }
+    .ck-ship-options { grid-template-columns: 1fr; }
+    .ck-step-line { width: 15px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ck-breadcrumb-wrap">
+    <div class="container">
+        <ol class="ck-breadcrumb">
+            <li><a href="/"><i class="bi bi-house-door-fill"></i> خانه</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li><a href="{% url 'market:landing' %}"><i class="bi bi-shop-window"></i> وین مارکت</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li><a href="{% url 'market:cart_detail' %}">سبد خرید</a></li>
+            <li class="sep"><i class="bi bi-chevron-left"></i></li>
+            <li class="active">تایید سفارش</li>
+        </ol>
+    </div>
+</div>
+
+<section class="ck-main">
+    <div class="container">
+
+        <!-- STEPS -->
+        <div class="ck-steps">
+            <div class="ck-step done">
+                <span class="num"><i class="bi bi-check-lg"></i></span>
+                <span>آدرس ارسال</span>
+            </div>
+            <div class="ck-step-line"></div>
+            <div class="ck-step active">
+                <span class="num">۲</span>
+                <span>تایید سفارش</span>
+            </div>
+            <div class="ck-step-line"></div>
+            <div class="ck-step">
+                <span class="num">۳</span>
+                <span>پرداخت</span>
+            </div>
+        </div>
+
+        <form id="ckConfirmForm" method="post" action="{% url 'market:checkout_confirm' %}" novalidate>
+            {% csrf_token %}
+            <div class="ck-grid">
+
+                <!-- ============ MAIN ============ -->
+                <div>
+
+                    <!-- ========== ADDRESS SUMMARY ========== -->
+                    <div class="ck-card">
+                        <h3 class="ck-card-title">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            آدرس ارسال
+                        </h3>
+
+                        <div class="ck-address-summary">
+                            <div class="icon"><i class="bi bi-check2"></i></div>
+                            <div class="body">
+                                <div class="head">
+                                    <span class="title">
+                                        {{ selected_address.title|default:"آدرس انتخابی" }}
+                                    </span>
+                                    {% if selected_address.is_default %}
+                                        <span class="badge-default">پیش‌فرض</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text">
+                                    {{ selected_address.province.name }} — {{ selected_address.city.name }} — {{ selected_address.address }}
+                                    {% if selected_address.plaque %} — پلاک {{ selected_address.plaque }}{% endif %}
+                                    {% if selected_address.unit %} — واحد {{ selected_address.unit }}{% endif %}
+                                </div>
+                                <div class="meta">
+                                    {% if selected_address.postal_code %}
+                                        <span><i class="bi bi-mailbox"></i> کدپستی: {{ selected_address.postal_code }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="ck-change-address-btn" id="ckChangeAddressBtn">
+                            <i class="bi bi-pencil-square"></i>
+                            تغییر آدرس
+                        </button>
+                    </div>
+
+                    <!-- ========== RECEIVER INFO ========== -->
+                    <div class="ck-card">
+                        <h3 class="ck-card-title">
+                            <i class="bi bi-person-badge-fill"></i>
+                            اطلاعات گیرنده
+                        </h3>
+
+                        <div class="ck-form-grid">
+                            <div class="ck-field">
+                                <label for="ck_receiver_name">نام گیرنده <span class="req">*</span></label>
+                                <input type="text" id="ck_receiver_name" name="receiver_name"
+                                       maxlength="100" value="{{ default_receiver_name }}" required>
+                            </div>
+                            <div class="ck-field">
+                                <label for="ck_receiver_phone">شماره تماس <span class="req">*</span></label>
+                                <input type="tel" id="ck_receiver_phone" name="receiver_phone"
+                                       maxlength="11" value="{{ default_receiver_phone }}"
+                                       placeholder="۰۹xxxxxxxxx" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== SHIPPING (per supplier) ========== -->
+                    <div class="ck-card">
+                        <h3 class="ck-card-title">
+                            <i class="bi bi-truck"></i>
+                            روش ارسال
+                            {% if has_multiple_suppliers %}
+                                <span class="badge-warn">{{ supplier_groups|length }} بسته</span>
+                            {% endif %}
+                        </h3>
+
+                        <div class="ck-ship-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>
+                                {% if has_multiple_suppliers %}
+                                    سفارش شما در <strong>{{ supplier_groups|length }} بسته</strong> از فروشندگان مختلف ارسال می‌شود.
+                                    <br>
+                                {% endif %}
+                                هزینه ارسال <strong>پس‌کرایه</strong> است و هنگام تحویل مرسوله، توسط پیک از شما دریافت می‌شود.
+                            </div>
+                        </div>
+
+                        {% for grp in supplier_groups %}
+                            <div class="ck-supplier-block">
+                                <div class="ck-supplier-head">
+                                    <i class="bi bi-shop"></i>
+                                    <span class="ck-supplier-name">{{ grp.supplier_name }}</span>
+                                    <span class="ck-supplier-items">{{ grp.items|length }} آیتم</span>
+                                </div>
+
+                                {% if grp.available_methods %}
+                                    <div class="ck-ship-options">
+                                        {% for method in grp.available_methods %}
+                                            <label class="ck-ship-option">
+                                                <input type="radio"
+                                                       name="shipping_method_{% if grp.supplier %}{{ grp.supplier.id }}{% else %}0{% endif %}"
+                                                       value="{{ method.id }}"
+                                                       {% if method.id == grp.default_method_id %}checked{% endif %}>
+                                                <div class="ck-ship-inner">
+                                                    <div class="ck-ship-icon">
+                                                        <i class="{% if method.icon %}{{ method.icon }}{% else %}bi-truck{% endif %}"></i>
+                                                    </div>
+                                                    <div class="ck-ship-body">
+                                                        <div class="ck-ship-title">{{ method.name }}</div>
+                                                        {% if method.description %}
+                                                            <div class="ck-ship-desc">{{ method.description }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="ck-ship-radio"></div>
+                                                </div>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="ck-ship-empty">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        متاسفانه برای این فروشنده روش ارسال فعالی وجود ندارد.
+                                        لطفاً با پشتیبانی تماس بگیرید.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ========== PAYMENT METHOD ========== -->
+                    <div class="ck-card">
+                        <h3 class="ck-card-title">
+                            <i class="bi bi-credit-card-2-front-fill"></i>
+                            روش پرداخت
+                        </h3>
+
+                        <div class="ck-pay-options">
+
+                            <!-- 💳 درگاه زرین‌پال (همیشه فعال) -->
+                            <label class="ck-pay-option">
+                                <input type="radio" name="payment_method" value="gateway" checked>
+                                <div class="ck-pay-inner">
+                                    <div class="ck-pay-icon"><i class="bi bi-credit-card-fill"></i></div>
+                                    <div class="ck-pay-body">
+                                        <div class="ck-pay-title">
+                                            درگاه زرین‌پال
+                                        </div>
+                                        <div class="ck-pay-desc">
+                                            پرداخت آنلاین از طریق درگاه امن بانکی
+                                        </div>
+                                    </div>
+                                    <div class="ck-pay-radio"></div>
+                                </div>
+                            </label>
+
+                            <!-- 👛 کیف پول -->
+                            <label class="ck-pay-option {% if not wallet_sufficient %}disabled{% endif %}"
+                                   {% if not wallet_sufficient %}title="موجودی کیف پول کافی نیست"{% endif %}>
+                                <input type="radio" name="payment_method" value="wallet"
+                                       {% if not wallet_sufficient %}disabled{% endif %}>
+                                <div class="ck-pay-inner">
+                                    <div class="ck-pay-icon"><i class="bi bi-wallet2"></i></div>
+                                    <div class="ck-pay-body">
+                                        <div class="ck-pay-title">
+                                            کیف پول
+                                        </div>
+                                        <div class="ck-pay-desc">
+                                            موجودی: <strong style="color:#fff;">{{ wallet_balance|intcomma }}</strong> تومان
+                                            {% if wallet_sufficient %}
+                                                <br><span class="ok"><i class="bi bi-check-circle-fill"></i> کافی برای پرداخت</span>
+                                            {% else %}
+                                                <br><span class="err"><i class="bi bi-x-circle-fill"></i>
+                                                    {{ wallet_shortage|intcomma }} تومان کم داری</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="ck-pay-radio"></div>
+                                </div>
+                            </label>
+
+                            <!-- 📅 مینی‌پی (غیرفعال) -->
+                            <label class="ck-pay-option disabled" title="به‌زودی">
+                                <input type="radio" name="payment_method" value="minipey" disabled>
+                                <div class="ck-pay-inner">
+                                    <div class="ck-pay-icon"><i class="bi bi-calendar-check"></i></div>
+                                    <div class="ck-pay-body">
+                                        <div class="ck-pay-title">
+                                            پرداخت اقساطی
+                                            <span class="ck-pay-badge-soon">به‌زودی</span>
+                                        </div>
+                                        <div class="ck-pay-desc">
+                                            از طریق درگاه مینی‌پی
+                                        </div>
+                                    </div>
+                                    <div class="ck-pay-radio"></div>
+                                </div>
+                            </label>
+
+                            <!-- 📅 دیجی‌پی (غیرفعال) -->
+                            <label class="ck-pay-option disabled" title="به‌زودی">
+                                <input type="radio" name="payment_method" value="digipay" disabled>
+                                <div class="ck-pay-inner">
+                                    <div class="ck-pay-icon"><i class="bi bi-calendar-check"></i></div>
+                                    <div class="ck-pay-body">
+                                        <div class="ck-pay-title">
+                                            پرداخت اقساطی
+                                            <span class="ck-pay-badge-soon">به‌زودی</span>
+                                        </div>
+                                        <div class="ck-pay-desc">
+                                            از طریق درگاه دیجی‌پی
+                                        </div>
+                                    </div>
+                                    <div class="ck-pay-radio"></div>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <!-- ========== CUSTOMER NOTE ========== -->
+                    <div class="ck-card">
+                        <h3 class="ck-card-title">
+                            <i class="bi bi-chat-left-text-fill"></i>
+                            یادداشت برای فروشنده (اختیاری)
+                        </h3>
+
+                        <div class="ck-field">
+                            <textarea id="ck_customer_note" name="customer_note" rows="3"
+                                      maxlength="500"
+                                      placeholder="مثلاً: لطفاً قبل از ارسال تماس بگیرید، بسته‌بندی کادویی، ..."></textarea>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ============ SIDEBAR ============ -->
+                <div>
+                    <div class="ck-sidebar">
+                        <h4 class="ck-sidebar-title">
+                            <i class="bi bi-bag-check-fill"></i>
+                            خلاصه سفارش
+                        </h4>
+
+                        {% for item in cart_items %}
+                        <div class="ck-side-item">
+                            <div class="ck-side-img">
+                                {% if item.product.main_image %}
+                                    <img src="{{ item.product.main_image.url }}" alt="">
+                                {% else %}
+                                    <i class="bi bi-bag"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ck-side-info">
+                                <div class="ck-side-name">{{ item.product.title }}</div>
+                                <div class="ck-side-qty">
+                                    <span>{{ item.quantity }} عدد</span>
+                                    <span class="ck-side-price">{{ item.subtotal|intcomma }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--mk-border);">
+                            <div class="ck-total-row">
+                                <span>جمع کالاها</span>
+                                <span>{{ items_total|intcomma }} ت</span>
+                            </div>
+                            <div class="ck-total-row">
+                                <span>هزینه ارسال</span>
+                                <span class="afterpay">پس‌کرایه 🚚</span>
+                            </div>
+                            <div class="ck-total-row grand">
+                                <span>مبلغ قابل پرداخت</span>
+                                <span class="val">{{ grand_total|intcomma }} ت</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="ck-pay-btn" id="ckPayBtn">
+                            <span class="spinner"></span>
+                            <i class="bi bi-shield-lock-fill icon"></i>
+                            <span id="ckPayBtnText">پرداخت امن</span>
+                        </button>
+
+                        <div class="ck-pay-trust">
+                            <span><i class="bi bi-shield-lock-fill"></i> پرداخت امن</span>
+                            <span><i class="bi bi-patch-check-fill"></i> ضمانت اصالت</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block modals %}
+    <!-- WALLET CONFIRM MODAL -->
+    <div class="modal fade" id="ckWalletConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color:#fff;">
+                        <i class="bi bi-wallet2" style="color:#fd5631;"></i>
+                        تایید پرداخت از کیف پول
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="filter:invert(1) grayscale(1) brightness(2);"></button>
+                </div>
+                <div class="modal-body">
+                    مبلغ <strong style="color:#fd5631;">{{ grand_total|intcomma }} تومان</strong>
+                    از کیف پول شما کسر می‌شود.
+                    <br>
+                    موجودی فعلی: <strong style="color:#fff;">{{ wallet_balance|intcomma }} تومان</strong>
+                    <br>
+                    موجودی پس از پرداخت:
+                    <strong style="color:#07c98b;">
+                        {{ wallet_after_payment|intcomma }} تومان
+                    </strong>
+                    <br><br>
+                    آیا مطمئنید؟
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="ck-btn ghost" data-bs-dismiss="modal"
+                            style="background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);padding:0.65rem 1.25rem;border-radius:0.75rem;font-weight:700;cursor:pointer;">
+                        انصراف
+                    </button>
+                    <button type="button" id="ckWalletConfirmBtn"
+                            style="background:linear-gradient(135deg,#fd5631,#f23c49);color:#fff;border:0;padding:0.65rem 1.35rem;border-radius:0.75rem;font-weight:800;cursor:pointer;">
+                        <i class="bi bi-check-circle"></i>
+                        بله، پرداخت کن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    const form = document.getElementById('ckConfirmForm');
+    const payBtn = document.getElementById('ckPayBtn');
+    const payBtnText = document.getElementById('ckPayBtnText');
+    const nameInput = document.getElementById('ck_receiver_name');
+    const phoneInput = document.getElementById('ck_receiver_phone');
+
+    const walletModalEl = document.getElementById('ckWalletConfirmModal');
+    let walletModal = null;
+    let pendingWalletSubmit = false;
+
+    // ============================================
+    // Toast
+    // ============================================
+    function showToast(msg, type) {
+        try {
+            if (typeof toastManager !== 'undefined' && toastManager.show) {
+                toastManager.show(msg, type);
+                return;
+            }
+        } catch (e) {}
+        console.log('[' + type + '] ' + msg);
+    }
+
+    // ============================================
+    // تغییر آدرس
+    // ============================================
+    const changeBtn = document.getElementById('ckChangeAddressBtn');
+    changeBtn && changeBtn.addEventListener('click', function() {
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = "{% url 'market:change_address' %}";
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        f.appendChild(csrfInput);
+        document.body.appendChild(f);
+        f.submit();
+    });
+
+    // ============================================
+    // تغییر متن دکمه بر اساس روش پرداخت
+    // ============================================
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'wallet') {
+                payBtnText.textContent = 'پرداخت از کیف پول';
+            } else {
+                payBtnText.textContent = 'پرداخت امن';
+            }
+        });
+    });
+
+    // ============================================
+    // اعتبارسنجی + Submit
+    // ============================================
+    function validateForm() {
+        if (!nameInput.value.trim()) {
+            nameInput.focus();
+            showToast('نام گیرنده الزامی است', 'warning');
+            return false;
+        }
+
+        const phone = phoneInput.value.trim();
+        if (!phone || !/^09\d{9}$/.test(phone)) {
+            phoneInput.focus();
+            showToast('شماره تماس معتبر وارد کنید (مثال: ۰۹۱۲۳۴۵۶۷۸۹)', 'warning');
+            return false;
+        }
+
+        return true;
+    }
+
+    function getSelectedPaymentMethod() {
+        const checked = document.querySelector('input[name="payment_method"]:checked');
+        return checked ? checked.value : 'gateway';
+    }
+
+    function doSubmit() {
+        payBtn.classList.add('loading');
+        payBtn.disabled = true;
+        form.submit();
+    }
+
+    form && form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (!validateForm()) return;
+
+        const method = getSelectedPaymentMethod();
+
+        if (method === 'wallet') {
+            // نمایش مودال تایید
+            if (!walletModal) {
+                walletModal = new bootstrap.Modal(walletModalEl);
+            }
+            pendingWalletSubmit = true;
+            walletModal.show();
+            return;
+        }
+
+        // درگاه — مستقیم submit
+        doSubmit();
+    });
+
+    // ============================================
+    // مودال تایید کیف پول
+    // ============================================
+    const walletConfirmBtn = document.getElementById('ckWalletConfirmBtn');
+    walletConfirmBtn && walletConfirmBtn.addEventListener('click', function() {
+        if (!pendingWalletSubmit) return;
+        walletConfirmBtn.disabled = true;
+        walletConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> در حال پردازش...';
+
+        if (walletModal) walletModal.hide();
+
+        // submit فرم اصلی
+        payBtn.classList.add('loading');
+        payBtn.disabled = true;
+        form.submit();
+    });
+
+    // reset pending flag if modal closed without confirm
+    walletModalEl && walletModalEl.addEventListener('hidden.bs.modal', function() {
+        if (pendingWalletSubmit) {
+            pendingWalletSubmit = false;
+            walletConfirmBtn.disabled = false;
+            walletConfirmBtn.innerHTML = '<i class="bi bi-check-circle"></i> بله، پرداخت کن';
+        }
+    });
+
+})();
+</script>
+{% endblock %}
