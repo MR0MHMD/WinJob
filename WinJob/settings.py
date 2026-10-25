@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     # packages
     'django_jalali',
     "django_resized",
-    "django_cleanup",
+    "django_cleanup.apps.CleanupConfig",
     'django_iranian_payment.contrib.django',
     # apps
     'accounts.apps.AccountsConfig',

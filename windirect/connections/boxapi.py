@@ -281,19 +281,7 @@ def send_message(account_id: str, recipient_id: str, message: str, buttons: list
 def upload_file(username: str, file_obj, file_type: str = None) -> Optional[dict]:
     """
     آپلود فایل به فضای ابری BoxAPI.
-
-    Args:
-        username: نام کاربری پیج (مثل winjob_ir)
-        file_obj: فایل (Django UploadedFile یا file object)
-        file_type: MIME type (اختیاری، مثل image/jpeg)
-
-    Returns:
-        dict: {
-            "success": bool,
-            "url": str|None,
-            "file_id": str|None,
-            "raw": dict|None,
-        }
+    پارامتر type رو ارسال نمی‌کنیم تا BoxAPI خودش فرمت رو تشخیص بده.
     """
     api_key = _get_api_key()
     if not api_key:
@@ -301,39 +289,30 @@ def upload_file(username: str, file_obj, file_type: str = None) -> Optional[dict
         return {"success": False, "url": None, "file_id": None, "raw": None}
 
     url = f"{_get_base_url()}/service/uploads"
-    headers = {
-        "X-Api-Key": api_key,
-        # ⚠️ Content-Type رو نمی‌ذاریم، چون requests خودش multipart/form-data رو ست می‌کنه
-    }
+    headers = {"X-Api-Key": api_key}
 
-    # ==================== آماده‌سازی فایل ====================
     files = {
         "file": (
             getattr(file_obj, "name", "file"),
             file_obj,
-            file_type or getattr(file_obj, "content_type", "application/octet-stream"),
+            file_type or "application/octet-stream",
         ),
     }
 
     data = {
         "username": username,
     }
-
-    if file_type:
-        data["type"] = file_type
+    # ⚠️ پارامتر type رو حذف کردیم
 
     logger.warning(
-        "📤 BoxAPI UPLOAD | url=%s | username=%s | filename=%s | size=%s | type=%s",
+        "📤 BoxAPI UPLOAD | url=%s | username=%s | filename=%s | size=%s",
         url, username,
         getattr(file_obj, "name", "?"),
         getattr(file_obj, "size", "?"),
-        file_type or "auto",
     )
 
     try:
-        response = requests.post(
-            url, headers=headers, files=files, data=data, timeout=60,
-        )
+        response = requests.post(url, headers=headers, files=files, data=data, timeout=60)
         logger.warning(
             "📥 BoxAPI UPLOAD RESPONSE | status=%s | body=%s",
             response.status_code, response.text[:500],
@@ -353,21 +332,14 @@ def upload_file(username: str, file_obj, file_type: str = None) -> Optional[dict
         logger.exception("❌ BoxAPI upload response not JSON")
         return {"success": False, "url": None, "file_id": None, "raw": None}
 
-    # ==================== استخراج URL و ID ====================
-    # ساختار احتمالی:
-    # {"success": true, "data": {"id": "...", "url": "https://dl.sendbox.chat/uploads/..."}}
     data_resp = result.get("data") or {}
-
     file_url = (
-        data_resp.get("url")
-        or data_resp.get("file_url")
-        or result.get("url")
+            data_resp.get("path")
+            or data_resp.get("url")
+            or data_resp.get("file_url")
+            or result.get("url")
     )
-    file_id = (
-        data_resp.get("id")
-        or data_resp.get("file_id")
-        or data_resp.get("uuid")
-    )
+    file_id = data_resp.get("id") or data_resp.get("file_id") or data_resp.get("uuid")
 
     if not result.get("success") or not file_url:
         logger.error(
@@ -376,16 +348,8 @@ def upload_file(username: str, file_obj, file_type: str = None) -> Optional[dict
         )
         return {"success": False, "url": None, "file_id": file_id, "raw": result}
 
-    logger.warning(
-        "✅ BoxAPI upload success | file_id=%s | url=%s",
-        file_id, file_url,
-    )
-    return {
-        "success": True,
-        "url": file_url,
-        "file_id": file_id,
-        "raw": result,
-    }
+    logger.warning("✅ BoxAPI upload success | file_id=%s | url=%s", file_id, file_url)
+    return {"success": True, "url": file_url, "file_id": file_id, "raw": result}
 
 
 def delete_file(file_id: str) -> bool:

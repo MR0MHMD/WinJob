@@ -34,8 +34,8 @@ class SubscriptionPlan(models.Model):
 
     class Meta:
         db_table = "windirect_subscriptionplan"
-        verbose_name = _("پلن وین دایرکت")
-        verbose_name_plural = _("پلن‌های وین دایرکت")
+        verbose_name = _("پلن")
+        verbose_name_plural = _("پلن ها")
         ordering = ["position", "pk"]
 
     def __str__(self):
@@ -80,8 +80,8 @@ class SubscriptionOffer(models.Model):
 
     class Meta:
         db_table = "windirect_subscriptionoffer"
-        verbose_name = _("دوره و قیمت پلن")
-        verbose_name_plural = _("دوره‌ها و قیمت‌های پلن")
+        verbose_name = _("اطلاعات پلن")
+        verbose_name_plural = _("اطلاعات پلن ها")
         ordering = ["duration_days", "pk"]
         constraints = [
             models.UniqueConstraint(
@@ -124,8 +124,8 @@ class SubscriptionAccount(models.Model):
 
     class Meta:
         db_table = "windirect_subscriptionaccount"
-        verbose_name = _("حساب اشتراک وین دایرکت")
-        verbose_name_plural = _("حساب‌های اشتراک وین دایرکت")
+        verbose_name = _("حساب اشتراک")
+        verbose_name_plural = _("حساب های اشتراک")
         ordering = ["-pk"]
 
     def __str__(self):
@@ -156,8 +156,8 @@ class ReferralCode(models.Model):
 
     class Meta:
         db_table = "windirect_referralcode"
-        verbose_name = _("کد معرف وین دایرکت")
-        verbose_name_plural = _("کدهای معرف وین دایرکت")
+        verbose_name = _("کد معرف")
+        verbose_name_plural = _("کد های معرف")
         ordering = ["-pk"]
 
     def __str__(self):
@@ -209,8 +209,8 @@ class SubscriptionOrder(models.Model):
 
     class Meta:
         db_table = "windirect_subscriptionorder"
-        verbose_name = _("سفارش اشتراک وین دایرکت")
-        verbose_name_plural = _("سفارش‌های اشتراک وین دایرکت")
+        verbose_name = _("سفارش اشتراک")
+        verbose_name_plural = _("سفارش ‌های اشتراک")
         ordering = ["-pk"]
         indexes = [
             models.Index(fields=["user", "status"], name="wd_order_owner_status")
@@ -263,7 +263,7 @@ class UserSubscription(models.Model):
     class Meta:
         db_table = "windirect_usersubscription"
         verbose_name = _("بازهٔ اشتراک کاربر")
-        verbose_name_plural = _("بازه‌های اشتراک کاربران")
+        verbose_name_plural = _("بازه های اشتراک کاربران")
         ordering = ["starts_at", "pk"]
         indexes = [
             models.Index(fields=["account", "ends_at"], name="wd_period_account_end")
@@ -301,7 +301,7 @@ class ReferralRedemption(models.Model):
     class Meta:
         db_table = "windirect_referralredemption"
         verbose_name = _("استفادهٔ موفق از کد معرف")
-        verbose_name_plural = _("استفاده‌های موفق از کد معرف")
+        verbose_name_plural = _("استفاده های موفق از کد معرف")
         ordering = ["-pk"]
 
     def __str__(self):
@@ -333,7 +333,7 @@ class SubscriptionGift(models.Model):
     class Meta:
         db_table = "windirect_subscriptiongift"
         verbose_name = _("هدیهٔ اشتراک")
-        verbose_name_plural = _("هدیه‌های اشتراک")
+        verbose_name_plural = _("هدایا اشتراک")
         ordering = ["-pk"]
         constraints = [
             models.UniqueConstraint(
@@ -380,8 +380,8 @@ class WindirectCoupon(models.Model):
 
     class Meta:
         db_table = "windirect_windirectcoupon"
-        verbose_name = _("کد تخفیف وین دایرکت")
-        verbose_name_plural = _("کدهای تخفیف وین دایرکت")
+        verbose_name = _("کد تخفیف")
+        verbose_name_plural = _("کد های تخفیف")
         ordering = ["-created_at"]
 
     def __str__(self):

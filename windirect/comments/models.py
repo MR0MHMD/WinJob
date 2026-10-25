@@ -119,8 +119,8 @@ class Automation(models.Model):
 
     class Meta:
         db_table = "windirect_automation"
-        verbose_name = _("کامنت هوشمند")
-        verbose_name_plural = _("کامنت‌های هوشمند")
+        verbose_name = _("کامنت")
+        verbose_name_plural = _("کامنت ها")
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["connection", "is_active", "target_type"]),
@@ -219,8 +219,8 @@ class AutomationKeyword(models.Model):
 
     class Meta:
         db_table = "windirect_automationkeyword"
-        verbose_name = _("فعال‌ساز کامنت هوشمند")
-        verbose_name_plural = _("فعال‌سازهای کامنت هوشمند")
+        verbose_name = _("فعال‌ساز کامنت")
+        verbose_name_plural = _("فعال‌ساز های کامنت")
         ordering = ["pk"]
         constraints = [
             models.UniqueConstraint(
@@ -288,8 +288,8 @@ class CommentEvent(models.Model):
 
     class Meta:
         db_table = "windirect_commentevent"
-        verbose_name = _("رویداد کامنت وین دایرکت")
-        verbose_name_plural = _("رویدادهای کامنت وین دایرکت")
+        verbose_name = _("رویداد کامنت")
+        verbose_name_plural = _("رویدادهای کامنت")
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
@@ -338,8 +338,8 @@ class AutomationExecution(models.Model):
 
     class Meta:
         db_table = "windirect_automationexecution"
-        verbose_name = _("اجرای کامنت هوشمند")
-        verbose_name_plural = _("اجراهای کامنت هوشمند")
+        verbose_name = _("اجرای کامنت")
+        verbose_name_plural = _("اجرا های کامنت")
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
@@ -414,7 +414,7 @@ class MediaUpload(models.Model):
     class Meta:
         db_table = "windirect_mediaupload"
         verbose_name = _("فایل آپلود شده")
-        verbose_name_plural = _("فایل‌های آپلود شده")
+        verbose_name_plural = _("فایل های آپلود شده")
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["status", "created_at"]),

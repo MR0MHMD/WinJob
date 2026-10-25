@@ -700,14 +700,25 @@ def upload_media(request):
     )
 
     if not result.get("success"):
+        raw = result.get("raw") or {}
+        raw_errors = raw.get("errors") or {}
+
+        error_message = "آپلود فایل به BoxAPI ناموفق بود."
+        if raw_errors.get("file"):
+            error_message = raw_errors["file"][0]
+        elif raw_errors.get("type"):
+            error_message = raw_errors["type"][0]
+        elif raw.get("message"):
+            error_message = raw["message"]
+
         logger.error(
-            "❌ upload_media: BoxAPI upload failed | result=%s",
-            result.get("raw"),
+            "❌ upload_media: BoxAPI upload failed | kind=%s | ext=%s | error=%s | raw=%s",
+            kind, file_ext, error_message, raw,
         )
         return JsonResponse({
             "success": False,
-            "message": "آپلود فایل به BoxAPI ناموفق بود. لطفاً دوباره تلاش کنید.",
-        }, status=500)
+            "message": f"آپلود ناموفق: {error_message}",
+        }, status=422)
 
     file_id = result.get("file_id")
     file_url = result.get("url")

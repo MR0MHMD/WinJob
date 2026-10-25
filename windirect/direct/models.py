@@ -52,8 +52,8 @@ class DirectRule(PanelAsset):
 
     class Meta(PanelAsset.Meta):
         db_table = "windirect_directrule"
-        verbose_name = _("قانون دایرکت")
-        verbose_name_plural = _("قوانین دایرکت")
+        verbose_name = _("دایرکت")
+        verbose_name_plural = _("دایرکت ها")
         ordering = ["priority", "pk"]
         indexes = [
             models.Index(
