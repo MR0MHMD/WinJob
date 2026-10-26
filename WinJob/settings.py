@@ -24,9 +24,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     # packages
+    'storages',
     'django_jalali',
     "django_resized",
-    "django_cleanup.apps.CleanupConfig",
     'django_iranian_payment.contrib.django',
     # apps
     'accounts.apps.AccountsConfig',
@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     "windirect.showcases.apps.ShowcasesConfig",
     "windirect.forms.apps.FormsConfig",
     "windirect.subscriptions.apps.SubscriptionsConfig",
-
     "blog.apps.BlogConfig",
     "content_team.apps.ContentTeamConfig",
     "notifications.apps.NotificationsConfig",
@@ -49,7 +48,8 @@ INSTALLED_APPS = [
     "gamification.apps.GamificationConfig",
     "support.apps.SupportConfig",
     "payment.apps.PaymentConfig",
-    "market.apps.MarketConfig"
+    "market.apps.MarketConfig",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 DAISY_SETTINGS = {
@@ -58,7 +58,6 @@ DAISY_SETTINGS = {
     'SITE_HEADER': 'ناحیه مدیریتی',
     'INDEX_TITLE': 'سلام به پنل مدیریتی سایت وینجاب خوش آمدید',
     'SITE_LOGO': '/static/finder/img/logo/logo.webp',
-
 
     'EXTRA_STYLES': ['/static/finder/css/them.min.css', '/static/finder/css/bootstrap-icons.css'],
     # 'EXTRA_SCRIPTS': ['static/finder/js/them.min.js'],
@@ -152,12 +151,12 @@ DAISY_SETTINGS = {
             'name': 'اعلان ها',
             'hide': None,
         }
-        ,'tickets': {
+        , 'tickets': {
             'icon': 'bi bi-ticket',
             'name': 'تیکت ها',
             'hide': None,
         }
-        ,'gamification': {
+        , 'gamification': {
             'icon': 'bi bi-star',
             'name': 'امتیاز ها',
             'hide': None,
@@ -168,7 +167,6 @@ DAISY_SETTINGS = {
 # ========== درگاه پرداخت زرین پال ==========
 ZARINPAL_MERCHANT_CODE = os.getenv('ZARINPAL_MERCHANT_CODE', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 
-# محیط درگاه صریح است؛ در توسعه حتی با شناسهٔ واقعی، سندباکس استفاده می‌شود.
 PAYMENT_ENV = os.getenv('PAYMENT_ENV', 'development' if DEBUG else 'production').lower()
 if PAYMENT_ENV not in ('development', 'production'):
     raise ValueError('PAYMENT_ENV باید development یا production باشد.')
@@ -274,22 +272,16 @@ DATETIME_FORMAT = 'Y/m/d | H:i:s'
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
 GHASEDAK_OTP_API = os.getenv("GHASEDAK_OTP_API")
-GHASEDAK_OTP_TEMPLATE = os.getenv('GHASEDAK_OTP_TEMPLATE')
-GHASEDAK_RESET_PASSWORD_TEMPLATE = os.getenv('GHASEDAK_RESET_PASSWORD_TEMPLATE')
+GHASEDAK_OTP_TEMPLATE = "WinJobOTP"
+GHASEDAK_RESET_PASSWORD_TEMPLATE = "WinJobResetPassword"
 
 BALE_BOT_TOKEN = os.environ.get("BALE_BOT_TOKEN")
 if not BALE_BOT_TOKEN:
     raise ValueError("متغیر BALE_BOT_TOKEN در فایل .env تنظیم نشده است!")
 
-SITE_URL = os.environ.get("SITE_URL", "https://winjob.ir")
-
-
 # ========== تنظیمات Celery ==========r
-CELERY_ENABLED = os.environ.get('CELERY_ENABLED', 'False') == 'True'
+CELERY_ENABLED = False
 
 if CELERY_ENABLED:
     CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
@@ -302,22 +294,20 @@ else:
     CELERY_BROKER_URL = None
     CELERY_RESULT_BACKEND = None
 
-USE_N8N_VERIFICATION = os.getenv('USE_N8N_VERIFICATION', 'False') == 'True'
-N8N_VERIFICATION_WEBHOOK_URL = os.getenv('N8N_VERIFICATION_WEBHOOK_URL', '')
-N8N_CAMPAIGN_REPORT_WEBHOOK = os.getenv("N8N_CAMPAIGN_REPORT_WEBHOOK")
-N8N_CALLBACK_SECRET = os.getenv("N8N_CALLBACK_SECRET")
-N8N_API_TOKEN = os.environ.get('n8n_API_TOKEN', 'change-me-in-production')
+USE_N8N_VERIFICATION = False
+N8N_VERIFICATION_WEBHOOK_URL = ""
+N8N_CAMPAIGN_REPORT_WEBHOOK = ""
+N8N_CALLBACK_SECRET = ""
+N8N_API_TOKEN = ""
 
-INSTAGRAM_APP_ID = "2314804449342444"  # Instagram App ID
-INSTAGRAM_APP_SECRET = "a63de2736714d45fd1eacafa8fc81094"
-INSTAGRAM_REDIRECT_URI = "https://winjob.ir/windirect/instagram/callback/"
+# AI
+CHABOKAN_API_KEY = os.environ.get('CHABOKAN_API_KEY', '').strip()
 
 # ==================== BoxAPI ====================
-BOXAPI_API_KEY = "ad2676fd907da9b39961411f142852b171e6ae0a865b0ce4826d3fcec9d71170"
+BOXAPI_API_KEY = os.environ.get("BOXAPI_API_KEY", "")
 BOXAPI_BASE_URL = "https://api.sendbox.chat/api/v1"
 BOXAPI_OAUTH_URL = "https://api.sendbox.chat/instagram-oauth"
-BOXAPI_WEBHOOK_SECRET = "whsec_4f0cedcf2ed4d22c10e87409cfe0e33b058bbeed4ccab25bdf38dbade6777136"
-
+BOXAPI_WEBHOOK_SECRET = os.environ.get("BOXAPI_WEBHOOK_SECRET", "")
 
 # Minipay / VPOS
 MINIPAY_BASE_URL = os.environ.get("MINIPAY_BASE_URL", "https://api.minipay.me/api/v1")
@@ -326,3 +316,63 @@ MINIPAY_USERNAME = os.environ.get("MINIPAY_USERNAME", "")
 MINIPAY_PASSWORD = os.environ.get("MINIPAY_PASSWORD", "")
 MINIPAY_API_KEY = os.environ.get("MINIPAY_API_KEY", "")
 MINIPAY_TIMEOUT = 30
+
+# ==================== تنظیمات استوریج (لوکال vs آروان) ====================
+
+AWS_STORAGE_BUCKET_NAME = 'winjob'
+AWS_S3_REGION_NAME = 'ir-central1'
+AWS_S3_ENDPOINT_URL = 'https://s3.ir-central1.arvanstorage.ir'
+AWS_S3_ADDRESSING_STYLE = 'virtual'
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
+
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.arvanstorage.ir'
+
+if DEBUG:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+    SITE_URL = "http://localhost:8000"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+else:
+    MEDIA_LOCATION = 'media'
+
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIA_LOCATION}/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+    SITE_URL = "https://winjob.ir"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "location": MEDIA_LOCATION,
+                "endpoint_url": AWS_S3_ENDPOINT_URL,
+                "region_name": AWS_S3_REGION_NAME,
+                "addressing_style": AWS_S3_ADDRESSING_STYLE,
+                "default_acl": AWS_DEFAULT_ACL,
+                "querystring_auth": AWS_QUERYSTRING_AUTH,
+                "file_overwrite": AWS_S3_FILE_OVERWRITE,
+                "object_parameters": AWS_S3_OBJECT_PARAMETERS,
+                "signature_version": AWS_S3_SIGNATURE_VERSION,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

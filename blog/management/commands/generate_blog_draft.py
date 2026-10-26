@@ -7,6 +7,7 @@ import warnings
 from difflib import SequenceMatcher
 from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
@@ -103,7 +104,7 @@ class Command(BaseCommand):
 
         author_id = options['author_id']
         if author_id is None:
-            raw_author_id = os.environ.get('BLOG_DEFAULT_AUTHOR_ID', '').strip()
+            raw_author_id = "1"
             if raw_author_id:
                 try:
                     author_id = int(raw_author_id)
@@ -124,7 +125,8 @@ class Command(BaseCommand):
         else:
             category = _select_balanced_category()
 
-        key = os.environ.get('CHABOKAN_API_KEY', '').strip()
+        key = settings.CHABOKAN_API_KEY
+
         if not key:
             try:
                 with warnings.catch_warnings():
@@ -132,7 +134,7 @@ class Command(BaseCommand):
                     key = getpass.getpass('Chabokan API key (hidden): ')
             except (getpass.GetPassWarning, EOFError):
                 raise CommandError('ورود مخفی کلید ممکن نیست. فرمان را در Terminal اجرا کنید یا CHABOKAN_API_KEY را تنظیم کنید.') from None
-        model = options['model'] or os.environ.get('CHABOKAN_MODEL', DEFAULT_MODEL)
+        model = options['model'] or DEFAULT_MODEL
 
         recent_global_titles = list(Post.objects.order_by('-created_at').values_list('title', flat=True)[:30])
         recent_category_titles = list(
@@ -167,10 +169,7 @@ class Command(BaseCommand):
         self.stdout.write('Usage (cost unit as reported by provider): ' + json.dumps(usage, ensure_ascii=False))
         image_bytes = None
         image_error = None
-        image_enabled = (
-            not options['no_image']
-            and os.environ.get('BLOG_IMAGE_ENABLED', 'true').strip().lower() not in {'0', 'false', 'no', 'off'}
-        )
+        image_enabled = True
         if image_enabled:
             self.stdout.write('Generating featured image with Cloudflare FLUX...')
             try:
@@ -178,7 +177,7 @@ class Command(BaseCommand):
                     article['visual_concept'],
                     os.environ.get('CLOUDFLARE_ACCOUNT_ID', ''),
                     os.environ.get('CLOUDFLARE_API_TOKEN', ''),
-                    os.environ.get('BLOG_IMAGE_STEPS', '6'),
+                    '6',
                 )
             except ImageGenerationError as exc:
                 image_error = str(exc)
