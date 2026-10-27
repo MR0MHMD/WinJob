@@ -105,7 +105,7 @@ def _rule_form(request, *, instance=None):
         messages.error(request, error.messages[0])
         return redirect("windirect:plans")
 
-    # ==================== حساب‌های موجود (آزمایشی + متصل) ====================
+    # ==================== حساب‌های موجود ====================
     owner_connections = InstagramConnection.objects.filter(
         owner=request.user,
         status__in=[
@@ -136,11 +136,26 @@ def _rule_form(request, *, instance=None):
         initial=initial_data,
     )
 
+    # ==================== ⚠️ مهم: ست کردن media_upload قبل از is_valid ====================
+    # این کار باید قبل از form.is_valid() انجام بشه چون full_clean() اجرا میشه
+    if request.method == "POST":
+        media_upload_id = request.POST.get("media_upload_id", "").strip()
+        if media_upload_id and media_upload_id.isdigit():
+            media_upload = MediaUpload.objects.filter(
+                pk=int(media_upload_id),
+                status=MediaUpload.Status.PENDING,
+            ).first()
+            if media_upload:
+                form.instance.media_upload = media_upload
+                logger.warning(
+                    "📎 Pre-attaching MediaUpload to instance | media_upload_id=%s",
+                    media_upload.pk,
+                )
+
     # ==================== پردازش POST ====================
     if request.method == "POST":
         keywords = _extract_keywords(request)
         replies = _extract_comment_replies(request)
-        media_upload_id = request.POST.get("media_upload_id", "").strip()
 
         if form.is_valid():
             try:
@@ -152,57 +167,24 @@ def _rule_form(request, *, instance=None):
             else:
                 with transaction.atomic():
                     automation = form.save(commit=False)
+
                     # is_active
                     if not automation.pk:
                         automation.is_active = True
                     else:
                         automation.is_active = instance.is_active if instance else True
 
-                    # ==================== اتصال MediaUpload ====================
-                    media_upload = None
-                    if media_upload_id and media_upload_id.isdigit():
-                        media_upload = MediaUpload.objects.filter(
-                            pk=int(media_upload_id),
-                            status=MediaUpload.Status.PENDING,
-                        ).first()
-
-                        if media_upload:
-                            logger.warning(
-                                "📎 Attaching MediaUpload to Automation | "
-                                "media_upload_id=%s | automation_id=%s",
-                                media_upload.pk, automation.pk or "new",
-                            )
-                        else:
-                            logger.warning(
-                                "⚠️ MediaUpload not found or not pending | "
-                                "media_upload_id=%s",
-                                media_upload_id,
-                            )
-
-                    # چک: اگه kind غیر متن و media_upload نداریم → خطا
-                    if automation.direct_message_kind in (
-                        Automation.DirectKind.AUDIO,
-                        Automation.DirectKind.IMAGE,
-                        Automation.DirectKind.VIDEO,
-                    ):
-                        # اگه نه media_upload جدید داریم، نه فایل قبلی روی instance
-                        existing_upload = instance.media_upload if instance else None
-                        if not media_upload and not existing_upload:
-                            form.add_error(
-                                "media_upload",
-                                "فایل مدیای دایرکت را انتخاب کنید.",
-                            )
-                            raise ValidationError("media_upload required")
-
-                    # اتصال
-                    if media_upload:
-                        automation.media_upload = media_upload
-
+                    # ذخیره
                     automation.save()
 
                     # ==================== آپدیت MediaUpload ====================
-                    if media_upload:
-                        media_upload.mark_attached()
+                    if automation.media_upload:
+                        automation.media_upload.mark_attached()
+                        logger.warning(
+                            "✅ MediaUpload attached to Automation | "
+                            "media_upload_id=%s | automation_id=%s",
+                            automation.media_upload.pk, automation.pk,
+                        )
 
                     # ==================== ذخیره‌ی keywords و replies ====================
                     _save_keywords(automation, keywords)
@@ -224,7 +206,6 @@ def _rule_form(request, *, instance=None):
         else []
     )
 
-    # اگه POST خطا داشت، اولویت با مقادیر POST
     if request.method == "POST":
         existing_keywords = _extract_keywords(request)
         existing_replies = _extract_comment_replies(request)
@@ -257,7 +238,6 @@ def _rule_form(request, *, instance=None):
         }
     )
     return render(request, "windirect/comments/rule_form.html", context)
-
 
 # ==================== لیست قوانین ====================
 @login_required()

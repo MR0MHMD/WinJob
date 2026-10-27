@@ -7,26 +7,6 @@ from windirect.comments.models import Automation
 class AutomationForm(forms.ModelForm):
     """فرم اصلی ساخت/ویرایش کامنت هوشمند."""
 
-    # ==================== فیلدهای جدید (فقط از POST میان) ====================
-    direct_message_file_url = forms.URLField(
-        required=False,
-        widget=forms.HiddenInput(),
-    )
-    direct_message_file_boxapi_id = forms.CharField(
-        required=False,
-        max_length=100,
-        widget=forms.HiddenInput(),
-    )
-    direct_message_file_name = forms.CharField(
-        required=False,
-        max_length=255,
-        widget=forms.HiddenInput(),
-    )
-    direct_message_file_size = forms.IntegerField(
-        required=False,
-        widget=forms.HiddenInput(),
-    )
-
     class Meta:
         model = Automation
         fields = (
@@ -42,7 +22,6 @@ class AutomationForm(forms.ModelForm):
             "follow_prompt_button",
             "direct_message_kind",
             "direct_message_text",
-            # ⚠️ direct_message_file رو حذف کردیم (دیگه توی فرم نیست)
         )
         widgets = {
             "connection": forms.Select(
@@ -99,7 +78,6 @@ class AutomationForm(forms.ModelForm):
                 InstagramConnection.Status.CONNECTED,
             ],
         )
-        # در ویرایش، اگه حساب قطع شده باشه، به لیست اضافه‌ش کن
         if self.instance and self.instance.pk and self.instance.connection_id:
             if not self.fields["connection"].queryset.filter(
                     pk=self.instance.connection_id
@@ -110,7 +88,6 @@ class AutomationForm(forms.ModelForm):
                 )
 
     def clean_name(self):
-        """نام خالی یا فقط فاصله را رد می‌کند."""
         name = self.cleaned_data.get("name", "").strip()
         if not name:
             raise forms.ValidationError("نام کامنت هوشمند را وارد کنید.")
@@ -141,7 +118,6 @@ class AutomationForm(forms.ModelForm):
         require_follow = cleaned.get("require_follow")
         direct_kind = cleaned.get("direct_message_kind")
         direct_text = cleaned.get("direct_message_text", "").strip()
-        file_url = cleaned.get("direct_message_file_url", "").strip()
 
         # لایو
         if target_type == Automation.TargetType.LIVE and cleaned.get("post_media_id"):
@@ -160,37 +136,31 @@ class AutomationForm(forms.ModelForm):
             if not cleaned.get("follow_prompt_button", "").strip():
                 self.add_error("follow_prompt_button", "متن دکمه فالو را وارد کنید.")
 
-        # محتوای دایرکت — فقط اگه دایرکت باشه
+        # ==================== محتوای دایرکت ====================
         if reply_channel == Automation.ReplyChannel.DIRECT:
-            # ==================== متن ====================
+            # ===== متن =====
             if direct_kind == Automation.DirectKind.TEXT:
                 if not direct_text:
                     self.add_error("direct_message_text", "متن دایرکت را وارد کنید.")
 
-            # ==================== صوت/تصویر/ویدیو ====================
+            # ===== صوت/تصویر/ویدیو =====
             elif direct_kind in (
                     Automation.DirectKind.AUDIO,
                     Automation.DirectKind.IMAGE,
                     Automation.DirectKind.VIDEO,
             ):
-                # چک کن یا URL جدید داره یا فایل قدیمی
-                instance_url = ""
-                if self.instance.pk and self.instance.media_upload:
-                    instance_url = self.instance.media_upload.boxapi_url
-
-                has_url = bool(file_url) or bool(instance_url)
-
-                if not has_url:
+                # ⚠️ نکته: چک media_upload از طریق model.clean() انجام میشه
+                # (چون در ویو pre-attach شده روی instance)
+                # اینجا فقط چک میکنیم اگه instance.media_upload خالی بود
+                if not self.instance.media_upload:
                     self.add_error(
-                        "direct_message_file_url",
+                        None,
                         "فایل مدیای دایرکت را انتخاب کنید.",
                     )
 
-            # ==================== هیچ‌کدوم ====================
+            # ===== نوع نامعتبر =====
             else:
-                self.add_error(
-                    "direct_message_kind", "نوع محتوای دایرکت نامعتبر است."
-                )
+                self.add_error("direct_message_kind", "نوع محتوای دایرکت نامعتبر است.")
 
         return cleaned
 

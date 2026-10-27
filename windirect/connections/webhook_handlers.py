@@ -206,42 +206,85 @@ def handle_follow_status_event(payload: dict) -> bool:
             rule.name, customer_id,
         )
 
+        from windirect.comments.services import _send_media_direct, MEDIA_PLACEHOLDER_TEXT
+
         direct_payload = _build_direct_payload(rule, assume_followed=True)
-        message_text = direct_payload.get("text", "")
+        kind = direct_payload.get("kind", "")
 
-        if not message_text:
-            logger.warning("⚠️ Direct reply has no text | rule=%s", rule.name)
-            return False
+        success_send = False
 
-        # ==================== انتخاب متد ارسال ====================
-        # ⚠️ مهم: اگه قبلاً یه private_reply برای این کامنت فرستادیم،
-        # دیگه نمی‌تونیم private_reply بفرستیم. باید send_message بفرستیم.
-        #
-        # مرحله‌ها:
-        # - pending_initial: هنوز هیچ پیامی نفرستادیم → private_reply مجازه
-        # - pending_recheck: قبلاً یه private_reply فرستادیم → باید send_message
-        if current_stage == "pending_initial":
-            # اولین پیام → private_reply (با comment_id)
-            logger.warning(
-                "📩 Using private_reply (first message) | comment_id=%s",
-                event.external_comment_id,
-            )
-            success_send = send_private_reply(
-                account_id=account_id,
-                comment_id=event.external_comment_id,
-                message=message_text,
-            )
+        # ==================== متن ====================
+        if kind == "text":
+            message_text = direct_payload.get("text", "")
+            if not message_text:
+                logger.warning("⚠️ Direct reply has no text | rule=%s", rule.name)
+                return False
+
+            if current_stage == "pending_initial":
+                # اولین پیام → private_reply
+                logger.warning(
+                    "📩 Using private_reply (first message) | comment_id=%s",
+                    event.external_comment_id,
+                )
+                success_send = send_private_reply(
+                    account_id=account_id,
+                    comment_id=event.external_comment_id,
+                    message=message_text,
+                )
+            else:
+                # کاربر دایرکت داره → send_message
+                logger.warning(
+                    "📨 Using send_message | recipient_id=%s",
+                    customer_id,
+                )
+                success_send = send_message(
+                    account_id=account_id,
+                    recipient_id=customer_id,
+                    message=message_text,
+                )
+
+        # ==================== مدیا ====================
         else:
-            # pending_recheck → کاربر دایرکت داره → send_message
-            logger.warning(
-                "📨 Using send_message (user already has DM) | recipient_id=%s",
-                customer_id,
-            )
-            success_send = send_message(
-                account_id=account_id,
-                recipient_id=customer_id,
-                message=message_text,
-            )
+            file_url = direct_payload.get("url", "")
+            if not file_url:
+                logger.warning(
+                    "⚠️ Media URL missing | rule=%s | media_upload=%s",
+                    rule.name, rule.media_upload,
+                )
+                return False
+
+            if current_stage == "pending_initial":
+                # اولین پیام → private_reply (متن کوتاه)، بعد media
+                logger.warning(
+                    "📩 Sending placeholder private_reply | comment_id=%s",
+                    event.external_comment_id,
+                )
+                placeholder_ok = send_private_reply(
+                    account_id=account_id,
+                    comment_id=event.external_comment_id,
+                    message=MEDIA_PLACEHOLDER_TEXT,
+                )
+                if not placeholder_ok:
+                    logger.error(
+                        "❌ Placeholder private_reply failed | rule=%s",
+                        rule.name,
+                    )
+                    success_send = False
+                else:
+                    success_send = _send_media_direct(
+                        account_id=account_id,
+                        recipient_id=customer_id,
+                        kind=kind,
+                        url=file_url,
+                    )
+            else:
+                # کاربر دایرکت داره → مستقیم media
+                success_send = _send_media_direct(
+                    account_id=account_id,
+                    recipient_id=customer_id,
+                    kind=kind,
+                    url=file_url,
+                )
 
         # ==================== آپدیت execution ====================
         execution.status = (
@@ -253,9 +296,10 @@ def handle_follow_status_event(payload: dict) -> bool:
             **execution.response_payload,
             "stage": "following_verified",
             "is_following": True,
-            "text": message_text,
+            "kind": kind,
+            "text": direct_payload.get("text", ""),
+            "url": direct_payload.get("url", ""),
             "send_success": success_send,
-            "send_method": "private_reply" if current_stage == "pending_initial" else "send_message",
         }
         execution.save(update_fields=["status", "response_payload"])
 

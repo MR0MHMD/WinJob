@@ -163,17 +163,13 @@ class Automation(models.Model):
                     self.DirectKind.IMAGE,
                     self.DirectKind.VIDEO,
             ):
-                # چک کن فایل مدیا وصل شده
+                # ⚠️ از non-field error استفاده میکنیم چون media_upload فیلد فرم نیست
                 if not self.media_upload:
-                    raise ValidationError({
-                        "direct_message_file": "فایل مدیای دایرکت را انتخاب کنید."
-                    })
+                    raise ValidationError("فایل مدیای دایرکت را انتخاب کنید.")
 
                 # چک کن نوع فایل با kind مطابقت داشته باشه
                 if self.media_upload.file_kind != self.direct_message_kind:
-                    raise ValidationError({
-                        "direct_message_file": "نوع فایل با محتوای انتخابی مطابقت ندارد."
-                    })
+                    raise ValidationError("نوع فایل با محتوای انتخابی مطابقت ندارد.")
 
             # ===== نوع نامعتبر =====
             else:

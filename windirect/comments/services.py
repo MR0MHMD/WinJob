@@ -34,10 +34,7 @@ def _build_comment_payload(automation):
 
 
 def _build_direct_payload(automation, assume_followed=False):
-    """خروجی دایرکت را برای ثبت در AutomationExecution می‌سازد.
-
-    اگر فالو اجباری باشد و مخاطب فالو نکرده باشد، payload «فالو کن» برمی‌گردد.
-    """
+    """خروجی دایرکت را برای ثبت در AutomationExecution می‌سازد."""
     # مرحلهٔ فالو اجباری
     if automation.require_follow and not assume_followed:
         return {
@@ -49,6 +46,7 @@ def _build_direct_payload(automation, assume_followed=False):
 
     kind = automation.direct_message_kind or Automation.DirectKind.TEXT
 
+    # ==================== متن ====================
     if kind == Automation.DirectKind.TEXT:
         return {
             "channel": "direct",
@@ -56,17 +54,62 @@ def _build_direct_payload(automation, assume_followed=False):
             "text": automation.direct_message_text,
         }
 
-    # صوت/تصویر/ویدیو
-    # URL فایل رو از direct_message_file بگیر
+    # ==================== صوت/تصویر/ویدیو ====================
     file_url = ""
+    file_id = ""
     if automation.media_upload:
         file_url = automation.media_upload.boxapi_url
+        file_id = automation.media_upload.boxapi_file_id
 
     return {
         "channel": "direct",
         "kind": kind,
         "url": file_url,
+        "file_id": file_id,
     }
+
+
+# ==================== ارسال مدیا در دایرکت ====================
+MEDIA_PLACEHOLDER_TEXT = "فایل شما در حال ارسال است..."
+
+def _send_media_direct(*, account_id, recipient_id, kind, url):
+    """
+    ارسال مدیا در دایرکت بر اساس kind.
+
+    Args:
+        kind: "image" یا "audio" یا "video"
+        url: URL فایل در BoxAPI
+    """
+    import logging
+    from windirect.connections.boxapi import send_image, send_attachment
+
+    logger = logging.getLogger(__name__)
+
+    if kind == Automation.DirectKind.IMAGE:
+        logger.warning("🖼️ Sending image | recipient_id=%s", recipient_id)
+        return send_image(
+            account_id=account_id,
+            recipient_id=recipient_id,
+            images=[{"url": url}],
+        )
+
+    if kind in (Automation.DirectKind.AUDIO, Automation.DirectKind.VIDEO):
+        attachment_type = (
+            "audio" if kind == Automation.DirectKind.AUDIO else "video"
+        )
+        logger.warning(
+            "📎 Sending attachment | recipient_id=%s | type=%s",
+            recipient_id, attachment_type,
+        )
+        return send_attachment(
+            account_id=account_id,
+            recipient_id=recipient_id,
+            attachment_type=attachment_type,
+            url=url,
+        )
+
+    logger.error("❌ Unknown media kind: %s", kind)
+    return False
 
 
 def _matches_automation(automation, media_id, text):
@@ -331,6 +374,7 @@ def process_real_comment(*, connection, comment_id, media_id, text, username="",
 
         try:
             if rule.reply_channel == Automation.ReplyChannel.COMMENT:
+                # ===== پاسخ در کامنت =====
                 payload = _build_comment_payload(rule)
                 message_text = payload.get("text", "")
 
@@ -338,10 +382,6 @@ def process_real_comment(*, connection, comment_id, media_id, text, username="",
                     logger.warning("⚠️ Comment reply has no text | rule=%s", rule.name)
                     continue
 
-                logger.warning(
-                    "💬 Sending comment reply | rule=%s | text=%r",
-                    rule.name, message_text[:80],
-                )
                 success = reply_to_comment(
                     account_id=account_id,
                     comment_id=comment_id,
@@ -364,25 +404,72 @@ def process_real_comment(*, connection, comment_id, media_id, text, username="",
                     )
                     continue
 
-                message_text = payload.get("text", "")
-                if not message_text:
-                    logger.warning("⚠️ Direct reply has no text | rule=%s", rule.name)
-                    continue
+                if kind == "text":
+                    # ===== متن =====
+                    message_text = payload.get("text", "")
+                    if not message_text:
+                        logger.warning("⚠️ Direct reply has no text | rule=%s", rule.name)
+                        continue
 
-                logger.warning(
-                    "📩 Sending private reply | rule=%s | text=%r",
-                    rule.name, message_text[:80],
-                )
-                success = send_private_reply(
-                    account_id=account_id,
-                    comment_id=comment_id,
-                    message=message_text,
-                )
-                status = (
-                    AutomationExecution.Status.SENT
-                    if success
-                    else AutomationExecution.Status.FAILED
-                )
+                    success = send_private_reply(
+                        account_id=account_id,
+                        comment_id=comment_id,
+                        message=message_text,
+                    )
+                    status = (
+                        AutomationExecution.Status.SENT
+                        if success
+                        else AutomationExecution.Status.FAILED
+                    )
+
+                else:
+                    # ===== مدیا (audio/image/video) =====
+                    file_url = payload.get("url", "")
+                    if not file_url:
+                        logger.warning(
+                            "⚠️ Media URL missing | rule=%s | media_upload=%s",
+                            rule.name, rule.media_upload,
+                        )
+                        continue
+
+                    if not customer_id:
+                        logger.error(
+                            "❌ Media rule but no customer_id | rule=%s",
+                            rule.name,
+                        )
+                        continue
+
+                    # مرحله ۱: private_reply (متن کوتاه، تا DM باز بشه)
+                    logger.warning(
+                        "📩 Sending placeholder private_reply | comment_id=%s",
+                        comment_id,
+                    )
+                    placeholder_ok = send_private_reply(
+                        account_id=account_id,
+                        comment_id=comment_id,
+                        message=MEDIA_PLACEHOLDER_TEXT,
+                    )
+
+                    if not placeholder_ok:
+                        logger.error(
+                            "❌ Placeholder private_reply failed | rule=%s",
+                            rule.name,
+                        )
+                        success = False
+                    else:
+                        # مرحله ۲: send media
+                        success = _send_media_direct(
+                            account_id=account_id,
+                            recipient_id=customer_id,
+                            kind=kind,
+                            url=file_url,
+                        )
+
+                    status = (
+                        AutomationExecution.Status.SENT
+                        if success
+                        else AutomationExecution.Status.FAILED
+                    )
 
         except Exception:
             logger.exception("❌ Error sending reply | rule=%s", rule.name)
