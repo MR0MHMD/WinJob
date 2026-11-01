@@ -17,7 +17,7 @@
 
             <li class="breadcrumb-item active" aria-current="page">داشبورد</li>
         </ol>
-    
+
         <div class="welcome-banner">
             <div class="row align-items-center">
                 <div class="col-md-8">
@@ -31,10 +31,10 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
+
                         <div>
                             <h1 class="h2 text-white mb-1"> {% now "H" as current_hour %} {% if current_hour|add:"0" < 12 %} صبح بخیر {% elif current_hour|add:"0" < 17 %} ظهر بخیر {% elif current_hour|add:"0" < 19 %} عصر بخیر {% else %} شب بخیر {% endif %}, {{ advertiser.user.nickname|default:advertiser.business_name }}! </h1>
-                        
+
                             <p class="text-muted mb-0">
                                 <i class="fi-calendar-alt ms-1"></i>
                                 امروز {{ persian_date }} -
@@ -43,14 +43,14 @@
                         </div>
                     </div>
                 </div>
-            
+
                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
                     <div class="d-flex gap-2 justify-content-md-end">
                         <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-primary">
                             <i class="fi-plus ms-1"></i>
                             کمپین جدید
                         </a>
-                        
+
                         <a href="{% url 'payment:wallet_dashboard' %}" class="btn btn-outline-primary">
                             <i class="fi-wallet ms-1"></i>
                             کیف پول
@@ -59,7 +59,7 @@
                 </div>
             </div>
         </div>
-    
+
         <!-- بخش گیمیفیکیشن -->
         <div class="row g-4 mb-5">
             <div class="col-12">
@@ -79,16 +79,16 @@
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10" 
+                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10"
                                      style="width: 60px; height: 60px;">
                                     {% if gamification.current_badge_icon %}
-                                        <img src="{{ gamification.current_badge_icon }}" 
-                                             alt="{{ gamification.current_badge_name }}" 
-                                             width="48" height="48" 
+                                        <img src="{{ gamification.current_badge_icon }}"
+                                             alt="{{ gamification.current_badge_name }}"
+                                             width="48" height="48"
                                              style="border-radius: 50%; object-fit: cover;">
                                     {% else %}
                                         {# Fallback: آیکون پیش‌فرض با رنگ مناسب #}
-                                        <i class="fi-award" style="font-size: 30px; color: 
+                                        <i class="fi-award" style="font-size: 30px; color:
                                             {% if gamification.current_badge_code == 'bronze' %}#cd7f32
                                             {% elif gamification.current_badge_code == 'silver' %}#c0c0c0
                                             {% elif gamification.current_badge_code == 'gold' %}#ffd700
@@ -102,7 +102,7 @@
                                     <p class="text-muted small mb-0">امتیاز فعلی: <strong class="text-white">{{ gamification.current_points }}</strong></p>
                                 </div>
                             </div>
-                            
+
                             <div class="text-md-end text-start">
                                 {% if not gamification.is_max_level %}
                                     <span class="text-muted small d-block">نشان بعدی: <strong class="text-warning">{{ gamification.next_badge_name }}</strong></span>
@@ -112,13 +112,13 @@
                                 {% endif %}
                             </div>
                         </div>
-        
+
                         <div class="progress mt-4" style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 50rem;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-                                 role="progressbar" 
-                                 style="width: {{ gamification.progress_percent|stringformat:'f' }}%;" 
-                                 aria-valuenow="{{ gamification.progress_percent|stringformat:'f' }}" 
-                                 aria-valuemin="0" 
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                 role="progressbar"
+                                 style="width: {{ gamification.progress_percent|stringformat:'f' }}%;"
+                                 aria-valuenow="{{ gamification.progress_percent|stringformat:'f' }}"
+                                 aria-valuemin="0"
                                  aria-valuemax="100">
                             </div>
                         </div>
@@ -134,14 +134,14 @@
                         <div class="stat-icon">
                             <i class="fi-wallet"></i>
                         </div>
-                        
+
                         <span class="badge bg-success px-3 py-1">موجودی</span>
                     </div>
-                    
+
                     <div class="stat-value">{{ wallet_balance|floatformat:0|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">موجودی کیف پول (تومان)</div>
-                    
+
                     <div class="mt-2">
                         <a href="{% url 'payment:wallet_deposit' %}" class="small text-primary text-decoration-none">شارژ کیف پول <i class="fi-arrow-left ms-1"></i></a>
                     </div>
@@ -154,19 +154,19 @@
                         <div class="stat-icon">
                             <img width="40" src="{% static 'advertisers/icons/campaign.svg' %}" alt="">
                         </div>
-                        
+
                         <span class="badge bg-primary px-3 py-1">کمپین</span>
                     </div>
-                    
+
                     <div class="stat-value">{{ total_campaigns|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">کل کمپین‌ها</div>
-                    
+
                     <div class="small text-muted mt-2">
                         <span class="text-success">✓ {{ active_campaigns|default:"۰" }} فعال</span>
-                        
+
                         <span class="mx-2">|</span>
-                        
+
                         <span class="text-info">✓ {{ completed_campaigns|default:"۰" }} تکمیل شده</span>
                     </div>
                 </div>
@@ -178,14 +178,14 @@
                         <div class="stat-icon">
                             <img width="40" src="{% static 'advertisers/icons/click.svg' %}" alt="">
                         </div>
-                        
+
                         <span class="badge bg-accent px-3 py-1">کلیک</span>
                     </div>
-                    
+
                     <div class="stat-value">{{ total_clicks|default:"۰" }}</div>
-                    
+
                     <div class="stat-label">کل کلیک ها</div>
-                    
+
                     <div class="small text-muted mt-2">
                         <i class="fi-user-check ms-1"></i>
                         {{ total_unique_clicks|default:"۰" }} کلیک یکتا
@@ -199,14 +199,14 @@
                         <div class="stat-icon">
                             <i class="fi-cash"></i>
                         </div>
-                        
+
                         <span class="badge bg-danger px-3 py-1">هزینه</span>
                     </div>
-                
+
                     <div class="stat-value">{{ total_spent|floatformat:0|default:"۰" }}</div>
-                
+
                     <div class="stat-label">کل هزینه شده (تومان)</div>
-                
+
                     <div class="small text-muted mt-2">
                         میانگین هزینه به ازای کلیک:
                         {% if total_clicks > 0 %}
@@ -225,41 +225,41 @@
                     <div class="dashboard-card-header">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-zap text-primary"></i>
-                            
+
                             <h5 class="text-white mb-0">دسترسی سریع</h5>
                         </div>
                     </div>
-                    
+
                     <div class="card-body p-4">
                         <div class="row g-3">
                             <div class="col-md-3 col-6">
                                 <a href="{% url 'campaigns:campaign_create_step1' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-plus-circle"></i>
-                                    
+
                                     <span class="small text-white">کمپین جدید</span>
                                 </a>
                             </div>
-                            
+
                             <div class="col-md-3 col-6">
                                 <a href="{% url 'influencers:channel_list' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-search"></i>
-                                    
+
                                     <span class="small text-white">جستجوی ناشران</span>
                                 </a>
                             </div>
-                            
+
                             <div class="col-md-3 col-6">
                                 <a href="{% url 'payment:wallet_deposit' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-wallet"></i>
-                                    
+
                                     <span class="small text-white">شارژ کیف پول</span>
                                 </a>
                             </div>
-                            
+
                             <div class="col-md-3 col-6">
                                 <a href="{% url 'advertisers:campaigns_list' %}" class="quick-action-btn d-block text-decoration-none">
                                     <i class="fi-list"></i>
-                                    
+
                                     <span class="small text-white">مدیریت کمپین‌ها</span>
                                 </a>
                             </div>
@@ -276,14 +276,14 @@
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="fi-chart-line text-primary"></i>
-                                
+
                                 <h5 class="text-white mb-0">هزینه روزانه</h5>
                             </div>
-                            
+
                             <span class="badge bg-faded-primary">۳۰ روز اخیر</span>
                         </div>
                     </div>
-                    
+
                     <div class="card-body p-4">
                         <div class="chart-container">
                             <canvas id="dailySpendingChart" width="800" height="400" data-labels='{{ daily_spending_labels_json|safe }}' data-values='{{ daily_spending_data_json|safe }}'> </canvas>
@@ -296,30 +296,30 @@
                         <div class="dashboard-card-header">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="fi-alarm text-warning"></i>
-                                
+
                                 <h5 class="text-white mb-0">کمپین‌های در شرف اتمام</h5>
-                                
+
                                 <span class="badge-warning-custom">{{ expiring_soon|length }} عدد</span>
                             </div>
                         </div>
-                    
+
                         <div class="card-body p-0">
                             {% for campaign in expiring_soon %}
                                 <div class="campaign-item m-3 mb-2">
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <div class="flex-grow-1">
                                             <div class="text-white fw-bold">{{ campaign.name }}</div>
-                                            
+
                                             <div class="small text-muted mt-1">
                                                 <i class="fi-clock ms-1"></i>
                                                 اتمام: {{ campaign.end_date|date:"Y/m/d H:i" }}
                                             </div>
-                                            
+
                                             <div class="progress-bar-custom mt-2">
                                                 <div class="progress-fill"></div>
                                             </div>
                                         </div>
-                                        
+
                                         <div>
                                             <a href="{{ campaign.get_absolute_url }}" class="btn btn-sm btn-outline-primary">
                                                 مشاهده
@@ -337,16 +337,16 @@
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-history text-primary"></i>
-                            
+
                             <h5 class="text-white mb-0">آخرین کمپین ها</h5>
                         </div>
-                        
+
                         <a href="{% url 'advertisers:campaigns_list' %}" class="small text-primary text-decoration-none">
                             مشاهده همه
                             <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-0" style="max-height: 240px; overflow-y: auto">
                         {% if recent_campaigns %}
                             {% for campaign in recent_campaigns %}
@@ -355,13 +355,13 @@
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="text-white fw-bold">{{ campaign.name }}</div>
-                                                
+
                                                 <div class="small text-muted mt-1">
                                                     <i class="fi-calendar ms-1"></i>
                                                     {{ campaign.created_at|date:"Y/m/d H:i" }}
                                                 </div>
                                             </div>
-                                            
+
                                             <div>
                                                 <span class="badge campaign-status-badge status-{{ campaign.status }}">
                                                     {{ campaign.get_status_display }}
@@ -374,9 +374,9 @@
                         {% else %}
                             <div class="text-center py-5">
                                 <i class="bi-megaphone fs-1 text-muted mb-3 d-block"></i>
-                                
+
                                 <p class="text-muted mb-3">هنوز کمپینی ایجاد نکرده‌اید</p>
-                                
+
                                 <a href="{% url 'campaigns:campaign_create_step1' %}" class="btn btn-outline-primary">
                                     <i class="fi-plus ms-1"></i>
                                     اولین کمپین خود را بسازید
@@ -395,7 +395,7 @@
                             <h5 class="text-white mb-0">برترین کانال ها</h5>
                         </div>
                     </div>
-                
+
                     <div class="card-body p-0" style="max-height: 330px; overflow-y: auto">
                         {% if top_channels %}
                             {% for channel in top_channels %}
@@ -411,13 +411,13 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
-                                        
+
                                             <div class="flex-grow-1">
                                                 <div class="text-white fw-bold">{{ channel.channel_name|truncatechars:20 }}</div>
                                                 <div class="small text-muted">
                                                     {{ channel.platform.name }} | {{ channel.channel_id }}
                                                 </div>
-                                            
+
                                                 <div class="small text-muted mt-1 rating-stars">
                                                     {% with rating=channel.avg_rating|default:0 %}
                                                         {% for i in "12345"|make_list %}
@@ -429,14 +429,14 @@
                                                                 <i class="fi-star rating-star"></i>
                                                             {% endif %}
                                                         {% endfor %}
-                                                        
+
                                                         {% if rating == 0 %}
                                                             <span class="text-muted">بدون امتیاز</span>
                                                         {% endif %}
                                                     {% endwith %}
                                                 </div>
                                             </div>
-                                        
+
                                             <div>
                                                 <span class="badge bg-accent px-3 py-2">{{ channel.total_bookings|default:"۰" }} همکاری</span>
                                             </div>
@@ -445,12 +445,12 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            
+
                             <div class="text-center py-5">
                                 <i class="fi-users fs-1 text-muted mb-3 d-block"></i>
-                                
+
                                 <p class="text-muted small mb-0">هنوز همکاری با کانالی نداشته‌اید</p>
-                                
+
                                 <a href="{% url 'influencers:channel_list' %}" class="btn btn-sm btn-outline-primary mt-3">
                                     جستجوی کانال
                                 </a>
@@ -458,7 +458,7 @@
                         {% endif %}
                     </div>
                 </div>
-            
+
                 {% if pending_review_bookings %}
                 <div class="dashboard-card my-4">
                     <div class="dashboard-card-header">
@@ -485,7 +485,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <a href="{{ booking.team.get_absolute_url }}?review_order_id={{ booking.id }}" 
+                                    <a href="{{ booking.team.get_absolute_url }}?review_order_id={{ booking.id }}"
                                        class="btn btn-sm btn-outline-accent">
                                         <i class="fi-star-filled ms-1"></i>
                                         ثبت نظر
@@ -527,16 +527,16 @@
                     <div class="dashboard-card-header d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fi-list text-primary"></i>
-                            
+
                             <h5 class="text-white mb-0">آخرین تراکنش‌ ها</h5>
                         </div>
-                        
+
                         <a href="{% url 'payment:wallet_dashboard' %}" class="small text-primary text-decoration-none">
                             مشاهده همه
                             <i class="fi-arrow-left ms-1"></i>
                         </a>
                     </div>
-                
+
                     <div class="card-body p-0" style="max-height: 280px; overflow-y: auto">
                         {% if recent_transactions %}
                             {% for transaction in recent_transactions %}
@@ -546,37 +546,37 @@
                                             <div class="rounded-circle transaction-icon {% if transaction.is_income %}income-icon{% else %}expense-icon{% endif %}">
                                                 <i class="{% if transaction.is_income %}fi-plus-circle text-success{% else %}fi-minus-circle text-danger{% endif %} fs-5"></i>
                                             </div>
-                                        
+
                                             <div>
                                                 <div class="text-white fw-bold small">
                                                     {{ transaction.get_type_display }}
                                                 </div>
                                                 <div class="small text-muted">{{ transaction.created_at|date:"Y/m/d H:i" }}</div>
-                                            
+
                                                 {% if transaction.description %}
-                                                    
+
                                                     <div class="small text-muted mt-1">{{ transaction.description|truncatechars:30 }}</div>
-                                                    
+
                                                 {% endif %}
-                                            
+
                                             </div>
                                         </div>
-                                    
+
                                         <div class="fw-bold transaction-amount {% if transaction.is_income %}text-success{% else %}text-danger{% endif %}">
                                             {{ transaction.sign_display }}
                                         </div>
                                     </div>
                                 </div>
-                                
+
                             {% endfor %}
-                            
+
                         {% else %}
-                            
+
                             <div class="text-center py-5">
                                 <i class="fi-wallet fs-1 text-muted mb-3 d-block"></i>
-                                
+
                                 <p class="text-muted small mb-0">هنوز تراکنشی انجام نشده است</p>
-                                
+
                                 <a href="{% url 'payment:wallet_deposit' %}" class="btn btn-sm btn-outline-primary mt-3">
                                     شارژ کیف پول
                                 </a>
