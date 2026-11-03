@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0001_initial'),
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('core', '0001_initial'),
+        ('core', '0003_city'),  # ← از 0001_initial به 0003_city
     ]
 
     operations = [

@@ -3,7 +3,8 @@ from django.contrib import admin
 from django.utils.html import mark_safe, format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-
+from django.db.models import Count
+from django.contrib import admin
 from content_team.models import ContentServicePlan
 from .models import Category, Platform, Province, ContentServiceType, FAQ, AdType, ContentType, Bank, City
 
@@ -69,12 +70,69 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Platform)
 class PlatformAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
+    """مدیریت حرفه‌ای پلتفرم‌های وین‌جاب."""
+
+    list_display = ("id", "name", "slug", "logo_thumbnail", "is_active", "is_forward_active", "bot_users_count")
+    list_filter = ("is_active", "is_forward_active")
+    search_fields = ("name", "slug", "description")
     prepopulated_fields = {"slug": ("name",)}
-    search_fields = (
-        "name",
-        "slug",
+    readonly_fields = ("logo_preview",)
+    list_per_page = 30
+    actions = ("action_activate_forward", "action_deactivate_forward", "action_activate_platform", "action_deactivate_platform")
+    fieldsets = (
+        (_("اطلاعات پایه"), {"fields": ("name", "slug", "description")}),
+        (_("برندینگ"), {"fields": ("logo", "logo_preview")}),
+        (_("وضعیت"), {"fields": ("is_active", "is_forward_active")}),
     )
+
+    def get_queryset(self, request):
+        """بهینه‌سازی با annotate تعداد BotUserهای هر پلتفرم."""
+        return super().get_queryset(request).annotate(_bot_users_count=Count("bot_users"))
+
+    @admin.display(description=_("لوگو"))
+    def logo_thumbnail(self, obj):
+        """نمایش بندانگشتی لوگو."""
+        if not obj.logo:
+            return mark_safe('<span style="color:#9691a4;">—</span>')
+        return format_html('<img src="{}" style="height:32px;width:32px;border-radius:6px;object-fit:cover;" />', obj.logo.url)
+
+    @admin.display(description=_("ربات کاربران"), ordering="_bot_users_count")
+    def bot_users_count(self, obj):
+        """نمایش تعداد کاربران ربات متصل به این پلتفرم."""
+        if obj._bot_users_count == 0:
+            return mark_safe('<span style="color:#9691a4;">0</span>')
+        return format_html('<strong>{}</strong>', obj._bot_users_count)
+
+    @admin.display(description=_("پیش نمایش لوگو"))
+    def logo_preview(self, obj):
+        """پیش‌نمایش بزرگ‌تر لوگو در صفحه ویرایش."""
+        if not obj.logo:
+            return "—"
+        return format_html('<img src="{}" style="max-height:120px;border-radius:8px;" />', obj.logo.url)
+
+    @admin.action(description=_("فعال سازی وین فوروارد"))
+    def action_activate_forward(self, request, queryset):
+        """فعال‌سازی پلتفرم‌های انتخاب‌شده برای وین فوروارد."""
+        n = queryset.update(is_forward_active=True)
+        self.message_user(request, f"{n} پلتفرم برای وین فوروارد فعال شد.")
+
+    @admin.action(description=_("غیرفعال سازی وین فوروارد"))
+    def action_deactivate_forward(self, request, queryset):
+        """غیرفعال‌سازی پلتفرم‌های انتخاب‌شده برای وین فوروارد."""
+        n = queryset.update(is_forward_active=False)
+        self.message_user(request, f"{n} پلتفرم از وین فوروارد غیرفعال شد.")
+
+    @admin.action(description=_("فعال سازی پلتفرم"))
+    def action_activate_platform(self, request, queryset):
+        """فعال‌سازی کلی پلتفرم‌های انتخاب‌شده."""
+        n = queryset.update(is_active=True)
+        self.message_user(request, f"{n} پلتفرم فعال شد.")
+
+    @admin.action(description=_("غیر فعال سازی پلتفرم"))
+    def action_deactivate_platform(self, request, queryset):
+        """غیرفعال‌سازی کلی پلتفرم‌های انتخاب‌شده."""
+        n = queryset.update(is_active=False)
+        self.message_user(request, f"{n} پلتفرم غیرفعال شد.")
 
 
 @admin.register(Province)

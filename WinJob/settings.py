@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     "support.apps.SupportConfig",
     "payment.apps.PaymentConfig",
     "market.apps.MarketConfig",
+    "product.forward.messengers.apps.MessengersConfig",
+    "product.forward.broadcast.apps.BroadcastConfig",
     "django_cleanup.apps.CleanupConfig",
 ]
 
@@ -376,3 +378,5 @@ else:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
+
+FORWARD_BALE_TOKEN = "2100857527:2oDqXkcXJCWpkrpoDYhwvbD6CtTFuJEYEkc"

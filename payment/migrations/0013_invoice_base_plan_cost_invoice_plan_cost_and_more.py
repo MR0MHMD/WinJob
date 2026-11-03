@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='invoice',
             name='subscription_order',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='invoice', to='windirect_subscriptions.subscriptionorder', verbose_name='سفارش اشتراک وین دایرکت'),
+            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='invoice', to='subscriptions.subscriptionorder', verbose_name='سفارش اشتراک وین دایرکت'),
         ),
         migrations.AlterField(
             model_name='invoice',
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
                 ('gateway_url', models.URLField(blank=True, max_length=1000, verbose_name='نشانی پرداخت')),
                 ('verified_at', django_jalali.db.models.jDateTimeField(blank=True, null=True, verbose_name='زمان تأیید و تعیین تکلیف')),
                 ('created_at', django_jalali.db.models.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')),
-                ('order', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='attempts', to='windirect_subscriptions.subscriptionorder', verbose_name='سفارش اشتراک')),
+                ('order', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='attempts', to='subscriptions.subscriptionorder', verbose_name='سفارش اشتراک')),
                 ('payment', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, to='payment.payment', verbose_name='پرداخت')),
             ],
             options={

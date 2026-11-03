@@ -40,11 +40,14 @@ class Category(models.Model):
 
 
 class Platform(models.Model):
+    """پلتفرم‌های قابل استفاده در وین‌جاب (بله، تلگرام، اینستاگرام، ...)."""
+
     name = models.CharField(_("نام"), max_length=50)
     slug = models.SlugField(_("اسلاگ"), max_length=160)
     description = models.TextField(_('توضیحات'), max_length=750)
     logo = models.ImageField(_('لوگو'), upload_to="platform/logos", null=True, blank=True)
     is_active = models.BooleanField(_('فعال باشد؟'), default=True)
+    is_forward_active = models.BooleanField(_('فعال در وین فوروارد'), default=False,)
 
     class Meta:
         verbose_name = _('پلتفرم')

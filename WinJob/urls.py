@@ -33,6 +33,7 @@ urlpatterns = [
     path('payment/', include("payment.urls", namespace="payment")),
     path("market/", include("market.urls", namespace="market")),
     path('gateway/', include("django_iranian_payment.contrib.django.urls")),
+    path('webhooks/', include("product.forward.messengers.urls", namespace="messengers")),
     path('', include("core.urls", namespace="core")),
 ]
 
