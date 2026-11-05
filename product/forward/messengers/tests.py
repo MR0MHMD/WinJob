@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 
+from accounts.models import CustomUser
 from product.forward.messengers.adapters.base import (
     MessengerAPIError,
     MessengerNotFoundError,
@@ -60,20 +61,28 @@ class BaleAdapterSendTests(TestCase):
         self.assertEqual(kwargs["params"]["text"], "سلام")
 
     @override_settings(FORWARD_BALE_TOKEN="test_token")
-    @patch("product.forward.messengers.adapters.bale.requests.get")
-    def test_send_media_dispatch_all_types(self, mock_get):
-        """send_media برای هر نوع محتوا متد صحیح را صدا می‌زند."""
-        mock_get.side_effect = [
+    @patch("product.forward.messengers.adapters.bale.requests.post")
+    def test_send_media_dispatch_all_types(self, mock_post):
+        """send_media برای هر نوع محتوا متد صحیح را صدا می‌زند (با mock کردن requests.post)."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        mock_post.side_effect = [
             _make_response(True, {"message_id": 1}),
             _make_response(True, {"message_id": 2}),
             _make_response(True, {"message_id": 3}),
         ]
         from product.forward.messengers.adapters.bale import BaleAdapter
         adapter = BaleAdapter()
-        self.assertEqual(adapter.send_media("@ch", "photo", "p.jpg", "cap")["message_id"], "1")
-        self.assertEqual(adapter.send_media("@ch", "video", "v.mp4", "cap")["message_id"], "2")
-        self.assertEqual(adapter.send_media("@ch", "document", "d.pdf", "cap")["message_id"], "3")
-        urls = [call[0][0] for call in mock_get.call_args_list]
+
+        photo = SimpleUploadedFile("p.jpg", b"fake_photo", content_type="image/jpeg")
+        video = SimpleUploadedFile("v.mp4", b"fake_video", content_type="video/mp4")
+        doc = SimpleUploadedFile("d.pdf", b"fake_doc", content_type="application/pdf")
+
+        self.assertEqual(adapter.send_media("@ch", "photo", photo, "cap")["message_id"], "1")
+        self.assertEqual(adapter.send_media("@ch", "video", video, "cap")["message_id"], "2")
+        self.assertEqual(adapter.send_media("@ch", "document", doc, "cap")["message_id"], "3")
+
+        urls = [call[0][0] for call in mock_post.call_args_list]
         self.assertTrue(any("sendPhoto" in u for u in urls))
         self.assertTrue(any("sendVideo" in u for u in urls))
         self.assertTrue(any("sendDocument" in u for u in urls))
@@ -161,9 +170,13 @@ class BaleWebhookTests(TestCase):
     """تست‌های Webhook ربات بله."""
 
     def setUp(self):
-        """آماده‌سازی URL و mock کردن آداپتور."""
-        self.url = "/webhooks/bale/"
+        """آماده‌سازی URL، Platform و mock کردن آداپتور."""
+        from core.models import Platform
         from django.test import override_settings
+        self.url = "/webhooks/bale/"
+        self.platform = Platform.objects.create(
+            name="Bale", slug="bale", description="Test", is_active=True,
+        )
         self.override = override_settings(FORWARD_BALE_TOKEN="test_token")
         self.override.enable()
 
@@ -210,3 +223,463 @@ class BaleWebhookTests(TestCase):
         mock_adapter.send_text.assert_called_once()
         args, _ = mock_adapter.send_text.call_args
         self.assertIn("با موفقیت", args[1])
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_bot_added_user_not_linked(self, mock_get_adapter):
+        """کاربر ناشناخته ربات را اضافه می‌کند — ربات پیام راهنما می‌فرستد، کانال ساخته نمی‌شود."""
+        from product.forward.broadcast.models import BroadcastChannel
+        mock_adapter = MagicMock()
+        mock_get_adapter.return_value = mock_adapter
+        before = BroadcastChannel.objects.count()
+
+        # ساختار دقیقاً مطابق خروجی n8n
+        payload = {
+            "message": {
+                "from": {"id": 99999},
+                "chat": {"id": -100123, "type": "channel", "title": "کانال ناشناخته"},
+                "new_chat_members": [{"id": 123456, "is_bot": True}]
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BroadcastChannel.objects.count(), before)
+        mock_adapter.send_text.assert_called_once()
+
+    def test_bot_added_user_linked_creates_channel(self):
+        """کاربر شناخته‌شده ربات را اضافه می‌کند — کانال به‌طور خودکار ساخته می‌شود."""
+        from accounts.models import CustomUser
+        from product.forward.broadcast.models import BroadcastChannel
+        from product.forward.messengers.models import BotUser
+
+        user = CustomUser(phone_number="09120000099", nickname="LinkedUser")
+        user.set_unusable_password()
+        user.save()
+        BotUser.objects.create(user=user, platform=self.platform, chat_id="55555", is_verified=True)
+
+        with patch("product.forward.messengers.webhooks.get_adapter") as mock_get:
+            mock_adapter = MagicMock()
+            mock_adapter.check_bot_is_admin.return_value = True
+            mock_get.return_value = mock_adapter
+
+            payload = {
+                "message": {
+                    "from": {"id": 55555},
+                    "chat": {"id": -100999, "type": "channel", "title": "کانال تستی"},
+                    "new_chat_members": [{"id": 123456, "is_bot": True}]
+                }
+            }
+            response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        channel = BroadcastChannel.objects.get(chat_id="-100999")
+        self.assertEqual(channel.user, user)
+        self.assertTrue(channel.bot_is_admin)
+        self.assertEqual(channel.title, "کانال تستی")
+
+    def test_bot_removed_deactivates_channel(self):
+        """حذف ربات از کانال — کانال غیرفعال می‌شود."""
+        from accounts.models import CustomUser
+        from product.forward.broadcast.models import BroadcastChannel
+
+        user = CustomUser(phone_number="09120000088", nickname="RemovedUser")
+        user.set_unusable_password()
+        user.save()
+        channel = BroadcastChannel.objects.create(
+            user=user, platform=self.platform, chat_id="-100777", title="کانال حذف‌شدنی", bot_is_admin=True,
+            is_active=True,
+        )
+
+        payload = {
+            "message": {
+                "from": {"id": 12345},
+                "chat": {"id": -100777, "type": "channel", "title": "کانال حذف‌شدنی"},
+                "left_chat_member": {"id": 123456, "is_bot": True}
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        channel.refresh_from_db()
+        self.assertFalse(channel.is_active)
+        self.assertFalse(channel.bot_is_admin)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_private_message_creates_draft_job(self, mock_get_adapter):
+        """ارسال متن در چت خصوصی باید یک BroadcastJob در حالت DRAFT بسازد."""
+        from product.forward.broadcast.models import BroadcastJob
+        from product.forward.messengers.models import BotUser
+        from accounts.models import CustomUser
+
+        # کاربر و کانال
+        user = CustomUser(phone_number="09001386427", nickname="BotUser")
+        user.set_unusable_password()
+        user.save()
+        BotUser.objects.create(user=user, platform=self.platform, chat_id="55555", is_verified=True)
+
+        from product.forward.broadcast.models import BroadcastChannel
+        BroadcastChannel.objects.create(user=user, platform=self.platform, chat_id="-100", title="کانال تست",
+                                        is_active=True, bot_is_admin=True)
+
+        mock_adapter = MagicMock()
+        mock_get_adapter.return_value = mock_adapter
+
+        payload = {
+            "message": {
+                "text": "سلام از طریق ربات",
+                "chat": {"id": 55555, "type": "private"},
+                "from": {"id": 55555}
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BroadcastJob.objects.count(), 1)
+        job = BroadcastJob.objects.first()
+        self.assertEqual(job.status, BroadcastJob.Status.DRAFT)
+        self.assertEqual(job.message.text, "سلام از طریق ربات")
+        mock_adapter.send_text.assert_called_once()
+        args, kwargs = mock_adapter.send_text.call_args
+        self.assertIn("inline_keyboard", kwargs.get("reply_markup", {}))
+
+
+class ConnectTokenWebhookTests(TestCase):
+    """تست‌های اتصال کاربر از طریق لینک Deep Link."""
+
+    def setUp(self):
+        """آماده‌سازی پلتفرم و URL."""
+        from core.models import Platform
+        self.url = "/webhooks/bale/"
+        self.platform = Platform.objects.create(name="Bale", slug="bale", description="Test", is_active=True)
+        self.user = CustomUser(phone_number="09120000077", nickname="ConnectUser")
+        self.user.set_unusable_password()
+        self.user.save()
+
+    def test_generate_connect_link(self):
+        """تولید لینک اتصال باید توکن بسازد و لینک صحیح برگرداند."""
+        from product.forward.messengers.services import generate_connect_link
+        from product.forward.messengers.models import ConnectToken
+
+        link = generate_connect_link(self.user, "bale")
+        self.assertIn("https://ble.ir/win_forward_bot?start=connect_", link)
+        self.assertEqual(ConnectToken.objects.count(), 1)
+
+        token_obj = ConnectToken.objects.first()
+        self.assertEqual(token_obj.user, self.user)
+        self.assertTrue(token_obj.is_valid())
+
+    def test_connect_user_success(self):
+        """دریافت /start connect_<token> باید BotUser را بسازد و توکن را باطل کند."""
+        from product.forward.messengers.models import ConnectToken, BotUser
+        from django.utils import timezone
+
+        token_obj = ConnectToken.objects.create(user=self.user, platform=self.platform, token="testtoken123")
+
+        payload = {
+            "message": {
+                "text": "/start connect_testtoken123",
+                "chat": {"id": 999888},
+                "from": {"id": 999888, "username": "connect_user"}
+            }
+        }
+
+        with patch("product.forward.messengers.webhooks.get_adapter") as mock_get:
+            mock_adapter = MagicMock()
+            mock_get.return_value = mock_adapter
+
+            response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+
+        # چک کردن BotUser
+        bot_user = BotUser.objects.get(user=self.user, platform=self.platform)
+        self.assertEqual(bot_user.chat_id, "999888")
+        self.assertTrue(bot_user.is_verified)
+
+        # چک کردن باطل شدن توکن
+        token_obj.refresh_from_db()
+        self.assertIsNotNone(token_obj.used_at)
+        mock_adapter.send_text.assert_called_once()
+        self.assertIn("با موفقیت", mock_adapter.send_text.call_args[0][1])
+
+    def test_connect_user_invalid_token(self):
+        """توکن نامعتبر نباید BotUser بسازد و باید پیام خطا بفرستد."""
+        from product.forward.messengers.models import BotUser
+
+        payload = {
+            "message": {
+                "text": "/start connect_invalidtoken",
+                "chat": {"id": 999888},
+                "from": {"id": 999888}
+            }
+        }
+
+        with patch("product.forward.messengers.webhooks.get_adapter") as mock_get:
+            mock_adapter = MagicMock()
+            mock_get.return_value = mock_adapter
+
+            response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BotUser.objects.count(), 0)
+        mock_adapter.send_text.assert_called_once()
+        self.assertIn("نامعتبر", mock_adapter.send_text.call_args[0][1])
+
+
+class BotCommandsTests(TestCase):
+    """تست‌های دستورات /status و /channels در ربات."""
+
+    def setUp(self):
+        """آماده‌سازی پلتفرم، کاربر و BotUser."""
+        from core.models import Platform
+        from product.forward.messengers.models import BotUser
+        self.url = "/webhooks/bale/"
+        self.platform = Platform.objects.create(name="Bale", slug="bale", description="Test", is_active=True)
+        self.user = CustomUser(phone_number="09120000066", nickname="CommandUser")
+        self.user.set_unusable_password()
+        self.user.save()
+        self.bot_user = BotUser.objects.create(user=self.user, platform=self.platform, chat_id="777888",
+                                               is_verified=True)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_status_command_connected(self, mock_get):
+        """دستور /status برای کاربر متصل باید اطلاعات کاربر را برگرداند."""
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        payload = {"message": {"text": "/status", "chat": {"id": 777888}}}
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_adapter.send_text.assert_called_once()
+        msg = mock_adapter.send_text.call_args[0][1]
+        self.assertIn("وضعیت حساب شما", msg)
+        self.assertIn("09120000066", msg)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_status_command_not_connected(self, mock_get):
+        """دستور /status برای کاربر ناشناس باید پیام خطا بدهد."""
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        # چت آیدی که BotUser ندارد
+        payload = {"message": {"text": "/status", "chat": {"id": 111222}}}
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        mock_adapter.send_text.assert_called_once()
+        msg = mock_adapter.send_text.call_args[0][1]
+        self.assertIn("حساب بله شما به سایت متصل نیست", msg)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_channels_command_with_channels(self, mock_get):
+        """دستور /channels باید کانال‌های کاربر را به شکل دکمه‌های شیشه‌ای نشان دهد."""
+        from product.forward.broadcast.models import BroadcastChannel
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        # ساخت دو کانال تستی برای این کاربر
+        BroadcastChannel.objects.create(user=self.user, platform=self.platform, chat_id="-1", title="کانال اول",
+                                        bot_is_admin=True, is_active=True)
+        BroadcastChannel.objects.create(user=self.user, platform=self.platform, chat_id="-2", title="کانال دوم",
+                                        bot_is_admin=False, is_active=True)
+
+        payload = {"message": {"text": "/channels", "chat": {"id": 777888}}}
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_adapter.send_text.assert_called_once()
+
+        args, kwargs = mock_adapter.send_text.call_args
+        msg = args[1]
+
+        # چک کردن پیام اصلی
+        self.assertIn("لطفاً یک کانال", msg)
+
+        # چک کردن کیبورد شیشه‌ای
+        reply_markup = kwargs.get("reply_markup")
+        self.assertIsNotNone(reply_markup, "reply_markup باید ارسال شود")
+        self.assertIn("inline_keyboard", reply_markup)
+
+        buttons = reply_markup["inline_keyboard"]
+        self.assertEqual(len(buttons), 2, "باید دو ردیف دکمه باشد (یکی برای هر کانال)")
+
+        button_texts = [b[0]["text"] for b in buttons]
+        self.assertTrue(any("کانال اول" in t for t in button_texts))
+        self.assertTrue(any("کانال دوم" in t for t in button_texts))
+        self.assertTrue(any("✅" in t for t in button_texts), "کانال ادمین‌شده باید ✅ داشته باشد")
+        self.assertTrue(any("⚠️" in t for t in button_texts), "کانال غیرادمین باید ⚠️ داشته باشد")
+
+
+class InlineKeyboardTests(TestCase):
+    """تست‌های دکمه‌های شیشه‌ای و Callback Query."""
+
+    def setUp(self):
+        """آماده‌سازی داده‌ها."""
+        from core.models import Platform
+        from product.forward.messengers.models import BotUser
+        from product.forward.broadcast.models import BroadcastChannel
+        self.url = "/webhooks/bale/"
+        self.platform = Platform.objects.create(name="Bale", slug="bale", description="Test", is_active=True)
+        self.user = CustomUser(phone_number="09120000055", nickname="KeyboardUser")
+        self.user.set_unusable_password()
+        self.user.save()
+        BotUser.objects.create(user=self.user, platform=self.platform, chat_id="123123", is_verified=True)
+        self.channel = BroadcastChannel.objects.create(user=self.user, platform=self.platform, chat_id="-100",
+                                                       title="کانال کیبورد", is_active=True)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_callback_channel_details(self, mock_get):
+        """کلیک روی کانال باید صفحه مدیریت کانال را باز کند."""
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        payload = {
+            "callback_query": {
+                "data": f"ch_{self.channel.pk}",
+                "message": {"chat": {"id": 123123}}
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        mock_adapter.send_text.assert_called_once()
+        args, kwargs = mock_adapter.send_text.call_args
+        self.assertIn("کانال کیبورد", args[1])
+        self.assertIn("reply_markup", kwargs)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_callback_delete_channel(self, mock_get):
+        """کلیک روی دکمه حذف باید کانال را غیرفعال کند."""
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        payload = {
+            "callback_query": {
+                "data": f"delete_{self.channel.pk}",
+                "message": {"chat": {"id": 123123}}
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.channel.refresh_from_db()
+        self.assertFalse(self.channel.is_active)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_callback_refresh_channel(self, mock_get):
+        """کلیک روی دکمه بروزرسانی باید وضعیت ادمین را چک کند."""
+        mock_adapter = MagicMock()
+        mock_adapter.check_bot_is_admin.return_value = True
+        mock_get.return_value = mock_adapter
+
+        # ذخیره وضعیت اولیه کانال (در حالت تست false است)
+        self.channel.bot_is_admin = False
+        self.channel.save()
+
+        payload = {
+            "callback_query": {
+                "data": f"refresh_{self.channel.pk}",
+                "message": {"chat": {"id": 123123}}
+            }
+        }
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.channel.refresh_from_db()
+        self.assertTrue(self.channel.bot_is_admin)
+
+
+class BotSendFlowTests(TestCase):
+    """تست‌های فرآیند ارسال پیام از طریق ربات (انتخاب کانال و تایید)."""
+
+    def setUp(self):
+        from accounts.models import CustomUser
+        from core.models import Platform
+        from product.forward.messengers.models import BotUser
+        from product.forward.broadcast.models import BroadcastChannel, BroadcastMessage, BroadcastJob
+        from django.core.files.uploadedfile import SimpleUploadedFile  # 🔑 اضافه شد
+
+        self.url = "/webhooks/bale/"
+        self.platform = Platform.objects.create(name="Bale", slug="bale", description="Test", is_active=True)
+        self.platform.logo = SimpleUploadedFile("logo.png", b"fake", content_type="image/png")  # 🔑 اضافه شد
+        self.platform.save()
+
+        self.user = CustomUser(phone_number="09001386427", nickname="BotSender")
+        self.user.set_unusable_password()
+        self.user.save()
+        BotUser.objects.create(user=self.user, platform=self.platform, chat_id="777777", is_verified=True)
+
+        self.ch1 = BroadcastChannel.objects.create(user=self.user, platform=self.platform, chat_id="-1",
+                                                   title="کانال ۱", bot_is_admin=True)
+        self.ch2 = BroadcastChannel.objects.create(user=self.user, platform=self.platform, chat_id="-2",
+                                                   title="کانال ۲", bot_is_admin=True)
+
+        # ساخت یک پیش‌نویس اولیه
+        msg = BroadcastMessage.objects.create(user=self.user, content_type="text", text="پیام تست")
+        self.job = BroadcastJob.objects.create(message=msg, status=BroadcastJob.Status.DRAFT)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_select_channel_callback(self, mock_get_adapter):
+        """کلیک روی کانال باید Target را بسازد/حذف کند."""
+        from product.forward.broadcast.models import BroadcastTarget
+        mock_adapter = MagicMock()
+        mock_get_adapter.return_value = mock_adapter
+
+        payload = {
+            "callback_query": {
+                "data": f"sel_{self.job.pk}_{self.ch1.pk}",
+                "message": {"chat": {"id": 777777}, "message_id": 100}
+            }
+        }
+
+        # کلیک اول: انتخاب
+        self.client.post(self.url, data=payload, content_type="application/json")
+        self.assertEqual(BroadcastTarget.objects.count(), 1)
+
+        # کلیک دوم: لغو انتخاب
+        self.client.post(self.url, data=payload, content_type="application/json")
+        self.assertEqual(BroadcastTarget.objects.count(), 0)
+
+    @patch("product.forward.broadcast.services.dispatcher.get_adapter")
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_send_job_callback_without_targets(self, mock_webhook_adapter, mock_dispatch_adapter):
+        """کلیک روی ارسال بدون انتخاب کانال باید پیام خطا بدهد."""
+        mock_w_adapter = MagicMock()
+        mock_webhook_adapter.return_value = mock_w_adapter
+
+        payload = {
+            "callback_query": {
+                "data": f"send_{self.job.pk}",
+                "message": {"chat": {"id": 777777}}
+            }
+        }
+        self.client.post(self.url, data=payload, content_type="application/json")
+
+        mock_w_adapter.send_text.assert_called_once()
+        self.assertIn("حداقل یک کانال", mock_w_adapter.send_text.call_args[0][1])
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, self.job.Status.DRAFT)  # هنوز ارسال نشده
+
+    @patch("product.forward.broadcast.services.dispatcher.get_adapter")
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_send_job_callback_success(self, mock_webhook_adapter, mock_dispatch_adapter):
+        """کلیک روی ارسال با کانال انتخاب‌شده باید دیسپچر را صدا بزند."""
+        from product.forward.broadcast.models import BroadcastTarget
+        BroadcastTarget.objects.create(job=self.job, channel=self.ch1)  # شبیه‌سازی انتخاب
+
+        mock_w_adapter = MagicMock()
+        mock_webhook_adapter.return_value = mock_w_adapter
+        mock_d_adapter = MagicMock()
+        mock_d_adapter.send_text.return_value = {"message_id": "123"}
+        mock_dispatch_adapter.return_value = mock_d_adapter
+
+        payload = {
+            "callback_query": {
+                "data": f"send_{self.job.pk}",
+                "message": {"chat": {"id": 777777}}
+            }
+        }
+        self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.job.refresh_from_db()
+        # چون dispatch_job اجرا شده، وضعیت از DRAFT به DONE تغییر می‌کنه
+        self.assertEqual(self.job.status, self.job.Status.DONE)
+        self.assertEqual(self.job.success_count, 1)
+        self.assertIn("پردازش شد", mock_w_adapter.send_text.call_args[0][1])

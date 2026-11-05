@@ -34,20 +34,30 @@ class MessengerAdapter(ABC):
     platform_slug: str = ""
 
     @abstractmethod
-    def send_text(self, chat_id: str, text: str) -> dict:
+    def send_text(self, chat_id: str, text: str, reply_markup: dict = None) -> dict:
         """ارسال پیام متنی و بازگرداندن دیکشنری حاوی message_id."""
 
     @abstractmethod
-    def send_photo(self, chat_id: str, photo, caption: str = "") -> dict:
+    def send_photo(self, chat_id: str, photo, caption: str = "", file_id: str = None) -> dict:
         """ارسال عکس با کپشن اختیاری."""
 
     @abstractmethod
-    def send_video(self, chat_id: str, video, caption: str = "") -> dict:
+    def send_video(self, chat_id: str, video, caption: str = "", file_id: str = None) -> dict:
         """ارسال ویدیو با کپشن اختیاری."""
 
     @abstractmethod
-    def send_document(self, chat_id: str, document, caption: str = "") -> dict:
+    def send_document(self, chat_id: str, document, caption: str = "", file_id: str = None) -> dict:
         """ارسال فایل با کپشن اختیاری."""
+
+    def send_media(self, chat_id: str, content_type: str, file, caption: str = "", file_id: str = None) -> dict:
+        """ارسال فایل بر اساس نوع محتوا (dispatch به متد مناسب)."""
+        if content_type == "photo":
+            return self.send_photo(chat_id, file, caption, file_id=file_id)
+        if content_type == "video":
+            return self.send_video(chat_id, file, caption, file_id=file_id)
+        if content_type == "document":
+            return self.send_document(chat_id, file, caption, file_id=file_id)
+        raise ValueError(f"نوع محتوای پشتیبانی‌نشده: {content_type}")
 
     @abstractmethod
     def check_bot_is_admin(self, chat_id: str) -> bool:
@@ -60,13 +70,3 @@ class MessengerAdapter(ABC):
     @abstractmethod
     def get_bot_username(self) -> str:
         """نام کاربری ربات برای ساخت Deep Link (بدون @)."""
-
-    def send_media(self, chat_id: str, content_type: str, file, caption: str = "") -> dict:
-        """ارسال فایل بر اساس نوع محتوا (dispatch به متد مناسب)."""
-        if content_type == "photo":
-            return self.send_photo(chat_id, file, caption)
-        if content_type == "video":
-            return self.send_video(chat_id, file, caption)
-        if content_type == "document":
-            return self.send_document(chat_id, file, caption)
-        raise ValueError(f"نوع محتوای پشتیبانی‌نشده: {content_type}")

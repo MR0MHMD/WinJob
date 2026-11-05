@@ -1,0 +1,50 @@
+{% extends 'parent/base.html' %}
+{% block title %}جزئیات ارسال | وین فوروارد{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card border-light shadow-sm">
+        <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
+            <h4 class="text-light mb-0">گزارش ارسال #{{ job.pk }}</h4>
+            <a href="{% url 'broadcast:send' %}" class="btn btn-sm btn-primary rounded-pill">ارسال پیام جدید</a>
+        </div>
+        <div class="card-body bg-dark text-light">
+            <p><strong>وضعیت کلی:</strong> 
+                <span class="badge bg-{% if job.status == 'done' %}success{% elif job.status == 'partial' %}warning{% else %}danger{% endif %}">
+                    {{ job.get_status_display }}
+                </span>
+            </p>
+            <p><strong>موفق:</strong> {{ job.success_count }} | <strong>ناموفق:</strong> {{ job.failed_count }}</p>
+            <hr class="border-light">
+            <div class="table-responsive">
+                <table class="table table-dark table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>کانال</th>
+                            <th>وضعیت</th>
+                            <th>خطا (در صورت وجود)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for target in targets %}
+                        <tr>
+                            <td>{{ target.channel.title }}</td>
+                            <td>
+                                {% if target.status == 'success' %}
+                                    <span class="text-success">✅ موفق</span>
+                                {% elif target.status == 'failed' %}
+                                    <span class="text-danger">❌ ناموفق</span>
+                                {% else %}
+                                    {{ target.get_status_display }}
+                                {% endif %}
+                            </td>
+                            <td class="text-danger small">{{ target.error_message|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

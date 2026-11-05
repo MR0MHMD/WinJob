@@ -1,0 +1,93 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}تاریخچه ارسال‌ها | وین فوروارد{% endblock %}
+
+{% block content %}
+    <div class="container py-5">
+        <div class="card border-light shadow-sm">
+            <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
+                <h4 class="text-light mb-0">📋 تاریخچه ارسال‌ها</h4>
+                <div>
+                    <a href="{% url 'broadcast:job_list' %}" class="btn btn-sm btn-outline-light rounded-pill me-2">بازگشت
+                        به لیست</a>
+                    <a href="{% url 'broadcast:send' %}" class="btn btn-sm btn-primary rounded-pill">ارسال پیام جدید</a>
+                </div>
+            </div>
+            <div class="card-body bg-dark text-light">
+                {% if jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped align-middle">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>متن پیام</th>
+                                <th>وضعیت</th>
+                                <th>موفق/ناموفق</th>
+                                <th>تاریخ</th>
+                                <th>عملیات</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for job in jobs %}
+                                <tr>
+                                    <td>#{{ job.pk }}</td>
+                                    <td>{{ job.message.text|truncatewords:5|default:"(بدون متن)" }}</td>
+                                    <td>
+                                        {% if job.status == 'done' %}
+                                            <span class="badge bg-success">کامل موفق</span>
+                                        {% elif job.status == 'partial' %}
+                                            <span class="badge bg-warning">نیمه‌موفق</span>
+                                        {% elif job.status == 'failed' %}
+                                            <span class="badge bg-danger">ناموفق</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ job.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-success">{{ job.success_count }}</span> /
+                                        <span class="text-danger">{{ job.failed_count }}</span>
+                                    </td>
+                                    <td>{{ job.created_at|date:"Y/m/d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'broadcast:job_detail' job.pk %}"
+                                           class="btn btn-sm btn-outline-primary">جزئیات</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- صفحه‌بندی -->
+                    {% if is_paginated %}
+                        <nav class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item"><a class="page-link"
+                                                             href="?page={{ page_obj.previous_page_number }}">قبلی</a>
+                                    </li>
+                                {% endif %}
+                                <li class="page-item active"><span
+                                        class="page-link">{{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
+                                </li>
+                                {% if page_obj.has_next %}
+                                    <li class="page-item"><a class="page-link"
+                                                             href="?page={{ page_obj.next_page_number }}">بعدی</a></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <h5 class="text-muted">شما هنوز هیچ پیامی ارسال نکرده‌اید.</h5>
+                        <a href="{% url 'broadcast:send' %}" class="btn btn-primary mt-3 rounded-pill">ارسال اولین
+                            پیام</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

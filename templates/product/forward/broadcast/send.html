@@ -1,0 +1,81 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}ارسال پیام جدید | وین فوروارد{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-light shadow-sm">
+                <div class="card-header bg-dark border-light">
+                    <h4 class="text-light mb-0">🚀 ارسال پیام جدید به کانال‌ها</h4>
+                </div>
+                <div class="card-body bg-dark text-light">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-light">{{ form.content_type.label }}</label>
+                            {{ form.content_type }}
+                            {% if form.content_type.errors %}<div class="text-danger">{{ form.content_type.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-light">{{ form.text.label }}</label>
+                            {{ form.text }}
+                            <div class="form-text text-muted">حداکثر ۴۰۹۶ کاراکتر. برای عکس/ویدیو این متن به عنوان کپشن استفاده می‌شود.</div>
+                            {% if form.text.errors %}<div class="text-danger">{{ form.text.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-4" id="file-upload-section">
+                            <label class="form-label text-light">{{ form.file.label }}</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}<div class="text-danger">{{ form.file.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-light mb-3">{{ form.channels.label }}</label>
+                            <div class="row g-2">
+                                {% for checkbox in form.channels %}
+                                <div class="col-md-6">
+                                    <div class="form-check bg-faded-dark p-2 rounded">
+                                        {{ checkbox.tag }}
+                                        <label class="form-check-label text-light" for="{{ checkbox.id_for_label }}">
+                                            {{ checkbox.choice_label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.channels.errors %}<div class="text-danger">{{ form.channels.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                                ✉️ ارسال پیام
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const contentTypeSelect = document.getElementById('id_content_type');
+    const fileSection = document.getElementById('file-upload-section');
+    
+    function toggleFileUpload() {
+        if (contentTypeSelect.value === 'text') {
+            fileSection.style.display = 'none';
+        } else {
+            fileSection.style.display = 'block';
+        }
+    }
+    
+    contentTypeSelect.addEventListener('change', toggleFileUpload);
+    document.addEventListener('DOMContentLoaded', toggleFileUpload);
+</script>
+{% endblock %}

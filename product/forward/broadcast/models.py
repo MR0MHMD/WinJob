@@ -75,6 +75,7 @@ class BroadcastMessage(models.Model):
     content_type = models.CharField(_("نوع محتوا"), max_length=20, choices=ContentType.choices, default=ContentType.TEXT, db_index=True,)
     text = models.TextField(_("متن پیام"), max_length=4096, blank=True, help_text=_("حداکثر ۴۰۹۶ کاراکتر — برای عکس/ویدیو به عنوان کپشن استفاده می‌شود"),)
     file = models.FileField(_("فایل"), upload_to="broadcast/messages/%Y/%m/", null=True, blank=True,)
+    platform_file_ids = models.JSONField(_("شناسه فایل در پلتفرم‌ها"), default=dict, blank=True, help_text=_("کش شناسه فایل‌ها برای ارسال سریع بدون آپلود مجدد"), )
     created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True,)
 
     class Meta:
@@ -93,13 +94,18 @@ class BroadcastMessage(models.Model):
         return bool(self.file)
 
     def clean(self):
-        """اعتبارسنجی هم‌خوانی نوع محتوا با وجود فایل و متن."""
+        """اعتبارسنجی هم‌خوانی نوع محتوا با وجود فایل، متن یا file_id."""
         if self.content_type == self.ContentType.TEXT and self.file:
             raise ValidationError({"file": _("برای پیام متنی، فایل نباید آپلود شود.")})
-        if self.content_type != self.ContentType.TEXT and not self.file:
-            raise ValidationError({"file": _("برای این نوع محتوا، فایل الزامی است.")})
-        if not (self.text or "").strip() and not self.has_media:
-            raise ValidationError({"text": _("حداقل یکی از متن یا فایل باید موجود باشد.")})
+
+        # پیام غیرمتنی باید یا فایل فیزیکی داشته باشه یا file_id از پلتفرم
+        if self.content_type != self.ContentType.TEXT:
+            has_platform_file = bool(self.platform_file_ids)
+            if not self.file and not has_platform_file:
+                raise ValidationError({"file": _("برای این نوع محتوا، فایل یا شناسه فایل پلتفرم الزامی است.")})
+
+        if not (self.text or "").strip() and not self.has_media and not self.platform_file_ids:
+            raise ValidationError({"text": _("حداقل یکی از متن، فایل یا شناسه فایل باید موجود باشد.")})
 
     def save(self, *args, **kwargs):
         """اجرای اعتبارسنجی قبل از ذخیره."""
@@ -111,6 +117,7 @@ class BroadcastJob(models.Model):
     """یک عملیات ارسال گروهی — یک پیام به چند کانال."""
 
     class Status(models.TextChoices):
+        DRAFT = "draft", _("پیش‌نویس")
         PENDING = "pending", _("در انتظار")
         RUNNING = "running", _("در حال اجرا")
         DONE = "done", _("کامل موفق")

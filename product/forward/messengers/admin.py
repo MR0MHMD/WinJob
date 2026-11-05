@@ -1,11 +1,11 @@
 """مدیریت حرفه‌ای کاربران ربات در پنل ادمین."""
 
+from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
+from django.utils.html import format_html
+from .models import BotUser, ConnectToken
 from django.contrib import admin
 from django.urls import reverse
-from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
-from .models import BotUser
 
 # استایل مشترک badge
 _BADGE = "display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:500;"
@@ -108,3 +108,44 @@ class BotUserAdmin(admin.ModelAdmin):
         from django.utils import timezone
         n = queryset.update(last_seen_at=timezone.now())
         self.message_user(request, f"{n} رکورد بروزرسانی شد.")
+
+
+@admin.register(ConnectToken)
+class ConnectTokenAdmin(admin.ModelAdmin):
+    """مدیریت توکن‌های اتصال (Deep Link)."""
+
+    list_display = ("id_badge", "user_link", "platform_badge", "token_display", "status_badge", "created_at")
+    list_filter = ("platform", ("created_at", admin.DateFieldListFilter))
+    search_fields = ("user__phone_number", "user__nickname", "token")
+    readonly_fields = ("token", "created_at", "used_at")
+    autocomplete_fields = ("user", "platform")
+
+    @admin.display(description=_("ID"))
+    def id_badge(self, obj):
+        """نمایش شناسه عددی."""
+        return format_html('<code style="background:#f5f4f8;padding:2px 6px;border-radius:4px;">#{}</code>', obj.pk)
+
+    @admin.display(description=_("کاربر"))
+    def user_link(self, obj):
+        """لینک به پروفایل کاربر."""
+        url = reverse(f"admin:{obj.user._meta.app_label}_{obj.user._meta.model_name}_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.nickname or obj.user.phone_number)
+
+    @admin.display(description=_("پلتفرم"))
+    def platform_badge(self, obj):
+        """نمایش نام پلتفرم."""
+        return obj.platform.name
+
+    @admin.display(description=_("توکن"))
+    def token_display(self, obj):
+        """نمایش بخشی از توکن."""
+        return format_html('<code>{}</code>', obj.token[:12])
+
+    @admin.display(description=_("وضعیت"))
+    def status_badge(self, obj):
+        """نمایش وضعیت استفاده از توکن."""
+        if obj.used_at:
+            return mark_safe('<span style="color:#f23c49;">استفاده شده</span>')
+        if obj.is_valid():
+            return mark_safe('<span style="color:#07c98b;">معتبر (۱۰ دقیقه)</span>')
+        return mark_safe('<span style="color:#fdbc31;">منقضی شده</span>')
