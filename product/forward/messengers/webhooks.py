@@ -6,11 +6,11 @@ import logging
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-
 from core.models import Platform
 from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
 from product.forward.broadcast.services.channel_sync import finalize_verification
 from product.forward.broadcast.services.dispatcher import dispatch_job
+from product.forward.messengers.adapters.base import MessengerError
 from product.forward.messengers.adapters.registry import get_adapter
 from product.forward.messengers.models import BotUser, ConnectToken
 
@@ -52,66 +52,63 @@ def _handle_message(message):
     if "left_chat_member" in message:
         return _handle_bot_removed_from_chat(message)
 
-    # ۳. بررسی پیام‌های چت خصوصی (ارسال پیام از ربات)
-    chat_type = message.get("chat", {}).get("type")
-    if chat_type == "private":
-        return _handle_private_message(message)
-
     text = message.get("text", "")
     chat_id = message.get("chat", {}).get("id")
     if not chat_id:
         return JsonResponse({"ok": True, "status": "no chat_id"})
 
-    # ۳. بررسی اینکه اصلا دستور است یا نه
-    if not text.startswith("/"):
-        return JsonResponse({"ok": True, "status": "not a command"})
+    # ۳. بررسی دستورات (قبل از پیام‌های خصوصی — رفع باگ)
+    if text.startswith("/"):
+        parts = text.split(" ")
+        command = parts[0]
 
-    parts = text.split(" ")
-    command = parts[0]
+        adapter = get_adapter("bale")
+        if adapter is None:
+            logger.error("BaleAdapter is not registered")
+            return JsonResponse({"ok": False, "error": "Adapter missing"}, status=500)
 
-    adapter = get_adapter("bale")
-    if adapter is None:
-        logger.error("BaleAdapter is not registered")
-        return JsonResponse({"ok": False, "error": "Adapter missing"}, status=500)
+        # --- /start ---
+        if command == "/start":
+            if len(parts) > 1 and parts[1].startswith("verify_"):
+                token = parts[1].replace("verify_", "")
+                result = finalize_verification(token, "bale", str(chat_id))
+                if result["ok"]:
+                    adapter.send_text(chat_id, f"✅ کانال «{result['channel'].title}» با موفقیت به وین فوروارد متصل شد.")
+                else:
+                    error_map = {
+                        "invalid_or_used_token": "❌ لینک نامعتبر است یا قبلاً استفاده شده.",
+                        "expired_token": "❌ لینک منقضی شده است. لطفاً از سایت لینک جدید بگیرید.",
+                        "bot_not_admin": "❌ ربات در کانال ادمین نیست. لطفاً ربات را ادمین کنید.",
+                        "api_error": "❌ خطا در ارتباط با بله. لطفاً بعداً تلاش کنید.",
+                    }
+                    adapter.send_text(chat_id, error_map.get(result.get("error"), "❌ خطای نامشخص."))
+                return JsonResponse({"ok": True, "status": "verify processed"})
 
-    # --- پردازش دستور /start ---
-    if command == "/start":
-        # حالت /start verify_<token>
-        if len(parts) > 1 and parts[1].startswith("verify_"):
-            token = parts[1].replace("verify_", "")
-            result = finalize_verification(token, "bale", str(chat_id))
-            if result["ok"]:
-                adapter.send_text(chat_id, f"✅ کانال «{result['channel'].title}» با موفقیت به وین فوروارد متصل شد.")
+            elif len(parts) > 1 and parts[1].startswith("connect_"):
+                token = parts[1].replace("connect_", "")
+                from_user = message.get("from", {})
+                return _handle_connect_user(token, chat_id, from_user)
+
             else:
-                error_map = {
-                    "invalid_or_used_token": "❌ لینک نامعتبر است یا قبلاً استفاده شده.",
-                    "expired_token": "❌ لینک منقضی شده است. لطفاً از سایت لینک جدید بگیرید.",
-                    "bot_not_admin": "❌ ربات در کانال ادمین نیست. لطفاً ربات را ادمین کنید.",
-                    "api_error": "❌ خطا در ارتباط با بله. لطفاً بعداً تلاش کنید.",
-                }
-                adapter.send_text(chat_id, error_map.get(result.get("error"), "❌ خطای نامشخص."))
-            return JsonResponse({"ok": True, "status": "verify processed"})  # 🔑 ریتِرن حیاتی!
+                adapter.send_text(chat_id, "سلام! به ربات وین فوروارد خوش آمدید.\nبرای اتصال کانال، از سایت اقدام کنید.")
+                return JsonResponse({"ok": True, "status": "welcome sent"})
 
-        # حالت /start connect_<token>
-        elif len(parts) > 1 and parts[1].startswith("connect_"):
-            token = parts[1].replace("connect_", "")
-            from_user = message.get("from", {})
-            return _handle_connect_user(token, chat_id, from_user)
+        # --- /status ---
+        elif command == "/status":
+            return _handle_status_command(chat_id)
 
-        # حالت /start ساده (خوش‌آمدگویی)
-        else:
-            adapter.send_text(chat_id, "سلام! به ربات وین فوروارد خوش آمدید.\nبرای اتصال کانال، از سایت اقدام کنید.")
-            return JsonResponse({"ok": True, "status": "welcome sent"})
+        # --- /channels ---
+        elif command == "/channels":
+            return _handle_channels_command(chat_id)
 
-    # --- پردازش دستور /status ---
-    elif command == "/status":
-        return _handle_status_command(chat_id)
+        return JsonResponse({"ok": True, "status": "unknown command"})
 
-    # --- پردازش دستور /channels ---
-    elif command == "/channels":
-        return _handle_channels_command(chat_id)
+    # ۴. پیام غیردستوری در چت خصوصی → ساخت پیش‌نویس
+    chat_type = message.get("chat", {}).get("type")
+    if chat_type == "private":
+        return _handle_private_message(message)
 
-    return JsonResponse({"ok": True, "status": "unknown command"})
+    return JsonResponse({"ok": True, "status": "ignored"})
 
 
 def _handle_bot_added_to_chat(message):
@@ -331,7 +328,7 @@ def _handle_callback_query(callback):
         adapter.send_text(chat_id, "❌ دسترسی غیرمجاز.")
         return JsonResponse({"ok": True, "status": "unauthorized"})
 
-    # ۱. انتخاب/لغو انتخاب کانال (sel_<job_id>_<channel_id>)
+    # ۱. انتخاب/لغو انتخاب کانال
     if data.startswith("sel_"):
         try:
             _, job_id, channel_id = data.split("_")
@@ -351,9 +348,9 @@ def _handle_callback_query(callback):
         except Exception as e:
             logger.error(f"Error in sel_ callback: {e}")
 
-        return JsonResponse({"ok": True, "status": "selection toggled"})  # 🔑 اضافه شد
+        return JsonResponse({"ok": True, "status": "selection toggled"})
 
-    # ۲. تایید و ارسال نهایی (send_<job_id>)
+    # ۲. تایید و ارسال
     elif data.startswith("send_"):
         try:
             job_id = data.replace("send_", "")
@@ -369,19 +366,17 @@ def _handle_callback_query(callback):
 
             job.status = BroadcastJob.Status.PENDING
             job.save(update_fields=["status"])
-            dispatch_job(job.pk)
 
-            job.refresh_from_db()
-            adapter.send_text(chat_id,
-                              f"✅ پیام شما پردازش شد.\n📊 موفق: {job.success_count} | ناموفق: {job.failed_count}")
+            # 🔑 dispatcher خودش پیام وضعیت و پیام نهایی رو مدیریت می‌کنه
+            dispatch_job(job.pk, progress_chat_id=str(chat_id))
 
         except Exception as e:
-            logger.error(f"Error in send_ callback: {e}")
+            logger.exception(f"Error in send_ callback: {e}")
             adapter.send_text(chat_id, "❌ خطایی در ارسال رخ داد.")
 
-        return JsonResponse({"ok": True, "status": "send processed"})  # 🔑 اضافه شد
+        return JsonResponse({"ok": True, "status": "send processed"})
 
-    # ۳. بازگشت به لیست کانال‌ها
+    # ۳. داشبورد کانال‌ها
     elif data.startswith("ch_") or data == "back_list" or data.startswith("refresh_") or data.startswith("delete_"):
         return _handle_dashboard_callback(callback, adapter, chat_id, bot_user)
 
@@ -436,31 +431,47 @@ def _handle_private_message(message):
     """دریافت فایل یا متن از کاربر در چت خصوصی و ساخت پیش‌نویس برای ارسال."""
     from product.forward.broadcast.models import BroadcastMessage, BroadcastJob
     chat_id = message.get("chat", {}).get("id")
+    chat_str = str(chat_id)
     from_user = message.get("from", {})
+    text_content = message.get("text", "").strip()
 
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    # --- ۳. منطق موجود بله ---
+    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=chat_str).select_related("user").first()
     if not bot_user:
         adapter = get_adapter("bale")
         adapter.send_text(chat_id, "❌ ابتدا حساب خود را با لینک اتصال سایت، به ربات متصل کنید.")
         return JsonResponse({"ok": True, "status": "not connected"})
 
-    # اگر دستور بود، نادیده بگیر
-    text_content = message.get("text", "")
     if text_content.startswith("/"):
         return JsonResponse({"ok": True, "status": "command ignored in private"})
 
-    # استخراج نوع محتوا و file_id
+    # استخراج نوع محتوا و file_id (ترتیب مهم است!)
     content_type = "text"
     platform_file_id = None
 
-    if "photo" in message:
+    # ۱. اول استیکر (چون ممکن است document هم داشته باشد)
+    if "sticker" in message:
+        content_type = "sticker"
+        platform_file_id = message["sticker"]["file_id"]
+        text_content = ""
+
+    # ۲. بعد انیمیشن/گیف (چون ممکن است document هم داشته باشد)
+    elif "animation" in message:
+        content_type = "animation"
+        platform_file_id = message["animation"]["file_id"]
+        text_content = message.get("caption", "")
+
+    # ۳. سپس بقیه انواع
+    elif "photo" in message:
         content_type = "photo"
         platform_file_id = message["photo"][-1]["file_id"]
         text_content = message.get("caption", "")
+
     elif "video" in message:
         content_type = "video"
         platform_file_id = message["video"]["file_id"]
         text_content = message.get("caption", "")
+
     elif "document" in message:
         content_type = "document"
         platform_file_id = message["document"]["file_id"]

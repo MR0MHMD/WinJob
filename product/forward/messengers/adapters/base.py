@@ -49,6 +49,12 @@ class MessengerAdapter(ABC):
     def send_document(self, chat_id: str, document, caption: str = "", file_id: str = None) -> dict:
         """ارسال فایل با کپشن اختیاری."""
 
+    def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:
+        """ارسال گیف (با file_id یا آپلود جدید)."""
+
+    def send_sticker(self, chat_id: str, sticker, file_id: str = None) -> dict:
+        """ارسال استیکر (با file_id یا آپلود جدید)."""
+
     def send_media(self, chat_id: str, content_type: str, file, caption: str = "", file_id: str = None) -> dict:
         """ارسال فایل بر اساس نوع محتوا (dispatch به متد مناسب)."""
         if content_type == "photo":
@@ -57,6 +63,10 @@ class MessengerAdapter(ABC):
             return self.send_video(chat_id, file, caption, file_id=file_id)
         if content_type == "document":
             return self.send_document(chat_id, file, caption, file_id=file_id)
+        if content_type == "animation":
+            return self.send_animation(chat_id, file, caption, file_id=file_id)
+        if content_type == "sticker":
+            return self.send_sticker(chat_id, file, file_id=file_id)
         raise ValueError(f"نوع محتوای پشتیبانی‌نشده: {content_type}")
 
     @abstractmethod

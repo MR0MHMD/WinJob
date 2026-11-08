@@ -31,14 +31,17 @@ class BaleAdapter(MessengerAdapter):
             raise MessengerAPIError("توکن ربات بله برای وین فوروارد تنظیم نشده است.")
         self._token = token
 
-    def _call(self, method: str, http_method: str = "GET", **params):
-        """فراخوانی متد API بله (به صورت GET یا POST)."""
+    def _call(self, method: str, http_method: str = "GET", as_form: bool = False, **params):
+        """فراخوانی متد API بله (با قابلیت ارسال به صورت form-data یا JSON)."""
         url = self.BASE_URL.format(token=self._token, method=method)
         try:
             if http_method == "GET":
                 response = requests.get(url, params=params, timeout=self.TIMEOUT)
             else:
-                response = requests.post(url, json=params, timeout=self.TIMEOUT)
+                if as_form:
+                    response = requests.post(url, data=params, timeout=self.TIMEOUT)
+                else:
+                    response = requests.post(url, json=params, timeout=self.TIMEOUT)
             data = response.json()
         except requests.RequestException as exc:
             raise MessengerAPIError(f"خطا در ارتباط با API بله: {exc}") from exc
@@ -51,6 +54,7 @@ class BaleAdapter(MessengerAdapter):
                 description=data.get("description", "Unknown error"),
             )
         return data.get("result")
+
 
     def _handle_api_error(self, code: int, description: str) -> NoReturn:
         """تبدیل خطای API بله به خطای معنادار آداپتور."""
@@ -76,7 +80,7 @@ class BaleAdapter(MessengerAdapter):
 
     def _call_multipart(self, method: str, chat_id: str, media_field: str, media_file, media_filename: str,
                         caption: str = "") -> dict:
-        """فراخوانی متدهای ارسال فایل با multipart/form-data."""
+        """فراخوانی متدهای ارسال فایل با multipart/form-data (با MIME type صحیح)."""
         url = self.BASE_URL.format(token=self._token, method=method)
 
         media_file.open("rb")
@@ -85,7 +89,26 @@ class BaleAdapter(MessengerAdapter):
         finally:
             media_file.close()
 
-        files = {media_field: (media_filename, file_bytes, "application/octet-stream")}
+        # تعیین MIME type بر اساس پسوند فایل
+        lower_name = media_filename.lower()
+        if lower_name.endswith(".gif"):
+            mime_type = "image/gif"
+        elif lower_name.endswith(".webp"):
+            mime_type = "image/webp"
+        elif lower_name.endswith(".tgs"):
+            mime_type = "application/x-tgsticker"
+        elif lower_name.endswith(".webm"):
+            mime_type = "video/webm"
+        elif lower_name.endswith(".mp4"):
+            mime_type = "video/mp4"
+        elif lower_name.endswith((".jpg", ".jpeg")):
+            mime_type = "image/jpeg"
+        elif lower_name.endswith(".png"):
+            mime_type = "image/png"
+        else:
+            mime_type = "application/octet-stream"
+
+        files = {media_field: (media_filename, file_bytes, mime_type)}
         data = {"chat_id": chat_id}
         if caption:
             data["caption"] = caption
@@ -138,6 +161,33 @@ class BaleAdapter(MessengerAdapter):
         extracted_file_id = result.get("document", {}).get("file_id")
         return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
 
+    def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:
+        """ارسال گیف (با file_id یا آپلود جدید)."""
+        if file_id:
+            # 🔑 استفاده از as_form=True برای جلوگیری از خطای malformed request
+            result = self._call("sendAnimation", http_method="POST", as_form=True, chat_id=chat_id, animation=file_id,
+                                caption=caption)
+        else:
+            filename = getattr(animation, "name", "animation.gif").split("/")[-1]
+            result = self._call_multipart("sendAnimation", chat_id, "animation", animation, filename, caption)
+
+        extracted_file_id = result.get("animation", {}).get("file_id")
+        return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
+
+    def send_sticker(self, chat_id: str, sticker, file_id: str = None) -> dict:
+        """ارسال استیکر (با file_id یا آپلود جدید)."""
+        if file_id:
+            # 🔑 استفاده از as_form=True برای جلوگیری از خطای malformed request
+            result = self._call("sendSticker", http_method="POST", as_form=True, chat_id=chat_id, sticker=file_id)
+        else:
+            filename = getattr(sticker, "name", "sticker.webp").split("/")[-1]
+            if not filename.lower().endswith(('.webp', '.tgs', '.webm')):
+                filename = "sticker.webp"
+            result = self._call_multipart("sendSticker", chat_id, "sticker", sticker, filename)
+
+        extracted_file_id = result.get("sticker", {}).get("file_id")
+        return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
+
     def check_bot_is_admin(self, chat_id: str) -> bool:
         """بررسی ادمین بودن ربات در کانال با استفاده از getChatMember."""
         me = self._call("getMe")
@@ -172,3 +222,24 @@ class BaleAdapter(MessengerAdapter):
             return True
         except Exception:
             return False
+
+    def edit_message_text(self, chat_id: str, message_id: int, text: str, reply_markup: dict = None) -> dict:
+        """ویرایش متن یک پیام ارسال‌شده (editMessageText)."""
+        import json
+        params = {"chat_id": chat_id, "message_id": message_id, "text": text}
+        if reply_markup:
+            params["reply_markup"] = json.dumps(reply_markup)
+        return self._call("editMessageText", http_method="POST", **params)
+
+    def get_file(self, file_id: str) -> dict:
+        """اطلاعات فایل را از بله دریافت میکند (getFile)."""
+        result = self._call("getFile", file_id=file_id)
+        return result
+
+    def download_file(self, file_path: str) -> bytes:
+        """فایل را از سرور بله دانلود میکند و بایتهای آن را برمیگرداند."""
+        url = f"https://tapi.bale.ai/file/bot{self._token}/{file_path}"
+        response = requests.get(url, timeout=self.TIMEOUT * 3)
+        if response.status_code != 200:
+            raise MessengerAPIError(f"خطا در دانلود فایل از بله (HTTP {response.status_code})")
+        return response.content

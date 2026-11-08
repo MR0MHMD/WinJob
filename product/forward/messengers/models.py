@@ -20,6 +20,13 @@ class BotUser(models.Model):
     platform = models.ForeignKey("core.Platform", on_delete=models.PROTECT, related_name="bot_users", verbose_name=_("پلتفرم"),)
     chat_id = models.CharField(_("شناسه چت"), max_length=64, help_text=_("شناسه یکتای کاربر در این پیام‌رسان"),)
     username = models.CharField(_("نام کاربری"), max_length=64, blank=True, help_text=_("در صورت وجود: @username"),)
+    api_token = models.CharField(
+        _("توکن API اختصاصی"),
+        max_length=256,
+        blank=True,
+        null=True,
+        help_text=_("برای پلتفرم‌هایی مثل ایتا که هر کاربر توکن اختصاصی دارد (مثلاً ایتایار). برای بله خالی بماند."),
+    )
     is_verified = models.BooleanField(_("تأیید شده"), default=False, help_text=_("آیا اتصال با موفقیت انجام شده است؟"),)
     linked_at = jmodels.jDateTimeField(_("تاریخ اتصال"), auto_now_add=True,)
     last_seen_at = jmodels.jDateTimeField(_("آخرین فعالیت"), null=True, blank=True, help_text=_("آخرین تعامل کاربر با ربات"),)

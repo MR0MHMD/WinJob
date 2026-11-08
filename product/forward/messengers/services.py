@@ -6,6 +6,12 @@ from .models import ConnectToken
 
 def generate_connect_link(user, platform_slug: str, bot_username: str = "win_forward_bot") -> str:
     """تولید توکن یک بار مصرف و ساخت لینک Deep Link برای اتصال به ربات."""
+    if platform_slug == "eitaa":
+        raise ValueError(
+            "ایتا از لینک اتصال (Deep Link) پشتیبانی نمی‌کند. "
+            "برای اتصال کانال ایتا از فرم ورود توکن ایتایار استفاده کنید."
+        )
+
     from core.models import Platform
     platform = Platform.objects.get(slug=platform_slug)
 

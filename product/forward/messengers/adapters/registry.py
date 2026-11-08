@@ -20,10 +20,13 @@ def unregister(platform_slug: str) -> None:
     _REGISTRY.pop(platform_slug, None)
 
 
-def get_adapter(platform_slug: str) -> Optional[MessengerAdapter]:
-    """نمونه آداپتور برای پلتفرم مشخص یا None در صورت ثبت‌نشدن."""
+def get_adapter(platform_slug: str, **kwargs) -> Optional[MessengerAdapter]:
+    """نمونه آداپتور برای پلتفرم مشخص یا None در صورت ثبت‌نشدن.
+
+    kwargs اختیاری به سازنده آداپتور پاس داده می‌شوند (مثلاً token برای ایتا).
+    """
     cls = _REGISTRY.get(platform_slug)
-    return cls() if cls else None
+    return cls(**kwargs) if cls else None
 
 
 def get_adapter_class(platform_slug: str):

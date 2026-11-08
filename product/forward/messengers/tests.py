@@ -12,6 +12,8 @@ from product.forward.messengers.adapters.base import (
     MessengerRateLimitError,
 )
 from product.forward.messengers.adapters.registry import get_adapter, get_registered_slugs
+# اطمینان از ثبت آداپتور ایتا در رجیستری (اجرای @register)
+from product.forward.messengers.adapters.eitaa import EitaaAdapter  # noqa: F401
 
 
 def _make_response(ok: bool, result=None, error_code: int = 0, description: str = ""):
@@ -509,6 +511,40 @@ class BotCommandsTests(TestCase):
         self.assertTrue(any("✅" in t for t in button_texts), "کانال ادمین‌شده باید ✅ داشته باشد")
         self.assertTrue(any("⚠️" in t for t in button_texts), "کانال غیرادمین باید ⚠️ داشته باشد")
 
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_status_command_works_in_private_chat(self, mock_get):
+        """/status در چت خصوصی (type=private) باید پاسخ بده — رفع باگ."""
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        payload = {"message": {"text": "/status", "chat": {"id": 777888, "type": "private"}}}
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_adapter.send_text.assert_called_once()
+        msg = mock_adapter.send_text.call_args[0][1]
+        self.assertIn("وضعیت حساب شما", msg)
+
+    @patch("product.forward.messengers.webhooks.get_adapter")
+    def test_channels_command_works_in_private_chat(self, mock_get):
+        """/channels در چت خصوصی (type=private) باید پاسخ بده — رفع باگ."""
+        from product.forward.broadcast.models import BroadcastChannel
+        mock_adapter = MagicMock()
+        mock_get.return_value = mock_adapter
+
+        BroadcastChannel.objects.create(
+            user=self.user, platform=self.platform, chat_id="-1", title="کانال تست",
+            bot_is_admin=True, is_active=True,
+        )
+
+        payload = {"message": {"text": "/channels", "chat": {"id": 777888, "type": "private"}}}
+        response = self.client.post(self.url, data=payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_adapter.send_text.assert_called_once()
+        msg = mock_adapter.send_text.call_args[0][1]
+        self.assertIn("لطفاً یک کانال", msg)
+
 
 class InlineKeyboardTests(TestCase):
     """تست‌های دکمه‌های شیشه‌ای و Callback Query."""
@@ -683,3 +719,330 @@ class BotSendFlowTests(TestCase):
         self.assertEqual(self.job.status, self.job.Status.DONE)
         self.assertEqual(self.job.success_count, 1)
         self.assertIn("پردازش شد", mock_w_adapter.send_text.call_args[0][1])
+
+
+# ============================================================
+# Eitaa Adapter Tests
+# ============================================================
+
+
+def _make_eitaa_response(ok: bool, result=None, description: str = ""):
+    """ساخت MagicMock پاسخ HTTP برای requests.post (ایتا)."""
+    response = MagicMock()
+    payload = {"ok": ok, "result": result}
+    if not ok:
+        payload["description"] = description
+    response.json.return_value = payload
+    return response
+
+
+class EitaaAdapterRegistrationTests(TestCase):
+    """تست‌های ثبت و مقداردهی اولیه آداپتور ایتا."""
+
+    @override_settings(EITAA_BOT_TOKEN="test_token_12345")
+    def test_adapter_registered_and_instantiable(self):
+        """آداپتور ایتا در رجیستری ثبت شده و با توکن معتبر ساخته می‌شود."""
+        self.assertIn("eitaa", get_registered_slugs())
+        adapter = get_adapter("eitaa")
+        self.assertIsNotNone(adapter)
+        self.assertEqual(adapter.platform_slug, "eitaa")
+
+    @override_settings(EITAA_BOT_TOKEN="")
+    def test_missing_token_raises(self):
+        """نبودن توکن تنظیمات باعث MessengerAPIError می‌شود."""
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        with self.assertRaises(MessengerAPIError):
+            EitaaAdapter()
+
+
+class EitaaAdapterSendTests(TestCase):
+    """تست‌های ارسال متن و مدیا در ایتا."""
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_send_text_returns_message_id(self, mock_post):
+        """send_text پیام ارسال می‌کند و message_id را برمی‌گرداند."""
+        mock_post.return_value = _make_eitaa_response(True, {"message_id": 98765})
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        result = adapter.send_text("1404", "سلام ایتا")
+        self.assertEqual(result["message_id"], "98765")
+        args, kwargs = mock_post.call_args
+        self.assertIn("sendMessage", args[0])
+        self.assertEqual(kwargs["json"]["chat_id"], "1404")
+        self.assertEqual(kwargs["json"]["text"], "سلام ایتا")
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_send_media_dispatch_all_types(self, mock_post):
+        """send_media برای هر نوع محتوا متد صحیح را صدا می‌زند."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        mock_post.side_effect = [
+            _make_eitaa_response(True, {"message_id": 1}),
+            _make_eitaa_response(True, {"message_id": 2}),
+            _make_eitaa_response(True, {"message_id": 3}),
+        ]
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+
+        photo = SimpleUploadedFile("p.jpg", b"fake_photo", content_type="image/jpeg")
+        video = SimpleUploadedFile("v.mp4", b"fake_video", content_type="video/mp4")
+        doc = SimpleUploadedFile("d.pdf", b"fake_doc", content_type="application/pdf")
+
+        self.assertEqual(adapter.send_media("1404", "photo", photo, "cap")["message_id"], "1")
+        self.assertEqual(adapter.send_media("1404", "video", video, "cap")["message_id"], "2")
+        self.assertEqual(adapter.send_media("1404", "document", doc, "cap")["message_id"], "3")
+
+        # همه فراخوانی‌ها باید به sendFile یا sendDocument برن
+        urls = [call[0][0] for call in mock_post.call_args_list]
+        self.assertTrue(any("sendFile" in u for u in urls))
+        self.assertTrue(any("sendDocument" in u for u in urls))
+
+    def test_send_media_unsupported_type_raises(self):
+        """نوع محتوای ناشناخته باعث ValueError می‌شود."""
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        with self.assertRaises(ValueError):
+            adapter.send_media("1404", "audio", "a.mp3", "")
+
+
+class EitaaAdapterErrorTests(TestCase):
+    """تست‌های تبدیل خطاهای API ایتا به خطاهای معنادار."""
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_not_found_error_mapped(self, mock_post):
+        """خطای chat not found به MessengerNotFoundError تبدیل می‌شود."""
+        mock_post.return_value = _make_eitaa_response(False, description="chat not found")
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        with self.assertRaises(MessengerNotFoundError):
+            adapter.send_text("9999", "test")
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_permission_error_mapped(self, mock_post):
+        """خطای forbidden به MessengerPermissionError تبدیل می‌شود."""
+        mock_post.return_value = _make_eitaa_response(False, description="Forbidden: not enough rights")
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        with self.assertRaises(MessengerPermissionError):
+            adapter.send_text("1404", "test")
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_rate_limit_mapped(self, mock_post):
+        """خطای rate limit به MessengerRateLimitError تبدیل می‌شود."""
+        mock_post.return_value = _make_eitaa_response(False, description="Too Many Requests")
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        with self.assertRaises(MessengerRateLimitError):
+            adapter.send_text("1404", "test")
+
+
+class EitaaAdapterInfoTests(TestCase):
+    """تست‌های دریافت اطلاعات ربات و بررسی ادمین بودن."""
+
+    @patch("product.forward.messengers.adapters.eitaa.requests.post")
+    def test_get_bot_username(self, mock_post):
+        """get_bot_username نام کاربری را از getMe استخراج می‌کند."""
+        mock_post.return_value = _make_eitaa_response(True, {"username": "win_forward_bot"})
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        self.assertEqual(adapter.get_bot_username(), "win_forward_bot")
+
+    def test_check_bot_is_admin_always_true(self):
+        """check_bot_is_admin برای ایتا همیشه True برمی‌گرداند (مسئولیت با کاربر)."""
+        from product.forward.messengers.adapters.eitaa import EitaaAdapter
+        adapter = EitaaAdapter(token="test_token")
+        self.assertTrue(adapter.check_bot_is_admin("1404"))
+
+
+# ============================================================
+# Eitaa Data Modeling Tests (Phase 4)
+# ============================================================
+
+class EitaaBotUserModelTests(TestCase):
+    """تست‌های فیلد api_token در مدل BotUser."""
+
+    def setUp(self):
+        """آماده‌سازی کاربر، پلتفرم ایتا و پلتفرم بله."""
+        from core.models import Platform
+        self.user = CustomUser(phone_number="09120003333", nickname="EitaaUser")
+        self.user.set_unusable_password()
+        self.user.save()
+
+        self.eitaa_platform = Platform.objects.create(
+            name="Eitaa", slug="eitaa", description="Eitaa test", is_active=True, is_forward_active=True
+        )
+        self.bale_platform = Platform.objects.create(
+            name="Bale", slug="bale", description="Bale test", is_active=True
+        )
+
+    def test_bot_user_api_token_can_be_saved(self):
+        """فیلد api_token باید قابل ذخیره و بازیابی باشد."""
+        from product.forward.messengers.models import BotUser
+        bot_user = BotUser.objects.create(
+            user=self.user,
+            platform=self.eitaa_platform,
+            chat_id=f"eitaa_user_{self.user.id}",
+            is_verified=True,
+            api_token="test_eitaayar_token_xyz",
+        )
+        bot_user.refresh_from_db()
+        self.assertEqual(bot_user.api_token, "test_eitaayar_token_xyz")
+
+    def test_bot_user_api_token_is_optional(self):
+        """برای بله، api_token باید بتواند خالی بماند."""
+        from product.forward.messengers.models import BotUser
+        bot_user = BotUser.objects.create(
+            user=self.user,
+            platform=self.bale_platform,
+            chat_id="bale_chat_123",
+            is_verified=True,
+        )
+        self.assertIsNone(bot_user.api_token)
+
+    def test_bale_bot_user_unaffected(self):
+        """فیلد جدید نباید رفتار بله را تغییر دهد."""
+        from product.forward.messengers.models import BotUser
+        bot_user = BotUser.objects.create(
+            user=self.user,
+            platform=self.bale_platform,
+            chat_id="bale_chat_999",
+            is_verified=True,
+        )
+        self.assertEqual(bot_user.platform.slug, "bale")
+        self.assertIsNone(bot_user.api_token)
+
+
+class EitaaDeepLinkBlockedTests(TestCase):
+    """تست‌های مسدود بودن Deep Link برای ایتا."""
+
+    def setUp(self):
+        """آماده‌سازی کاربر، پلتفرم ایتا و کانال."""
+        from core.models import Platform
+        from product.forward.broadcast.models import BroadcastChannel
+        self.user = CustomUser(phone_number="09120004444", nickname="EitaaLinkUser")
+        self.user.set_unusable_password()
+        self.user.save()
+        self.eitaa_platform = Platform.objects.create(
+            name="Eitaa", slug="eitaa", description="Eitaa test", is_active=True
+        )
+        self.channel = BroadcastChannel.objects.create(
+            user=self.user, platform=self.eitaa_platform, chat_id="1404", title="کانال ایتا"
+        )
+
+    def test_build_deep_link_raises_for_eitaa(self):
+        """build_deep_link برای ایتا باید ValueError بدهد."""
+        from product.forward.broadcast.services import channel_sync
+        channel_sync.generate_verification_token(self.channel)
+        with self.assertRaises(ValueError) as ctx:
+            channel_sync.build_deep_link(self.channel, bot_username="any_bot")
+        self.assertIn("پشتیبانی", str(ctx.exception))
+
+    def test_build_deep_link_works_for_bale(self):
+        """برای بله، build_deep_link باید مثل قبل کار کند (بدون رگرسیون)."""
+        from core.models import Platform
+        from product.forward.broadcast.models import BroadcastChannel
+        from product.forward.broadcast.services import channel_sync
+
+        bale = Platform.objects.create(name="Bale", slug="bale", description="Bale", is_active=True)
+        bale_channel = BroadcastChannel.objects.create(
+            user=self.user, platform=bale, chat_id="@test_ch", title="کانال بله"
+        )
+        channel_sync.generate_verification_token(bale_channel)
+        link = channel_sync.build_deep_link(bale_channel, bot_username="my_bot")
+        self.assertIn("ble.ir/my_bot?start=verify_", link)
+
+
+class EitaaConnectLinkBlockedTests(TestCase):
+    """تست‌های مسدود بودن generate_connect_link برای ایتا."""
+
+    def setUp(self):
+        from core.models import Platform
+        self.user = CustomUser(phone_number="09120005555", nickname="ConnectUser")
+        self.user.set_unusable_password()
+        self.user.save()
+        self.eitaa_platform = Platform.objects.create(
+            name="Eitaa", slug="eitaa", description="Eitaa", is_active=True
+        )
+
+    def test_generate_connect_link_raises_for_eitaa(self):
+        """generate_connect_link برای ایتا باید ValueError بدهد."""
+        from product.forward.messengers.services import generate_connect_link
+        with self.assertRaises(ValueError) as ctx:
+            generate_connect_link(self.user, "eitaa")
+        self.assertIn("پشتیبانی نمی‌کند", str(ctx.exception))
+
+    def test_generate_connect_link_still_works_for_bale(self):
+        """برای بله، generate_connect_link نباید رگرسیون داشته باشد."""
+        from core.models import Platform
+        from product.forward.messengers.services import generate_connect_link
+
+        Platform.objects.create(name="Bale", slug="bale", description="Bale", is_active=True)
+        link = generate_connect_link(self.user, "bale")
+        self.assertIn("ble.ir/", link)
+        self.assertIn("connect_", link)
+
+
+class EitaaDispatcherTests(TestCase):
+    """تست‌های ارسال به کانال ایتا از طریق Dispatcher."""
+
+    def setUp(self):
+        from core.models import Platform
+        from product.forward.messengers.models import BotUser
+        from product.forward.broadcast.models import BroadcastChannel, BroadcastMessage
+
+        self.user = CustomUser(phone_number="09120008888", nickname="EitaaDispatch")
+        self.user.set_unusable_password()
+        self.user.save()
+        self.eitaa_platform = Platform.objects.create(
+            name="Eitaa", slug="eitaa", description="Eitaa", is_active=True, is_forward_active=True
+        )
+        self.msg = BroadcastMessage.objects.create(user=self.user, content_type="text", text="سلام ایتا")
+
+    @patch("product.forward.broadcast.services.dispatcher.get_adapter")
+    def test_dispatch_uses_user_token_for_eitaa(self, mock_get_adapter):
+        """Dispatcher باید توکن کاربر را به EitaaAdapter پاس بدهد."""
+        from product.forward.messengers.models import BotUser
+        from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
+        from product.forward.broadcast.services.dispatcher import dispatch_job
+
+        BotUser.objects.create(
+            user=self.user, platform=self.eitaa_platform,
+            chat_id=f"eitaa_user_{self.user.id}",
+            is_verified=True, api_token="user_eitaa_token_xyz",
+        )
+        channel = BroadcastChannel.objects.create(
+            user=self.user, platform=self.eitaa_platform,
+            chat_id="1404", title="کانال ایتا", bot_is_admin=True, is_active=True,
+        )
+
+        mock_adapter = MagicMock()
+        mock_adapter.send_text.return_value = {"message_id": "200"}
+        mock_get_adapter.return_value = mock_adapter
+
+        job = BroadcastJob.objects.create(message=self.msg)
+        BroadcastTarget.objects.create(job=job, channel=channel)
+
+        dispatch_job(job.pk)
+
+        # آداپتور باید با token=... صدا زده شده باشه
+        mock_get_adapter.assert_called_once_with("eitaa", token="user_eitaa_token_xyz")
+
+    @patch("product.forward.broadcast.services.dispatcher.get_adapter")
+    def test_dispatch_fails_without_token(self, mock_get_adapter):
+        """اگر کاربر توکن ایتا نداشته باشد، Target باید FAILED شود."""
+        from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
+        from product.forward.broadcast.services.dispatcher import dispatch_job
+
+        channel = BroadcastChannel.objects.create(
+            user=self.user, platform=self.eitaa_platform,
+            chat_id="1404", title="کانال ایتا", bot_is_admin=True, is_active=True,
+        )
+
+        job = BroadcastJob.objects.create(message=self.msg)
+        target = BroadcastTarget.objects.create(job=job, channel=channel)
+
+        dispatch_job(job.pk)
+
+        target.refresh_from_db()
+        self.assertEqual(target.status, BroadcastTarget.Status.FAILED)
+        self.assertIn("توکن ایتایار", target.error_message)

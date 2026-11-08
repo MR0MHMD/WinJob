@@ -70,6 +70,8 @@ class BroadcastMessage(models.Model):
         PHOTO = "photo", _("عکس")
         VIDEO = "video", _("ویدیو")
         DOCUMENT = "document", _("فایل")
+        ANIMATION = "animation", _("گیف")
+        STICKER = "sticker", _("استیکر")
 
     user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name="broadcast_messages", verbose_name=_("کاربر"),)
     content_type = models.CharField(_("نوع محتوا"), max_length=20, choices=ContentType.choices, default=ContentType.TEXT, db_index=True,)
