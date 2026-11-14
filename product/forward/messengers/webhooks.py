@@ -472,6 +472,16 @@ def _handle_private_message(message):
         platform_file_id = message["video"]["file_id"]
         text_content = message.get("caption", "")
 
+    elif "voice" in message:
+        content_type = "voice"
+        platform_file_id = message["voice"]["file_id"]
+        text_content = message.get("caption", "")
+
+    elif "audio" in message:
+        content_type = "audio"
+        platform_file_id = message["audio"]["file_id"]
+        text_content = message.get("caption", "")
+
     elif "document" in message:
         content_type = "document"
         platform_file_id = message["document"]["file_id"]

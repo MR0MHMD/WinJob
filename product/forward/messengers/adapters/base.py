@@ -25,11 +25,11 @@ class MessengerNotFoundError(MessengerError):
 
 
 class MessengerPermissionError(MessengerError):
-    """ربات دسترسی لازم (مثلاً ادمین بودن) را ندارد."""
+    """ربات یا اکانت دسترسی لازم (مثلاً ادمین بودن) را ندارد."""
 
 
 class MessengerAdapter(ABC):
-    """اینترفیس مشترک همه آداپتور های پیام‌رسان (بله، تلگرام، ایتا، ...)."""
+    """اینترفیس مشترک همه آداپتورهای پیام‌رسان (بله، ایتا، روبیکا، ...)."""
 
     platform_slug: str = ""
 
@@ -49,6 +49,14 @@ class MessengerAdapter(ABC):
     def send_document(self, chat_id: str, document, caption: str = "", file_id: str = None) -> dict:
         """ارسال فایل با کپشن اختیاری."""
 
+    def send_audio(self, chat_id: str, audio, caption: str = "", file_id: str = None) -> dict:
+        """ارسال فایل صوتی (موزیک) با کپشن اختیاری؛ در صورت عدم پیاده‌سازی به send_document ارجاع می‌شود."""
+        return self.send_document(chat_id, audio, caption=caption, file_id=file_id)
+
+    def send_voice(self, chat_id: str, voice, caption: str = "", file_id: str = None) -> dict:
+        """ارسال پیام صوتی (ویس) با کپشن اختیاری؛ در صورت عدم پیاده‌سازی به send_document ارجاع می‌شود."""
+        return self.send_document(chat_id, voice, caption=caption, file_id=file_id)
+
     def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:
         """ارسال گیف (با file_id یا آپلود جدید)."""
 
@@ -56,11 +64,23 @@ class MessengerAdapter(ABC):
         """ارسال استیکر (با file_id یا آپلود جدید)."""
 
     def send_media(self, chat_id: str, content_type: str, file, caption: str = "", file_id: str = None) -> dict:
-        """ارسال فایل بر اساس نوع محتوا (dispatch به متد مناسب)."""
+        """ارسال فایل بر اساس نوع محتوا (dispatch به متد مناسب).
+
+        :param chat_id: شناسه چت یا کانال مقصد.
+        :param content_type: نوع محتوا (photo، video، audio، voice، document، animation، sticker).
+        :param file: فایل یا شیء رسانه.
+        :param caption: متن کپشن اختیاری.
+        :param file_id: شناسه فایل کش‌شده در صورت پشتیبانی پلتفرم.
+        :return: دیکشنری نتیجه ارسال شامل message_id و file_id.
+        """
         if content_type == "photo":
             return self.send_photo(chat_id, file, caption, file_id=file_id)
         if content_type == "video":
             return self.send_video(chat_id, file, caption, file_id=file_id)
+        if content_type == "audio":
+            return self.send_audio(chat_id, file, caption, file_id=file_id)
+        if content_type == "voice":
+            return self.send_voice(chat_id, file, caption, file_id=file_id)
         if content_type == "document":
             return self.send_document(chat_id, file, caption, file_id=file_id)
         if content_type == "animation":
@@ -71,7 +91,7 @@ class MessengerAdapter(ABC):
 
     @abstractmethod
     def check_bot_is_admin(self, chat_id: str) -> bool:
-        """بررسی ادمین بودن ربات در کانال مشخص."""
+        """بررسی ادمین بودن ربات یا دسترسی ارسال اکانت در کانال مشخص."""
 
     @abstractmethod
     def get_chat_info(self, chat_id: str) -> dict:

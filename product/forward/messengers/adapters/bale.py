@@ -105,6 +105,10 @@ class BaleAdapter(MessengerAdapter):
             mime_type = "image/jpeg"
         elif lower_name.endswith(".png"):
             mime_type = "image/png"
+        elif lower_name.endswith(".mp3"):
+            mime_type = "audio/mpeg"
+        elif lower_name.endswith((".ogg", ".oga")):
+            mime_type = "audio/ogg"
         else:
             mime_type = "application/octet-stream"
 
@@ -159,6 +163,28 @@ class BaleAdapter(MessengerAdapter):
             result = self._call_multipart("sendDocument", chat_id, "document", document, filename, caption)
 
         extracted_file_id = result.get("document", {}).get("file_id")
+        return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
+
+    def send_audio(self, chat_id: str, audio, caption: str = "", file_id: str = None) -> dict:
+        """ارسال فایل صوتی با کپشن اختیاری (با استفاده از file_id در صورت وجود)."""
+        if file_id:
+            result = self._call("sendAudio", http_method="POST", chat_id=chat_id, audio=file_id, caption=caption)
+        else:
+            filename = getattr(audio, "name", "audio.mp3").split("/")[-1]
+            result = self._call_multipart("sendAudio", chat_id, "audio", audio, filename, caption)
+
+        extracted_file_id = result.get("audio", {}).get("file_id")
+        return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
+
+    def send_voice(self, chat_id: str, voice, caption: str = "", file_id: str = None) -> dict:
+        """ارسال پیام صوتی (ویس) با کپشن اختیاری (با استفاده از file_id در صورت وجود)."""
+        if file_id:
+            result = self._call("sendVoice", http_method="POST", chat_id=chat_id, voice=file_id, caption=caption)
+        else:
+            filename = getattr(voice, "name", "voice.ogg").split("/")[-1]
+            result = self._call_multipart("sendVoice", chat_id, "voice", voice, filename, caption)
+
+        extracted_file_id = result.get("voice", {}).get("file_id")
         return {"message_id": str(result["message_id"]), "file_id": extracted_file_id}
 
     def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:

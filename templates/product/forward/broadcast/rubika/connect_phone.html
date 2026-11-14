@@ -1,0 +1,96 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}اتصال حساب روبیکا{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    {# ========== Breadcrumb ========== #}
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item">
+                <a href="{% url 'broadcast:job_list' %}">وین فوروارد</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">اتصال به روبیکا</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-7">
+
+            {# ========== Header Card ========== #}
+            <div class="card card-light border-light mb-4">
+                <div class="card-body p-4 d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm"
+                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #2ecc71, #16a085); flex-shrink: 0;">
+                        <i class="fi-send fs-3 text-white"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-white mb-1">اتصال حساب روبیکا (گام ۱ از ۲)</h4>
+                        <p class="text-muted mb-0 fs-sm">
+                            شماره موبایل حساب روبیکای خود را وارد کنید تا کد تایید برایتان ارسال شود.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {# ========== Alert: قبلاً متصل شده ========== #}
+            {% if existing_bot_user and existing_bot_user.has_rubika_session %}
+                <div class="alert alert-success border-0 d-flex align-items-center gap-2 mb-4 rounded-3">
+                    <i class="fi-check-circle fs-5"></i>
+                    <div class="flex-grow-1">
+                        <strong>حساب روبیکا قبلاً متصل شده است.</strong>
+                        <div class="fs-xs opacity-75">در صورت نیاز به تغییر حساب، مجدداً با شماره جدید وارد شوید.</div>
+                    </div>
+                    <a href="{% url 'broadcast:rubika_channels' %}" class="btn btn-sm btn-success rounded-pill">
+                        مشاهده کانال‌ها
+                    </a>
+                </div>
+            {% endif %}
+
+            {# ========== Form ========== #}
+            <div class="card card-light border-light">
+                <div class="card-body p-4 p-md-5">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label text-white fw-bold mb-2">
+                                <i class="fi-phone me-1 text-primary"></i>
+                                {{ form.phone_number.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.help_text %}
+                                <div class="form-text text-muted fs-xs mt-2">
+                                    <i class="fi-info-circle me-1"></i>{{ form.phone_number.help_text }}
+                                </div>
+                            {% endif %}
+                            {% if form.phone_number.errors %}
+                                <div class="text-danger fs-xs mt-2">
+                                    {% for error in form.phone_number.errors %}{{ error }}<br>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <hr class="border-light my-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'broadcast:rubika_channels' %}" class="btn btn-outline-light rounded-pill px-4">
+                                انصراف
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                ارسال کد تایید
+                                <i class="fi-arrow-left ms-1"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

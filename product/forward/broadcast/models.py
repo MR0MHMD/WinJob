@@ -2,10 +2,11 @@
 مدل‌های اپ broadcast — قلب وین فوروارد برای ارسال گروهی پیام.
 """
 
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Count, Q
-from datetime import timedelta
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
@@ -63,19 +64,21 @@ class BroadcastChannel(models.Model):
 
 
 class BroadcastMessage(models.Model):
-    """محتوای یک پیام ارسالی — متن، عکس، ویدیو یا فایل."""
+    """محتوای یک پیام ارسالی — متن، عکس، ویدیو، صوت، ویس، فایل، گیف یا استیکر."""
 
     class ContentType(models.TextChoices):
         TEXT = "text", _("متن")
         PHOTO = "photo", _("عکس")
         VIDEO = "video", _("ویدیو")
+        AUDIO = "audio", _("فایل صوتی")
+        VOICE = "voice", _("پیام صوتی (ویس)")
         DOCUMENT = "document", _("فایل")
         ANIMATION = "animation", _("گیف")
         STICKER = "sticker", _("استیکر")
 
     user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name="broadcast_messages", verbose_name=_("کاربر"),)
     content_type = models.CharField(_("نوع محتوا"), max_length=20, choices=ContentType.choices, default=ContentType.TEXT, db_index=True,)
-    text = models.TextField(_("متن پیام"), max_length=4096, blank=True, help_text=_("حداکثر ۴۰۹۶ کاراکتر — برای عکس/ویدیو به عنوان کپشن استفاده می‌شود"),)
+    text = models.TextField(_("متن پیام"), max_length=4096, blank=True, help_text=_("حداکثر ۴۰۹۶ کاراکتر — برای عکس/ویدیو/صوت به عنوان کپشن استفاده می‌شود"),)
     file = models.FileField(_("فایل"), upload_to="broadcast/messages/%Y/%m/", null=True, blank=True,)
     platform_file_ids = models.JSONField(_("شناسه فایل در پلتفرم‌ها"), default=dict, blank=True, help_text=_("کش شناسه فایل‌ها برای ارسال سریع بدون آپلود مجدد"), )
     created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True,)

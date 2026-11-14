@@ -151,3 +151,129 @@ class EitaaChannelForm(forms.Form):
             )
 
         return cleaned
+
+
+# ============================================================
+# Rubika Forms (Web Panel)
+# ============================================================
+
+
+class RubikaPhoneForm(forms.Form):
+    """فرم مرحله اول ورود به روبیکا — دریافت شماره موبایل و ارسال کد تایید."""
+
+    phone_number = forms.CharField(
+        label="شماره موبایل روبیکا",
+        max_length=15,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light",
+            "placeholder": "مثلاً: 09123456789",
+            "dir": "ltr",
+            "autocomplete": "tel",
+        }),
+        help_text="شماره موبایلی که با آن در روبیکا حساب کاربری دارید وارد کنید.",
+    )
+
+    def clean_phone_number(self):
+        """نرمال‌سازی شماره موبایل به فرمت استاندارد 989xxxxxxxxx برای API روبیکا."""
+        raw = self.cleaned_data["phone_number"].strip().replace(" ", "").replace("-", "")
+        if raw.startswith("+"):
+            raw = raw[1:]
+        if raw.startswith("09") and len(raw) == 11:
+            raw = "98" + raw[1:]
+        elif raw.startswith("9") and len(raw) == 10:
+            raw = "98" + raw
+        if not raw.startswith("989") or len(raw) != 12 or not raw.isdigit():
+            raise forms.ValidationError("فرمت شماره موبایل معتبر نیست (مثال صحیح: 09123456789).")
+        return raw
+
+
+class RubikaVerifyCodeForm(forms.Form):
+    """فرم مرحله دوم ورود به روبیکا — دریافت و اعتبارسنجی کد تایید ۵ رقمی."""
+
+    phone_code = forms.CharField(
+        label="کد تایید (OTP)",
+        max_length=10,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light text-center",
+            "placeholder": "کد ارسال‌شده به روبیکا یا پیامک",
+            "dir": "ltr",
+            "autocomplete": "one-time-code",
+        }),
+        help_text="کد تاییدی که به پیامک یا پیام‌های داخلی روبیکای شما ارسال شده را وارد کنید.",
+    )
+
+    def clean_phone_code(self):
+        """پاکسازی فاصله‌های اضافه و بررسی عددی بودن کد تایید."""
+        code = self.cleaned_data["phone_code"].strip()
+        if not code.isdigit():
+            raise forms.ValidationError("کد تایید باید فقط شامل اعداد باشد.")
+        return code
+
+
+class RubikaChannelForm(forms.Form):
+    """فرم افزودن دستی کانال روبیکا با نام کاربری یا شناسه GUID و بررسی دسترسی ارسال."""
+
+    channel_identifier = forms.CharField(
+        label="نام کاربری یا شناسه کانال (GUID)",
+        max_length=64,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light",
+            "placeholder": "مثلاً: winjob_news یا c0B123456789...",
+            "dir": "ltr",
+            "autocomplete": "off",
+        }),
+        help_text="نام کاربری کانال (بدون یا با @) یا شناسه GUID کانال (شروع با c0) را وارد کنید.",
+    )
+
+    title = forms.CharField(
+        label="نام نمایشی کانال (اختیاری)",
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light",
+            "placeholder": "در صورت خالی بودن، عنوان واقعی از روبیکا خوانده می‌شود",
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        """دریافت کاربر و نمونه آداپتور روبیکا برای بررسی کانال هنگام اعتبارسنجی."""
+        self.user = kwargs.pop("user", None)
+        self.rubika_adapter = kwargs.pop("rubika_adapter", None)
+        self.resolved_channel = None
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        """استعلام اطلاعات کانال از روبیکا، بررسی تکراری نبودن و تست دسترسی ارسال."""
+        cleaned = super().clean()
+        identifier = (cleaned.get("channel_identifier") or "").strip().lstrip("@")
+        if not identifier or not self.rubika_adapter or not self.user:
+            return cleaned
+
+        from core.models import Platform
+        from product.forward.broadcast.models import BroadcastChannel
+        from product.forward.messengers.adapters.base import MessengerError
+
+        try:
+            info = self.rubika_adapter.get_chat_info(identifier)
+        except MessengerError as exc:
+            raise forms.ValidationError(f"کانال در روبیکا یافت نشد یا قابل دسترس نیست: {exc}")
+
+        chat_id = info.get("chat_id")
+        if not chat_id:
+            raise forms.ValidationError("شناسه GUID کانال از روبیکا دریافت نشد.")
+
+        rubika_platform = Platform.objects.filter(slug="rubika").first()
+        if rubika_platform and BroadcastChannel.objects.filter(
+            user=self.user, platform=rubika_platform, chat_id=chat_id, is_active=True
+        ).exists():
+            raise forms.ValidationError("این کانال قبلاً به حساب شما متصل شده است.")
+
+        if not self.rubika_adapter.check_bot_is_admin(chat_id):
+            raise forms.ValidationError("حساب روبیکای شما در این کانال دسترسی ارسال پیام (ادمین) ندارد.")
+
+        self.resolved_channel = {
+            "chat_id": chat_id,
+            "title": (cleaned.get("title") or "").strip() or info.get("title") or chat_id,
+            "username": info.get("username") or (identifier if not identifier.startswith("c0") else ""),
+        }
+        return cleaned

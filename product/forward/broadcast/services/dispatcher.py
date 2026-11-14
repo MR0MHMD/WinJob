@@ -44,6 +44,8 @@ def _make_filename(message) -> str:
     ext_map = {
         "photo": "jpg",
         "video": "mp4",
+        "audio": "mp3",
+        "voice": "ogg",
         "document": "bin",
         "animation": "gif",  # 🔑 پسوند gif برای ایتا
         "sticker": "webp",
@@ -214,6 +216,27 @@ def _get_adapter_for_channel(channel):
 
         logger.info(f"Successfully fetched token from DB for user {channel.user.id}. Token starts with: {eitaa_bot_user.api_token[:6]}...")
         return get_adapter(slug, token=eitaa_bot_user.api_token)
+
+    if slug == "rubika":
+        from product.forward.messengers.models import BotUser
+
+        rubika_bot_user = BotUser.objects.filter(
+            user=channel.user, platform=channel.platform
+        ).first()
+
+        if not rubika_bot_user or not rubika_bot_user.has_rubika_session:
+            raise MessengerAPIError(
+                f"نشست روبیکا برای کاربر {channel.user.phone_number} ثبت یا تایید نشده است. "
+                "لطفاً ابتدا از پنل وب وارد حساب روبیکای خود شوید."
+            )
+
+        session_data = rubika_bot_user.session_data or {}
+        return get_adapter(
+            slug,
+            auth=session_data.get("auth"),
+            private_key=session_data.get("private_key"),
+        )
+
     return get_adapter(slug)
 
 
@@ -244,7 +267,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
         new_file_id_to_cache = None
 
         # ۱. file_id کش‌شده (فقط برای پلتفرم‌هایی که پشتیبانی می‌کنن مثل بله)
-        if cached_file_id and platform_slug != "eitaa":
+        if cached_file_id and platform_slug not in ("eitaa", "rubika"):
             logger.info(f"[{platform_slug}] Using cached file_id for msg {message.pk}")
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, None,
@@ -292,7 +315,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             )
 
         # کش file_id جدید (فقط برای پلتفرم‌های دارای file_id)
-        if new_file_id_to_cache and not cached_file_id and platform_slug != "eitaa":
+        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika"):
             message.platform_file_ids[platform_slug] = new_file_id_to_cache
             message.save(update_fields=["platform_file_ids"])
             logger.info(f"[{platform_slug}] Cached file_id for msg {message.pk}")

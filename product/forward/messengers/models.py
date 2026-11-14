@@ -1,19 +1,20 @@
-""" مدل‌های اپ messengers — اتصال کاربران سایت به ربات‌های پیام‌رسان. """
+""" مدل‌های اپ messengers — اتصال کاربران سایت به ربات‌ها و نشست‌های پیام‌رسان. """
 
+from datetime import timedelta
+
+from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_jalali.db import models as jmodels
-from django.utils import timezone
-from datetime import timedelta
-from django.db import models
 
 
 class BotUser(models.Model):
     """
-    اتصال کاربر سایت (CustomUser) به حساب کاربری در ربات‌های پیام‌رسان.
+    اتصال کاربر سایت (CustomUser) به حساب کاربری در ربات‌ها یا نشست‌های پیام‌رسان.
 
-    - هر کاربر در هر پلتفرم یک حساب ربات دارد.
-    - فقط بعد از لینک موفق ساخته می‌شود.
+    - هر کاربر در هر پلتفرم یک حساب متصل دارد.
     - پلتفرم از core.Platform می‌آید تا با Channel/AdType/Campaign یکپارچه باشد.
+    - برای ایتا از api_token و برای روبیکا از session_data (شامل auth و private_key) استفاده می‌شود.
     """
 
     user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name="bot_users", verbose_name=_("کاربر"),)
@@ -26,6 +27,12 @@ class BotUser(models.Model):
         blank=True,
         null=True,
         help_text=_("برای پلتفرم‌هایی مثل ایتا که هر کاربر توکن اختصاصی دارد (مثلاً ایتایار). برای بله خالی بماند."),
+    )
+    session_data = models.JSONField(
+        _("اطلاعات نشست"),
+        default=dict,
+        blank=True,
+        help_text=_("ذخیره اطلاعات نشست برای پلتفرم‌هایی مثل روبیکا (auth و private_key)."),
     )
     is_verified = models.BooleanField(_("تأیید شده"), default=False, help_text=_("آیا اتصال با موفقیت انجام شده است؟"),)
     linked_at = jmodels.jDateTimeField(_("تاریخ اتصال"), auto_now_add=True,)
@@ -54,6 +61,12 @@ class BotUser(models.Model):
         """بروزرسانی last_seen_at هنگام تعامل کاربر با ربات."""
         self.last_seen_at = timezone.now()
         self.save(update_fields=["last_seen_at"])
+
+    @property
+    def has_rubika_session(self) -> bool:
+        """بررسی وجود کامل توکن auth و کلید خصوصی روبیکا در session_data."""
+        data = self.session_data or {}
+        return bool(data.get("auth") and data.get("private_key"))
 
 
 class ConnectToken(models.Model):

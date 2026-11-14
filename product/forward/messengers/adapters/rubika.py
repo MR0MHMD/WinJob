@@ -1,0 +1,731 @@
+"""آداپتور همگام پیام‌رسان روبیکا برای وین فوروارد، بر پایه API کلاینت (نسخه ۶) و کتابخانه requests."""
+
+from __future__ import annotations
+
+import base64
+import json
+import random
+import re
+import secrets
+import string
+from string import ascii_lowercase, ascii_uppercase, digits
+from typing import Any, Dict, List, NoReturn, Optional, Tuple
+
+import requests
+from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
+from Crypto.Util.Padding import pad, unpad
+
+from .base import (
+    MessengerAdapter,
+    MessengerAPIError,
+    MessengerNotFoundError,
+    MessengerPermissionError,
+    MessengerRateLimitError, MessengerError,
+)
+from .registry import register
+
+
+class RubikaCrypto:
+    """مجموعه ابزارهای رمزنگاری و امضای دیجیتال سازگار با پروتکل روبیکا (نسخه ۶)."""
+
+    AES_IV: bytes = b"\x00" * 16
+
+    _LOWER_TABLE = str.maketrans(
+        ascii_lowercase,
+        "".join(chr(((32 - (ord(c) - 97)) % 26) + 97) for c in ascii_lowercase),
+    )
+    _UPPER_TABLE = str.maketrans(
+        ascii_uppercase,
+        "".join(chr(((29 - (ord(c) - 65)) % 26) + 65) for c in ascii_uppercase),
+    )
+
+    @classmethod
+    def decode_auth(cls, auth: str) -> str:
+        """تبدیل کاراکترهای رشته auth یا کلید عمومی برای ارسال در بدنه درخواست‌های روبیکا.
+
+        :param auth: رشته احراز هویت یا کلید عمومی رمزنگاری‌شده با Base64.
+        :return: رشته تبدیل‌شده مطابق الگوریتم جایگزینی روبیکا.
+        """
+        result: List[str] = []
+        for char in auth:
+            if char in ascii_lowercase:
+                result.append(char.translate(cls._LOWER_TABLE))
+            elif char in ascii_uppercase:
+                result.append(char.translate(cls._UPPER_TABLE))
+            elif char in digits:
+                result.append(chr(((13 - (ord(char) - 48)) % 10) + 48))
+            else:
+                result.append(char)
+        return "".join(result)
+
+    @staticmethod
+    def secret(length: int = 32) -> str:
+        """تولید رشته تصادفی ۳۲ کاراکتری با حروف کوچک انگلیسی برای نشست موقت (tmp_session).
+
+        :param length: طول رشته مورد نیاز (پیش‌فرض ۳۲).
+        :return: رشته تصادفی امن.
+        """
+        return "".join(secrets.choice(string.ascii_lowercase) for _ in range(length))
+
+    @staticmethod
+    def passphrase(auth: str) -> str:
+        """استخراج کلید ۳۲ بایتی AES از روی رشته auth یا tmp_session.
+
+        :param auth: رشته ۳۲ کاراکتری احراز هویت یا نشست موقت.
+        :return: کلید ۳۲ کاراکتری برای رمزگذاری و رمزگشایی AES-256-CBC.
+        :raises ValueError: در صورتی که طول رشته ۳۲ کاراکتر نباشد.
+        """
+        if len(auth) != 32:
+            raise ValueError("طول رشته auth باید دقیقاً ۳۲ کاراکتر باشد.")
+        chunks = re.findall(r"\S{8}", auth)
+        if len(chunks) != 4:
+            raise ValueError("فرمت رشته auth برای استخراج کلید نامعتبر است.")
+        reordered = chunks[2] + chunks[0] + chunks[3] + chunks[1]
+        return "".join(chr(((ord(ch) - 97 + 9) % 26) + 97) for ch in reordered)
+
+    @classmethod
+    def encrypt(cls, data: Dict[str, Any] | str, key: str) -> str:
+        """رمزگذاری داده متنی یا دیکشنری با الگوریتم AES-256-CBC و خروجی Base64.
+
+        :param data: دیکشنری JSON یا رشته متنی برای رمزگذاری.
+        :param key: کلید ۳۲ کاراکتری استخراج‌شده از passphrase.
+        :return: رشته رمزگذاری‌شده با Base64.
+        """
+        if isinstance(data, dict):
+            data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+        raw = pad(data.encode("utf-8"), AES.block_size)
+        cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, cls.AES_IV)
+        return base64.b64encode(cipher.encrypt(raw)).decode("utf-8")
+
+    @classmethod
+    def decrypt(cls, data_enc: str, key: str) -> Dict[str, Any]:
+        """رمزگشایی پاسخ رمزنگاری‌شده سرور روبیکا به دیکشنری پایتون.
+
+        :param data_enc: رشته رمزنگاری‌شده دریافتی از سرور.
+        :param key: کلید ۳۲ کاراکتری استخراج‌شده از passphrase.
+        :return: دیکشنری JSON رمزگشایی‌شده.
+        """
+        cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, cls.AES_IV)
+        raw = base64.urlsafe_b64decode(data_enc.encode("utf-8"))
+        decrypted = unpad(cipher.decrypt(raw), AES.block_size).decode("utf-8")
+        return json.loads(decrypted)
+
+    @staticmethod
+    def create_keys() -> Tuple[str, str]:
+        """تولید جفت کلید RSA-1024 برای امضای درخواست‌ها پس از ورود.
+
+        :return: تاپل شامل (کلید عمومی کدگذاری‌شده برای روبیکا، کلید خصوصی با فرمت PEM).
+        """
+        rsa_key = RSA.generate(1024)
+        public_b64 = base64.b64encode(rsa_key.publickey().export_key()).decode("utf-8")
+        decoded_public_key = RubikaCrypto.decode_auth(public_b64)
+        private_key_pem = rsa_key.export_key().decode("utf-8")
+        return decoded_public_key, private_key_pem
+
+    @staticmethod
+    def sign(private_key_pem: str, data_enc: str) -> str:
+        """تولید امضای دیجیتال RSA PKCS#1 v1.5 (با هش SHA-256) روی داده رمزگذاری‌شده.
+
+        :param private_key_pem: کلید خصوصی RSA در قالب PEM.
+        :param data_enc: رشته رمزگذاری‌شده payload.
+        :return: امضای دیجیتال کدگذاری‌شده با Base64.
+        """
+        rsa_key = RSA.import_key(private_key_pem)
+        signer = pkcs1_15.new(rsa_key)
+        digest = SHA256.new(data_enc.encode("utf-8"))
+        return base64.b64encode(signer.sign(digest)).decode("utf-8")
+
+
+@register
+class RubikaAdapter(MessengerAdapter):
+    """آداپتور همگام روبیکا با استفاده از کلاینت اکانت شخصی و کتابخانه requests."""
+
+    platform_slug = "rubika"
+    API_VERSION = "6"
+    DC_DISCOVERY_URL = "https://getdcmess.iranlms.ir/"
+    FALLBACK_API_URLS = [
+        "https://messengerg2c1.iranlms.ir",
+        "https://messengerg2c2.iranlms.ir",
+        "https://messengerg2c4.iranlms.ir",
+    ]
+    TIMEOUT = 30
+    CHUNK_SIZE = 1048576  # ۱ مگابایت برای هر قطعه آپلود
+
+    DEFAULT_CLIENT = {
+        "app_name": "Main",
+        "app_version": "2.4.6",
+        "platform": "PWA",
+        "package": "m.rubika.ir",
+        "lang_code": "fa",
+    }
+
+    def __init__(
+        self,
+        auth: Optional[str] = None,
+        private_key: Optional[str] = None,
+        api_url: Optional[str] = None,
+    ) -> None:
+        """مقداردهی اولیه آداپتور روبیکا با اطلاعات نشست کاربر.
+
+        :param auth: توکن دائمی ۳۲ کاراکتری اکانت روبیکا.
+        :param private_key: کلید خصوصی RSA در قالب PEM.
+        :param api_url: آدرس اختیاری سرور API روبیکا (DC).
+        """
+        self._auth = auth
+        self._private_key = private_key
+        self._api_url = api_url
+        self._session = requests.Session()
+        self._session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+                "Origin": "https://web.rubika.ir",
+                "Referer": "https://web.rubika.ir/",
+                "Content-Type": "application/json",
+            }
+        )
+
+    def _get_api_url(self) -> str:
+        """دریافت آدرس دیتاسنتر فعال روبیکا (با لیست پشتیبان در صورت خطا).
+
+        :return: آدرس URL دیتاسنتر روبیکا.
+        """
+        if self._api_url:
+            return self._api_url
+        try:
+            resp = self._session.get(self.DC_DISCOVERY_URL, timeout=10)
+            resp.raise_for_status()
+            payload = resp.json()
+            urls = payload.get("data", {}).get("default_api_urls", [])
+            if urls:
+                self._api_url = urls[0]
+                return self._api_url
+        except requests.RequestException:
+            pass
+        self._api_url = self.FALLBACK_API_URLS[0]
+        return self._api_url
+
+    def _handle_api_error(self, status: str, status_det: str) -> NoReturn:
+        """تبدیل کدهای وضعیت خطای روبیکا به استثناهای استاندارد آداپتور.
+
+        :param status: وضعیت کلی خطا (مانند ERROR_GENERIC یا INVALID_AUTH).
+        :param status_det: جزئیات دقیق خطا از سمت سرور.
+        """
+        combined = f"{status} {status_det}".lower()
+        if "not_registered" in combined or "invalid_input" in combined or "not_found" in combined:
+            raise MessengerNotFoundError(f"{status}: {status_det}")
+        if "invalid_auth" in combined or "not_admin" in combined or "permission" in combined or "forbidden" in combined:
+            raise MessengerPermissionError(f"{status}: {status_det}")
+        if "too_requests" in combined or "flood" in combined or "rate" in combined:
+            raise MessengerRateLimitError(0, f"{status}: {status_det}")
+        raise MessengerAPIError(f"خطای روبیکا ({status}): {status_det}")
+
+    def _request(
+        self,
+        method: str,
+        input_data: Dict[str, Any],
+        use_tmp_session: bool = False,
+        tmp_session: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """رمزگذاری، امضا و ارسال درخواست همگام به API روبیکا و رمزگشایی پاسخ.
+
+        :param method: نام متد در API روبیکا (مانند sendCode، sendMessage و ...).
+        :param input_data: دیکشنری پارامترهای ورودی متد.
+        :param use_tmp_session: در صورت True بودن از نشست موقت بدون امضای RSA استفاده می‌شود.
+        :param tmp_session: رشته ۳۲ کاراکتری نشست موقت (در صورت وجود).
+        :return: دیکشنری data استخراج‌شده از پاسخ رمزگشایی‌شده.
+        """
+        inner_payload = {
+            "client": self.DEFAULT_CLIENT,
+            "method": method,
+            "input": input_data,
+        }
+
+        if use_tmp_session:
+            session_token = tmp_session or RubikaCrypto.secret(32)
+            aes_key = RubikaCrypto.passphrase(session_token)
+            data_enc = RubikaCrypto.encrypt(inner_payload, aes_key)
+            body: Dict[str, Any] = {
+                "api_version": self.API_VERSION,
+                "tmp_session": session_token,
+                "data_enc": data_enc,
+            }
+        else:
+            if not self._auth or not self._private_key:
+                raise MessengerPermissionError("نشست روبیکا (auth و private_key) ثبت یا تایید نشده است.")
+            aes_key = RubikaCrypto.passphrase(self._auth)
+            data_enc = RubikaCrypto.encrypt(inner_payload, aes_key)
+            body = {
+                "api_version": self.API_VERSION,
+                "auth": RubikaCrypto.decode_auth(self._auth),
+                "data_enc": data_enc,
+                "sign": RubikaCrypto.sign(self._private_key, data_enc),
+            }
+
+        try:
+            response = self._session.post(self._get_api_url(), json=body, timeout=self.TIMEOUT)
+            response.raise_for_status()
+            res_json = response.json()
+        except requests.RequestException as exc:
+            raise MessengerAPIError(f"خطا در ارتباط با سرور روبیکا: {exc}") from exc
+        except ValueError as exc:
+            raise MessengerAPIError(f"پاسخ نامعتبر از سرور روبیکا: {exc}") from exc
+
+        if "data_enc" in res_json:
+            try:
+                decrypted = RubikaCrypto.decrypt(res_json["data_enc"], aes_key)
+            except Exception as exc:
+                raise MessengerAPIError(f"خطا در رمزگشایی پاسخ روبیکا: {exc}") from exc
+        else:
+            decrypted = res_json
+
+        status = decrypted.get("status", "")
+        if status and status != "OK":
+            self._handle_api_error(status, decrypted.get("status_det", ""))
+        return decrypted.get("data", decrypted)
+
+    # ============================================================
+    # متدهای احراز هویت دو مرحله‌ای (OTP)
+    # ============================================================
+
+    def send_code(
+        self,
+        phone_number: str,
+        pass_key: Optional[str] = None,
+        send_type: str = "SMS",
+    ) -> Dict[str, Any]:
+        """ارسال کد تایید یک‌بارمصرف (OTP) به شماره موبایل کاربر در روبیکا.
+
+        :param phone_number: شماره موبایل کاربر (ترجیحاً با فرمت 98912... یا 0912...).
+        :param pass_key: رمز عبور دومرحله‌ای در صورت فعال بودن (اختیاری).
+        :param send_type: روش ارسال کد ('SMS' یا 'Internal').
+        :return: دیکشنری شامل phone_code_hash و tmp_session جهت نگهداری در سشن جنگو.
+        """
+        tmp_session = RubikaCrypto.secret(32)
+        data = self._request(
+            method="sendCode",
+            input_data={
+                "phone_number": phone_number,
+                "pass_key": pass_key,
+                "send_type": send_type,
+            },
+            use_tmp_session=True,
+            tmp_session=tmp_session,
+        )
+        return {
+            "phone_code_hash": data.get("phone_code_hash"),
+            "tmp_session": tmp_session,
+            "raw": data,
+        }
+
+    def sign_in(
+        self,
+        phone_number: str,
+        phone_code: str,
+        phone_code_hash: str,
+        tmp_session: str,
+    ) -> Dict[str, Any]:
+        """تکمیل فرآیند ورود با کد تایید و دریافت توکن دائمی و کلید خصوصی.
+
+        :param phone_number: شماره موبایل کاربر.
+        :param phone_code: کد تایید ۵ رقمی واردشده توسط کاربر.
+        :param phone_code_hash: هش دریافت‌شده از مرحله send_code.
+        :param tmp_session: شناسه نشست موقت تولیدشده در مرحله send_code.
+        :return: دیکشنری شامل auth، private_key و اطلاعات کاربر در روبیکا.
+        """
+        decoded_public_key, private_key_pem = RubikaCrypto.create_keys()
+        data = self._request(
+            method="signIn",
+            input_data={
+                "phone_code": str(phone_code).strip(),
+                "phone_number": phone_number,
+                "phone_code_hash": phone_code_hash,
+                "public_key": decoded_public_key,
+            },
+            use_tmp_session=True,
+            tmp_session=tmp_session,
+        )
+
+        auth_token = data.get("auth")
+        if not auth_token:
+            status = data.get("status", "SIGN_IN_FAILED")
+            raise MessengerAPIError(f"ورود با کد تایید ناموفق بود: {status}")
+
+        self._auth = auth_token
+        self._private_key = private_key_pem
+
+        return {
+            "auth": auth_token,
+            "private_key": private_key_pem,
+            "user": data.get("user", {}),
+            "raw": data,
+        }
+
+    # ============================================================
+    # متدهای آپلود تکه‌ای و ارسال انواع پیام و رسانه
+    # ============================================================
+
+    @staticmethod
+    def _read_file_bytes(file_obj: Any) -> Tuple[bytes, str]:
+        """خواندن بایت‌ها و استخراج نام فایل از آبجکت‌های فایل جنگو، ContentFile یا bytes.
+
+        :param file_obj: فایل ارسالی (FieldFile، ContentFile، مسیر یا بایت خام).
+        :return: تاپل شامل (بایت‌های فایل، نام فایل).
+        """
+        if isinstance(file_obj, (bytes, bytearray)):
+            return bytes(file_obj), "file.bin"
+
+        filename = getattr(file_obj, "name", "file.bin") or "file.bin"
+        filename = filename.split("/")[-1].split("\\")[-1]
+
+        if hasattr(file_obj, "open"):
+            file_obj.open("rb")
+            try:
+                content = file_obj.read()
+            finally:
+                file_obj.close()
+            return content, filename
+
+        if hasattr(file_obj, "read"):
+            content = file_obj.read()
+            return content, filename
+
+        raise MessengerAPIError("فرمت فایل ورودی برای آپلود در روبیکا معتبر نیست.")
+
+    def _upload_file(self, file_obj: Any, default_filename: str) -> Dict[str, Any]:
+        """آپلود تکه‌ای فایل به سرورهای روبیکا با استفاده از متد requestSendFile.
+
+        :param file_obj: شیء فایل قابل خواندن یا بایت‌های خام.
+        :param default_filename: نام پیش‌فرض فایل در صورت نبود نام یا پسوند.
+        :return: دیکشنری اطلاعات فایل آپلودشده شامل file_id، dc_id و access_hash_rec.
+        """
+        file_bytes, filename = self._read_file_bytes(file_obj)
+        if "." not in filename:
+            filename = default_filename
+
+        file_size = len(file_bytes)
+        mime = filename.rsplit(".", 1)[-1].lower()
+
+        req_data = self._request(
+            "requestSendFile",
+            {
+                "file_name": filename,
+                "size": int(file_size),
+                "mime": mime,
+            },
+        )
+
+        file_id = str(req_data["id"])
+        dc_id = str(req_data["dc_id"])
+        upload_url = req_data["upload_url"]
+        access_hash_send = req_data["access_hash_send"]
+
+        total_parts = max(1, (file_size + self.CHUNK_SIZE - 1) // self.CHUNK_SIZE)
+        upload_headers_base = {
+            "auth": self._auth,
+            "file-id": file_id,
+            "total-part": str(total_parts),
+            "access-hash-send": access_hash_send,
+        }
+
+        upload_result: Dict[str, Any] = {}
+        for index in range(total_parts):
+            start = index * self.CHUNK_SIZE
+            chunk = file_bytes[start : start + self.CHUNK_SIZE]
+            headers = {
+                **upload_headers_base,
+                "part-number": str(index + 1),
+                "chunk-size": str(len(chunk)),
+            }
+            try:
+                resp = requests.post(
+                    upload_url,
+                    data=chunk,
+                    headers=headers,
+                    timeout=self.TIMEOUT * 4,
+                )
+                resp.raise_for_status()
+                upload_result = resp.json()
+            except requests.RequestException as exc:
+                raise MessengerAPIError(f"خطا در آپلود قطعه {index + 1} به روبیکا: {exc}") from exc
+            except ValueError as exc:
+                raise MessengerAPIError(f"پاسخ نامعتبر از سرور آپلود روبیکا: {exc}") from exc
+
+            if upload_result.get("status") == "ERROR_TRY_AGAIN":
+                raise MessengerAPIError("سرور آپلود روبیکا درخواست تلاش مجدد داد (ERROR_TRY_AGAIN).")
+
+        if upload_result.get("status") != "OK":
+            raise MessengerAPIError(
+                f"آپلود فایل در روبیکا ناموفق بود: {upload_result.get('status_det', upload_result)}"
+            )
+
+        access_hash_rec = upload_result.get("data", {}).get("access_hash_rec")
+        if not access_hash_rec:
+            raise MessengerAPIError("مقدار access_hash_rec از سرور آپلود روبیکا دریافت نشد.")
+
+        return {
+            "file_id": file_id,
+            "mime": mime,
+            "dc_id": dc_id,
+            "access_hash_rec": access_hash_rec,
+            "file_name": filename,
+            "size": file_size,
+        }
+
+    def _send_file_inline(
+        self,
+        chat_id: str,
+        file_obj: Any,
+        default_filename: str,
+        rubika_type: str,
+        caption: str = "",
+        extra_inline: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """ساخت ساختار file_inline و فراخوانی sendMessage برای ارسال رسانه به روبیکا.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param file_obj: شیء فایل یا بایت‌های خام رسانه.
+        :param default_filename: نام پیش‌فرض با پسوند استاندارد.
+        :param rubika_type: نوع رسانه در روبیکا (Image، Video، Music، Voice، Gif، File).
+        :param caption: متن کپشن اختیاری همراه رسانه.
+        :param extra_inline: فیلدهای تکمیلی اختیاری برای دیکشنری file_inline.
+        :return: دیکشنری حاوی message_id پیام ارسال‌شده.
+        """
+        uploaded = self._upload_file(file_obj, default_filename=default_filename)
+        file_inline: Dict[str, Any] = {
+            **uploaded,
+            "type": rubika_type,
+            "time": 1,
+            "width": 200,
+            "height": 200,
+            "music_performer": "",
+            "is_spoil": False,
+        }
+        if extra_inline:
+            file_inline.update(extra_inline)
+
+        input_data: Dict[str, Any] = {
+            "object_guid": chat_id,
+            "rnd": random.randint(100000, 999999999),
+            "file_inline": file_inline,
+        }
+        if caption:
+            input_data["text"] = caption
+
+        result = self._request("sendMessage", input_data)
+        msg_id = (
+            result.get("message_update", {}).get("message_id")
+            or result.get("message_id")
+            or ""
+        )
+        return {"message_id": str(msg_id), "file_id": uploaded["file_id"]}
+
+    def send_text(self, chat_id: str, text: str, reply_markup: dict = None) -> dict:
+        """ارسال پیام متنی ساده به کانال یا گفت‌وگوی روبیکا.
+
+        :param chat_id: شناسه GUID مقصد (مانند c0...).
+        :param text: متن پیام ارسالی.
+        :param reply_markup: پارامتر سازگاری با اینترفیس پایه (در کلاینت شخصی استفاده نمی‌شود).
+        :return: دیکشنری حاوی message_id.
+        """
+        result = self._request(
+            "sendMessage",
+            {
+                "object_guid": chat_id,
+                "text": text,
+                "rnd": random.randint(100000, 999999999),
+            },
+        )
+        msg_id = (
+            result.get("message_update", {}).get("message_id")
+            or result.get("message_id")
+            or ""
+        )
+        return {"message_id": str(msg_id)}
+
+    def send_photo(self, chat_id: str, photo, caption: str = "", file_id: str = None) -> dict:
+        """ارسال عکس به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param photo: فایل تصویر.
+        :param caption: متن کپشن اختیاری.
+        :param file_id: شناسه فایل از پیش آپلودشده (در روبیکا آپلود مستقیم انجام می‌شود).
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, photo, "photo.jpg", "Image", caption=caption)
+
+    def send_video(self, chat_id: str, video, caption: str = "", file_id: str = None) -> dict:
+        """ارسال ویدیو به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param video: فایل ویدیو.
+        :param caption: متن کپشن اختیاری.
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, video, "video.mp4", "Video", caption=caption)
+
+    def send_audio(self, chat_id: str, audio, caption: str = "", file_id: str = None) -> dict:
+        """ارسال فایل صوتی (موزیک/پادکست) به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param audio: فایل صوتی (مانند mp3).
+        :param caption: متن کپشن اختیاری.
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, audio, "audio.mp3", "Music", caption=caption)
+
+    def send_voice(self, chat_id: str, voice, caption: str = "", file_id: str = None) -> dict:
+        """ارسال پیام صوتی (ویس) به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param voice: فایل ویس (مانند ogg).
+        :param caption: متن کپشن اختیاری.
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(
+            chat_id,
+            voice,
+            "voice.ogg",
+            "Voice",
+            caption=caption,
+            extra_inline={"time": 1000},
+        )
+
+    def send_document(self, chat_id: str, document, caption: str = "", file_id: str = None) -> dict:
+        """ارسال فایل یا سند به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param document: فایل ارسالی.
+        :param caption: متن کپشن اختیاری.
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, document, "document.bin", "File", caption=caption)
+
+    def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:
+        """ارسال گیف (انیمیشن) به کانال روبیکا همراه با کپشن اختیاری.
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param animation: فایل گیف یا ویدیوی کوتاه.
+        :param caption: متن کپشن اختیاری.
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, animation, "animation.gif", "Gif", caption=caption)
+
+    def send_sticker(self, chat_id: str, sticker, file_id: str = None) -> dict:
+        """ارسال استیکر به کانال روبیکا (آپلود به عنوان تصویر/فایل بدون نیاز به sticker_id داخلی).
+
+        :param chat_id: شناسه GUID کانال یا چت مقصد.
+        :param sticker: فایل استیکر (معمولاً با فرمت webp).
+        :param file_id: پارامتر سازگاری با اینترفیس پایه.
+        :return: دیکشنری حاوی message_id و file_id.
+        """
+        return self._send_file_inline(chat_id, sticker, "sticker.webp", "Image", caption="")
+
+    # ============================================================
+    # متدهای مدیریت و بررسی کانال‌ها
+    # ============================================================
+
+    def get_object_by_username(self, username: str) -> Dict[str, Any]:
+        """دریافت اطلاعات کانال یا کاربر از طریق نام کاربری (بدون @).
+
+        :param username: نام کاربری کانال در روبیکا.
+        :return: دیکشنری اطلاعات کانال شامل channel_guid و عنوان.
+        """
+        clean_username = username.strip().lstrip("@")
+        return self._request("getObjectByUsername", {"username": clean_username})
+
+    def get_chats(self, start_id: Optional[str] = None) -> Dict[str, Any]:
+        """دریافت لیست گفت‌وگوها و کانال‌های اکانت متصل‌شده کاربر.
+
+        :param start_id: شناسه صفحه‌بندی برای دریافت ادامه لیست (اختیاری).
+        :return: دیکشنری شامل لیست chats و وضعیت ادامه.
+        """
+        return self._request("getChats", {"start_id": start_id})
+
+    def get_user_channels(self) -> List[Dict[str, str]]:
+        """استخراج لیست کانال‌هایی که کاربر در آن‌ها عضو یا ادمین است.
+
+        :return: لیست دیکشنری‌ها شامل chat_id، title و username هر کانال.
+        """
+        data = self.get_chats()
+        chats = data.get("chats", [])
+        channels: List[Dict[str, str]] = []
+        for chat in chats:
+            obj_guid = chat.get("object_guid", "")
+            if not obj_guid.startswith("c0"):
+                continue
+            abs_obj = chat.get("abs_object", {}) or {}
+            access = chat.get("access", []) or []
+            # فقط کانال‌هایی که کاربر دسترسی ارسال پیام دارد یا سازنده/ادمین است
+            if access and "SendMessages" not in access and "SetAdmin" not in access:
+                continue
+            channels.append(
+                {
+                    "chat_id": obj_guid,
+                    "title": abs_obj.get("title") or obj_guid,
+                    "username": abs_obj.get("username") or "",
+                }
+            )
+        return channels
+
+    def get_chat_info(self, chat_id: str) -> dict:
+        """دریافت اطلاعات کانال روبیکا (عنوان، نام کاربری، نوع).
+
+        :param chat_id: شناسه GUID کانال یا نام کاربری آن.
+        :return: دیکشنری شامل title، username و type.
+        """
+        target_guid = chat_id.strip()
+        if not target_guid.startswith("c0"):
+            obj = self.get_object_by_username(target_guid)
+            channel_obj = obj.get("channel") or {}
+            if not channel_obj:
+                raise MessengerNotFoundError("کانال با این نام کاربری در روبیکا یافت نشد.")
+            return {
+                "chat_id": channel_obj.get("channel_guid", ""),
+                "title": channel_obj.get("channel_title", "") or target_guid,
+                "username": channel_obj.get("username", "") or "",
+                "type": "channel",
+            }
+
+        data = self._request("getChannelInfo", {"channel_guid": target_guid})
+        channel_obj = data.get("channel") or {}
+        return {
+            "chat_id": channel_obj.get("channel_guid", target_guid),
+            "title": channel_obj.get("channel_title", "") or target_guid,
+            "username": channel_obj.get("username", "") or "",
+            "type": "channel",
+        }
+
+    def check_bot_is_admin(self, chat_id: str) -> bool:
+        """بررسی دسترسی ارسال پیام توسط اکانت کاربر در کانال مشخص.
+
+        :param chat_id: شناسه GUID کانال روبیکا.
+        :return: True در صورت داشتن دسترسی ارسال یا ادمین بودن، در غیر این صورت False.
+        """
+        try:
+            data = self._request("getChannelInfo", {"channel_guid": chat_id})
+            chat = data.get("chat", {}) or {}
+            access = chat.get("access", []) or []
+            if access:
+                return "SendMessages" in access or "SetAdmin" in access
+            return bool(data.get("channel"))
+        except MessengerError:
+            return False
+
+    def get_bot_username(self) -> str:
+        """دریافت نام کاربری ربات (برای سازگاری با اینترفیس پایه؛ در کلاینت شخصی خالی است).
+
+        :return: رشته خالی.
+        """
+        return ""
