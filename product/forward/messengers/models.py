@@ -68,6 +68,12 @@ class BotUser(models.Model):
         data = self.session_data or {}
         return bool(data.get("auth") and data.get("private_key"))
 
+    @property
+    def has_soroush_session(self) -> bool:
+        """بررسی وجود رشته نشست معتبر سروش‌پلاس (StringSession) در session_data."""
+        data = self.session_data or {}
+        return bool(data.get("string_session"))
+
 
 class ConnectToken(models.Model):
     """توکن یک بار مصرف برای اتصال کاربر سایت به ربات پیام‌رسان از طریق Deep Link."""

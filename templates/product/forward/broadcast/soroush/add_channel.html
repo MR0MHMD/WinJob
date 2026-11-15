@@ -1,0 +1,103 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}افزودن کانال سروش‌پلاس{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    {# ========== Breadcrumb ========== #}
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item"><a href="{% url 'broadcast:job_list' %}">وین فوروارد</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'broadcast:soroush_channels' %}">کانال‌های سروش‌پلاس</a></li>
+            <li class="breadcrumb-item active">افزودن کانال</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-7">
+
+            {# ========== Header ========== #}
+            <div class="card card-light border-light mb-4">
+                <div class="card-body p-4 d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-4"
+                         style="width: 56px; height: 56px; background: rgba(7,201,139,0.15); flex-shrink: 0;">
+                        <i class="fi-plus-circle fs-3 text-success"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-white mb-1">افزودن دستی کانال سروش‌پلاس</h4>
+                        <p class="text-muted mb-0 fs-sm">
+                            نام کاربری (یوزرنیم) یا شناسه عددی کانال سروش‌پلاسی که در آن ادمین هستید را وارد کنید.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {# ========== Form ========== #}
+            <div class="card card-light border-light">
+                <div class="card-body p-4 p-md-5">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.channel_identifier.id_for_label }}" class="form-label text-white fw-bold mb-2">
+                                <i class="fi-hash me-1 text-primary"></i>
+                                {{ form.channel_identifier.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.channel_identifier }}
+                            {% if form.channel_identifier.help_text %}
+                                <div class="form-text text-muted fs-xs mt-2">
+                                    <i class="fi-info-circle me-1"></i>{{ form.channel_identifier.help_text }}
+                                </div>
+                            {% endif %}
+                            {% if form.channel_identifier.errors %}
+                                <div class="text-danger fs-xs mt-2">
+                                    {% for e in form.channel_identifier.errors %}{{ e }}<br>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.title.id_for_label }}" class="form-label text-white fw-bold mb-2">
+                                <i class="fi-edit me-1 text-primary"></i>
+                                {{ form.title.label }}
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger fs-xs mt-2">
+                                    {% for e in form.title.errors %}{{ e }}<br>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger border-0 rounded-3 mb-4">
+                                {% for error in form.non_field_errors %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fi-alert-circle"></i>{{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <hr class="border-light my-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'broadcast:soroush_channels' %}" class="btn btn-outline-light rounded-pill px-4">
+                                انصراف
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                <i class="fi-check me-1"></i>بررسی و اتصال کانال
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

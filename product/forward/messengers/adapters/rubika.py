@@ -12,7 +12,7 @@ from string import ascii_lowercase, ascii_uppercase, digits
 from typing import Any, Dict, List, NoReturn, Optional, Tuple
 
 import requests
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
@@ -23,7 +23,7 @@ from .base import (
     MessengerAPIError,
     MessengerNotFoundError,
     MessengerPermissionError,
-    MessengerRateLimitError, MessengerError,
+    MessengerRateLimitError,
 )
 from .registry import register
 
@@ -124,6 +124,19 @@ class RubikaCrypto:
         decoded_public_key = RubikaCrypto.decode_auth(public_b64)
         private_key_pem = rsa_key.export_key().decode("utf-8")
         return decoded_public_key, private_key_pem
+
+    @staticmethod
+    def decrypt_rsa_oaep(private_key_pem: str, data: str) -> str:
+        """رمزگشایی رشته auth رمزنگاری‌شده با RSA-OAEP توسط سرور در مرحله signIn.
+
+        :param private_key_pem: کلید خصوصی RSA در قالب PEM.
+        :param data: رشته رمزنگاری‌شده با Base64 دریافتی از پاسخ signIn.
+        :return: رشته ۳۲ کاراکتری auth رمزگشایی‌شده.
+        """
+        rsa_key = RSA.import_key(private_key_pem)
+        cipher = PKCS1_OAEP.new(rsa_key)
+        decrypted = cipher.decrypt(base64.b64decode(data))
+        return decrypted.decode("utf-8")
 
     @staticmethod
     def sign(private_key_pem: str, data_enc: str) -> str:
@@ -352,13 +365,21 @@ class RubikaAdapter(MessengerAdapter):
             tmp_session=tmp_session,
         )
 
-        auth_token = data.get("auth")
-        if not auth_token:
+        raw_auth = data.get("auth")
+        if not raw_auth:
             status = data.get("status", "SIGN_IN_FAILED")
             raise MessengerAPIError(f"ورود با کد تایید ناموفق بود: {status}")
 
+        try:
+            auth_token = RubikaCrypto.decrypt_rsa_oaep(private_key_pem, raw_auth)
+        except Exception as exc:
+            raise MessengerAPIError(f"خطا در رمزگشایی توکن auth با RSA-OAEP: {exc}") from exc
+
         self._auth = auth_token
         self._private_key = private_key_pem
+
+        # ثبت دستگاه در سرور روبیکا برای فعال‌سازی رسمی نشست در لیست نشست‌های کاربر
+        self.register_device(device_model="WinForward")
 
         return {
             "auth": auth_token,
@@ -366,6 +387,27 @@ class RubikaAdapter(MessengerAdapter):
             "user": data.get("user", {}),
             "raw": data,
         }
+
+    def register_device(self, device_model: str = "WinForward") -> Dict[str, Any]:
+        """ثبت دستگاه و نشست کلاینت در سرور روبیکا (registerDevice) بلافاصله پس از ورود.
+
+        :param device_model: نام نمایشی دستگاه در لیست نشست‌های فعال روبیکا.
+        :return: پاسخ سرور روبیکا برای ثبت دستگاه.
+        """
+        user_agent = self._session.headers.get("User-Agent", "")
+        device_hash = "2" + "".join(re.findall(r"\d+", user_agent))
+        return self._request(
+            "registerDevice",
+            {
+                "token": "",
+                "lang_code": self.DEFAULT_CLIENT["lang_code"],
+                "token_type": "Firebase",
+                "app_version": f"PW_{self.DEFAULT_CLIENT['app_version']}",
+                "system_version": "Windows 10",
+                "device_model": device_model,
+                "device_hash": device_hash,
+            },
+        )
 
     # ============================================================
     # متدهای آپلود تکه‌ای و ارسال انواع پیام و رسانه
@@ -623,14 +665,14 @@ class RubikaAdapter(MessengerAdapter):
         return self._send_file_inline(chat_id, animation, "animation.gif", "Gif", caption=caption)
 
     def send_sticker(self, chat_id: str, sticker, file_id: str = None) -> dict:
-        """ارسال استیکر به کانال روبیکا (آپلود به عنوان تصویر/فایل بدون نیاز به sticker_id داخلی).
+        """جلوگیری از ارسال استیکر به روبیکا به دلیل عدم پشتیبانی از استیکرهای بیرونی.
 
         :param chat_id: شناسه GUID کانال یا چت مقصد.
-        :param sticker: فایل استیکر (معمولاً با فرمت webp).
+        :param sticker: فایل استیکر.
         :param file_id: پارامتر سازگاری با اینترفیس پایه.
-        :return: دیکشنری حاوی message_id و file_id.
+        :raises MessengerAPIError: همیشه خطای عدم پشتیبانی از استیکر برمی‌گرداند.
         """
-        return self._send_file_inline(chat_id, sticker, "sticker.webp", "Image", caption="")
+        raise MessengerAPIError("روبیکا از ارسال استیکر بیرونی پشتیبانی نمی‌کند.")
 
     # ============================================================
     # متدهای مدیریت و بررسی کانال‌ها

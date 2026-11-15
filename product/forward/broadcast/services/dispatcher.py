@@ -237,6 +237,22 @@ def _get_adapter_for_channel(channel):
             private_key=session_data.get("private_key"),
         )
 
+    if slug == "soroush":
+        from product.forward.messengers.models import BotUser
+
+        soroush_bot_user = BotUser.objects.filter(
+            user=channel.user, platform=channel.platform
+        ).first()
+
+        if not soroush_bot_user or not soroush_bot_user.has_soroush_session:
+            raise MessengerAPIError(
+                f"نشست سروش‌پلاس برای کاربر {channel.user.phone_number} ثبت یا تایید نشده است. "
+                "لطفاً ابتدا از پنل وب وارد حساب سروش‌پلاس خود شوید."
+            )
+
+        session_data = soroush_bot_user.session_data or {}
+        return get_adapter(slug, session_string=session_data.get("string_session"))
+
     return get_adapter(slug)
 
 
@@ -267,7 +283,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
         new_file_id_to_cache = None
 
         # ۱. file_id کش‌شده (فقط برای پلتفرم‌هایی که پشتیبانی می‌کنن مثل بله)
-        if cached_file_id and platform_slug not in ("eitaa", "rubika"):
+        if cached_file_id and platform_slug not in ("eitaa", "rubika", "soroush"):
             logger.info(f"[{platform_slug}] Using cached file_id for msg {message.pk}")
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, None,
@@ -315,7 +331,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             )
 
         # کش file_id جدید (فقط برای پلتفرم‌های دارای file_id)
-        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika"):
+        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika", "soroush"):
             message.platform_file_ids[platform_slug] = new_file_id_to_cache
             message.save(update_fields=["platform_file_ids"])
             logger.info(f"[{platform_slug}] Cached file_id for msg {message.pk}")

@@ -5,17 +5,16 @@ from .models import ConnectToken
 
 
 def generate_connect_link(user, platform_slug: str, bot_username: str = "win_forward_bot") -> str:
-    """تولید توکن یک بار مصرف و ساخت لینک Deep Link برای اتصال به ربات."""
-    if platform_slug == "eitaa":
+    """تولید توکن یک‌بارمصرف و ساخت لینک Deep Link برای اتصال به ربات."""
+    if platform_slug in ("eitaa", "rubika", "soroush"):
         raise ValueError(
-            "ایتا از لینک اتصال (Deep Link) پشتیبانی نمی‌کند. "
-            "برای اتصال کانال ایتا از فرم ورود توکن ایتایار استفاده کنید."
+            f"پلتفرم {platform_slug} از لینک اتصال (Deep Link) پشتیبانی نمی‌کند."
         )
 
     from core.models import Platform
     platform = Platform.objects.get(slug=platform_slug)
 
-    # حذف توکن‌های قبلی استفاده نشده برای این پلتفرم
+    # حذف توکن‌های قبلی استفاده‌نشده برای این پلتفرم
     ConnectToken.objects.filter(user=user, platform=platform, used_at__isnull=True).delete()
 
     token = uuid.uuid4().hex

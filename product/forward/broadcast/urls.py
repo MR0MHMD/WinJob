@@ -23,4 +23,12 @@ urlpatterns = [
     path("rubika/channels/add/", views.rubika_add_channel, name="rubika_add_channel"),
     path("rubika/channels/sync/", views.rubika_sync_channels, name="rubika_sync_channels"),
     path("rubika/channels/<int:channel_id>/delete/", views.rubika_delete_channel, name="rubika_delete_channel"),
+
+    # Soroush Plus web panel
+    path("soroush/connect/", views.soroush_connect_phone, name="soroush_connect_phone"),
+    path("soroush/verify/", views.soroush_verify_code, name="soroush_verify_code"),
+    path("soroush/channels/", views.soroush_channels, name="soroush_channels"),
+    path("soroush/channels/add/", views.soroush_add_channel, name="soroush_add_channel"),
+    path("soroush/channels/sync/", views.soroush_sync_channels, name="soroush_sync_channels"),
+    path("soroush/channels/<int:channel_id>/delete/", views.soroush_delete_channel, name="soroush_delete_channel"),
 ]

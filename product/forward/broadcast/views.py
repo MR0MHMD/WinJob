@@ -11,7 +11,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 
-
 @login_required
 def send_broadcast(request):
     """صفحه ارسال پیام جدید به کانال‌ها از طریق پنل وب."""
@@ -251,7 +250,7 @@ def rubika_connect_phone(request):
             adapter = RubikaAdapter()
             try:
                 otp_res = adapter.send_code(phone_number=phone)
-            except MessengerError as exc:
+            except (MessengerError, ValueError) as exc:
                 messages.error(request, f"خطا در ارسال کد تایید روبیکا: {exc}")
             else:
                 request.session["rubika_otp_phone"] = phone
@@ -302,7 +301,7 @@ def rubika_verify_code(request):
                     phone_code_hash=phone_code_hash,
                     tmp_session=tmp_session,
                 )
-            except MessengerError as exc:
+            except (MessengerError, ValueError) as exc:
                 messages.error(request, f"کد تایید نامعتبر است یا خطایی رخ داد: {exc}")
             else:
                 user_info = creds.get("user") or {}
@@ -400,7 +399,7 @@ def rubika_sync_channels(request):
 
     try:
         found_channels = adapter.get_user_channels()
-    except MessengerError as exc:
+    except (MessengerError, ValueError) as exc:
         messages.error(request, f"خطا در دریافت لیست کانال‌ها از روبیکا: {exc}")
         return redirect("broadcast:rubika_channels")
 
@@ -498,3 +497,275 @@ def rubika_delete_channel(request, channel_id):
     channel.save(update_fields=["is_active"])
     messages.success(request, f"کانال «{channel.title}» غیرفعال شد.")
     return redirect("broadcast:rubika_channels")
+
+
+# ============================================================
+# Soroush Plus Web Panel Views
+# ============================================================
+
+
+@login_required
+def soroush_connect_phone(request):
+    """گام اول اتصال به سروش‌پلاس: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
+    from core.models import Platform
+    from product.forward.broadcast.forms import SoroushPhoneForm
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:job_list")
+
+    existing_bot_user = BotUser.objects.filter(
+        user=request.user, platform=soroush_platform
+    ).first()
+
+    if request.method == "POST":
+        form = SoroushPhoneForm(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data["phone_number"]
+            adapter = SoroushAdapter()
+            try:
+                otp_res = adapter.send_code(phone_number=phone)
+            except MessengerError as exc:
+                messages.error(request, f"خطا در ارسال کد تایید سروش‌پلاس: {exc}")
+            else:
+                request.session["soroush_otp_phone"] = phone
+                request.session["soroush_otp_hash"] = otp_res["phone_code_hash"]
+                request.session["soroush_otp_tmp"] = otp_res["temp_session"]
+                messages.info(request, "کد تایید به حساب سروش‌پلاس یا شماره موبایل شما ارسال شد.")
+                return redirect("broadcast:soroush_verify_code")
+    else:
+        form = SoroushPhoneForm()
+
+    return render(request, "product/forward/broadcast/soroush/connect_phone.html", {
+        "form": form,
+        "existing_bot_user": existing_bot_user,
+    })
+
+
+@login_required
+def soroush_verify_code(request):
+    """گام دوم اتصال به سروش‌پلاس: تایید کد OTP و ذخیره StringSession در BotUser."""
+    from django.utils import timezone
+    from core.models import Platform
+    from product.forward.broadcast.forms import SoroushVerifyCodeForm
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    phone = request.session.get("soroush_otp_phone")
+    phone_code_hash = request.session.get("soroush_otp_hash")
+    temp_session = request.session.get("soroush_otp_tmp")
+
+    if not all([phone, phone_code_hash, temp_session]):
+        messages.warning(request, "اطلاعات نشست موقت منقضی شده است؛ لطفاً دوباره شماره خود را وارد کنید.")
+        return redirect("broadcast:soroush_connect_phone")
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:job_list")
+
+    if request.method == "POST":
+        form = SoroushVerifyCodeForm(request.POST)
+        if form.is_valid():
+            adapter = SoroushAdapter()
+            try:
+                creds = adapter.sign_in(
+                    phone_number=phone,
+                    code=form.cleaned_data["phone_code"],
+                    phone_code_hash=phone_code_hash,
+                    temp_session=temp_session,
+                    password=form.cleaned_data.get("password") or None,
+                )
+            except MessengerError as exc:
+                messages.error(request, f"کد تایید نامعتبر است یا خطایی رخ داد: {exc}")
+            else:
+                user_id = creds.get("user_id") or f"soroush_user_{request.user.id}"
+                session_payload = {
+                    "string_session": creds["string_session"],
+                    "phone_number": phone,
+                    "user_id": user_id,
+                }
+
+                bot_user, created = BotUser.objects.get_or_create(
+                    user=request.user,
+                    platform=soroush_platform,
+                    defaults={
+                        "chat_id": user_id,
+                        "username": creds.get("username", "") or "",
+                        "is_verified": True,
+                        "session_data": session_payload,
+                    },
+                )
+                if not created:
+                    bot_user.chat_id = user_id
+                    bot_user.username = creds.get("username", "") or ""
+                    bot_user.is_verified = True
+                    bot_user.session_data = session_payload
+                    bot_user.last_seen_at = timezone.now()
+                    bot_user.save(update_fields=["chat_id", "username", "is_verified", "session_data", "last_seen_at"])
+
+                for key in ("soroush_otp_phone", "soroush_otp_hash", "soroush_otp_tmp"):
+                    request.session.pop(key, None)
+
+                messages.success(request, "✅ حساب سروش‌پلاس شما با موفقیت متصل شد.")
+                return redirect("broadcast:soroush_channels")
+    else:
+        form = SoroushVerifyCodeForm()
+
+    return render(request, "product/forward/broadcast/soroush/verify_code.html", {
+        "form": form,
+        "phone": phone,
+    })
+
+
+@login_required
+def soroush_channels(request):
+    """صفحه لیست و مدیریت کانال‌های متصل‌شده سروش‌پلاس."""
+    from core.models import Platform
+    from product.forward.broadcast.models import BroadcastChannel
+    from product.forward.messengers.models import BotUser
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:job_list")
+
+    bot_user = BotUser.objects.filter(
+        user=request.user, platform=soroush_platform
+    ).first()
+
+    channels = BroadcastChannel.objects.filter(
+        user=request.user, platform=soroush_platform
+    ).order_by("-created_at")
+
+    return render(request, "product/forward/broadcast/soroush/channels.html", {
+        "bot_user": bot_user,
+        "channels": channels,
+    })
+
+
+@login_required
+def soroush_sync_channels(request):
+    """همگام‌سازی خودکار کانال‌هایی که کاربر در سروش‌پلاس دسترسی ارسال دارد (POST only)."""
+    from django.utils import timezone
+    from core.models import Platform
+    from product.forward.broadcast.models import BroadcastChannel
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    if request.method != "POST":
+        return redirect("broadcast:soroush_channels")
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    bot_user = BotUser.objects.filter(user=request.user, platform=soroush_platform).first() if soroush_platform else None
+
+    if not bot_user or not bot_user.has_soroush_session:
+        messages.warning(request, "ابتدا باید وارد حساب سروش‌پلاس خود شوید.")
+        return redirect("broadcast:soroush_connect_phone")
+
+    session_data = bot_user.session_data or {}
+    adapter = SoroushAdapter(session_string=session_data.get("string_session"))
+
+    try:
+        found_channels = adapter.get_user_channels()
+    except (MessengerError, ValueError) as exc:
+        messages.error(request, f"خطا در دریافت لیست کانال‌ها از سروش‌پلاس: {exc}")
+        return redirect("broadcast:soroush_channels")
+
+    synced_count = 0
+    for ch in found_channels:
+        BroadcastChannel.objects.update_or_create(
+            user=request.user,
+            platform=soroush_platform,
+            chat_id=ch["chat_id"],
+            defaults={
+                "title": ch["title"],
+                "username": ch["username"],
+                "bot_is_admin": True,
+                "bot_admin_checked_at": timezone.now(),
+                "is_active": True,
+            },
+        )
+        synced_count += 1
+
+    messages.success(request, f"✅ {synced_count} کانال سروش‌پلاس همگام‌سازی شد.")
+    return redirect("broadcast:soroush_channels")
+
+
+@login_required
+def soroush_add_channel(request):
+    """صفحه افزودن دستی کانال سروش‌پلاس با نام کاربری یا شناسه عددی."""
+    from django.utils import timezone
+    from core.models import Platform
+    from product.forward.broadcast.forms import SoroushChannelForm
+    from product.forward.broadcast.models import BroadcastChannel
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:job_list")
+
+    bot_user = BotUser.objects.filter(
+        user=request.user, platform=soroush_platform
+    ).first()
+
+    if not bot_user or not bot_user.has_soroush_session:
+        messages.warning(request, "ابتدا باید حساب سروش‌پلاس خود را متصل کنید.")
+        return redirect("broadcast:soroush_connect_phone")
+
+    session_data = bot_user.session_data or {}
+    adapter = SoroushAdapter(session_string=session_data.get("string_session"))
+
+    if request.method == "POST":
+        form = SoroushChannelForm(request.POST, user=request.user, soroush_adapter=adapter)
+        if form.is_valid() and form.resolved_channel:
+            resolved = form.resolved_channel
+            channel, _created = BroadcastChannel.objects.update_or_create(
+                user=request.user,
+                platform=soroush_platform,
+                chat_id=resolved["chat_id"],
+                defaults={
+                    "title": resolved["title"],
+                    "username": resolved["username"],
+                    "bot_is_admin": True,
+                    "bot_admin_checked_at": timezone.now(),
+                    "is_active": True,
+                },
+            )
+            messages.success(request, f"✅ کانال «{channel.title}» با موفقیت به وین‌فوروارد متصل شد.")
+            return redirect("broadcast:soroush_channels")
+    else:
+        form = SoroushChannelForm(user=request.user, soroush_adapter=adapter)
+
+    return render(request, "product/forward/broadcast/soroush/add_channel.html", {
+        "form": form,
+        "bot_user": bot_user,
+    })
+
+
+@login_required
+def soroush_delete_channel(request, channel_id):
+    """غیرفعال‌سازی کانال سروش‌پلاس (POST only)."""
+    from product.forward.broadcast.models import BroadcastChannel
+
+    if request.method != "POST":
+        return redirect("broadcast:soroush_channels")
+
+    channel = get_object_or_404(
+        BroadcastChannel,
+        pk=channel_id,
+        user=request.user,
+        platform__slug="soroush",
+    )
+    channel.is_active = False
+    channel.save(update_fields=["is_active"])
+    messages.success(request, f"کانال «{channel.title}» غیرفعال شد.")
+    return redirect("broadcast:soroush_channels")
