@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "market.apps.MarketConfig",
     "product.forward.messengers.apps.MessengersConfig",
     "product.forward.broadcast.apps.BroadcastConfig",
+    "product.forward.subscriptions.apps.ForwardSubscriptionsConfig",
     "django_cleanup.apps.CleanupConfig",
 ]
 
@@ -380,3 +381,7 @@ else:
     }
 
 FORWARD_BALE_TOKEN = "2100857527:2oDqXkcXJCWpkrpoDYhwvbD6CtTFuJEYEkc"
+
+# تنظیمات اشتراک وین فوروارد (برای فعال‌سازی مالیات یا تسهیم در آینده مقدار را True کنید)
+FORWARD_ENABLE_VAT = False
+FORWARD_ENABLE_COMMISSION_SPLIT = False

@@ -1,0 +1,200 @@
+{% extends "parent/base.html" %}
+{% load static humanize %}
+
+{% block title %}اشتراک وین فوروارد{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item"><a href="{% url 'broadcast:job_list' %}">وین فوروارد</a></li>
+            <li class="breadcrumb-item active">خرید و مدیریت اشتراک</li>
+        </ol>
+    </nav>
+
+    {# ========== وضعیت فعلی پلتفرم‌ها ========== #}
+    <div class="card card-light border-light mb-4">
+        <div class="card-body p-4">
+            <h5 class="text-white mb-3">وضعیت اشتراک پلتفرم‌های شما</h5>
+            <div class="row g-3">
+                {% for slug, label in all_platforms %}
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="p-3 rounded-3 border border-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-white">{{ label }}</strong>
+                                {% if slug in access_map %}
+                                    <span class="badge bg-success">فعال</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">غیرفعال</span>
+                                {% endif %}
+                            </div>
+                            {% for acc_slug, acc in access_map.items %}
+                                {% if acc_slug == slug %}
+                                    <div class="fs-xs text-muted">{{ acc.remaining_days }} روز باقی‌مانده</div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ========== افزودن پلتفرم جدید در میانه دوره ========== #}
+    {% if has_active_paid_bale and missing_platforms %}
+        <div class="card card-light border-light mb-4">
+            <div class="card-body p-4">
+                <h5 class="text-white mb-2">افزودن پلتفرم جدید به اشتراک فعلی</h5>
+                <p class="text-muted fs-sm mb-3">
+                    هزینه بر اساس {{ bale_access.remaining_days }} روز باقی‌مانده از دوره فعلی شما محاسبه می‌شود.
+                </p>
+                <form method="post" action="{% url 'forward_subscriptions:create_order' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="plan_id" value="{{ bale_access.plan_id }}">
+                    <input type="hidden" name="order_kind" value="add_platform">
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {% for slug, label in missing_platforms %}
+                            <label class="form-check-label text-white d-flex align-items-center gap-2 border border-light rounded-3 px-3 py-2">
+                                <input class="form-check-input" type="checkbox" name="platforms" value="{{ slug }}">
+                                {{ label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-outline-success rounded-pill px-4">
+                        محاسبه و افزودن پلتفرم
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ========== پلن‌های اشتراک ========== #}
+    <div class="row g-4 mb-4">
+        {% for plan in plans %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-light border-light h-100 {% if plan.is_featured %}border-primary{% endif %}">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="text-white mb-0">{{ plan.name }}</h5>
+                            {% if plan.is_featured %}
+                                <span class="badge bg-primary">پیشنهادی</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted fs-xs mb-3">{{ plan.description }}</p>
+
+                        <div class="mb-3">
+                            {% if plan.is_trial %}
+                                <span class="fs-4 fw-bold text-success">رایگان</span>
+                                <span class="text-muted fs-xs">/ ۷ روز همه پلتفرم‌ها</span>
+                            {% else %}
+                                <span class="fs-4 fw-bold text-white">{{ plan.price_per_platform|intcomma }}</span>
+                                <span class="text-muted fs-xs">تومان / هر پلتفرم</span>
+                            {% endif %}
+                        </div>
+
+                        {% if plan.is_trial %}
+                            {% if account.can_use_trial %}
+                                <form method="post" action="{% url 'forward_subscriptions:create_order' %}" class="mt-auto">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="plan_id" value="{{ plan.pk }}">
+                                    <input type="hidden" name="order_kind" value="new">
+                                    <button type="submit" class="btn btn-success w-100 rounded-pill">
+                                        فعال‌سازی رایگان ۷ روزه
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-secondary w-100 rounded-pill mt-auto" disabled>
+                                    قبلاً استفاده شده
+                                </button>
+                            {% endif %}
+                        {% else %}
+                            <form method="post" action="{% url 'forward_subscriptions:create_order' %}" class="mt-auto wf-plan-form" data-unit-price="{{ plan.price_per_platform }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="plan_id" value="{{ plan.pk }}">
+                                <input type="hidden" name="order_kind" value="new">
+                                <div class="mb-3 d-flex flex-column gap-2">
+                                    {% for slug, label in all_platforms %}
+                                        {% if slug == 'bale' %}
+                                            <label class="form-check-label text-white fs-sm d-flex align-items-center gap-2">
+                                                <input class="form-check-input wf-platform-cb" type="checkbox" name="platforms" value="bale" checked onclick="return false;">
+                                                {{ label }} <span class="badge bg-info text-dark">اجباری</span>
+                                            </label>
+                                        {% else %}
+                                            <label class="form-check-label text-white fs-sm d-flex align-items-center gap-2">
+                                                <input class="form-check-input wf-platform-cb" type="checkbox" name="platforms" value="{{ slug }}">
+                                                {{ label }}
+                                            </label>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="text-white fs-sm mb-3">
+                                    مبلغ کل: <strong class="wf-total-price text-primary">{{ plan.price_per_platform|intcomma }}</strong> تومان
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                                    ادامه و پرداخت
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# ========== سفارش‌های اخیر ========== #}
+    {% if recent_orders %}
+        <div class="card card-light border-light">
+            <div class="card-body p-4">
+                <h6 class="text-white mb-3">سفارش‌های اخیر اشتراک</h6>
+                <div class="table-responsive">
+                    <table class="table table-dark table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>پلن</th>
+                                <th>پلتفرم‌ها</th>
+                                <th>مبلغ (تومان)</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ord in recent_orders %}
+                                <tr>
+                                    <td>#{{ ord.pk }}</td>
+                                    <td>{{ ord.plan.name }}</td>
+                                    <td>{{ ord.platform_labels|join:"، " }}</td>
+                                    <td>{{ ord.total_amount|intcomma }}</td>
+                                    <td>{{ ord.get_status_display }}</td>
+                                    <td>
+                                        <a href="{% url 'forward_subscriptions:order_detail' ord.pk %}" class="btn btn-xs btn-outline-primary rounded-pill">
+                                            مشاهده
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+document.querySelectorAll('.wf-plan-form').forEach(function (form) {
+    const unitPrice = parseInt(form.dataset.unitPrice || '0', 10);
+    const totalEl = form.querySelector('.wf-total-price');
+    const checkboxes = form.querySelectorAll('.wf-platform-cb');
+    function updateTotal() {
+        let count = 0;
+        checkboxes.forEach(cb => { if (cb.checked) count++; });
+        totalEl.textContent = (count * unitPrice).toLocaleString('en-US');
+    }
+    checkboxes.forEach(cb => cb.addEventListener('change', updateTotal));
+    updateTotal();
+});
+</script>
+{% endblock %}

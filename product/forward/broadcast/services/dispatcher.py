@@ -266,6 +266,12 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
         target.save(update_fields=["status"])
 
         platform_slug = target.channel.platform.slug
+        from product.forward.subscriptions.access import user_has_platform_access
+
+        if not user_has_platform_access(target.channel.user, platform_slug):
+            target.mark_failed(f"اشتراک فعال وین فوروارد برای پلتفرم {_platform_fa(platform_slug)} وجود ندارد.")
+            return
+
         adapter = _get_adapter_for_channel(target.channel)
 
         if not adapter:

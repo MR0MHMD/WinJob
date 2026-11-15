@@ -301,14 +301,24 @@ def _handle_channels_command(chat_id):
 
 
 def _build_draft_keyboard(job):
-    """ساخت کیبورد شیشه‌ای برای انتخاب کانال‌ها در حالت پیش‌نویس."""
-    channels = BroadcastChannel.objects.filter(user=job.message.user, is_active=True, bot_is_admin=True)
+    """ساخت کیبورد شیشه‌ای برای انتخاب کانال‌ها همراه با نمایش قفل اشتراک برای پلتفرم‌های غیرفعال."""
+    from product.forward.subscriptions.access import get_active_platform_slugs
+
+    active_slugs = get_active_platform_slugs(job.message.user)
+    channels = BroadcastChannel.objects.filter(
+        user=job.message.user, is_active=True, bot_is_admin=True
+    ).select_related("platform")
     selected_channel_ids = set(job.targets.values_list("channel_id", flat=True))
     inline_keyboard = []
     for ch in channels:
-        is_selected = ch.pk in selected_channel_ids
-        icon = "✅" if is_selected else "⬜"
-        inline_keyboard.append([{"text": f"{icon} {ch.title}", "callback_data": f"sel_{job.pk}_{ch.pk}"}])
+        if ch.platform.slug not in active_slugs:
+            inline_keyboard.append([
+                {"text": f"🔒 {ch.title} ({ch.platform.name} - نیاز به اشتراک)", "callback_data": f"locked_{ch.platform.slug}"}
+            ])
+        else:
+            is_selected = ch.pk in selected_channel_ids
+            icon = "✅" if is_selected else "⬜"
+            inline_keyboard.append([{"text": f"{icon} {ch.title}", "callback_data": f"sel_{job.pk}_{ch.pk}"}])
     inline_keyboard.append([{"text": "🚀 تایید و ارسال", "callback_data": f"send_{job.pk}"}])
     return {"inline_keyboard": inline_keyboard}
 
@@ -327,6 +337,17 @@ def _handle_callback_query(callback):
     if not bot_user:
         adapter.send_text(chat_id, "❌ دسترسی غیرمجاز.")
         return JsonResponse({"ok": True, "status": "unauthorized"})
+
+    # ۰. کلیک روی کانال نیازمند اشتراک
+    if data.startswith("locked_"):
+        from product.forward.subscriptions.access import platform_label
+        slug = data.replace("locked_", "")
+        adapter.send_text(
+            chat_id,
+            f"🔒 اشتراک فعال برای پلتفرم «{platform_label(slug)}» ندارید.\n"
+            "برای فعال‌سازی، به بخش اشتراک وین‌فوروارد در سایت مراجعه کنید.",
+        )
+        return JsonResponse({"ok": True, "status": "locked platform"})
 
     # ۱. انتخاب/لغو انتخاب کانال
     if data.startswith("sel_"):
@@ -505,6 +526,16 @@ def _handle_private_message(message):
         adapter.send_text(chat_id, f"❌ خطا در ساخت پیش‌نویس: {exc}")
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
 
+    from product.forward.subscriptions.access import user_has_platform_access
+    if not user_has_platform_access(bot_user.user, "bale"):
+        adapter = get_adapter("bale")
+        adapter.send_text(
+            chat_id,
+            "🔒 اشتراک وین‌فوروارد شما فعال نیست یا منقضی شده است.\n"
+            "لطفاً ابتدا از سایت اشتراک خود را فعال یا تمدید کنید.",
+        )
+        return JsonResponse({"ok": True, "status": "subscription required"})
+
     # دریافت لیست کانال‌های کاربر
     channels = BroadcastChannel.objects.filter(user=bot_user.user, is_active=True, bot_is_admin=True)
     if not channels.exists():
@@ -512,12 +543,9 @@ def _handle_private_message(message):
         adapter.send_text(chat_id, "⚠️ شما هیچ کانال فعالی با دسترسی ادمین ندارید.")
         return JsonResponse({"ok": True, "status": "no channels"})
 
-    # ساخت کیبورد شیشه‌ای
-    inline_keyboard = []
-    for ch in channels:
-        inline_keyboard.append([{"text": f"⬜ {ch.title}", "callback_data": f"sel_{job.pk}_{ch.pk}"}])
-
-    inline_keyboard.append([{"text": "🚀 تایید و ارسال", "callback_data": f"send_{job.pk}"}])
+    # ساخت کیبورد شیشه‌ای با نمایش وضعیت اشتراک هر پلتفرم
+    reply_markup = _build_draft_keyboard(job)
+    inline_keyboard = reply_markup["inline_keyboard"]
 
     adapter = get_adapter("bale")
     try:

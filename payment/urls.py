@@ -40,3 +40,9 @@ urlpatterns += [
     path('windirect/callback/', subscription_callback, name='subscription_callback'),
     path('windirect/payments/<int:pk>/verify/', subscription_reverify, name='subscription_reverify'),
 ]
+from .views.forward_subscription import forward_subscription_callback, forward_subscription_reverify
+
+urlpatterns += [
+    path('winforward/callback/', forward_subscription_callback, name='forward_subscription_callback'),
+    path('winforward/payments/<int:pk>/verify/', forward_subscription_reverify, name='forward_subscription_reverify'),
+]

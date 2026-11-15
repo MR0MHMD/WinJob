@@ -23,12 +23,35 @@ class BroadcastSendForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """دریافت کاربر برای فیلتر کردن کانال‌های قابل انتخاب."""
+        """دریافت کاربر برای فیلتر کردن کانال‌ها و مشخص کردن وضعیت اشتراک هر پلتفرم."""
+        from product.forward.subscriptions.access import get_active_platform_slugs
+
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+        self.active_platform_slugs = get_active_platform_slugs(user) if user else set()
+        self.channel_items = []
         if user:
-            self.fields["channels"].queryset = BroadcastChannel.objects.filter(user=user, is_active=True,
-                                                                               bot_is_admin=True)
+            qs = BroadcastChannel.objects.filter(
+                user=user, is_active=True, bot_is_admin=True
+            ).select_related("platform")
+            self.fields["channels"].queryset = qs
+            selected_ids = set(str(v) for v in (self.data.getlist("channels") if self.is_bound else []))
+            for ch in qs:
+                self.channel_items.append({
+                    "channel": ch,
+                    "has_access": ch.platform.slug in self.active_platform_slugs,
+                    "checked": str(ch.pk) in selected_ids,
+                })
+
+    def clean_channels(self):
+        """اطمینان از داشتن اشتراک فعال برای تمام کانال‌های انتخاب‌شده."""
+        channels = self.cleaned_data.get("channels")
+        for ch in channels:
+            if ch.platform.slug not in self.active_platform_slugs:
+                raise forms.ValidationError(
+                    f"برای ارسال به کانال «{ch.title}» باید اشتراک فعال پلتفرم {ch.platform.name} را داشته باشید."
+                )
+        return channels
 
 
 # ============================================================

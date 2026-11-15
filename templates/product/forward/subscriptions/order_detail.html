@@ -1,0 +1,90 @@
+{% extends "parent/base.html" %}
+{% load static humanize %}
+
+{% block title %}سفارش اشتراک #{{ order.pk }} | وین فوروارد{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb breadcrumb-light">
+            <li class="breadcrumb-item"><a href="{% url 'forward_subscriptions:plans' %}">اشتراک وین فوروارد</a></li>
+            <li class="breadcrumb-item active">فاکتور سفارش #{{ order.pk }}</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card card-light border-light">
+                <div class="card-body p-4 p-md-5">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="text-white mb-0">سفارش اشتراک #{{ order.pk }}</h4>
+                        {% if order.status == 'paid' %}
+                            <span class="badge bg-success fs-sm">پرداخت‌شده</span>
+                        {% elif order.status == 'pending' %}
+                            <span class="badge bg-warning text-dark fs-sm">در انتظار پرداخت</span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-sm">{{ order.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+
+                    <ul class="list-unstyled text-muted fs-sm mb-4" style="line-height: 2.2;">
+                        <li><strong class="text-white">پلن:</strong> {{ order.plan.name }} ({{ order.duration_days }} روز)</li>
+                        <li><strong class="text-white">نوع سفارش:</strong> {{ order.get_order_kind_display }}</li>
+                        <li><strong class="text-white">پلتفرم‌ها:</strong> {{ order.platform_labels|join:"، " }}</li>
+                        {% if invoice %}
+                            <li><strong class="text-white">شماره فاکتور:</strong> {{ invoice.invoice_number }}</li>
+                            <li><strong class="text-white">مبلغ پایه:</strong> {{ order.subtotal_amount|intcomma }} تومان</li>
+                            {% if order.vat_amount %}
+                                <li><strong class="text-white">مالیات:</strong> {{ order.vat_amount|intcomma }} تومان</li>
+                            {% endif %}
+                            <li class="fs-5 mt-2"><strong class="text-white">مبلغ قابل پرداخت:</strong> <span class="text-primary fw-bold">{{ order.total_amount|intcomma }} تومان</span></li>
+                        {% endif %}
+                    </ul>
+
+                    {% if order.status == 'pending' and invoice %}
+                        <div class="alert alert-dark border-light mb-4">
+                            موجودی کیف پول شما: <strong class="text-white">{{ wallet.balance|intcomma }} تومان</strong>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <form method="post" action="{% url 'forward_subscriptions:pay_wallet' order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success rounded-pill px-4" {% if not can_pay_wallet %}disabled{% endif %}>
+                                    پرداخت از کیف پول
+                                </button>
+                            </form>
+
+                            <form method="post" action="{% url 'forward_subscriptions:pay_gateway' order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                    پرداخت آنلاین (زرین‌پال)
+                                </button>
+                            </form>
+
+                            {% if pending_gateway %}
+                                <form method="post" action="{% url 'payment:forward_subscription_reverify' pending_gateway.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-warning rounded-pill px-4">
+                                        بررسی مجدد تراکنش درگاه
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% elif order.status == 'paid' %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'forward_subscriptions:plans' %}" class="btn btn-outline-light rounded-pill px-4">
+                                بازگشت به اشتراک‌ها
+                            </a>
+                            <a href="{% url 'broadcast:send' %}" class="btn btn-primary rounded-pill px-4">
+                                ارسال پیام به کانال‌ها
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

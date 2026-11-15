@@ -72,6 +72,11 @@ class JobListView(ListView):
 @login_required
 def eitaa_connect_token(request):
     """صفحه اتصال توکن ایتایار (گام ۱)."""
+    from product.forward.subscriptions.access import user_has_platform_access
+    if not user_has_platform_access(request.user, "eitaa"):
+        messages.warning(request, "🔒 برای اتصال و استفاده از ایتا ابتدا باید اشتراک فعال آن را تهیه کنید.")
+        return redirect("forward_subscriptions:plans")
+
     from core.models import Platform
     from product.forward.broadcast.forms import EitaaTokenForm
     from product.forward.messengers.models import BotUser
@@ -228,6 +233,11 @@ def eitaa_delete_channel(request, channel_id):
 @login_required
 def rubika_connect_phone(request):
     """گام اول اتصال به روبیکا: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
+    from product.forward.subscriptions.access import user_has_platform_access
+    if not user_has_platform_access(request.user, "rubika"):
+        messages.warning(request, "🔒 برای اتصال و استفاده از روبیکا ابتدا باید اشتراک فعال آن را تهیه کنید.")
+        return redirect("forward_subscriptions:plans")
+
     from core.models import Platform
     from product.forward.broadcast.forms import RubikaPhoneForm
     from product.forward.messengers.adapters.base import MessengerError
@@ -507,6 +517,11 @@ def rubika_delete_channel(request, channel_id):
 @login_required
 def soroush_connect_phone(request):
     """گام اول اتصال به سروش‌پلاس: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
+    from product.forward.subscriptions.access import user_has_platform_access
+    if not user_has_platform_access(request.user, "soroush"):
+        messages.warning(request, "🔒 برای اتصال و استفاده از سروش‌پلاس ابتدا باید اشتراک فعال آن را تهیه کنید.")
+        return redirect("forward_subscriptions:plans")
+
     from core.models import Platform
     from product.forward.broadcast.forms import SoroushPhoneForm
     from product.forward.messengers.adapters.base import MessengerError

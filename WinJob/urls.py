@@ -35,6 +35,7 @@ urlpatterns = [
     path('gateway/', include("django_iranian_payment.contrib.django.urls")),
     path('webhooks/', include("product.forward.messengers.urls", namespace="messengers")),
     path('broadcast/', include("product.forward.broadcast.urls", namespace='broadcast')),
+    path('forward-subscriptions/', include("product.forward.subscriptions.urls", namespace='forward_subscriptions')),
     path('', include("core.urls", namespace="core")),
 ]
 

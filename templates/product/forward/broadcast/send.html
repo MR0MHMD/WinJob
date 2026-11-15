@@ -37,13 +37,24 @@
                         <div class="mb-4">
                             <label class="form-label text-light mb-3">{{ form.channels.label }}</label>
                             <div class="row g-2">
-                                {% for checkbox in form.channels %}
+                                {% for item in form.channel_items %}
                                 <div class="col-md-6">
-                                    <div class="form-check bg-faded-dark p-2 rounded">
-                                        {{ checkbox.tag }}
-                                        <label class="form-check-label text-light" for="{{ checkbox.id_for_label }}">
-                                            {{ checkbox.choice_label }}
-                                        </label>
+                                    <div class="form-check bg-faded-dark p-2 rounded d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <input class="form-check-input" type="checkbox" name="channels"
+                                                   value="{{ item.channel.pk }}" id="id_channels_{{ item.channel.pk }}"
+                                                   {% if item.checked %}checked{% endif %}
+                                                   {% if not item.has_access %}disabled{% endif %}>
+                                            <label class="form-check-label text-light {% if not item.has_access %}opacity-50{% endif %}"
+                                                   for="id_channels_{{ item.channel.pk }}">
+                                                {{ item.channel.title }} ({{ item.channel.platform.name }})
+                                            </label>
+                                        </div>
+                                        {% if not item.has_access %}
+                                            <a href="{% url 'forward_subscriptions:plans' %}" class="badge bg-warning text-dark text-decoration-none">
+                                                🔒 نیاز به اشتراک
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}

@@ -38,6 +38,7 @@ class Invoice(models.Model):
         CAMPAIGN = 'campaign', _('فاکتور کمپین')
         WALLET = 'wallet', _('فاکتور شارژ کیف پول')
         WINDIRECT = 'windirect', _('فاکتور اشتراک وین دایرکت')
+        WINFORWARD = 'winforward', _('فاکتور اشتراک وین فوروارد')
         CONTENT_ORDER = 'content_order', _('فاکتور سفارش محتوا')
         MARKET_ORDER = 'market_order', _('فاکتور سفارش وین مارکت')  # ✅ جدید
 
@@ -93,6 +94,14 @@ class Invoice(models.Model):
         related_name='invoice',
         null=True, blank=True,
         verbose_name=_("سفارش اشتراک وین دایرکت"),
+    )
+
+    forward_subscription_order = models.OneToOneField(
+        'forward_subscriptions.ForwardSubscriptionOrder',
+        on_delete=models.PROTECT,
+        related_name='invoice',
+        null=True, blank=True,
+        verbose_name=_("سفارش اشتراک وین فوروارد"),
     )
 
     base_plan_cost = models.PositiveBigIntegerField(_("قیمت اولیهٔ پلن"), null=True, blank=True)
@@ -549,6 +558,8 @@ class Transaction(models.Model):
     class Type(models.TextChoices):
         SUBSCRIPTION_PAYMENT = "subscription_payment", _("پرداخت اشتراک از کیف پول")
         SUBSCRIPTION_GATEWAY = "subscription_gateway", _("پرداخت اشتراک از درگاه")
+        FORWARD_SUBSCRIPTION_PAYMENT = "forward_subscription_payment", _("پرداخت اشتراک وین فوروارد از کیف پول")
+        FORWARD_SUBSCRIPTION_GATEWAY = "forward_subscription_gateway", _("پرداخت اشتراک وین فوروارد از درگاه")
         # کیف پول
         DEPOSIT = "deposit", "شارژ کیف پول"
         WITHDRAW = "withdraw", "برداشت از کیف پول"
