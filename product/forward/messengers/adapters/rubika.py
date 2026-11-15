@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
+import os
 import random
+import shutil
+import subprocess
+import tempfile
+import time
 import re
 import secrets
 import string
@@ -165,7 +171,10 @@ class RubikaAdapter(MessengerAdapter):
         "https://messengerg2c4.iranlms.ir",
     ]
     TIMEOUT = 30
-    CHUNK_SIZE = 1048576  # ۱ مگابایت برای هر قطعه آپلود
+    CHUNK_SIZE = 524288  # ۵۱۲ کیلوبایت برای آپلود پایدارتر و سریع‌تر
+    _CACHED_API_URL: Optional[str] = None
+    _CACHED_API_URL_TS: float = 0.0
+    _DC_CACHE_TTL: float = 600.0
 
     DEFAULT_CLIENT = {
         "app_name": "Main",
@@ -205,19 +214,25 @@ class RubikaAdapter(MessengerAdapter):
         )
 
     def _get_api_url(self) -> str:
-        """دریافت آدرس دیتاسنتر فعال روبیکا (با لیست پشتیبان در صورت خطا).
+        """دریافت آدرس دیتاسنتر فعال روبیکا با کش ۱۰ دقیقه‌ای برای حذف تاخیر اضافی در هر ارسال.
 
         :return: آدرس URL دیتاسنتر روبیکا.
         """
         if self._api_url:
             return self._api_url
+        now = time.monotonic()
+        if self.__class__._CACHED_API_URL and (now - self.__class__._CACHED_API_URL_TS) < self._DC_CACHE_TTL:
+            self._api_url = self.__class__._CACHED_API_URL
+            return self._api_url
         try:
-            resp = self._session.get(self.DC_DISCOVERY_URL, timeout=10)
+            resp = self._session.get(self.DC_DISCOVERY_URL, timeout=8)
             resp.raise_for_status()
             payload = resp.json()
             urls = payload.get("data", {}).get("default_api_urls", [])
             if urls:
                 self._api_url = urls[0]
+                self.__class__._CACHED_API_URL = self._api_url
+                self.__class__._CACHED_API_URL_TS = now
                 return self._api_url
         except requests.RequestException:
             pass
@@ -440,12 +455,106 @@ class RubikaAdapter(MessengerAdapter):
 
         raise MessengerAPIError("فرمت فایل ورودی برای آپلود در روبیکا معتبر نیست.")
 
+    _FALLBACK_THUMB_B64 = (
+        "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcv"
+        "Jik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7"
+        "Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAgACADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEA"
+        "AAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEI"
+        "I0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4"
+        "eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo"
+        "6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQA"
+        "AQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNE"
+        "RUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3"
+        "uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDy2iiitRBRRRQA"
+        "UUUUAFFFFAH/2Q=="
+    )
+
+    @classmethod
+    def _extract_image_meta(cls, file_bytes: bytes) -> Tuple[int, int, str]:
+        """استخراج عرض، ارتفاع و تصویر بندانگشتی Base64 (thumb_inline) برای عکس در روبیکا."""
+        try:
+            from PIL import Image
+
+            with Image.open(io.BytesIO(file_bytes)) as im:
+                width, height = im.size
+                rgb_im = im.convert("RGB")
+                if height > width:
+                    new_h = 40
+                    new_w = max(1, round(new_h * width / max(1, height)))
+                else:
+                    new_w = 40
+                    new_h = max(1, round(new_w * height / max(1, width)))
+                resized = rgb_im.resize((new_w, new_h))
+                out = io.BytesIO()
+                resized.save(out, format="JPEG", quality=70)
+                thumb_b64 = base64.b64encode(out.getvalue()).decode("ascii")
+                return int(width), int(height), thumb_b64
+        except Exception:
+            return 200, 200, cls._FALLBACK_THUMB_B64
+
+    @classmethod
+    def _extract_video_meta(cls, file_bytes: bytes, ext: str = "mp4") -> Tuple[int, int, int, str]:
+        """برگرداندن سریع متادیتا و تصویر بندانگشتی استاندارد برای ویدیو و گیف بدون سربار دیسک و ffmpeg."""
+        return 480, 360, 1, cls._FALLBACK_THUMB_B64
+        ffmpeg_bin = None
+        if not ffmpeg_bin:
+            return width, height, duration, thumb_b64
+
+        tmp_video = None
+        tmp_thumb = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as vf:
+                vf.write(file_bytes)
+                tmp_video = vf.name
+            tmp_thumb = tmp_video + ".jpg"
+
+            ffprobe_bin = shutil.which("ffprobe")
+            if ffprobe_bin:
+                probe = subprocess.run(
+                    [
+                        ffprobe_bin, "-v", "error", "-select_streams", "v:0",
+                        "-show_entries", "stream=width,height,duration",
+                        "-of", "json", tmp_video,
+                    ],
+                    capture_output=True, text=True, timeout=10, check=False,
+                )
+                if probe.returncode == 0 and probe.stdout:
+                    streams = json.loads(probe.stdout).get("streams") or []
+                    if streams:
+                        width = int(streams[0].get("width") or width)
+                        height = int(streams[0].get("height") or height)
+                        dur_val = streams[0].get("duration")
+                        if dur_val:
+                            duration = max(1, int(float(dur_val)))
+
+            subprocess.run(
+                [
+                    ffmpeg_bin, "-y", "-i", tmp_video,
+                    "-ss", "00:00:00.5", "-vframes", "1",
+                    "-vf", "scale=40:-1", tmp_thumb,
+                ],
+                capture_output=True, timeout=10, check=False,
+            )
+            if os.path.exists(tmp_thumb) and os.path.getsize(tmp_thumb) > 0:
+                with open(tmp_thumb, "rb") as tf:
+                    thumb_b64 = base64.b64encode(tf.read()).decode("ascii")
+        except Exception:
+            pass
+        finally:
+            for p in (tmp_video, tmp_thumb):
+                if p and os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except OSError:
+                        pass
+        return width, height, duration, thumb_b64
+
     def _upload_file(self, file_obj: Any, default_filename: str) -> Dict[str, Any]:
         """آپلود تکه‌ای فایل به سرورهای روبیکا با استفاده از متد requestSendFile.
 
         :param file_obj: شیء فایل قابل خواندن یا بایت‌های خام.
         :param default_filename: نام پیش‌فرض فایل در صورت نبود نام یا پسوند.
-        :return: دیکشنری اطلاعات فایل آپلودشده شامل file_id، dc_id و access_hash_rec.
+        :return: دیکشنری اطلاعات فایل آپلودشده شامل file_id، dc_id، access_hash_rec و بایت‌های فایل.
         """
         file_bytes, filename = self._read_file_bytes(file_obj)
         if "." not in filename:
@@ -484,9 +593,10 @@ class RubikaAdapter(MessengerAdapter):
                 **upload_headers_base,
                 "part-number": str(index + 1),
                 "chunk-size": str(len(chunk)),
+                "Content-Type": "application/octet-stream",
             }
             try:
-                resp = requests.post(
+                resp = self._session.post(
                     upload_url,
                     data=chunk,
                     headers=headers,
@@ -518,6 +628,7 @@ class RubikaAdapter(MessengerAdapter):
             "access_hash_rec": access_hash_rec,
             "file_name": filename,
             "size": file_size,
+            "_file_bytes": file_bytes,
         }
 
     def _send_file_inline(
@@ -528,27 +639,53 @@ class RubikaAdapter(MessengerAdapter):
         rubika_type: str,
         caption: str = "",
         extra_inline: Optional[Dict[str, Any]] = None,
+        cached_file_inline: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """ساخت ساختار file_inline و فراخوانی sendMessage برای ارسال رسانه به روبیکا.
+        """ساخت ساختار دقیق file_inline بر اساس نوع رسانه و فراخوانی sendMessage در روبیکا.
 
-        :param chat_id: شناسه GUID کانال یا چت مقصد.
-        :param file_obj: شیء فایل یا بایت‌های خام رسانه.
-        :param default_filename: نام پیش‌فرض با پسوند استاندارد.
-        :param rubika_type: نوع رسانه در روبیکا (Image، Video، Music، Voice، Gif، File).
-        :param caption: متن کپشن اختیاری همراه رسانه.
-        :param extra_inline: فیلدهای تکمیلی اختیاری برای دیکشنری file_inline.
-        :return: دیکشنری حاوی message_id پیام ارسال‌شده.
+        در صورتی که cached_file_inline از آپلود کانال قبلی در همان جاب موجود باشد، بدون آپلود مجدد
+        مستقیماً از همان متادیتا استفاده می‌شود تا ارسال به کانال‌های بعدی روبیکا آنی انجام شود.
         """
-        uploaded = self._upload_file(file_obj, default_filename=default_filename)
-        file_inline: Dict[str, Any] = {
-            **uploaded,
-            "type": rubika_type,
-            "time": 1,
-            "width": 200,
-            "height": 200,
-            "music_performer": "",
-            "is_spoil": False,
-        }
+        if isinstance(cached_file_inline, dict) and cached_file_inline.get("file_id") and cached_file_inline.get("access_hash_rec"):
+            file_inline = dict(cached_file_inline)
+            file_inline["type"] = rubika_type
+        else:
+            uploaded = self._upload_file(file_obj, default_filename=default_filename)
+            file_bytes = uploaded.pop("_file_bytes", b"")
+
+            file_inline = {
+                **uploaded,
+                "type": rubika_type,
+            }
+
+            if rubika_type == "Image":
+                w, h, thumb = self._extract_image_meta(file_bytes)
+                file_inline.update({
+                    "width": w,
+                    "height": h,
+                    "thumb_inline": thumb,
+                    "is_spoil": False,
+                })
+            elif rubika_type in ("Video", "Gif"):
+                w, h, dur, thumb = self._extract_video_meta(file_bytes, ext=uploaded.get("mime", "mp4"))
+                file_inline.update({
+                    "width": w,
+                    "height": h,
+                    "time": dur,
+                    "thumb_inline": thumb,
+                    "auto_play": False if rubika_type == "Video" else True,
+                    "is_spoil": False,
+                })
+            elif rubika_type == "Music":
+                file_inline.update({
+                    "time": 1,
+                    "music_performer": "",
+                })
+            elif rubika_type == "Voice":
+                file_inline.update({
+                    "time": 1000,
+                })
+
         if extra_inline:
             file_inline.update(extra_inline)
 
@@ -566,7 +703,11 @@ class RubikaAdapter(MessengerAdapter):
             or result.get("message_id")
             or ""
         )
-        return {"message_id": str(msg_id), "file_id": uploaded["file_id"]}
+        return {
+            "message_id": str(msg_id),
+            "file_id": file_inline["file_id"],
+            "rubika_file_inline": file_inline,
+        }
 
     def send_text(self, chat_id: str, text: str, reply_markup: dict = None) -> dict:
         """ارسال پیام متنی ساده به کانال یا گفت‌وگوی روبیکا.
@@ -600,7 +741,7 @@ class RubikaAdapter(MessengerAdapter):
         :param file_id: شناسه فایل از پیش آپلودشده (در روبیکا آپلود مستقیم انجام می‌شود).
         :return: دیکشنری حاوی message_id و file_id.
         """
-        return self._send_file_inline(chat_id, photo, "photo.jpg", "Image", caption=caption)
+        return self._send_file_inline(chat_id, photo, "photo.jpg", "Image", caption=caption, cached_file_inline=file_id if isinstance(file_id, dict) else None)
 
     def send_video(self, chat_id: str, video, caption: str = "", file_id: str = None) -> dict:
         """ارسال ویدیو به کانال روبیکا همراه با کپشن اختیاری.
@@ -611,7 +752,7 @@ class RubikaAdapter(MessengerAdapter):
         :param file_id: پارامتر سازگاری با اینترفیس پایه.
         :return: دیکشنری حاوی message_id و file_id.
         """
-        return self._send_file_inline(chat_id, video, "video.mp4", "Video", caption=caption)
+        return self._send_file_inline(chat_id, video, "video.mp4", "Video", caption=caption, cached_file_inline=file_id if isinstance(file_id, dict) else None)
 
     def send_audio(self, chat_id: str, audio, caption: str = "", file_id: str = None) -> dict:
         """ارسال فایل صوتی (موزیک/پادکست) به کانال روبیکا همراه با کپشن اختیاری.
@@ -622,7 +763,7 @@ class RubikaAdapter(MessengerAdapter):
         :param file_id: پارامتر سازگاری با اینترفیس پایه.
         :return: دیکشنری حاوی message_id و file_id.
         """
-        return self._send_file_inline(chat_id, audio, "audio.mp3", "Music", caption=caption)
+        return self._send_file_inline(chat_id, audio, "audio.mp3", "Music", caption=caption, cached_file_inline=file_id if isinstance(file_id, dict) else None)
 
     def send_voice(self, chat_id: str, voice, caption: str = "", file_id: str = None) -> dict:
         """ارسال پیام صوتی (ویس) به کانال روبیکا همراه با کپشن اختیاری.
@@ -640,6 +781,7 @@ class RubikaAdapter(MessengerAdapter):
             "Voice",
             caption=caption,
             extra_inline={"time": 1000},
+            cached_file_inline=file_id if isinstance(file_id, dict) else None,
         )
 
     def send_document(self, chat_id: str, document, caption: str = "", file_id: str = None) -> dict:
@@ -651,7 +793,7 @@ class RubikaAdapter(MessengerAdapter):
         :param file_id: پارامتر سازگاری با اینترفیس پایه.
         :return: دیکشنری حاوی message_id و file_id.
         """
-        return self._send_file_inline(chat_id, document, "document.bin", "File", caption=caption)
+        return self._send_file_inline(chat_id, document, "document.bin", "File", caption=caption, cached_file_inline=file_id if isinstance(file_id, dict) else None)
 
     def send_animation(self, chat_id: str, animation, caption: str = "", file_id: str = None) -> dict:
         """ارسال گیف (انیمیشن) به کانال روبیکا همراه با کپشن اختیاری.
@@ -662,7 +804,7 @@ class RubikaAdapter(MessengerAdapter):
         :param file_id: پارامتر سازگاری با اینترفیس پایه.
         :return: دیکشنری حاوی message_id و file_id.
         """
-        return self._send_file_inline(chat_id, animation, "animation.gif", "Gif", caption=caption)
+        return self._send_file_inline(chat_id, animation, "animation.gif", "Gif", caption=caption, cached_file_inline=file_id if isinstance(file_id, dict) else None)
 
     def send_sticker(self, chat_id: str, sticker, file_id: str = None) -> dict:
         """جلوگیری از ارسال استیکر به روبیکا به دلیل عدم پشتیبانی از استیکرهای بیرونی.

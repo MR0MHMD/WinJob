@@ -1,92 +1,232 @@
-{% extends 'parent/base.html' %}
+{% extends "parent/base.html" %}
 {% load static %}
 
-{% block title %}ارسال پیام جدید | وین فوروارد{% endblock %}
+{% block title %}استودیو ارسال پیام همگانی | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/send.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card border-light shadow-sm">
-                <div class="card-header bg-dark border-light">
-                    <h4 class="text-light mb-0">🚀 ارسال پیام جدید به کانال‌ها</h4>
-                </div>
-                <div class="card-body bg-dark text-light">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label class="form-label text-light">{{ form.content_type.label }}</label>
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">استودیو ارسال پیام</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-studio-header wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-plans-header-icon" style="width:58px;height:58px;border-radius:1.15rem;background:linear-gradient(135deg,#fd5631,#5d3cf2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;">
+                <i class="bi bi-rocket-takeoff-fill"></i>
+            </div>
+            <div>
+                <h1 class="h4 text-white fw-bold mb-1">استودیو انتشار همزمان چندپلتفرمی</h1>
+                <p class="text-muted fs-xs mb-0">
+                    محتوای خود را یک‌بار بنویسید و با یک کلیک در تمام کانال‌های متصل بله، ایتا و روبیکا منتشر کنید.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'broadcast:job_list' %}" class="wf-btn wf-btn-glass">
+            <i class="bi bi-clock-history"></i> تاریخچه ارسال‌ها
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-4 wf-reveal wf-delay-1">
+            <!-- ستون راست: تنظیم محتوا و انتخاب کانال‌ها -->
+            <div class="col-lg-8">
+                <div class="wf-studio-card">
+                    <div class="wf-studio-card-header">
+                        <h5 class="text-white fw-bold mb-0 fs-6">
+                            <i class="bi bi-pencil-square text-primary me-1"></i> ۱. نوع محتوا و متن پیام
+                        </h5>
+                        <span class="badge bg-dark border border-secondary text-muted rounded-pill px-3 py-1" id="wfCharCounter">
+                            0 / 4,096 کاراکتر
+                        </span>
+                    </div>
+                    <div class="p-4">
+                        <!-- تب‌های تصویری انتخاب نوع محتوا -->
+                        <label class="text-white fw-bold fs-xs mb-2 d-block">انتخاب قالب پیام:</label>
+                        <div class="wf-content-type-pills">
+                            <button type="button" class="wf-type-pill-btn is-active" data-content-type="text">
+                                <i class="bi bi-chat-right-text-fill"></i>
+                                <span>پیام متنی</span>
+                            </button>
+                            <button type="button" class="wf-type-pill-btn" data-content-type="photo">
+                                <i class="bi bi-image-fill"></i>
+                                <span>تصویر + کپشن</span>
+                            </button>
+                            <button type="button" class="wf-type-pill-btn" data-content-type="video">
+                                <i class="bi bi-camera-reels-fill"></i>
+                                <span>ویدیو + کپشن</span>
+                            </button>
+                            <button type="button" class="wf-type-pill-btn" data-content-type="audio">
+                                <i class="bi bi-music-note-beamed"></i>
+                                <span>فایل صوتی</span>
+                            </button>
+                            <button type="button" class="wf-type-pill-btn" data-content-type="document">
+                                <i class="bi bi-file-earmark-zip-fill"></i>
+                                <span>سند / فایل</span>
+                            </button>
+                        </div>
+
+                        <div class="d-none">
                             {{ form.content_type }}
-                            {% if form.content_type.errors %}<div class="text-danger">{{ form.content_type.errors }}</div>{% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label text-light">{{ form.text.label }}</label>
+                        <!-- باکس آپلود فایل رسانه -->
+                        <div class="mb-4" id="file-upload-section" style="display: none;">
+                            <div class="wf-upload-dropzone">
+                                <i class="bi bi-cloud-arrow-up-fill fs-1 text-primary d-block mb-2"></i>
+                                <div class="text-white fw-bold fs-sm mb-1">فایل رسانه را انتخاب کنید</div>
+                                <div class="text-muted fs-xs mb-3">پشتیبانی از عکس، ویدیو، صوت و فایل تا سقف ۵۰ مگابایت</div>
+                                {{ form.file }}
+                                <div id="wfFileNameDisplay" class="text-success fs-xs fw-bold mt-2" style="display: none;"></div>
+                            </div>
+                            {% if form.file.errors %}
+                                <div class="text-danger fs-xs mt-2">{{ form.file.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- متن پیام / کپشن -->
+                        <div>
+                            <label for="{{ form.text.id_for_label }}" class="text-white fw-bold fs-xs mb-2 d-block">
+                                <i class="bi bi-body-text text-primary me-1"></i> متن پیام یا کپشن رسانه:
+                            </label>
                             {{ form.text }}
-                            <div class="form-text text-muted">حداکثر ۴۰۹۶ کاراکتر. برای عکس/ویدیو این متن به عنوان کپشن استفاده می‌شود.</div>
-                            {% if form.text.errors %}<div class="text-danger">{{ form.text.errors }}</div>{% endif %}
+                            {% if form.text.errors %}
+                                <div class="text-danger fs-xs mt-2">{{ form.text.errors }}</div>
+                            {% endif %}
                         </div>
+                    </div>
+                </div>
 
-                        <div class="mb-4" id="file-upload-section">
-                            <label class="form-label text-light">{{ form.file.label }}</label>
-                            {{ form.file }}
-                            {% if form.file.errors %}<div class="text-danger">{{ form.file.errors }}</div>{% endif %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label text-light mb-3">{{ form.channels.label }}</label>
-                            <div class="row g-2">
+                <!-- انتخاب کانال‌های مقصد همراه با لوگوی دیتابیس پلتفرم -->
+                <div class="wf-studio-card mb-0">
+                    <div class="wf-studio-card-header">
+                        <h5 class="text-white fw-bold mb-0 fs-6">
+                            <i class="bi bi-diagram-3-fill text-success me-1"></i> ۲. انتخاب کانال‌های مقصد انتشار
+                        </h5>
+                        {% if form.channel_items %}
+                            <button type="button" id="wfSelectAllChannels" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                                <i class="bi bi-check2-all"></i> انتخاب همه کانال‌های مجاز
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="p-4">
+                        {% if form.channel_items %}
+                            <div class="row g-3">
                                 {% for item in form.channel_items %}
                                 <div class="col-md-6">
-                                    <div class="form-check bg-faded-dark p-2 rounded d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <input class="form-check-input" type="checkbox" name="channels"
-                                                   value="{{ item.channel.pk }}" id="id_channels_{{ item.channel.pk }}"
-                                                   {% if item.checked %}checked{% endif %}
+                                    <label class="wf-channel-tile w-100 {% if item.checked and item.has_access %}is-selected{% endif %} {% if not item.has_access %}is-locked{% endif %}"
+                                           for="id_channels_{{ item.channel.pk }}">
+                                        <div class="d-flex align-items-center gap-3 overflow-hidden">
+                                            <input class="form-check-input wf-channel-cb mt-0 flex-shrink-0"
+                                                   type="checkbox"
+                                                   name="channels"
+                                                   value="{{ item.channel.pk }}"
+                                                   id="id_channels_{{ item.channel.pk }}"
+                                                   {% if item.checked and item.has_access %}checked{% endif %}
                                                    {% if not item.has_access %}disabled{% endif %}>
-                                            <label class="form-check-label text-light {% if not item.has_access %}opacity-50{% endif %}"
-                                                   for="id_channels_{{ item.channel.pk }}">
-                                                {{ item.channel.title }} ({{ item.channel.platform.name }})
-                                            </label>
+                                            {% if item.channel.platform.logo %}
+                                                <img src="{{ item.channel.platform.logo.url }}"
+                                                     alt="{{ item.channel.platform.name }}"
+                                                     class="wf-channel-platform-logo">
+                                            {% else %}
+                                                <div class="wf-channel-platform-logo d-flex align-items-center justify-content-center bg-dark text-white">
+                                                    <i class="bi bi-megaphone-fill"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="overflow-hidden">
+                                                <div class="text-white fw-bold fs-sm text-truncate">{{ item.channel.title }}</div>
+                                                <div class="text-muted fs-xs text-truncate">
+                                                    {{ item.channel.platform.name }}
+                                                    {% if item.channel.username %} · <span dir="ltr">@{{ item.channel.username }}</span>{% endif %}
+                                                </div>
+                                            </div>
                                         </div>
+
                                         {% if not item.has_access %}
-                                            <a href="{% url 'forward_subscriptions:plans' %}" class="badge bg-warning text-dark text-decoration-none">
+                                            <a href="{% url 'forward_subscriptions:plans' %}"
+                                               class="badge bg-warning text-dark text-decoration-none rounded-pill px-2 py-1 flex-shrink-0">
                                                 🔒 نیاز به اشتراک
                                             </a>
+                                        {% else %}
+                                            <span class="wf-badge-status is-connected py-1 px-2 flex-shrink-0">
+                                                <span class="wf-pulse-dot"></span> آماده
+                                            </span>
                                         {% endif %}
-                                    </div>
+                                    </label>
                                 </div>
                                 {% endfor %}
                             </div>
-                            {% if form.channels.errors %}<div class="text-danger">{{ form.channels.errors }}</div>{% endif %}
-                        </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-megaphone fs-1 text-muted d-block mb-2"></i>
+                                <h6 class="text-white fw-bold mb-1">هنوز کانالی متصل نکرده‌اید</h6>
+                                <p class="text-muted fs-xs mb-3">از داشبورد وین فوروارد کانال‌های بله، ایتا یا روبیکا خود را متصل کنید.</p>
+                                <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-orange">
+                                    <i class="bi bi-grid-1x2-fill"></i> رفتن به داشبورد
+                                </a>
+                            </div>
+                        {% endif %}
 
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill">
-                                ✉️ ارسال پیام
+                        {% if form.channels.errors %}
+                            <div class="text-danger fs-xs mt-3">{{ form.channels.errors }}</div>
+                        {% endif %}
+
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3 border-top border-light">
+                            <span class="text-muted fs-xs">
+                                <i class="bi bi-shield-check text-success me-1"></i> ارسال بدون تگ فوروارد و بهینه‌شده برای هر پیام‌رسان
+                            </span>
+                            <button type="submit" class="wf-btn wf-btn-orange px-5 py-3">
+                                <i class="bi bi-rocket-takeoff-fill"></i> شروع انتشار همگانی
                             </button>
                         </div>
-                    </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ستون چپ: شبیه‌ساز موبایل پیش‌نمایش زنده -->
+            <div class="col-lg-4">
+                <div class="position-sticky" style="top: 90px;">
+                    <div class="wf-phone-frame">
+                        <div class="wf-phone-notch"></div>
+                        <div class="wf-phone-screen">
+                            <div class="d-flex align-items-center gap-2 pb-2 mb-3 border-bottom border-light">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:36px;height:36px;background:linear-gradient(135deg,#fd5631,#5d3cf2);color:#fff;">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="text-white fw-bold fs-xs">پیش‌نمایش کانال شما</div>
+                                    <div class="text-muted" style="font-size:0.68rem;">نمایش زنده خروجی پیام</div>
+                                </div>
+                            </div>
+
+                            <div class="wf-chat-bubble">
+                                <div id="wfPreviewMediaBadge" class="mb-2 p-2 rounded-3 text-center fs-xs fw-bold"
+                                     style="display:none;background:rgba(253,86,49,0.16);color:#fd5631;border:1px dashed rgba(253,86,49,0.4);">
+                                    📎 پیوست رسانه
+                                </div>
+                                <div id="wfPreviewText" style="white-space: pre-wrap;">متن یا کپشن پیام شما به صورت زنده در این حباب نمایش داده می‌شود...</div>
+                                <div class="d-flex align-items-center justify-content-end gap-1 mt-2 text-muted" style="font-size:0.68rem;">
+                                    <span>الان</span>
+                                    <i class="bi bi-check2-all text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </form>
 
-<script>
-    const contentTypeSelect = document.getElementById('id_content_type');
-    const fileSection = document.getElementById('file-upload-section');
-    
-    function toggleFileUpload() {
-        if (contentTypeSelect.value === 'text') {
-            fileSection.style.display = 'none';
-        } else {
-            fileSection.style.display = 'block';
-        }
-    }
-    
-    contentTypeSelect.addEventListener('change', toggleFileUpload);
-    document.addEventListener('DOMContentLoaded', toggleFileUpload);
-</script>
+</div>
 {% endblock %}

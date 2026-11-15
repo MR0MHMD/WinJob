@@ -269,6 +269,7 @@ class Invoice(models.Model):
         day = str(created_at.day).zfill(2)
         prefix_map = {
             cls.Type.WINDIRECT: 'WDR',
+            cls.Type.WINFORWARD: 'WFW',
             cls.Type.CAMPAIGN: 'CMP',
             cls.Type.WALLET: 'WAL',
             cls.Type.CONTENT_ORDER: 'CTO',
@@ -723,6 +724,8 @@ class Transaction(models.Model):
             self.Type.GATEWAY_PAYMENT,
             self.Type.SUBSCRIPTION_PAYMENT,
             self.Type.SUBSCRIPTION_GATEWAY,
+            self.Type.FORWARD_SUBSCRIPTION_PAYMENT,
+            self.Type.FORWARD_SUBSCRIPTION_GATEWAY,
             self.Type.MARKET_ORDER_PAYMENT,
             self.Type.SUPPLIER_WITHDRAWAL,
         ]

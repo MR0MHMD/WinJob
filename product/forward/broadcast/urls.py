@@ -6,9 +6,15 @@ from . import views
 app_name = "broadcast"
 
 urlpatterns = [
+    path("", views.forward_dashboard, name="dashboard"),
     path("send/", views.send_broadcast, name="send"),
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path("job/<int:job_id>/", views.job_detail, name="job_detail"),
+
+    # Bale web panel
+    path("bale/connect/", views.bale_connect, name="bale_connect"),
+    path("bale/channels/", views.bale_channels, name="bale_channels"),
+    path("bale/channels/<int:channel_id>/delete/", views.bale_delete_channel, name="bale_delete_channel"),
 
     # Eitaa web panel
     path("eitaa/connect/", views.eitaa_connect_token, name="eitaa_connect_token"),
@@ -24,11 +30,4 @@ urlpatterns = [
     path("rubika/channels/sync/", views.rubika_sync_channels, name="rubika_sync_channels"),
     path("rubika/channels/<int:channel_id>/delete/", views.rubika_delete_channel, name="rubika_delete_channel"),
 
-    # Soroush Plus web panel
-    path("soroush/connect/", views.soroush_connect_phone, name="soroush_connect_phone"),
-    path("soroush/verify/", views.soroush_verify_code, name="soroush_verify_code"),
-    path("soroush/channels/", views.soroush_channels, name="soroush_channels"),
-    path("soroush/channels/add/", views.soroush_add_channel, name="soroush_add_channel"),
-    path("soroush/channels/sync/", views.soroush_sync_channels, name="soroush_sync_channels"),
-    path("soroush/channels/<int:channel_id>/delete/", views.soroush_delete_channel, name="soroush_delete_channel"),
 ]

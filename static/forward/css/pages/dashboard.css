@@ -1,0 +1,507 @@
+/* ==========================================================================
+   WinForward Ultra-Luxury Dashboard Stylesheet
+   (static/forward/css/pages/dashboard.css)
+   طراحی اختصاصی، چشم‌نواز و نئونی-شیشه‌ای داشبورد فرماندهی وین‌فوروارد
+   ========================================================================== */
+
+/* ── ۱. بنر فرماندهی قهرمان (Hero Command Center) ── */
+.wf-hero-command {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 1.75rem;
+    padding: 2.1rem 2.25rem;
+    margin-bottom: 2.25rem;
+    background:
+        radial-gradient(circle at 12% 20%, rgba(253, 86, 49, 0.22) 0%, transparent 48%),
+        radial-gradient(circle at 88% 80%, rgba(93, 60, 242, 0.24) 0%, transparent 52%),
+        radial-gradient(circle at 50% 0%, rgba(7, 201, 139, 0.12) 0%, transparent 45%),
+        linear-gradient(145deg, rgba(33, 28, 49, 0.94) 0%, rgba(20, 17, 31, 0.97) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 26px 55px -18px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.wf-hero-command::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: radial-gradient(ellipse at center, black 35%, transparent 85%);
+    pointer-events: none;
+}
+
+.wf-hero-command::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #fd5631, #fdbc31, #07c98b, #5d3cf2);
+}
+
+.wf-hero-avatar-ring {
+    position: relative;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    padding: 3.5px;
+    background: linear-gradient(135deg, #fd5631, #fdbc31, #5d3cf2);
+    box-shadow: 0 12px 30px -6px rgba(253, 86, 49, 0.55);
+    flex-shrink: 0;
+}
+
+.wf-hero-avatar-ring img,
+.wf-hero-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #191528;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2rem;
+    border: 3px solid #191528;
+}
+
+.wf-avatar-online-dot {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #07c98b;
+    border: 3px solid #191528;
+    box-shadow: 0 0 12px #07c98b;
+}
+
+.wf-hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.32rem 0.85rem;
+    border-radius: 50rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: rgba(253, 86, 49, 0.15);
+    border: 1px solid rgba(253, 86, 49, 0.35);
+    color: #ff9d85;
+    margin-bottom: 0.55rem;
+}
+
+.wf-hero-platform-stack {
+    display: inline-flex;
+    align-items: center;
+    direction: ltr;
+    padding: 0.25rem 0.6rem;
+    border-radius: 50rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wf-hero-platform-stack img {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #1b172a;
+    margin-left: -6px;
+}
+.wf-hero-platform-stack img:first-child {
+    margin-left: 0;
+}
+
+/* ── ۲. کارت‌های آماری نئونی-شیشه‌ای (KPI Stat Cards) ── */
+.wf-stat-card {
+    position: relative;
+    background: linear-gradient(160deg, rgba(35, 30, 52, 0.78) 0%, rgba(22, 19, 34, 0.88) 100%);
+    border-radius: 1.5rem;
+    padding: 1.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    backdrop-filter: blur(14px);
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.2, 0.85, 0.25, 1);
+    box-shadow: 0 16px 35px -15px rgba(0, 0, 0, 0.5);
+}
+
+.wf-stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    opacity: 0.85;
+    transition: height 0.3s ease;
+}
+
+.wf-stat-card.accent-orange::before { background: linear-gradient(90deg, #fd5631, #fdbc31); }
+.wf-stat-card.accent-emerald::before { background: linear-gradient(90deg, #07c98b, #34d399); }
+.wf-stat-card.accent-purple::before { background: linear-gradient(90deg, #5d3cf2, #a78bfa); }
+.wf-stat-card.accent-blue::before { background: linear-gradient(90deg, #3c76f2, #60a5fa); }
+
+.wf-stat-card:hover {
+    transform: translateY(-7px);
+    border-color: rgba(253, 86, 49, 0.42);
+    box-shadow: 0 24px 48px -14px rgba(0, 0, 0, 0.65);
+}
+
+.wf-stat-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    transition: transform 0.35s ease;
+}
+
+.wf-stat-card:hover .wf-stat-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.wf-stat-icon.orange {
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.24), rgba(253, 188, 49, 0.16));
+    color: #fd5631;
+    box-shadow: 0 10px 22px -8px rgba(253, 86, 49, 0.45);
+}
+.wf-stat-icon.emerald {
+    background: linear-gradient(135deg, rgba(7, 201, 139, 0.24), rgba(16, 185, 129, 0.14));
+    color: #07c98b;
+    box-shadow: 0 10px 22px -8px rgba(7, 201, 139, 0.45);
+}
+.wf-stat-icon.purple {
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.28), rgba(139, 92, 246, 0.16));
+    color: #a78bfa;
+    box-shadow: 0 10px 22px -8px rgba(93, 60, 242, 0.45);
+}
+.wf-stat-icon.blue {
+    background: linear-gradient(135deg, rgba(60, 118, 242, 0.25), rgba(99, 145, 245, 0.15));
+    color: #6391f5;
+    box-shadow: 0 10px 22px -8px rgba(60, 118, 242, 0.45);
+}
+
+.wf-stat-value {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.wf-stat-label {
+    color: #a39eb5;
+    font-size: 0.86rem;
+    font-weight: 600;
+    margin-top: 0.3rem;
+}
+
+/* ── ۳. ویترین ۴ پلتفرم با لوگوی دیتابیس و حالت سبز درخشان (Platform Showcase Cards) ── */
+.wf-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.1rem 1.5rem;
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.028);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    margin-bottom: 1.35rem;
+}
+
+.wf-platform-hub-card {
+    position: relative;
+    border-radius: 1.65rem;
+    padding: 1.6rem 1.45rem;
+    background: linear-gradient(165deg, rgba(35, 30, 50, 0.9) 0%, rgba(20, 17, 30, 0.95) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.38s cubic-bezier(0.2, 0.85, 0.25, 1);
+    box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.6);
+}
+
+.wf-platform-hub-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.wf-platform-hub-card:hover {
+    transform: translateY(-8px);
+}
+
+/* حالت آماده اتصال (دارای اشتراک ولی متصل نشده) */
+.wf-platform-hub-card.is-subscribed-pending {
+    border-color: rgba(253, 188, 49, 0.42);
+    background:
+        radial-gradient(circle at top right, rgba(253, 188, 49, 0.14), transparent 55%),
+        linear-gradient(165deg, rgba(36, 30, 48, 0.92) 0%, rgba(21, 18, 32, 0.96) 100%);
+    box-shadow: 0 18px 40px -16px rgba(253, 188, 49, 0.22);
+}
+.wf-platform-hub-card.is-subscribed-pending::before {
+    height: 5px;
+    background: linear-gradient(90deg, #fdbc31, #fd5631);
+}
+
+/* حالت متصل شده -> کارت کاملاً سبز زمردی و درخشان! */
+.wf-platform-hub-card.is-connected {
+    border-color: rgba(7, 201, 139, 0.78) !important;
+    background:
+        radial-gradient(circle at top right, rgba(7, 201, 139, 0.24) 0%, transparent 58%),
+        radial-gradient(circle at bottom left, rgba(5, 150, 105, 0.14) 0%, transparent 55%),
+        linear-gradient(165deg, rgba(16, 42, 38, 0.92) 0%, rgba(16, 24, 32, 0.96) 100%) !important;
+    box-shadow:
+        0 22px 48px -12px rgba(7, 201, 139, 0.34),
+        inset 0 0 32px rgba(7, 201, 139, 0.08);
+}
+.wf-platform-hub-card.is-connected::before {
+    height: 5px;
+    background: linear-gradient(90deg, #07c98b, #34d399, #10b981);
+}
+.wf-platform-hub-card.is-connected:hover {
+    border-color: #10f5a8 !important;
+    box-shadow: 0 28px 56px -10px rgba(7, 201, 139, 0.48);
+}
+
+/* حالت بدون اشتراک (قفل) */
+.wf-platform-hub-card.is-locked {
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.wf-platform-logo-box {
+    width: 66px;
+    height: 66px;
+    border-radius: 1.35rem;
+    padding: 3.5px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.05));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.55);
+    transition: transform 0.35s ease;
+}
+
+.wf-platform-hub-card:hover .wf-platform-logo-box {
+    transform: scale(1.06);
+}
+
+.wf-platform-hub-card.is-connected .wf-platform-logo-box {
+    background: linear-gradient(135deg, #07c98b, #34d399);
+    box-shadow: 0 12px 28px -6px rgba(7, 201, 139, 0.6);
+}
+
+.wf-platform-hub-card.is-subscribed-pending .wf-platform-logo-box {
+    background: linear-gradient(135deg, #fdbc31, #fd5631);
+    box-shadow: 0 12px 28px -6px rgba(253, 188, 49, 0.45);
+}
+
+.wf-platform-logo-box img {
+    width: 100%;
+    height: 100%;
+    border-radius: 1.1rem;
+    object-fit: cover;
+    background: #171424;
+}
+
+.wf-platform-logo-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 1.1rem;
+    background: #1b172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: #fff;
+}
+
+.wf-platform-check-badge {
+    position: absolute;
+    bottom: -5px;
+    left: -5px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #07c98b;
+    color: #fff;
+    border: 2.5px solid #131f1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 12px rgba(7, 201, 139, 0.75);
+}
+
+.wf-platform-meta-box {
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 1.15rem;
+    padding: 0.95rem 1.05rem;
+    margin: 1.1rem 0;
+}
+
+.wf-platform-hub-card.is-connected .wf-platform-meta-box {
+    background: rgba(7, 201, 139, 0.11);
+    border-color: rgba(7, 201, 139, 0.34);
+}
+
+.wf-channel-mini-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 50rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── ۴. نوار دسترسی سریع تصویری با لوگوی دیتابیس پلتفرم‌ها (Quick Launch Dock) ── */
+.wf-dock-tile {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    padding: 1.15rem 0.9rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    color: #fff !important;
+    text-decoration: none !important;
+    height: 100%;
+    transition: all 0.28s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.wf-dock-tile:hover {
+    background: linear-gradient(145deg, rgba(253, 86, 49, 0.16), rgba(93, 60, 242, 0.16));
+    border-color: rgba(253, 86, 49, 0.55);
+    transform: translateY(-5px);
+    box-shadow: 0 14px 30px -10px rgba(253, 86, 49, 0.4);
+}
+
+.wf-dock-tile-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.95rem;
+    object-fit: cover;
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.wf-dock-tile-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.22), rgba(93, 60, 242, 0.22));
+    color: #fd5631;
+}
+
+/* ── ۵. کارت‌های تحلیلی و ردیف‌های آخرین فعالیت‌ها ── */
+.wf-dashboard-card {
+    background: linear-gradient(160deg, rgba(33, 28, 49, 0.72) 0%, rgba(21, 18, 32, 0.86) 100%);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+}
+
+.wf-dashboard-card:hover {
+    border-color: rgba(253, 86, 49, 0.32);
+}
+
+.wf-dashboard-card-header {
+    background: rgba(255, 255, 255, 0.025);
+    padding: 1.2rem 1.55rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.wf-chart-container {
+    background: rgba(13, 11, 22, 0.55);
+    border-radius: 1.2rem;
+    padding: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wf-chart-container canvas {
+    max-height: 280px;
+    width: 100%;
+}
+
+.wf-job-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    background: rgba(255, 255, 255, 0.026);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 1.1rem;
+    margin-bottom: 0.7rem;
+    transition: all 0.25s ease;
+    text-decoration: none !important;
+}
+
+.wf-job-row:hover {
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(7, 201, 139, 0.45);
+    transform: translateX(-5px);
+}
+
+.wf-guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.05rem 1.2rem;
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.032);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    margin-bottom: 0.9rem;
+}
+
+.wf-guide-step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 0.85rem;
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    color: #fff;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}

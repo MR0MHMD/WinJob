@@ -219,12 +219,21 @@ def create_forward_order_with_invoice(
         user=user,
         forward_subscription_order=order,
         base_plan_cost=quote["subtotal_amount"],
+        plan_discount_amount=0,
         plan_cost=quote["subtotal_amount"],
         plan_vat=quote["vat_amount"],
-        tax_amount=quote["vat_amount"],
+        discount_amount=0,
+        total_amount=quote["subtotal_amount"],
+        total_vat=quote["vat_amount"],
         payable_amount=quote["total_amount"],
+        base_commission=quote["subtotal_amount"],
+        commission=quote["subtotal_amount"],
         description=f"اشتراک وین فوروارد ({plan.name}) — پلتفرم‌ها: {platform_names}",
     )
+    invoice.invoice_number = Invoice.generate_invoice_number(
+        invoice.pk, invoice.created_at, Invoice.Type.WINFORWARD
+    )
+    invoice.save(update_fields=["invoice_number"])
     return order, invoice
 
 

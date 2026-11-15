@@ -11,7 +11,6 @@ from product.forward.messengers.adapters.registry import get_adapter
 DEEP_LINK_PATTERNS = {
     "bale": "https://ble.ir/{bot}?start={payload}",
     "telegram": "https://t.me/{bot}?start={payload}",
-    "soroush": "https://splus.ir/{bot}?start={payload}",
     "rubika": "https://rubika.ir/{bot}?start={payload}",
 }
 

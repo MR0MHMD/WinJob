@@ -2,7 +2,9 @@
 
 import logging
 
+import threading
 from django.core.files.base import ContentFile
+from django.db import close_old_connections
 from django.utils import timezone
 
 from product.forward.broadcast.models import BroadcastJob, BroadcastMessage, BroadcastTarget
@@ -16,18 +18,17 @@ _PLATFORM_FA_NAMES = {
     "eitaa": "ایتا",
     "telegram": "تلگرام",
     "rubika": "روبیکا",
-    "soroush": "سروش",
 }
 
-_PLATFORM_ORDER = ["bale", "eitaa", "telegram", "rubika", "soroush"]
+_PLATFORM_ORDER = ["bale", "eitaa", "telegram", "rubika"]
 
 
 def _platform_fa(slug: str) -> str:
     return _PLATFORM_FA_NAMES.get(slug, slug)
 
 
-def _download_external_file(source_platform: str, source_file_id: str) -> bytes:
-    """دانلود فایل از پلتفرم دیگر (فعلاً فقط بله)."""
+def _download_external_file(source_platform: str, source_file_id: str) -> tuple[bytes, str]:
+    """دانلود فایل از پلتفرم دیگر (فعلاً فقط بله) و بازگرداندن بایت‌ها همراه با مسیر فایل."""
     if source_platform == "bale":
         from product.forward.messengers.adapters.bale import BaleAdapter
         bale = BaleAdapter()
@@ -35,12 +36,26 @@ def _download_external_file(source_platform: str, source_file_id: str) -> bytes:
         file_path = (file_info or {}).get("file_path")
         if not file_path:
             raise MessengerAPIError("پاسخ getFile از بله فاقد file_path است.")
-        return bale.download_file(file_path)
+        return bale.download_file(file_path), str(file_path)
     raise MessengerAPIError(f"دانلود از پلتفرم «{_platform_fa(source_platform)}» پشتیبانی نمی‌شود.")
 
 
-def _make_filename(message) -> str:
-    """ساخت نام فایل با پسوند صحیح."""
+def _make_filename(message, downloaded_file_path: str = "") -> str:
+    """ساخت نام فایل با حفظ نام و پسوند اصلی فایل در صورت موجود بودن."""
+    import os
+
+    saved_name = (message.platform_file_ids or {}).get("bale_file_name") or ""
+    saved_name = os.path.basename(str(saved_name).strip())
+    if saved_name and "." in saved_name:
+        return saved_name
+
+    if downloaded_file_path and "." in os.path.basename(downloaded_file_path):
+        real_ext = os.path.basename(downloaded_file_path).rsplit(".", 1)[-1].lower()
+        if real_ext and len(real_ext) <= 8 and real_ext.isalnum():
+            if saved_name:
+                return f"{saved_name}.{real_ext}"
+            return f"forwarded_{message.pk}.{real_ext}"
+
     ext_map = {
         "photo": "jpg",
         "video": "mp4",
@@ -51,6 +66,8 @@ def _make_filename(message) -> str:
         "sticker": "webp",
     }
     ext = ext_map.get(message.content_type, "bin")
+    if saved_name:
+        return f"{saved_name}.{ext}"
     return f"forwarded_{message.pk}.{ext}"
 
 
@@ -131,20 +148,58 @@ class ProgressTracker:
 # ============================================================
 
 
+def enqueue_dispatch_job(job_id: int, progress_chat_id: str = None) -> None:
+    """قرار دادن عملیات ارسال همگانی در صف پس‌زمینه (سازگار با gevent و threading بدون نیاز به Redis).
+
+    با اجرای غیرمسدودکننده، درخواست HTTP وب‌هوک بله و پنل وب بلافاصله آزاد می‌شود و از بروز خطای Timeout
+    یا ارسال تکراری وب‌هوک جلوگیری می‌گردد.
+
+    :param job_id: شناسه جاب ارسال (BroadcastJob.pk).
+    :param progress_chat_id: شناسه چت کاربر در بله جهت ارسال و ویرایش پیام پیشرفت (اختیاری).
+    """
+    def _background_runner():
+        close_old_connections()
+        try:
+            dispatch_job(job_id, progress_chat_id=progress_chat_id)
+        except Exception as exc:
+            logger.exception(f"Background dispatch_job failed for job {job_id}: {exc}")
+        finally:
+            close_old_connections()
+
+    try:
+        import gevent
+        from gevent import monkey
+
+        if monkey.is_module_patched("socket"):
+            gevent.spawn(_background_runner)
+            return
+    except ImportError:
+        pass
+
+    worker_thread = threading.Thread(
+        target=_background_runner,
+        name=f"winforward-job-{job_id}",
+        daemon=True,
+    )
+    worker_thread.start()
+
+
 def dispatch_job(job_id: int, progress_chat_id: str = None) -> dict:
-    """پردازش یک جاب ارسال."""
+    """پردازش یک جاب ارسال همگانی به تمامی کانال‌های هدف."""
+    close_old_connections()
     try:
         job = BroadcastJob.objects.select_related("message").get(pk=job_id)
     except BroadcastJob.DoesNotExist:
         logger.error(f"Job {job_id} not found.")
         return {"ok": False, "error": "Job not found"}
 
-    if job.is_finished:
-        return {"ok": False, "error": "Job already finished"}
+    if job.is_finished or job.status == BroadcastJob.Status.RUNNING:
+        return {"ok": False, "error": "Job already running or finished"}
 
     job.status = BroadcastJob.Status.RUNNING
     job.started_at = timezone.now()
-    job.save(update_fields=["status", "started_at"])
+    job.total_targets = job.targets.count()
+    job.save(update_fields=["status", "started_at", "total_targets"])
 
     message = job.message
     all_targets = list(
@@ -158,6 +213,8 @@ def dispatch_job(job_id: int, progress_chat_id: str = None) -> dict:
     context = {
         "bale_file_id": message.platform_file_ids.get("bale"),
         "downloaded_file_bytes": None,
+        "downloaded_file_path": "",
+        "rubika_file_inline": None,
     }
 
     tracker = None
@@ -237,21 +294,6 @@ def _get_adapter_for_channel(channel):
             private_key=session_data.get("private_key"),
         )
 
-    if slug == "soroush":
-        from product.forward.messengers.models import BotUser
-
-        soroush_bot_user = BotUser.objects.filter(
-            user=channel.user, platform=channel.platform
-        ).first()
-
-        if not soroush_bot_user or not soroush_bot_user.has_soroush_session:
-            raise MessengerAPIError(
-                f"نشست سروش‌پلاس برای کاربر {channel.user.phone_number} ثبت یا تایید نشده است. "
-                "لطفاً ابتدا از پنل وب وارد حساب سروش‌پلاس خود شوید."
-            )
-
-        session_data = soroush_bot_user.session_data or {}
-        return get_adapter(slug, session_string=session_data.get("string_session"))
 
     return get_adapter(slug)
 
@@ -289,7 +331,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
         new_file_id_to_cache = None
 
         # ۱. file_id کش‌شده (فقط برای پلتفرم‌هایی که پشتیبانی می‌کنن مثل بله)
-        if cached_file_id and platform_slug not in ("eitaa", "rubika", "soroush"):
+        if cached_file_id and platform_slug not in ("eitaa", "rubika"):
             logger.info(f"[{platform_slug}] Using cached file_id for msg {message.pk}")
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, None,
@@ -301,10 +343,13 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             if tracker:
                 tracker.start_upload(platform_slug)
             logger.info(f"[{platform_slug}] Uploading physical file for msg {message.pk}")
+            rubika_cached = context.get("rubika_file_inline") if platform_slug == "rubika" else None
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, message.file,
-                message.text, file_id=None,
+                message.text, file_id=rubika_cached,
             )
+            if platform_slug == "rubika" and result.get("rubika_file_inline"):
+                context["rubika_file_inline"] = result["rubika_file_inline"]
             new_file_id_to_cache = result.get("file_id")
 
         # ۳. فایل بین‌پلتفرمی (دانلود از بله)
@@ -319,25 +364,34 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
                 if tracker:
                     tracker.start_download()
                 logger.info(f"[{platform_slug}] Downloading from bale for msg {message.pk}")
-                context["downloaded_file_bytes"] = _download_external_file("bale", bale_file_id)
+                file_bytes, remote_path = _download_external_file("bale", bale_file_id)
+                context["downloaded_file_bytes"] = file_bytes
+                context["downloaded_file_path"] = remote_path
 
             downloaded_file_bytes = context["downloaded_file_bytes"]
+            resolved_filename = _make_filename(message, context.get("downloaded_file_path", ""))
 
             # 🔑 ارسال فایل بدون هیچ تبدیل و دستکاری (خود ایتا هندل می‌کند)
             if tracker:
                 tracker.start_upload(platform_slug)
 
             logger.info(
-                f"[{platform_slug}] Uploading {len(downloaded_file_bytes)} bytes for msg {message.pk}"
+                f"[{platform_slug}] Uploading {len(downloaded_file_bytes)} bytes ({resolved_filename}) for msg {message.pk}"
             )
-            file_obj = ContentFile(downloaded_file_bytes, name=_make_filename(message))
+            send_content_type = message.content_type
+            if send_content_type == "document" and resolved_filename.lower().endswith((".mp3", ".m4a", ".wav", ".flac", ".aac")):
+                send_content_type = "audio"
+            file_obj = ContentFile(downloaded_file_bytes, name=resolved_filename)
+            rubika_cached = context.get("rubika_file_inline") if platform_slug == "rubika" else None
             result = adapter.send_media(
-                target.channel.chat_id, message.content_type, file_obj,
-                message.text, file_id=None,
+                target.channel.chat_id, send_content_type, file_obj,
+                message.text, file_id=rubika_cached,
             )
+            if platform_slug == "rubika" and result.get("rubika_file_inline"):
+                context["rubika_file_inline"] = result["rubika_file_inline"]
 
         # کش file_id جدید (فقط برای پلتفرم‌های دارای file_id)
-        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika", "soroush"):
+        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika"):
             message.platform_file_ids[platform_slug] = new_file_id_to_cache
             message.save(update_fields=["platform_file_ids"])
             logger.info(f"[{platform_slug}] Cached file_id for msg {message.pk}")

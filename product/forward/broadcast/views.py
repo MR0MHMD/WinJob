@@ -1,19 +1,68 @@
-"""ویوهای پنل وب وین فوروارد."""
+"""ویوهای پنل وب وین فوروارد (همراه با ارسال لوگوهای پلتفرم از دیتابیس و داده‌های تحلیلی داشبورد)."""
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from datetime import timedelta
+import json
+import jdatetime
 from django.contrib import messages
-from product.forward.broadcast.forms import BroadcastSendForm
-from product.forward.broadcast.models import BroadcastJob, BroadcastTarget
-from product.forward.broadcast.services.dispatcher import dispatch_job
-from django.views.generic import ListView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
+from django.views.generic import ListView
+
+from product.forward.broadcast.forms import BroadcastSendForm
+from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
+from product.forward.broadcast.services.dispatcher import dispatch_job, enqueue_dispatch_job
+
+
+def _get_forward_platforms_map() -> dict:
+    """واکشی دیکشنری پلتفرم‌های وین‌فوروارد از دیتابیس (شامل فیلد logo) بر اساس اسلاگ."""
+    from core.models import Platform
+
+    qs = Platform.objects.filter(slug__in=["bale", "eitaa", "rubika"])
+    return {p.slug: p for p in qs}
+
+
+def _format_persian_date() -> str:
+    """تولید رشته تاریخ شمسی خوانا مشابه داشبورد وین‌دایرکت و تبلیغ‌دهندگان."""
+    today = jdatetime.date.today()
+    persian_date = today.strftime("%A %d %B %Y")
+    weekdays = {
+        "Saturday": "شنبه",
+        "Sunday": "یکشنبه",
+        "Monday": "دوشنبه",
+        "Tuesday": "سه‌شنبه",
+        "Wednesday": "چهارشنبه",
+        "Thursday": "پنجشنبه",
+        "Friday": "جمعه",
+    }
+    months = {
+        "Farvardin": "فروردین",
+        "Ordibehesht": "اردیبهشت",
+        "Khordad": "خرداد",
+        "Tir": "تیر",
+        "Mordad": "مرداد",
+        "Shahrivar": "شهریور",
+        "Mehr": "مهر",
+        "Aban": "آبان",
+        "Azar": "آذر",
+        "Dey": "دی",
+        "Bahman": "بهمن",
+        "Esfand": "اسفند",
+    }
+    for en, fa in weekdays.items():
+        persian_date = persian_date.replace(en, fa)
+    for en, fa in months.items():
+        persian_date = persian_date.replace(en, fa)
+    return persian_date
+
 
 @login_required
 def send_broadcast(request):
-    """صفحه ارسال پیام جدید به کانال‌ها از طریق پنل وب."""
+    """صفحه استودیو ارسال پیام همگانی به کانال‌های متصل از طریق پنل وب."""
+    nav_platforms = _get_forward_platforms_map()
     if request.method == "POST":
         form = BroadcastSendForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
@@ -21,47 +70,88 @@ def send_broadcast(request):
             message.user = request.user
             message.save()
 
-            job = BroadcastJob.objects.create(message=message)
-            selected_channels = form.cleaned_data["channels"]
+            selected_channels = list(form.cleaned_data["channels"])
+            job = BroadcastJob.objects.create(
+                message=message,
+                total_targets=len(selected_channels),
+                status=BroadcastJob.Status.PENDING,
+            )
 
             for channel in selected_channels:
                 BroadcastTarget.objects.create(job=job, channel=channel)
 
-            dispatch_job(job.pk)
-            job.refresh_from_db()
-
-            if job.status == BroadcastJob.Status.DONE:
-                messages.success(request, f"✅ پیام با موفقیت به {job.success_count} کانال ارسال شد.")
-            else:
-                messages.warning(request, f"⚠️ ارسال انجام شد: {job.success_count} موفق، {job.failed_count} ناموفق.")
+            enqueue_dispatch_job(job.pk)
+            messages.info(
+                request,
+                f"🚀 پیام شما در صف ارسال پس‌زمینه قرار گرفت و در حال ارسال به {len(selected_channels)} کانال است.",
+            )
 
             return redirect("broadcast:job_detail", job_id=job.pk)
     else:
         form = BroadcastSendForm(user=request.user)
 
-    return render(request, "product/forward/broadcast/send.html", {"form": form})
+    return render(
+        request,
+        "product/forward/broadcast/send.html",
+        {
+            "form": form,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def job_detail(request, job_id):
-    """نمایش جزئیات یک جاب و وضعیت ارسال به هر کانال."""
-    job = get_object_or_404(BroadcastJob, pk=job_id, message__user=request.user)
-    targets = job.targets.select_related("channel").all()
-    return render(request, "product/forward/broadcast/job_detail.html", {"job": job, "targets": targets})
+    """نمایش جزئیات یک عملیات ارسال همگانی و وضعیت تحویل به تفکیک هر کانال."""
+    nav_platforms = _get_forward_platforms_map()
+    job = get_object_or_404(BroadcastJob.objects.select_related("message"), pk=job_id, message__user=request.user)
+    targets = job.targets.select_related("channel", "channel__platform").all()
+    total_targets = job.total_targets or targets.count()
+    success_rate = int(round((job.success_count / total_targets) * 100)) if total_targets > 0 else 0
+
+    return render(
+        request,
+        "product/forward/broadcast/job_detail.html",
+        {
+            "job": job,
+            "targets": targets,
+            "success_rate": success_rate,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
-@method_decorator(login_required, name='dispatch')
+@method_decorator(login_required, name="dispatch")
 class JobListView(ListView):
-    """نمایش تاریخچه جاب‌های ارسال کاربر."""
+    """نمایش تاریخچه عملیات‌های ارسال همگانی کاربر به همراه آمار کلی."""
+
     model = BroadcastJob
     template_name = "product/forward/broadcast/job_list.html"
     context_object_name = "jobs"
     paginate_by = 15
 
     def get_queryset(self):
-        """فقط جاب‌های مربوط به کاربر لاگین شده را برمی‌گرداند."""
-        return BroadcastJob.objects.filter(message__user=self.request.user).select_related("message").order_by(
-            "-created_at")
+        """واکشی جاب‌های مربوط به کاربر لاگین‌شده به همراه کانال‌ها و پلتفرم‌های مقصد."""
+        return (
+            BroadcastJob.objects.filter(message__user=self.request.user)
+            .select_related("message")
+            .prefetch_related("targets__channel__platform")
+            .order_by("-created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        """افزودن آمار کلی ارسال‌ها و لوگوهای پلتفرم به کانتکست صفحه تاریخچه."""
+        ctx = super().get_context_data(**kwargs)
+        ctx["nav_platforms"] = _get_forward_platforms_map()
+        qs = BroadcastJob.objects.filter(message__user=self.request.user)
+        agg = qs.aggregate(
+            total_sent=Sum("success_count"),
+            total_failed=Sum("failed_count"),
+        )
+        ctx["total_jobs_count"] = qs.count()
+        ctx["total_sent_count"] = agg["total_sent"] or 0
+        ctx["total_failed_count"] = agg["total_failed"] or 0
+        return ctx
 
 
 # ============================================================
@@ -73,6 +163,7 @@ class JobListView(ListView):
 def eitaa_connect_token(request):
     """صفحه اتصال توکن ایتایار (گام ۱)."""
     from product.forward.subscriptions.access import user_has_platform_access
+
     if not user_has_platform_access(request.user, "eitaa"):
         messages.warning(request, "🔒 برای اتصال و استفاده از ایتا ابتدا باید اشتراک فعال آن را تهیه کنید.")
         return redirect("forward_subscriptions:plans")
@@ -81,14 +172,13 @@ def eitaa_connect_token(request):
     from product.forward.broadcast.forms import EitaaTokenForm
     from product.forward.messengers.models import BotUser
 
-    eitaa_platform = Platform.objects.filter(slug="eitaa").first()
+    nav_platforms = _get_forward_platforms_map()
+    eitaa_platform = nav_platforms.get("eitaa") or Platform.objects.filter(slug="eitaa").first()
     if not eitaa_platform:
         messages.error(request, "پلتفرم ایتا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    existing_bot_user = BotUser.objects.filter(
-        user=request.user, platform=eitaa_platform
-    ).first()
+    existing_bot_user = BotUser.objects.filter(user=request.user, platform=eitaa_platform).first()
 
     if request.method == "POST":
         form = EitaaTokenForm(request.POST)
@@ -111,72 +201,80 @@ def eitaa_connect_token(request):
 
             messages.success(
                 request,
-                "✅ توکن ایتایار با موفقیت ذخیره شد. حالا می‌توانید کانال‌های خود را اضافه کنید."
+                "✅ توکن ایتایار با موفقیت ذخیره شد. حالا می‌توانید کانال‌های خود را اضافه کنید.",
             )
             return redirect("broadcast:eitaa_channels")
     else:
         form = EitaaTokenForm()
 
-    return render(request, "product/forward/broadcast/eitaa/connect_token.html", {
-        "form": form,
-        "existing_bot_user": existing_bot_user,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/eitaa/connect_token.html",
+        {
+            "form": form,
+            "existing_bot_user": existing_bot_user,
+            "platform": eitaa_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def eitaa_channels(request):
-    """صفحه لیست و مدیریت کانال‌های ایتا (گام ۲ - لیست)."""
+    """صفحه لیست و مدیریت کانال‌های ایتا."""
     from core.models import Platform
-    from product.forward.broadcast.models import BroadcastChannel
     from product.forward.messengers.models import BotUser
+    from product.forward.subscriptions.access import get_user_platform_access_map
 
-    eitaa_platform = Platform.objects.filter(slug="eitaa").first()
+    nav_platforms = _get_forward_platforms_map()
+    eitaa_platform = nav_platforms.get("eitaa") or Platform.objects.filter(slug="eitaa").first()
     if not eitaa_platform:
         messages.error(request, "پلتفرم ایتا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=eitaa_platform
-    ).first()
+    bot_user = BotUser.objects.filter(user=request.user, platform=eitaa_platform).first()
+    channels = (
+        BroadcastChannel.objects.filter(user=request.user, platform=eitaa_platform, is_active=True)
+        .select_related("platform")
+        .order_by("-created_at")
+    )
+    access_map = get_user_platform_access_map(request.user)
 
-    channels = BroadcastChannel.objects.filter(
-        user=request.user, platform=eitaa_platform
-    ).order_by("-created_at")
-
-    return render(request, "product/forward/broadcast/eitaa/channels.html", {
-        "bot_user": bot_user,
-        "channels": channels,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/eitaa/channels.html",
+        {
+            "bot_user": bot_user,
+            "channels": channels,
+            "platform": eitaa_platform,
+            "platform_access": access_map.get("eitaa"),
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def eitaa_add_channel(request):
-    """صفحه افزودن کانال جدید ایتا (گام ۲ - افزودن)."""
+    """صفحه افزودن کانال جدید ایتا به همراه تست ارسال."""
     from core.models import Platform
     from product.forward.broadcast.forms import EitaaChannelForm
     from product.forward.messengers.models import BotUser
 
-    eitaa_platform = Platform.objects.filter(slug="eitaa").first()
+    nav_platforms = _get_forward_platforms_map()
+    eitaa_platform = nav_platforms.get("eitaa") or Platform.objects.filter(slug="eitaa").first()
     if not eitaa_platform:
         messages.error(request, "پلتفرم ایتا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=eitaa_platform
-    ).first()
+    bot_user = BotUser.objects.filter(user=request.user, platform=eitaa_platform).first()
 
     if not bot_user or not bot_user.api_token:
         messages.warning(request, "ابتدا باید توکن ایتایار خود را ثبت کنید.")
         return redirect("broadcast:eitaa_connect_token")
 
     if request.method == "POST":
-        form = EitaaChannelForm(
-            request.POST, user=request.user, api_token=bot_user.api_token
-        )
+        form = EitaaChannelForm(request.POST, user=request.user, api_token=bot_user.api_token)
         if form.is_valid():
-            from django.utils import timezone
-            from product.forward.broadcast.models import BroadcastChannel
-
             chat_id = form.cleaned_data["chat_id"]
             title = form.cleaned_data["title"]
             username = form.cleaned_data.get("username", "")
@@ -199,17 +297,21 @@ def eitaa_add_channel(request):
     else:
         form = EitaaChannelForm(user=request.user, api_token=bot_user.api_token)
 
-    return render(request, "product/forward/broadcast/eitaa/add_channel.html", {
-        "form": form,
-        "bot_user": bot_user,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/eitaa/add_channel.html",
+        {
+            "form": form,
+            "bot_user": bot_user,
+            "platform": eitaa_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def eitaa_delete_channel(request, channel_id):
     """غیرفعال‌سازی کانال ایتا (POST only)."""
-    from product.forward.broadcast.models import BroadcastChannel
-
     if request.method != "POST":
         return redirect("broadcast:eitaa_channels")
 
@@ -234,6 +336,7 @@ def eitaa_delete_channel(request, channel_id):
 def rubika_connect_phone(request):
     """گام اول اتصال به روبیکا: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
     from product.forward.subscriptions.access import user_has_platform_access
+
     if not user_has_platform_access(request.user, "rubika"):
         messages.warning(request, "🔒 برای اتصال و استفاده از روبیکا ابتدا باید اشتراک فعال آن را تهیه کنید.")
         return redirect("forward_subscriptions:plans")
@@ -244,14 +347,13 @@ def rubika_connect_phone(request):
     from product.forward.messengers.adapters.rubika import RubikaAdapter
     from product.forward.messengers.models import BotUser
 
-    rubika_platform = Platform.objects.filter(slug="rubika").first()
+    nav_platforms = _get_forward_platforms_map()
+    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
     if not rubika_platform:
         messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    existing_bot_user = BotUser.objects.filter(
-        user=request.user, platform=rubika_platform
-    ).first()
+    existing_bot_user = BotUser.objects.filter(user=request.user, platform=rubika_platform).first()
 
     if request.method == "POST":
         form = RubikaPhoneForm(request.POST)
@@ -271,16 +373,21 @@ def rubika_connect_phone(request):
     else:
         form = RubikaPhoneForm()
 
-    return render(request, "product/forward/broadcast/rubika/connect_phone.html", {
-        "form": form,
-        "existing_bot_user": existing_bot_user,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/rubika/connect_phone.html",
+        {
+            "form": form,
+            "existing_bot_user": existing_bot_user,
+            "platform": rubika_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def rubika_verify_code(request):
     """گام دوم اتصال به روبیکا: تایید کد OTP و ذخیره نشست دائمی در BotUser."""
-    from django.utils import timezone
     from core.models import Platform
     from product.forward.broadcast.forms import RubikaVerifyCodeForm
     from product.forward.messengers.adapters.base import MessengerError
@@ -295,10 +402,11 @@ def rubika_verify_code(request):
         messages.warning(request, "اطلاعات نشست موقت منقضی شده است؛ لطفاً دوباره شماره خود را وارد کنید.")
         return redirect("broadcast:rubika_connect_phone")
 
-    rubika_platform = Platform.objects.filter(slug="rubika").first()
+    nav_platforms = _get_forward_platforms_map()
+    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
     if not rubika_platform:
         messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
     if request.method == "POST":
         form = RubikaVerifyCodeForm(request.POST)
@@ -349,44 +457,56 @@ def rubika_verify_code(request):
     else:
         form = RubikaVerifyCodeForm()
 
-    return render(request, "product/forward/broadcast/rubika/verify_code.html", {
-        "form": form,
-        "phone": phone,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/rubika/verify_code.html",
+        {
+            "form": form,
+            "phone": phone,
+            "platform": rubika_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def rubika_channels(request):
     """صفحه لیست و مدیریت کانال‌های متصل‌شده روبیکا."""
     from core.models import Platform
-    from product.forward.broadcast.models import BroadcastChannel
     from product.forward.messengers.models import BotUser
+    from product.forward.subscriptions.access import get_user_platform_access_map
 
-    rubika_platform = Platform.objects.filter(slug="rubika").first()
+    nav_platforms = _get_forward_platforms_map()
+    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
     if not rubika_platform:
         messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=rubika_platform
-    ).first()
+    bot_user = BotUser.objects.filter(user=request.user, platform=rubika_platform).first()
+    channels = (
+        BroadcastChannel.objects.filter(user=request.user, platform=rubika_platform, is_active=True)
+        .select_related("platform")
+        .order_by("-created_at")
+    )
+    access_map = get_user_platform_access_map(request.user)
 
-    channels = BroadcastChannel.objects.filter(
-        user=request.user, platform=rubika_platform
-    ).order_by("-created_at")
-
-    return render(request, "product/forward/broadcast/rubika/channels.html", {
-        "bot_user": bot_user,
-        "channels": channels,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/rubika/channels.html",
+        {
+            "bot_user": bot_user,
+            "channels": channels,
+            "platform": rubika_platform,
+            "platform_access": access_map.get("rubika"),
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def rubika_sync_channels(request):
     """همگام‌سازی خودکار کانال‌هایی که کاربر در روبیکا دسترسی ارسال پیام دارد (POST only)."""
-    from django.utils import timezone
     from core.models import Platform
-    from product.forward.broadcast.models import BroadcastChannel
     from product.forward.messengers.adapters.base import MessengerError
     from product.forward.messengers.adapters.rubika import RubikaAdapter
     from product.forward.messengers.models import BotUser
@@ -436,21 +556,18 @@ def rubika_sync_channels(request):
 @login_required
 def rubika_add_channel(request):
     """صفحه افزودن دستی کانال روبیکا با نام کاربری یا شناسه GUID."""
-    from django.utils import timezone
     from core.models import Platform
     from product.forward.broadcast.forms import RubikaChannelForm
-    from product.forward.broadcast.models import BroadcastChannel
     from product.forward.messengers.adapters.rubika import RubikaAdapter
     from product.forward.messengers.models import BotUser
 
-    rubika_platform = Platform.objects.filter(slug="rubika").first()
+    nav_platforms = _get_forward_platforms_map()
+    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
     if not rubika_platform:
         messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+        return redirect("broadcast:dashboard")
 
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=rubika_platform
-    ).first()
+    bot_user = BotUser.objects.filter(user=request.user, platform=rubika_platform).first()
 
     if not bot_user or not bot_user.has_rubika_session:
         messages.warning(request, "ابتدا باید حساب روبیکای خود را متصل کنید.")
@@ -483,17 +600,21 @@ def rubika_add_channel(request):
     else:
         form = RubikaChannelForm(user=request.user, rubika_adapter=adapter)
 
-    return render(request, "product/forward/broadcast/rubika/add_channel.html", {
-        "form": form,
-        "bot_user": bot_user,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/rubika/add_channel.html",
+        {
+            "form": form,
+            "bot_user": bot_user,
+            "platform": rubika_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
 def rubika_delete_channel(request, channel_id):
     """غیرفعال‌سازی کانال روبیکا (POST only)."""
-    from product.forward.broadcast.models import BroadcastChannel
-
     if request.method != "POST":
         return redirect("broadcast:rubika_channels")
 
@@ -510,277 +631,259 @@ def rubika_delete_channel(request, channel_id):
 
 
 # ============================================================
-# Soroush Plus Web Panel Views
+# WinForward Unified Dashboard & Bale Views
 # ============================================================
 
 
 @login_required
-def soroush_connect_phone(request):
-    """گام اول اتصال به سروش‌پلاس: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
+def forward_dashboard(request):
+    """داشبورد جامع وین فوروارد: خلاصه اشتراک، کارت‌های ۳ پلتفرم با لوگوی دیتابیس، نمودار ۳۰ روزه و آخرین ارسال‌ها."""
+    from payment.models import Wallet
+    from product.forward.messengers.models import BotUser
+    from product.forward.messengers.services import generate_connect_link
+    from product.forward.subscriptions.access import get_user_platform_access_map
+    from product.forward.subscriptions.services import account_for
+
+    nav_platforms = _get_forward_platforms_map()
+    account = account_for(request.user)
+    access_map = get_user_platform_access_map(request.user)
+    wallet = Wallet.objects.filter(user=request.user).first()
+    wallet_balance = wallet.balance if wallet else 0
+
+    bot_users = {
+        bu.platform.slug: bu
+        for bu in BotUser.objects.filter(user=request.user).select_related("platform")
+    }
+
+    active_channels = BroadcastChannel.objects.filter(
+        user=request.user, is_active=True
+    ).select_related("platform")
+
+    channels_by_slug = {"bale": [], "eitaa": [], "rubika": []}
+    for ch in active_channels:
+        if ch.platform.slug in channels_by_slug:
+            channels_by_slug[ch.platform.slug].append(ch)
+
+    bale_connect_link = ""
+    try:
+        bale_connect_link = generate_connect_link(request.user, "bale")
+    except Exception:
+        bale_connect_link = "https://ble.ir/win_forward_bot"
+
+    platform_definitions = [
+        {
+            "slug": "bale",
+            "name": "بله",
+            "icon": "bi-send-check-fill",
+            "connect_url_name": "broadcast:bale_connect",
+            "channels_url_name": "broadcast:bale_channels",
+            "is_connected": bool(bot_users.get("bale") and bot_users["bale"].is_verified),
+            "account_identifier": (
+                bot_users["bale"].username or bot_users["bale"].chat_id if bot_users.get("bale") else ""
+            ),
+            "summary": "هسته مرکزی دریافت پست از بازوبند ربات بله و انتشار خودکار به تمام کانال‌ها",
+        },
+        {
+            "slug": "eitaa",
+            "name": "ایتا",
+            "icon": "bi-broadcast-pin",
+            "connect_url_name": "broadcast:eitaa_connect_token",
+            "channels_url_name": "broadcast:eitaa_channels",
+            "is_connected": bool(bot_users.get("eitaa") and bot_users["eitaa"].api_token),
+            "account_identifier": (
+                "توکن ایتایار متصل" if (bot_users.get("eitaa") and bot_users["eitaa"].api_token) else ""
+            ),
+            "summary": "اتصال رسمی از طریق توکن ایتایار و انتشار بدون تگ فوروارد در کانال‌های ایتا",
+        },
+        {
+            "slug": "rubika",
+            "name": "روبیکا",
+            "icon": "bi-phone-vibrate-fill",
+            "connect_url_name": "broadcast:rubika_connect_phone",
+            "channels_url_name": "broadcast:rubika_channels",
+            "is_connected": bool(bot_users.get("rubika") and bot_users["rubika"].has_rubika_session),
+            "account_identifier": (
+                (bot_users["rubika"].session_data or {}).get("phone_number", "")
+                if bot_users.get("rubika")
+                else ""
+            ),
+            "summary": "ورود امن با کد تایید (OTP) و همگام‌سازی خودکار تمام کانال‌های روبیکا",
+        },
+    ]
+
+    platform_cards = []
+    connected_platforms_count = 0
+    for p in platform_definitions:
+        slug = p["slug"]
+        p_obj = nav_platforms.get(slug)
+        logo_url = p_obj.logo.url if (p_obj and p_obj.logo) else ""
+        acc = access_map.get(slug)
+        has_sub = bool(acc and acc.is_valid)
+        if p["is_connected"]:
+            connected_platforms_count += 1
+        ch_list = channels_by_slug.get(slug, [])
+        platform_cards.append(
+            {
+                **p,
+                "platform_obj": p_obj,
+                "logo_url": logo_url,
+                "has_subscription": has_sub,
+                "access": acc,
+                "remaining_days": acc.remaining_days if has_sub else 0,
+                "channels_count": len(ch_list),
+                "channels": ch_list[:4],
+            }
+        )
+
+    jobs_qs = (
+        BroadcastJob.objects.filter(message__user=request.user)
+        .select_related("message")
+        .prefetch_related("targets__channel__platform")
+        .order_by("-created_at")
+    )
+    total_jobs_count = jobs_qs.count()
+    agg = jobs_qs.aggregate(
+        total_sent=Sum("success_count"),
+        total_failed=Sum("failed_count"),
+    )
+    recent_jobs = jobs_qs[:6]
+
+    # داده‌های نمودار ۳۰ روز اخیر ارسال‌ها
+    now = timezone.now()
+    last_30_days = now - timedelta(days=30)
+    daily_stats = (
+        BroadcastJob.objects.filter(message__user=request.user, created_at__gte=last_30_days)
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(
+            sent_sum=Sum("success_count"),
+            failed_sum=Sum("failed_count"),
+        )
+        .order_by("day")
+    )
+    activity_labels = []
+    activity_success_data = []
+    activity_failed_data = []
+    for item in daily_stats:
+        if item["day"]:
+            jalali = jdatetime.date.fromgregorian(date=item["day"])
+            activity_labels.append(jalali.strftime("%m/%d"))
+            activity_success_data.append(item["sent_sum"] or 0)
+            activity_failed_data.append(item["failed_sum"] or 0)
+
+    bale_access = access_map.get("bale")
+    subscription_days_left = bale_access.remaining_days if (bale_access and bale_access.is_valid) else 0
+    active_plan_name = bale_access.plan.name if (bale_access and bale_access.plan) else ""
+
+    return render(
+        request,
+        "product/forward/broadcast/dashboard.html",
+        {
+            "account": account,
+            "access_map": access_map,
+            "nav_platforms": nav_platforms,
+            "platform_cards": platform_cards,
+            "subscribed_platforms_count": len(access_map),
+            "connected_platforms_count": connected_platforms_count,
+            "total_channels_count": active_channels.count(),
+            "total_jobs_count": total_jobs_count,
+            "total_sent_count": agg["total_sent"] or 0,
+            "total_failed_count": agg["total_failed"] or 0,
+            "recent_jobs": recent_jobs,
+            "bale_connect_link": bale_connect_link,
+            "subscription_days_left": subscription_days_left,
+            "active_plan_name": active_plan_name,
+            "wallet_balance": wallet_balance,
+            "persian_date": _format_persian_date(),
+            "activity_labels_json": json.dumps(activity_labels, ensure_ascii=False),
+            "activity_success_data_json": json.dumps(activity_success_data, ensure_ascii=False),
+            "activity_failed_data_json": json.dumps(activity_failed_data, ensure_ascii=False),
+        },
+    )
+
+
+@login_required
+def bale_connect(request):
+    """صفحه راهنما و دریافت لینک یک‌بارمصرف اتصال حساب بله به ربات وین فوروارد."""
     from product.forward.subscriptions.access import user_has_platform_access
-    if not user_has_platform_access(request.user, "soroush"):
-        messages.warning(request, "🔒 برای اتصال و استفاده از سروش‌پلاس ابتدا باید اشتراک فعال آن را تهیه کنید.")
+
+    if not user_has_platform_access(request.user, "bale"):
+        messages.warning(request, "🔒 برای اتصال و استفاده از بله ابتدا باید اشتراک فعال وین‌فوروارد داشته باشید.")
         return redirect("forward_subscriptions:plans")
 
     from core.models import Platform
-    from product.forward.broadcast.forms import SoroushPhoneForm
-    from product.forward.messengers.adapters.base import MessengerError
-    from product.forward.messengers.adapters.soroush import SoroushAdapter
     from product.forward.messengers.models import BotUser
+    from product.forward.messengers.services import generate_connect_link
 
-    soroush_platform = Platform.objects.filter(slug="soroush").first()
-    if not soroush_platform:
-        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
+    nav_platforms = _get_forward_platforms_map()
+    bale_platform = nav_platforms.get("bale") or Platform.objects.filter(slug="bale").first()
+    existing_bot_user = (
+        BotUser.objects.filter(user=request.user, platform=bale_platform).first() if bale_platform else None
+    )
 
-    existing_bot_user = BotUser.objects.filter(
-        user=request.user, platform=soroush_platform
-    ).first()
+    connect_link = ""
+    if bale_platform:
+        connect_link = generate_connect_link(request.user, "bale")
 
-    if request.method == "POST":
-        form = SoroushPhoneForm(request.POST)
-        if form.is_valid():
-            phone = form.cleaned_data["phone_number"]
-            adapter = SoroushAdapter()
-            try:
-                otp_res = adapter.send_code(phone_number=phone)
-            except MessengerError as exc:
-                messages.error(request, f"خطا در ارسال کد تایید سروش‌پلاس: {exc}")
-            else:
-                request.session["soroush_otp_phone"] = phone
-                request.session["soroush_otp_hash"] = otp_res["phone_code_hash"]
-                request.session["soroush_otp_tmp"] = otp_res["temp_session"]
-                messages.info(request, "کد تایید به حساب سروش‌پلاس یا شماره موبایل شما ارسال شد.")
-                return redirect("broadcast:soroush_verify_code")
-    else:
-        form = SoroushPhoneForm()
-
-    return render(request, "product/forward/broadcast/soroush/connect_phone.html", {
-        "form": form,
-        "existing_bot_user": existing_bot_user,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/bale/connect.html",
+        {
+            "existing_bot_user": existing_bot_user,
+            "connect_link": connect_link,
+            "platform": bale_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
-def soroush_verify_code(request):
-    """گام دوم اتصال به سروش‌پلاس: تایید کد OTP و ذخیره StringSession در BotUser."""
-    from django.utils import timezone
+def bale_channels(request):
+    """صفحه لیست و مدیریت کانال‌های متصل‌شده کاربر در پیام‌رسان بله."""
     from core.models import Platform
-    from product.forward.broadcast.forms import SoroushVerifyCodeForm
-    from product.forward.messengers.adapters.base import MessengerError
-    from product.forward.messengers.adapters.soroush import SoroushAdapter
     from product.forward.messengers.models import BotUser
+    from product.forward.subscriptions.access import get_user_platform_access_map
 
-    phone = request.session.get("soroush_otp_phone")
-    phone_code_hash = request.session.get("soroush_otp_hash")
-    temp_session = request.session.get("soroush_otp_tmp")
+    nav_platforms = _get_forward_platforms_map()
+    bale_platform = nav_platforms.get("bale") or Platform.objects.filter(slug="bale").first()
+    if not bale_platform:
+        messages.error(request, "پلتفرم بله در سیستم ثبت نشده است.")
+        return redirect("broadcast:dashboard")
 
-    if not all([phone, phone_code_hash, temp_session]):
-        messages.warning(request, "اطلاعات نشست موقت منقضی شده است؛ لطفاً دوباره شماره خود را وارد کنید.")
-        return redirect("broadcast:soroush_connect_phone")
+    bot_user = BotUser.objects.filter(user=request.user, platform=bale_platform).first()
+    channels = (
+        BroadcastChannel.objects.filter(user=request.user, platform=bale_platform, is_active=True)
+        .select_related("platform")
+        .order_by("-created_at")
+    )
+    access_map = get_user_platform_access_map(request.user)
 
-    soroush_platform = Platform.objects.filter(slug="soroush").first()
-    if not soroush_platform:
-        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
-
-    if request.method == "POST":
-        form = SoroushVerifyCodeForm(request.POST)
-        if form.is_valid():
-            adapter = SoroushAdapter()
-            try:
-                creds = adapter.sign_in(
-                    phone_number=phone,
-                    code=form.cleaned_data["phone_code"],
-                    phone_code_hash=phone_code_hash,
-                    temp_session=temp_session,
-                    password=form.cleaned_data.get("password") or None,
-                )
-            except MessengerError as exc:
-                messages.error(request, f"کد تایید نامعتبر است یا خطایی رخ داد: {exc}")
-            else:
-                user_id = creds.get("user_id") or f"soroush_user_{request.user.id}"
-                session_payload = {
-                    "string_session": creds["string_session"],
-                    "phone_number": phone,
-                    "user_id": user_id,
-                }
-
-                bot_user, created = BotUser.objects.get_or_create(
-                    user=request.user,
-                    platform=soroush_platform,
-                    defaults={
-                        "chat_id": user_id,
-                        "username": creds.get("username", "") or "",
-                        "is_verified": True,
-                        "session_data": session_payload,
-                    },
-                )
-                if not created:
-                    bot_user.chat_id = user_id
-                    bot_user.username = creds.get("username", "") or ""
-                    bot_user.is_verified = True
-                    bot_user.session_data = session_payload
-                    bot_user.last_seen_at = timezone.now()
-                    bot_user.save(update_fields=["chat_id", "username", "is_verified", "session_data", "last_seen_at"])
-
-                for key in ("soroush_otp_phone", "soroush_otp_hash", "soroush_otp_tmp"):
-                    request.session.pop(key, None)
-
-                messages.success(request, "✅ حساب سروش‌پلاس شما با موفقیت متصل شد.")
-                return redirect("broadcast:soroush_channels")
-    else:
-        form = SoroushVerifyCodeForm()
-
-    return render(request, "product/forward/broadcast/soroush/verify_code.html", {
-        "form": form,
-        "phone": phone,
-    })
+    return render(
+        request,
+        "product/forward/broadcast/bale/channels.html",
+        {
+            "bot_user": bot_user,
+            "channels": channels,
+            "platform": bale_platform,
+            "platform_access": access_map.get("bale"),
+            "nav_platforms": nav_platforms,
+        },
+    )
 
 
 @login_required
-def soroush_channels(request):
-    """صفحه لیست و مدیریت کانال‌های متصل‌شده سروش‌پلاس."""
-    from core.models import Platform
-    from product.forward.broadcast.models import BroadcastChannel
-    from product.forward.messengers.models import BotUser
-
-    soroush_platform = Platform.objects.filter(slug="soroush").first()
-    if not soroush_platform:
-        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
-
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=soroush_platform
-    ).first()
-
-    channels = BroadcastChannel.objects.filter(
-        user=request.user, platform=soroush_platform
-    ).order_by("-created_at")
-
-    return render(request, "product/forward/broadcast/soroush/channels.html", {
-        "bot_user": bot_user,
-        "channels": channels,
-    })
-
-
-@login_required
-def soroush_sync_channels(request):
-    """همگام‌سازی خودکار کانال‌هایی که کاربر در سروش‌پلاس دسترسی ارسال دارد (POST only)."""
-    from django.utils import timezone
-    from core.models import Platform
-    from product.forward.broadcast.models import BroadcastChannel
-    from product.forward.messengers.adapters.base import MessengerError
-    from product.forward.messengers.adapters.soroush import SoroushAdapter
-    from product.forward.messengers.models import BotUser
-
+def bale_delete_channel(request, channel_id):
+    """غیرفعال‌سازی کانال بله توسط کاربر (POST only)."""
     if request.method != "POST":
-        return redirect("broadcast:soroush_channels")
-
-    soroush_platform = Platform.objects.filter(slug="soroush").first()
-    bot_user = BotUser.objects.filter(user=request.user, platform=soroush_platform).first() if soroush_platform else None
-
-    if not bot_user or not bot_user.has_soroush_session:
-        messages.warning(request, "ابتدا باید وارد حساب سروش‌پلاس خود شوید.")
-        return redirect("broadcast:soroush_connect_phone")
-
-    session_data = bot_user.session_data or {}
-    adapter = SoroushAdapter(session_string=session_data.get("string_session"))
-
-    try:
-        found_channels = adapter.get_user_channels()
-    except (MessengerError, ValueError) as exc:
-        messages.error(request, f"خطا در دریافت لیست کانال‌ها از سروش‌پلاس: {exc}")
-        return redirect("broadcast:soroush_channels")
-
-    synced_count = 0
-    for ch in found_channels:
-        BroadcastChannel.objects.update_or_create(
-            user=request.user,
-            platform=soroush_platform,
-            chat_id=ch["chat_id"],
-            defaults={
-                "title": ch["title"],
-                "username": ch["username"],
-                "bot_is_admin": True,
-                "bot_admin_checked_at": timezone.now(),
-                "is_active": True,
-            },
-        )
-        synced_count += 1
-
-    messages.success(request, f"✅ {synced_count} کانال سروش‌پلاس همگام‌سازی شد.")
-    return redirect("broadcast:soroush_channels")
-
-
-@login_required
-def soroush_add_channel(request):
-    """صفحه افزودن دستی کانال سروش‌پلاس با نام کاربری یا شناسه عددی."""
-    from django.utils import timezone
-    from core.models import Platform
-    from product.forward.broadcast.forms import SoroushChannelForm
-    from product.forward.broadcast.models import BroadcastChannel
-    from product.forward.messengers.adapters.soroush import SoroushAdapter
-    from product.forward.messengers.models import BotUser
-
-    soroush_platform = Platform.objects.filter(slug="soroush").first()
-    if not soroush_platform:
-        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
-        return redirect("broadcast:job_list")
-
-    bot_user = BotUser.objects.filter(
-        user=request.user, platform=soroush_platform
-    ).first()
-
-    if not bot_user or not bot_user.has_soroush_session:
-        messages.warning(request, "ابتدا باید حساب سروش‌پلاس خود را متصل کنید.")
-        return redirect("broadcast:soroush_connect_phone")
-
-    session_data = bot_user.session_data or {}
-    adapter = SoroushAdapter(session_string=session_data.get("string_session"))
-
-    if request.method == "POST":
-        form = SoroushChannelForm(request.POST, user=request.user, soroush_adapter=adapter)
-        if form.is_valid() and form.resolved_channel:
-            resolved = form.resolved_channel
-            channel, _created = BroadcastChannel.objects.update_or_create(
-                user=request.user,
-                platform=soroush_platform,
-                chat_id=resolved["chat_id"],
-                defaults={
-                    "title": resolved["title"],
-                    "username": resolved["username"],
-                    "bot_is_admin": True,
-                    "bot_admin_checked_at": timezone.now(),
-                    "is_active": True,
-                },
-            )
-            messages.success(request, f"✅ کانال «{channel.title}» با موفقیت به وین‌فوروارد متصل شد.")
-            return redirect("broadcast:soroush_channels")
-    else:
-        form = SoroushChannelForm(user=request.user, soroush_adapter=adapter)
-
-    return render(request, "product/forward/broadcast/soroush/add_channel.html", {
-        "form": form,
-        "bot_user": bot_user,
-    })
-
-
-@login_required
-def soroush_delete_channel(request, channel_id):
-    """غیرفعال‌سازی کانال سروش‌پلاس (POST only)."""
-    from product.forward.broadcast.models import BroadcastChannel
-
-    if request.method != "POST":
-        return redirect("broadcast:soroush_channels")
+        return redirect("broadcast:bale_channels")
 
     channel = get_object_or_404(
         BroadcastChannel,
         pk=channel_id,
         user=request.user,
-        platform__slug="soroush",
+        platform__slug="bale",
     )
     channel.is_active = False
     channel.save(update_fields=["is_active"])
-    messages.success(request, f"کانال «{channel.title}» غیرفعال شد.")
-    return redirect("broadcast:soroush_channels")
+    messages.success(request, f"کانال «{channel.title}» در بله غیرفعال شد.")
+    return redirect("broadcast:bale_channels")

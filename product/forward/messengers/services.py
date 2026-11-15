@@ -6,7 +6,7 @@ from .models import ConnectToken
 
 def generate_connect_link(user, platform_slug: str, bot_username: str = "win_forward_bot") -> str:
     """تولید توکن یک‌بارمصرف و ساخت لینک Deep Link برای اتصال به ربات."""
-    if platform_slug in ("eitaa", "rubika", "soroush"):
+    if platform_slug in ("eitaa", "rubika"):
         raise ValueError(
             f"پلتفرم {platform_slug} از لینک اتصال (Deep Link) پشتیبانی نمی‌کند."
         )

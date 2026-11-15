@@ -1,136 +1,142 @@
 {% extends "parent/base.html" %}
 {% load static %}
 
-{% block title %}اتصال به ایتا{% endblock %}
+{% block title %}اتصال توکن ایتایار | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_connect.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 wf-shell">
 
-    {# ========== Breadcrumb ========== #}
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb breadcrumb-light">
-            <li class="breadcrumb-item">
-                <a href="{% url 'broadcast:job_list' %}">وین فوروارد</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">اتصال به ایتا</li>
-        </ol>
-    </nav>
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">اتصال ایتا</li>
+    </ol>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-9 col-xl-7">
+    {% include "product/forward/partials/nav.html" %}
 
-            {# ========== Header Card ========== #}
-            <div class="card card-light border-light mb-4">
-                <div class="card-body p-4 d-flex align-items-center gap-3">
-                    <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm"
-                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #fd5631, #5d3cf2); flex-shrink: 0;">
-                        <i class="fi-send fs-3 text-white"></i>
-                    </div>
-                    <div>
-                        <h4 class="text-white mb-1">اتصال به ایتا</h4>
-                        <p class="text-muted mb-0 fs-sm">
-                            توکن ایتایار خود را وارد کنید تا کانال‌های ایتا را به وین‌فوروارد متصل کنید.
-                        </p>
-                    </div>
-                </div>
+    <div class="wf-connect-hero {% if existing_bot_user and existing_bot_user.api_token %}is-connected{% endif %} wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-connect-hero-logo">
+                {% if platform and platform.logo %}
+                    <img src="{{ platform.logo.url }}" alt="{{ platform.name }}">
+                {% else %}
+                    <i class="bi bi-broadcast-pin fs-2 text-white"></i>
+                {% endif %}
             </div>
-
-            {# ========== Alert: قبلاً ثبت شده ========== #}
-            {% if existing_bot_user and existing_bot_user.api_token %}
-                <div class="alert alert-success border-0 d-flex align-items-center gap-2 mb-4 rounded-3">
-                    <i class="fi-check-circle fs-5"></i>
-                    <div class="flex-grow-1">
-                        <strong>توکن قبلاً ثبت شده است.</strong>
-                        <div class="fs-xs opacity-75">برای به‌روزرسانی، توکن جدید را در فرم زیر وارد کنید.</div>
-                    </div>
-                    <a href="{% url 'broadcast:eitaa_channels' %}" class="btn btn-sm btn-success rounded-pill">
-                        مشاهده کانال‌ها
-                    </a>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">اتصال پیام‌رسان ایتا (سرویس رسمی ایتایار)</h1>
+                    {% if existing_bot_user and existing_bot_user.api_token %}
+                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> توکن متصل است</span>
+                    {% else %}
+                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> در انتظار ثبت توکن</span>
+                    {% endif %}
                 </div>
-            {% endif %}
-
-            {# ========== Help Card ========== #}
-            <div class="card card-light border-light mb-4">
-                <div class="card-body p-4">
-                    <h6 class="text-white mb-3 d-flex align-items-center gap-2">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-                              style="width: 32px; height: 32px; background: rgba(60,118,242,0.15);">
-                            <i class="fi-info-circle text-info"></i>
-                        </span>
-                        راهنمای دریافت توکن
-                    </h6>
-                    <ol class="text-muted mb-0 ps-4 fs-sm" style="line-height: 2;">
-                        <li>
-                            به سایت
-                            <a href="https://eitaayar.ir" target="_blank" rel="noopener"
-                               class="text-primary text-decoration-none fw-bold">eitaayar.ir</a>
-                            بروید و با حساب ایتا وارد شوید.
-                        </li>
-                        <li>
-                            یک <strong class="text-white">ربات جدید</strong> بسازید و توکن آن را کپی کنید.
-                        </li>
-                        <li>
-                            حساب <code class="text-primary">@sender</code> را در کانال ایتا خود
-                            <strong class="text-warning">ادمین</strong> کنید.
-                        </li>
-                        <li>
-                            توکن را در فرم زیر پیست کرده و ذخیره کنید.
-                        </li>
-                    </ol>
-                </div>
+                <p class="text-muted fs-xs mb-0">
+                    توکن دریافتی از سامانه ایتایار را ثبت کنید تا کانال‌های ایتای شما بدون محدودیت به وین فوروارد متصل شوند.
+                </p>
             </div>
+        </div>
+        <a href="{% url 'broadcast:eitaa_channels' %}" class="wf-btn wf-btn-glass">
+            <i class="bi bi-list-ul"></i> کانال‌های متصل ایتا
+        </a>
+    </div>
 
-            {# ========== Form ========== #}
-            <div class="card card-light border-light">
-                <div class="card-body p-4 p-md-5">
+    <div class="row g-4 wf-reveal wf-delay-1">
+        <div class="col-lg-6">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-key-fill text-primary me-1"></i> ثبت یا بروزرسانی توکن API ایتایار
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
+                    {% if existing_bot_user and existing_bot_user.api_token %}
+                    <div class="p-3 rounded-4 mb-4 d-flex align-items-center justify-content-between"
+                         style="background:rgba(7,201,139,0.12);border:1px solid rgba(7,201,139,0.35);">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-patch-check-fill text-success fs-3"></i>
+                            <div>
+                                <div class="text-white fw-bold fs-sm">توکن ایتایار فعال است</div>
+                                <div class="text-muted fs-xs">می‌توانید کانال جدید اضافه کنید یا توکن را تغییر دهید.</div>
+                            </div>
+                        </div>
+                        <a href="{% url 'broadcast:eitaa_add_channel' %}" class="wf-btn wf-btn-emerald py-1 px-3 fs-xs">افزودن کانال</a>
+                    </div>
+                    {% endif %}
+
                     <form method="post" novalidate>
                         {% csrf_token %}
-
                         <div class="mb-4">
-                            <label for="{{ form.api_token.id_for_label }}" class="form-label text-white fw-bold mb-2">
-                                <i class="fi-lock me-1 text-primary"></i>
-                                {{ form.api_token.label }}
-                                <span class="text-danger">*</span>
+                            <label for="{{ form.api_token.id_for_label }}" class="text-white fw-bold fs-xs mb-2 d-block">
+                                <i class="bi bi-shield-lock text-primary me-1"></i> {{ form.api_token.label }} <span class="text-danger">*</span>
                             </label>
                             {{ form.api_token }}
                             {% if form.api_token.help_text %}
-                                <div class="form-text text-muted fs-xs mt-2">
-                                    <i class="fi-info-circle me-1"></i>{{ form.api_token.help_text }}
-                                </div>
+                                <div class="form-text text-muted fs-xs mt-2">{{ form.api_token.help_text }}</div>
                             {% endif %}
                             {% if form.api_token.errors %}
-                                <div class="text-danger fs-xs mt-2 d-flex align-items-start gap-1">
-                                    <i class="fi-alert-circle mt-1"></i>
-                                    <div>{% for error in form.api_token.errors %}{{ error }}<br>{% endfor %}</div>
+                                <div class="text-danger fs-xs mt-2">
+                                    {% for error in form.api_token.errors %}{{ error }}<br>{% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger border-0 rounded-3 mb-4">
-                                {% for error in form.non_field_errors %}
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fi-alert-circle"></i>{{ error }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <hr class="border-light my-4">
-
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-primary rounded-pill px-4">
-                                <i class="fi-check me-1"></i>ذخیره و ادامه
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-light">
+                            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass">بازگشت</a>
+                            <button type="submit" class="wf-btn wf-btn-orange px-4">
+                                <i class="bi bi-check2-circle"></i> ذخیره توکن و ادامه
                             </button>
-                            <a href="{% url 'broadcast:job_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
-                                <i class="fi-arrow-right me-1"></i>بازگشت
-                            </a>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
 
+        <div class="col-lg-6">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-journal-check text-warning me-1"></i> مراحل دریافت توکن از ایتایار
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
+                    <div class="wf-timeline-step">
+                        <div class="wf-timeline-badge">۱</div>
+                        <div>
+                            <h6 class="text-white fw-bold fs-sm mb-1">ورود به سامانه eitaayar.ir</h6>
+                            <p class="text-muted fs-xs mb-0">وارد سایت <a href="https://eitaayar.ir" target="_blank" rel="noopener" class="text-primary fw-bold">eitaayar.ir</a> شوید و با حساب ایتا لاگین کنید.</p>
+                        </div>
+                    </div>
+                    <div class="wf-timeline-step">
+                        <div class="wf-timeline-badge">۲</div>
+                        <div>
+                            <h6 class="text-white fw-bold fs-sm mb-1">ایجاد ربات و کپی توکن</h6>
+                            <p class="text-muted fs-xs mb-0">یک پروژه/ربات جدید بسازید و رشته توکن اختصاصی آن را کپی نمایید.</p>
+                        </div>
+                    </div>
+                    <div class="wf-timeline-step mb-0">
+                        <div class="wf-timeline-badge">۳</div>
+                        <div class="w-100">
+                            <h6 class="text-white fw-bold fs-sm mb-1">ادمین کردن <code>@sender</code> در کانال ایتا</h6>
+                            <p class="text-muted fs-xs mb-2">حساب زیر را در کانال ایتای خود با دسترسی ارسال پست ادمین کنید:</p>
+                            <div class="wf-code-copy-box">
+                                <code>@sender</code>
+                                <button type="button" class="wf-btn wf-btn-glass py-1 px-2 fs-xs" data-wf-copy="@sender">
+                                    <i class="bi bi-clipboard"></i> کپی
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
 {% endblock %}

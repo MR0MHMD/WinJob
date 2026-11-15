@@ -187,16 +187,16 @@ def api_dispatch_job(request):
             return JsonResponse({"ok": False, "error": "no_targets"})
 
         job.status = BroadcastJob.Status.PENDING
-        job.save(update_fields=["status"])
+        job.total_targets = job.targets.count()
+        job.save(update_fields=["status", "total_targets"])
 
-        from product.forward.broadcast.services.dispatcher import dispatch_job
-        dispatch_job(job.pk)
+        from product.forward.broadcast.services.dispatcher import enqueue_dispatch_job
+        enqueue_dispatch_job(job.pk)
 
-        job.refresh_from_db()
         return JsonResponse({
             "ok": True,
-            "success_count": job.success_count,
-            "failed_count": job.failed_count
+            "status": "queued",
+            "job_id": job.pk,
         })
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
@@ -287,7 +287,7 @@ def api_bot_channel_event(request):
         if not bot_user:
             return JsonResponse({
                 "ok": False,
-                "text": f"سلام! کانال «{title}» شناسایی شد.\nابتدا از لینک زیر حساب بله خود را به سایت متصل کنید، سپس ربات را حذف و مجدداً اضافه کنید:\nhttps://winjob.ir/broadcast/connect"
+                "text": f"سلام! کانال «{title}» شناسایی شد.\nابتدا از لینک زیر حساب بله خود را به سایت متصل کنید، سپس ربات را حذف و مجدداً اضافه کنید:\nhttps://winjob.ir/forward/bale/connect/"
             })
 
         channel, created = BroadcastChannel.objects.update_or_create(

@@ -1,0 +1,702 @@
+{% extends "parent/base.html" %}
+{% load static humanize %}
+
+{% block title %}داشبورد مدیریت | وین فوروارد{% endblock %}
+{% block description %}پنل مدیریت هوشمند انتشار همزمان در بله، ایتا و روبیکا{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <!-- بردکرامب -->
+    <ol class="breadcrumb breadcrumb-light mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item active" aria-current="page">پنل وین فوروارد</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <!-- ── ۱. بنر فرماندهی قهرمان (Hero Command Center) ── -->
+    <div class="wf-hero-command wf-reveal">
+        <div class="row align-items-center g-4">
+            <div class="col-xl-7">
+                <div class="d-flex align-items-center gap-3 gap-md-4 flex-wrap flex-sm-nowrap">
+                    <div class="wf-hero-avatar-ring">
+                        {% if request.user.avatar %}
+                            <img src="{{ request.user.avatar.url }}" alt="آواتار">
+                        {% else %}
+                            <div class="wf-hero-avatar-fallback"><i class="bi bi-person-fill"></i></div>
+                        {% endif %}
+                        <span class="wf-avatar-online-dot" title="آنلاین"></span>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <span class="wf-hero-kicker">
+                                <i class="bi bi-broadcast-pin"></i> سیستم انتشار هوشمند چندپلتفرمی
+                            </span>
+                            <div class="wf-hero-platform-stack" title="پلتفرم‌های پشتیبانی‌شده">
+                                {% for p in platform_cards %}
+                                    {% if p.logo_url %}
+                                        <img src="{{ p.logo_url }}" alt="{{ p.name }}">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <h1 class="h2 text-white fw-bold mb-2">
+                            {% now "H" as current_hour %}
+                            {% if current_hour|add:"0" < 12 %}صبح بخیر{% elif current_hour|add:"0" < 17 %}ظهر بخیر{% elif current_hour|add:"0" < 19 %}عصر بخیر{% else %}شب بخیر{% endif %}،
+                            {{ request.user.nickname|default:request.user.phone_number }} عزیز!
+                        </h1>
+
+                        <div class="d-flex flex-wrap align-items-center gap-3 text-muted fs-xs">
+                            <span>
+                                <i class="bi bi-calendar3 ms-1 text-warning"></i> امروز {{ persian_date }}
+                            </span>
+                            <span>•</span>
+                            {% if subscription_days_left > 0 %}
+                                <span class="text-success fw-bold">
+                                    <i class="bi bi-patch-check-fill ms-1"></i>{{ active_plan_name }} ({{ subscription_days_left }} روز اعتبار فعال)
+                                </span>
+                            {% else %}
+                                <span class="text-warning fw-bold">
+                                    <i class="bi bi-exclamation-circle ms-1"></i>اشتراک فعالی ندارید — از تست رایگان ۷ روزه شروع کنید
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-5 text-xl-end">
+                <div class="d-flex flex-wrap gap-2 justify-content-xl-end">
+                    <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange px-4 py-3">
+                        <i class="bi bi-rocket-takeoff-fill"></i> ارسال پیام جدید
+                    </a>
+                    <a href="{% url 'forward_subscriptions:plans' %}" class="wf-btn wf-btn-purple px-3 py-3">
+                        <i class="bi bi-gem"></i> پلن‌ها و اشتراک
+                    </a>
+                    <a href="{% url 'broadcast:job_list' %}" class="wf-btn wf-btn-glass px-3 py-3">
+                        <i class="bi bi-clock-history"></i> تاریخچه
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ۲. کارت‌های آماری نئونی-شیشه‌ای (KPI Stat Cards) ── -->
+    <div class="row g-4 mb-5 wf-reveal wf-delay-1">
+        <!-- اشتراک -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wf-stat-card accent-orange">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wf-stat-icon orange"><i class="bi bi-gem"></i></div>
+                    {% if subscription_days_left > 0 %}
+                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> فعال</span>
+                    {% else %}
+                        <span class="wf-badge-status is-locked"><span class="wf-pulse-dot"></span> غیرفعال</span>
+                    {% endif %}
+                </div>
+                {% if subscription_days_left > 0 %}
+                    <div class="wf-stat-value">{{ subscription_days_left }} <span class="fs-6 fw-normal text-muted">روز</span></div>
+                    <div class="wf-stat-label">{{ active_plan_name }} · {{ subscribed_platforms_count }} پلتفرم مجاز</div>
+                {% else %}
+                    <div class="wf-stat-value">۰ <span class="fs-6 fw-normal text-muted">روز</span></div>
+                    <div class="wf-stat-label">اشتراک فعالی ثبت نشده</div>
+                {% endif %}
+                <div class="mt-3 pt-2 border-top border-light">
+                    <a href="{% url 'forward_subscriptions:plans' %}" class="small text-primary text-decoration-none fw-bold">
+                        {% if subscription_days_left > 0 %}تمدید یا افزودن پلتفرم{% else %}دریافت اشتراک / تست رایگان{% endif %}
+                        <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- پیام‌رسان‌های متصل -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wf-stat-card accent-emerald">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wf-stat-icon emerald"><i class="bi bi-hdd-network-fill"></i></div>
+                    <span class="badge bg-success bg-opacity-25 text-success px-3 py-1 rounded-pill">اتصال</span>
+                </div>
+                <div class="wf-stat-value">{{ connected_platforms_count }} <span class="fs-6 fw-normal text-muted">از ۴</span></div>
+                <div class="wf-stat-label">پیام‌رسان متصل‌شده</div>
+                <div class="mt-3 pt-2 border-top border-light small text-muted d-flex justify-content-between">
+                    <span class="text-success">✓ {{ subscribed_platforms_count }} دارای اشتراک</span>
+                    <span class="text-info">✓ {{ total_channels_count }} کانال فعال</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- کل تحویل‌های موفق -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wf-stat-card accent-purple">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wf-stat-icon purple"><i class="bi bi-send-check-fill"></i></div>
+                    <span class="badge bg-primary bg-opacity-25 text-primary px-3 py-1 rounded-pill">انتشار</span>
+                </div>
+                <div class="wf-stat-value">{{ total_sent_count|intcomma }}</div>
+                <div class="wf-stat-label">تحویل موفق در کانال‌ها</div>
+                <div class="mt-3 pt-2 border-top border-light small text-muted">
+                    طی <strong class="text-white">{{ total_jobs_count|intcomma }}</strong> نوبت ارسال همگانی
+                </div>
+            </div>
+        </div>
+
+        <!-- کیف پول -->
+        <div class="col-xl-3 col-md-6">
+            <div class="wf-stat-card accent-blue">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="wf-stat-icon blue"><i class="bi bi-wallet2"></i></div>
+                    <span class="badge bg-info bg-opacity-25 text-info px-3 py-1 rounded-pill">مالی</span>
+                </div>
+                <div class="wf-stat-value">{{ wallet_balance|intcomma }}</div>
+                <div class="wf-stat-label">موجودی کیف پول (تومان)</div>
+                <div class="mt-3 pt-2 border-top border-light">
+                    <a href="{% url 'payment:wallet_deposit' %}" class="small text-info text-decoration-none fw-bold">
+                        افزایش موجودی کیف پول <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ۳. ویترین ۴ پلتفرم با لوگوی دیتابیس (سبز شونده پس از اتصال!) ── -->
+    <div class="wf-section-heading wf-reveal wf-delay-2">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:42px;height:42px;border-radius:0.9rem;background:linear-gradient(135deg,#07c98b,#3c76f2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.25rem;">
+                <i class="bi bi-broadcast"></i>
+            </div>
+            <div>
+                <h4 class="text-white fw-bold mb-0 fs-5">وضعیت اتصال پیام‌رسان‌ها و مدیریت کانال‌ها</h4>
+                <p class="text-muted fs-xs mb-0">
+                    روی هر پیام‌رسان می‌توانید آموزش اتصال را ببینید، حساب خود را متصل کنید و کانال‌های آن را مدیریت نمایید.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'forward_subscriptions:plans' %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+            <i class="bi bi-plus-circle-fill text-success"></i> ارتقا و افزودن پلتفرم
+        </a>
+    </div>
+
+    <div class="row g-4 mb-5 wf-reveal wf-delay-2">
+        {% for p in platform_cards %}
+        <div class="col-md-6 col-lg-4">
+            <div class="wf-platform-hub-card {% if p.is_connected %}is-connected{% elif p.has_subscription %}is-subscribed-pending{% else %}is-locked{% endif %}">
+
+                <!-- هدر کارت پلتفرم با لوگوی واقعی دیتابیس -->
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="wf-platform-logo-box">
+                            {% if p.logo_url %}
+                                <img src="{{ p.logo_url }}" alt="{{ p.name }}">
+                            {% else %}
+                                <div class="wf-platform-logo-fallback">
+                                    <i class="bi {{ p.icon }}"></i>
+                                </div>
+                            {% endif %}
+                            {% if p.is_connected %}
+                                <span class="wf-platform-check-badge" title="متصل و فعال">
+                                    <i class="bi bi-check-lg"></i>
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h5 class="text-white fw-bold mb-1 fs-5">{{ p.name }}</h5>
+                            {% if p.has_subscription %}
+                                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2 py-1">
+                                    <i class="bi bi-shield-check me-1"></i>{{ p.remaining_days }} روز اعتبار
+                                </span>
+                            {% else %}
+                                <span class="badge bg-dark border border-secondary text-muted rounded-pill px-2 py-1">
+                                    <i class="bi bi-lock-fill me-1"></i>نیاز به اشتراک
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if p.is_connected %}
+                        <span class="wf-badge-status is-connected">
+                            <span class="wf-pulse-dot"></span> متصل
+                        </span>
+                    {% elif p.has_subscription %}
+                        <span class="wf-badge-status is-ready">
+                            <span class="wf-pulse-dot"></span> آماده اتصال
+                        </span>
+                    {% else %}
+                        <span class="wf-badge-status is-locked">
+                            <span class="wf-pulse-dot"></span> قفل
+                        </span>
+                    {% endif %}
+                </div>
+
+                <p class="text-muted fs-xs mb-0" style="line-height: 1.8; min-height: 44px;">
+                    {{ p.summary }}
+                </p>
+
+                <!-- باکس اطلاعات اتصال و کانال‌ها -->
+                <div class="wf-platform-meta-box">
+                    <div class="d-flex justify-content-between align-items-center fs-xs mb-2">
+                        <span class="text-muted">وضعیت نشست:</span>
+                        {% if p.is_connected %}
+                            <strong class="text-success text-truncate" style="max-width: 140px;" dir="ltr">
+                                {{ p.account_identifier|default:"متصل و فعال" }}
+                            </strong>
+                        {% else %}
+                            <span class="text-warning fw-bold">متصل نشده</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center fs-xs">
+                        <span class="text-muted">کانال‌های ثبت‌شده:</span>
+                        <strong class="text-white">{{ p.channels_count }} کانال فعال</strong>
+                    </div>
+
+                    {% if p.channels %}
+                    <div class="d-flex flex-wrap gap-1 mt-2 pt-2 border-top border-light">
+                        {% for ch in p.channels %}
+                            <span class="wf-channel-mini-tag">
+                                <i class="bi bi-check2-circle text-success"></i>
+                                {{ ch.title|truncatechars:14 }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- دکمه‌های عملیاتی پایین کارت -->
+                <div class="mt-auto d-flex flex-column gap-2">
+                    {% if p.has_subscription %}
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="wf-btn wf-btn-glass py-2 px-3 fs-xs"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#wfGuideModal_{{ p.slug }}"
+                                    title="آموزش گام‌به‌گام اتصال">
+                                <i class="bi bi-journal-code text-warning"></i> آموزش
+                            </button>
+                            {% if p.is_connected %}
+                                <a href="{% url p.channels_url_name %}" class="wf-btn wf-btn-emerald flex-grow-1 py-2 px-3 fs-xs">
+                                    <i class="bi bi-sliders"></i> مدیریت کانال‌ها ({{ p.channels_count }})
+                                </a>
+                            {% else %}
+                                <a href="{% url p.connect_url_name %}" class="wf-btn wf-btn-orange flex-grow-1 py-2 px-3 fs-xs">
+                                    <i class="bi bi-plug-fill"></i> اتصال {{ p.name }}
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-1 px-1">
+                            <a href="{% url p.connect_url_name %}" class="text-muted fs-xs text-decoration-none">
+                                <i class="bi bi-key me-1 text-primary"></i>تنظیمات اتصال
+                            </a>
+                            <a href="{% url p.channels_url_name %}" class="text-muted fs-xs text-decoration-none">
+                                لیست کانال‌ها <i class="bi bi-chevron-left ms-1"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="wf-btn wf-btn-glass py-2 px-3 fs-xs"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#wfGuideModal_{{ p.slug }}">
+                                <i class="bi bi-question-circle text-warning"></i> راهنما
+                            </button>
+                            <a href="{% url 'forward_subscriptions:plans' %}" class="wf-btn wf-btn-orange flex-grow-1 py-2 px-3 fs-xs">
+                                <i class="bi bi-unlock-fill"></i> فعال‌سازی {{ p.name }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ── ۴. نوار دسترسی سریع تصویری با لوگوهای دیتابیس (Quick Launch Dock) ── -->
+    <div class="wf-dashboard-card mb-5 wf-reveal wf-delay-3">
+        <div class="wf-dashboard-card-header">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                <h5 class="text-white fw-bold mb-0 fs-6">دسترسی سریع به بخش‌های وین فوروارد</h5>
+            </div>
+        </div>
+        <div class="p-4">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
+                <div class="col">
+                    <a href="{% url 'broadcast:send' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
+                        <span class="fw-bold fs-xs">ارسال پیام همگانی</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'broadcast:bale_channels' %}" class="wf-dock-tile">
+                        {% if nav_platforms.bale and nav_platforms.bale.logo %}
+                            <img src="{{ nav_platforms.bale.logo.url }}" alt="بله" class="wf-dock-tile-logo">
+                        {% else %}
+                            <div class="wf-dock-tile-icon"><i class="bi bi-send-check-fill"></i></div>
+                        {% endif %}
+                        <span class="fw-bold fs-xs">کانال‌های بله</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'broadcast:eitaa_channels' %}" class="wf-dock-tile">
+                        {% if nav_platforms.eitaa and nav_platforms.eitaa.logo %}
+                            <img src="{{ nav_platforms.eitaa.logo.url }}" alt="ایتا" class="wf-dock-tile-logo">
+                        {% else %}
+                            <div class="wf-dock-tile-icon"><i class="bi bi-broadcast-pin"></i></div>
+                        {% endif %}
+                        <span class="fw-bold fs-xs">کانال‌های ایتا</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'broadcast:rubika_channels' %}" class="wf-dock-tile">
+                        {% if nav_platforms.rubika and nav_platforms.rubika.logo %}
+                            <img src="{{ nav_platforms.rubika.logo.url }}" alt="روبیکا" class="wf-dock-tile-logo">
+                        {% else %}
+                            <div class="wf-dock-tile-icon"><i class="bi bi-phone-vibrate-fill"></i></div>
+                        {% endif %}
+                        <span class="fw-bold fs-xs">کانال‌های روبیکا</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'forward_subscriptions:plans' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon" style="color:#fdbc31;"><i class="bi bi-gem"></i></div>
+                        <span class="fw-bold fs-xs">خرید و تمدید اشتراک</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ۵. نمودار فعالیت ۳۰ روز اخیر و لیست آخرین ارسال‌ها ── -->
+    <div class="row g-4 wf-reveal wf-delay-4">
+        <div class="col-lg-7">
+            <div class="wf-dashboard-card h-100">
+                <div class="wf-dashboard-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-graph-up-arrow text-primary fs-5"></i>
+                        <h5 class="text-white fw-bold mb-0 fs-6">نمودار عملکرد انتشار در ۳۰ روز اخیر</h5>
+                    </div>
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill px-3 py-1">
+                        تحویل موفق و ناموفق
+                    </span>
+                </div>
+                <div class="p-4">
+                    <div class="wf-chart-container">
+                        <canvas id="winforwardActivityChart"
+                                data-labels='{{ activity_labels_json|safe }}'
+                                data-success='{{ activity_success_data_json|safe }}'
+                                data-failed='{{ activity_failed_data_json|safe }}'></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="wf-dashboard-card h-100">
+                <div class="wf-dashboard-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-info fs-5"></i>
+                        <h5 class="text-white fw-bold mb-0 fs-6">آخرین عملیات‌های ارسال</h5>
+                    </div>
+                    <a href="{% url 'broadcast:job_list' %}" class="small text-primary text-decoration-none fw-bold">
+                        مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                    </a>
+                </div>
+                <div class="p-3" style="max-height: 360px; overflow-y: auto;">
+                    {% if recent_jobs %}
+                        {% for job in recent_jobs %}
+                            <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-job-row">
+                                <div class="overflow-hidden">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1">
+                                            #{{ job.pk }} · {{ job.message.get_content_type_display }}
+                                        </span>
+                                        <span class="text-white fw-bold fs-xs text-truncate" style="max-width: 170px;">
+                                            {{ job.message.text|truncatechars:35|default:"(رسانه بدون کپشن)" }}
+                                        </span>
+                                    </div>
+                                    <div class="text-muted fs-xs">
+                                        {{ job.created_at|date:"Y/m/d H:i" }} ·
+                                        <span class="text-success">{{ job.success_count }} موفق</span>
+                                        {% if job.failed_count %}
+                                            / <span class="text-danger">{{ job.failed_count }} خطا</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                    {% if job.status == 'done' %}
+                                        <span class="wf-badge-status is-connected py-1 px-2">موفق</span>
+                                    {% elif job.status == 'partial' %}
+                                        <span class="wf-badge-status is-ready py-1 px-2">نیمه‌موفق</span>
+                                    {% elif job.status == 'running' or job.status == 'pending' %}
+                                        <span class="wf-badge-status is-ready py-1 px-2">در حال ارسال</span>
+                                    {% else %}
+                                        <span class="wf-badge-status is-danger py-1 px-2">ناموفق</span>
+                                    {% endif %}
+                                    <i class="bi bi-chevron-left text-muted"></i>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-send-slash fs-1 text-muted d-block mb-2"></i>
+                            <p class="text-muted fs-sm mb-3">هنوز هیچ پیامی ارسال نکرده‌اید.</p>
+                            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange py-2 px-4 fs-xs">
+                                ارسال اولین پیام
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── مودال‌های آموزش گام‌به‌گام اتصال هر پلتفرم (با لوگوی دیتابیس) ── -->
+<div class="modal fade wf-modal" id="wfGuideModal_bale" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold d-flex align-items-center gap-2">
+                    {% if nav_platforms.bale and nav_platforms.bale.logo %}
+                        <img src="{{ nav_platforms.bale.logo.url }}" alt="بله" width="32" height="32" class="rounded-3">
+                    {% else %}
+                        <i class="bi bi-send-check-fill text-success"></i>
+                    {% endif %}
+                    آموزش اتصال پیام‌رسان بله به وین فوروارد
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۱</div>
+                    <div class="w-100">
+                        <h6 class="text-white fw-bold fs-sm mb-1">ورود به ربات رسمی وین فوروارد در بله</h6>
+                        <p class="text-muted fs-xs mb-2">روی لینک اختصاصی زیر کلیک کنید یا آن را کپی کرده و در پیام‌رسان بله باز کنید تا حساب کاربری شما متصل شود:</p>
+                        <div class="wf-code-copy-box">
+                            <code>{{ bale_connect_link }}</code>
+                            <button type="button" class="wf-btn wf-btn-glass py-1 px-3 fs-xs" data-wf-copy="{{ bale_connect_link }}">
+                                <i class="bi bi-clipboard"></i> کپی لینک
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۲</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ادمین کردن ربات در کانال‌های بله</h6>
+                        <p class="text-muted fs-xs mb-0">ربات وین فوروارد را در کانال‌های بله خود با دسترسی «ارسال پیام» ادمین کنید.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step mb-0">
+                    <div class="wf-guide-step-num">۳</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ثبت کانال با دستور <code>/addchannel</code></h6>
+                        <p class="text-muted fs-xs mb-0">در داخل ربات بله دستور <code>/addchannel @channel_id</code> را بفرستید تا کانالتان ثبت شود و کارت بله در داشبورد سبز گردد.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
+                <a href="{% url 'broadcast:bale_connect' %}" class="wf-btn wf-btn-emerald">
+                    <i class="bi bi-plug-fill"></i> رفتن به صفحه اتصال بله
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade wf-modal" id="wfGuideModal_eitaa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold d-flex align-items-center gap-2">
+                    {% if nav_platforms.eitaa and nav_platforms.eitaa.logo %}
+                        <img src="{{ nav_platforms.eitaa.logo.url }}" alt="ایتا" width="32" height="32" class="rounded-3">
+                    {% else %}
+                        <i class="bi bi-broadcast-pin text-warning"></i>
+                    {% endif %}
+                    آموزش اتصال پیام‌رسان ایتا (سرویس ایتایار)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۱</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">دریافت توکن از سامانه ایتایار</h6>
+                        <p class="text-muted fs-xs mb-0">وارد سایت <a href="https://eitaayar.ir" target="_blank" rel="noopener" class="text-primary fw-bold">eitaayar.ir</a> شوید، با حساب ایتا لاگین کنید و توکن پروژه خود را کپی نمایید.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۲</div>
+                    <div class="w-100">
+                        <h6 class="text-white fw-bold fs-sm mb-1">ادمین کردن <code>@sender</code> در کانال ایتا</h6>
+                        <p class="text-muted fs-xs mb-2">اکانت <code>@sender</code> را در بخش مدیران کانال ایتای خود ادمین کنید.</p>
+                        <div class="wf-code-copy-box">
+                            <code>@sender</code>
+                            <button type="button" class="wf-btn wf-btn-glass py-1 px-3 fs-xs" data-wf-copy="@sender">
+                                <i class="bi bi-clipboard"></i> کپی
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="wf-guide-step mb-0">
+                    <div class="wf-guide-step-num">۳</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ثبت توکن و افزودن کانال</h6>
+                        <p class="text-muted fs-xs mb-0">توکن را در صفحه اتصال ایتا ذخیره کنید تا کارت ایتا سبز شود و کانال‌هایتان را اضافه نمایید.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
+                <a href="{% url 'broadcast:eitaa_connect_token' %}" class="wf-btn wf-btn-orange">
+                    <i class="bi bi-key-fill"></i> ثبت توکن ایتایار
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade wf-modal" id="wfGuideModal_rubika" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold d-flex align-items-center gap-2">
+                    {% if nav_platforms.rubika and nav_platforms.rubika.logo %}
+                        <img src="{{ nav_platforms.rubika.logo.url }}" alt="روبیکا" width="32" height="32" class="rounded-3">
+                    {% else %}
+                        <i class="bi bi-phone-vibrate-fill text-info"></i>
+                    {% endif %}
+                    آموزش اتصال مستقیم حساب روبیکا
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۱</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ورود با شماره موبایل روبیکا</h6>
+                        <p class="text-muted fs-xs mb-0">شماره موبایل اکانت روبیکایی که در کانال‌هایتان ادمین است را وارد کنید.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۲</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">تایید کد یک‌بارمصرف (OTP)</h6>
+                        <p class="text-muted fs-xs mb-0">کد ارسال‌شده به برنامه روبیکا را وارد کنید تا نشست رمزنگاری‌شده ثبت شده و کارت روبیکا سبز شود.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step mb-0">
+                    <div class="wf-guide-step-num">۳</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">دریافت خودکار کانال‌ها</h6>
+                        <p class="text-muted fs-xs mb-0">در صفحه کانال‌های روبیکا روی دکمه «شناسایی خودکار کانال‌ها» بزنید تا تمام کانال‌های شما یک‌جا اضافه شوند.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
+                <a href="{% url 'broadcast:rubika_connect_phone' %}" class="wf-btn wf-btn-emerald">
+                    <i class="bi bi-phone-fill"></i> ورود به حساب روبیکا
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'finder/vendor/chart/dict/chart.umd.min.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("winforwardActivityChart");
+    if (!canvas || typeof Chart === "undefined") return;
+
+    const labels = JSON.parse(canvas.dataset.labels || "[]");
+    const successData = JSON.parse(canvas.dataset.success || "[]");
+    const failedData = JSON.parse(canvas.dataset.failed || "[]");
+    const ctx = canvas.getContext("2d");
+
+    if (labels.length === 0) {
+        ctx.font = "13px IRANSans, Vazir, sans-serif";
+        ctx.fillStyle = "#9691a4";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("پس از اولین ارسال همگانی، نمودار تحویل ۳۰ روزه در اینجا رسم می‌شود", canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const gradSuccess = ctx.createLinearGradient(0, 0, 0, 260);
+    gradSuccess.addColorStop(0, "rgba(7, 201, 139, 0.38)");
+    gradSuccess.addColorStop(1, "rgba(7, 201, 139, 0.01)");
+
+    const gradFailed = ctx.createLinearGradient(0, 0, 0, 260);
+    gradFailed.addColorStop(0, "rgba(253, 86, 49, 0.34)");
+    gradFailed.addColorStop(1, "rgba(253, 86, 49, 0.01)");
+
+    new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "تحویل موفق",
+                    data: successData,
+                    borderColor: "#07c98b",
+                    backgroundColor: gradSuccess,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: "#07c98b",
+                    pointBorderColor: "#fff",
+                    pointRadius: 3.5,
+                },
+                {
+                    label: "خطای ارسال",
+                    data: failedData,
+                    borderColor: "#fd5631",
+                    backgroundColor: gradFailed,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: "#fd5631",
+                    pointBorderColor: "#fff",
+                    pointRadius: 3,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: {
+                    labels: { color: "#fff", font: { family: "IRANSans, Vazir", size: 12 }, usePointStyle: true },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: "rgba(255,255,255,0.05)" },
+                    ticks: { color: "#9691a4", precision: 0 },
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: "#9691a4" },
+                },
+            },
+        },
+    });
+});
+</script>
+{% endblock %}

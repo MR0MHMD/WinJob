@@ -1,0 +1,302 @@
+/* ==========================================================================
+   WinForward Shared Core & Navigation Design System (forward.css)
+   هماهنگ با تم اصلی وین‌جاب (parent/base.html) و پالت وین‌دایرکت
+   ========================================================================== */
+
+:root {
+    --wf-primary: #fd5631;
+    --wf-primary-light: #ff8066;
+    --wf-accent: #5d3cf2;
+    --wf-accent-light: #8b5cf6;
+    --wf-emerald: #07c98b;
+    --wf-emerald-dark: #059669;
+    --wf-gold: #fdbc31;
+    --wf-blue: #3c76f2;
+    --wf-blue-light: #6391f5;
+    --wf-danger: #f23c49;
+    --wf-surface: rgba(255, 255, 255, 0.032);
+    --wf-surface-elevated: rgba(31, 27, 45, 0.82);
+    --wf-border: rgba(255, 255, 255, 0.08);
+    --wf-text-muted: #9691a4;
+}
+
+.wf-shell {
+    margin-top: 1.75rem;
+    margin-bottom: 3.5rem;
+    color: #ffffff;
+    direction: rtl;
+}
+
+/* ── انیمیشن‌های پایه و پیشرفته ── */
+@keyframes wfFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes wfPulseEmerald {
+    0% { box-shadow: 0 0 0 0 rgba(7, 201, 139, 0.65); }
+    70% { box-shadow: 0 0 0 10px rgba(7, 201, 139, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(7, 201, 139, 0); }
+}
+
+@keyframes wfShimmerBorder {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+@keyframes wfFadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.wf-reveal {
+    animation: wfFadeUp 0.5s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+.wf-delay-1 { animation-delay: 0.07s; }
+.wf-delay-2 { animation-delay: 0.14s; }
+.wf-delay-3 { animation-delay: 0.21s; }
+.wf-delay-4 { animation-delay: 0.28s; }
+
+/* ── نوار ناوبری یکپارچه وین‌فوروارد با لوگوی دیتابیس پلتفرم‌ها ── */
+.wf-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem;
+    margin-bottom: 1.85rem;
+    background: linear-gradient(135deg, rgba(31, 27, 45, 0.92), rgba(22, 19, 34, 0.92));
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.wf-nav-bar::-webkit-scrollbar { display: none; }
+
+.wf-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.62rem 1.05rem;
+    border-radius: 0.9rem;
+    color: rgba(255, 255, 255, 0.72) !important;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    white-space: nowrap;
+    transition: all 0.25s cubic-bezier(0.2, 0.85, 0.25, 1);
+    border: 1px solid transparent;
+}
+
+.wf-nav-item:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.wf-nav-item.is-active {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.22), rgba(93, 60, 242, 0.24));
+    border-color: rgba(253, 86, 49, 0.45);
+    box-shadow: 0 8px 22px -8px rgba(253, 86, 49, 0.45);
+}
+
+.wf-nav-item.is-sub-cta {
+    background: linear-gradient(135deg, rgba(253, 188, 49, 0.16), rgba(253, 86, 49, 0.16));
+    border-color: rgba(253, 188, 49, 0.35);
+    color: #fdbc31 !important;
+}
+.wf-nav-item.is-sub-cta.is-active,
+.wf-nav-item.is-sub-cta:hover {
+    background: linear-gradient(135deg, #fdbc31, #fd5631);
+    color: #fff !important;
+    border-color: transparent;
+}
+
+.wf-nav-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* ── حلقه نمایش لوگوی پلتفرم از دیتابیس ── */
+.wf-db-logo-ring {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.15rem;
+    padding: 3px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04));
+    box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+}
+
+.wf-db-logo-ring img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0.95rem;
+    display: block;
+}
+
+/* ── نشان‌های وضعیت تپنده ── */
+.wf-badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 50rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.wf-badge-status .wf-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.wf-badge-status.is-connected {
+    background: rgba(7, 201, 139, 0.16);
+    color: #2ce5a7;
+    border: 1px solid rgba(7, 201, 139, 0.4);
+}
+.wf-badge-status.is-connected .wf-pulse-dot {
+    background: #07c98b;
+    animation: wfPulseEmerald 2s infinite;
+}
+
+.wf-badge-status.is-ready {
+    background: rgba(253, 188, 49, 0.15);
+    color: #fdbc31;
+    border: 1px solid rgba(253, 188, 49, 0.35);
+}
+.wf-badge-status.is-ready .wf-pulse-dot {
+    background: #fdbc31;
+}
+
+.wf-badge-status.is-locked {
+    background: rgba(150, 145, 164, 0.14);
+    color: #b1acc0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.wf-badge-status.is-locked .wf-pulse-dot {
+    background: #9691a4;
+}
+
+.wf-badge-status.is-danger {
+    background: rgba(242, 60, 73, 0.16);
+    color: #ff6b78;
+    border: 1px solid rgba(242, 60, 73, 0.35);
+}
+.wf-badge-status.is-danger .wf-pulse-dot {
+    background: #f23c49;
+}
+
+/* ── دکمه‌های استاندارد وین‌فوروارد ── */
+.wf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.35rem;
+    border-radius: 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.wf-btn-orange {
+    background: linear-gradient(135deg, #fd5631, #e03e1a);
+    color: #fff !important;
+    box-shadow: 0 8px 22px -6px rgba(253, 86, 49, 0.5);
+}
+.wf-btn-orange:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(253, 86, 49, 0.68);
+    color: #fff !important;
+}
+
+.wf-btn-emerald {
+    background: linear-gradient(135deg, #07c98b, #059669);
+    color: #fff !important;
+    box-shadow: 0 8px 22px -6px rgba(7, 201, 139, 0.45);
+}
+.wf-btn-emerald:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(7, 201, 139, 0.65);
+    color: #fff !important;
+}
+
+.wf-btn-purple {
+    background: linear-gradient(135deg, #5d3cf2, #4728d4);
+    color: #fff !important;
+    box-shadow: 0 8px 22px -6px rgba(93, 60, 242, 0.45);
+}
+.wf-btn-purple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(93, 60, 242, 0.65);
+    color: #fff !important;
+}
+
+.wf-btn-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #e6e3f0 !important;
+}
+.wf-btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(253, 86, 49, 0.45) !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+}
+
+/* ── مودال‌های شیشه‌ای تیره‌رنگ ── */
+.wf-modal .modal-content {
+    background: linear-gradient(165deg, #211d30 0%, #171422 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.5rem;
+    color: #fff;
+    box-shadow: 0 28px 65px -15px rgba(0, 0, 0, 0.8);
+}
+.wf-modal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.25rem 1.5rem;
+}
+.wf-modal .modal-body { padding: 1.5rem; }
+.wf-modal .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem 1.5rem;
+}
+.wf-modal .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+}
+
+/* ── باکس کپی دستورات و کدها ── */
+.wf-code-copy-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem 1.1rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px dashed rgba(7, 201, 139, 0.45);
+    border-radius: 0.9rem;
+    direction: ltr;
+}
+.wf-code-copy-box code {
+    color: #2ce5a7;
+    font-size: 0.92rem;
+    font-weight: 700;
+    word-break: break-all;
+}

@@ -1,57 +1,74 @@
 {% extends "parent/base.html" %}
 {% load static %}
 
-{% block title %}تایید کد ورود روبیکا{% endblock %}
+{% block title %}تایید کد ورود روبیکا | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_connect.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 wf-shell">
 
-    {# ========== Breadcrumb ========== #}
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb breadcrumb-light">
-            <li class="breadcrumb-item"><a href="{% url 'broadcast:job_list' %}">وین فوروارد</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'broadcast:rubika_connect_phone' %}">اتصال به روبیکا</a></li>
-            <li class="breadcrumb-item active" aria-current="page">تایید کد</li>
-        </ol>
-    </nav>
+        <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:rubika_connect_phone' %}">اتصال روبیکا</a></li>
+        <li class="breadcrumb-item active">تایید کد</li>
+    </ol>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-9 col-xl-7">
+    {% include "product/forward/partials/nav.html" %}
 
-            {# ========== Header Card ========== #}
-            <div class="card card-light border-light mb-4">
-                <div class="card-body p-4 d-flex align-items-center gap-3">
-                    <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm"
-                         style="width: 60px; height: 60px; background: linear-gradient(135deg, #2ecc71, #16a085); flex-shrink: 0;">
-                        <i class="fi-lock fs-3 text-white"></i>
-                    </div>
-                    <div>
-                        <h4 class="text-white mb-1">تایید کد ورود روبیکا (گام ۲ از ۲)</h4>
-                        <p class="text-muted mb-0 fs-sm">
-                            کد ارسال‌شده برای شماره <span dir="ltr" class="text-white fw-bold">{{ phone }}</span> را وارد کنید.
-                        </p>
-                    </div>
-                </div>
+    <div class="wf-auth-wizard wf-reveal">
+        <a href="{% url 'broadcast:rubika_connect_phone' %}" class="wf-wizard-node is-done text-decoration-none">
+            <span class="wf-wizard-circle"><i class="bi bi-check-lg"></i></span>
+            <span>گام اول: شماره موبایل ({{ phone }})</span>
+        </a>
+        <i class="bi bi-chevron-left text-muted"></i>
+        <span class="wf-wizard-node is-active">
+            <span class="wf-wizard-circle">۲</span>
+            <span>گام دوم: تایید کد ورود</span>
+        </span>
+    </div>
+
+    <div class="wf-connect-hero wf-reveal wf-delay-1">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-connect-hero-logo">
+                {% if platform and platform.logo %}
+                    <img src="{{ platform.logo.url }}" alt="{{ platform.name }}">
+                {% else %}
+                    <i class="bi bi-shield-lock-fill fs-2 text-white"></i>
+                {% endif %}
             </div>
+            <div>
+                <h1 class="h4 text-white fw-bold mb-1">تایید کد ورود روبیکا</h1>
+                <p class="text-muted fs-xs mb-0">
+                    کد ارسال‌شده به برنامه روبیکا یا پیامک شماره <strong class="text-white" dir="ltr">{{ phone }}</strong> را وارد کنید.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'broadcast:rubika_connect_phone' %}" class="wf-btn wf-btn-glass">
+            <i class="bi bi-pencil"></i> تغییر شماره
+        </a>
+    </div>
 
-            {# ========== Form ========== #}
-            <div class="card card-light border-light">
-                <div class="card-body p-4 p-md-5">
+    <div class="row justify-content-center wf-reveal wf-delay-2">
+        <div class="col-lg-7">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-key-fill text-success me-1"></i> ثبت کد تایید یک‌بارمصرف
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
                     <form method="post" novalidate>
                         {% csrf_token %}
-
                         <div class="mb-4">
-                            <label for="{{ form.phone_code.id_for_label }}" class="form-label text-white fw-bold mb-2">
-                                <i class="fi-key me-1 text-primary"></i>
-                                {{ form.phone_code.label }}
-                                <span class="text-danger">*</span>
+                            <label for="{{ form.phone_code.id_for_label }}" class="text-white fw-bold fs-xs mb-2 d-block">
+                                <i class="bi bi-123 text-primary me-1"></i> {{ form.phone_code.label }} <span class="text-danger">*</span>
                             </label>
                             {{ form.phone_code }}
-                            {% if form.phone_code.help_text %}
-                                <div class="form-text text-muted fs-xs mt-2">
-                                    <i class="fi-info-circle me-1"></i>{{ form.phone_code.help_text }}
-                                </div>
-                            {% endif %}
                             {% if form.phone_code.errors %}
                                 <div class="text-danger fs-xs mt-2">
                                     {% for error in form.phone_code.errors %}{{ error }}<br>{% endfor %}
@@ -59,20 +76,15 @@
                             {% endif %}
                         </div>
 
-                        <hr class="border-light my-4">
-
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="{% url 'broadcast:rubika_connect_phone' %}" class="btn btn-outline-light rounded-pill px-4">
-                                تغییر شماره
-                            </a>
-                            <button type="submit" class="btn btn-success rounded-pill px-4">
-                                <i class="fi-check me-1"></i>تایید و اتصال حساب
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-light">
+                            <a href="{% url 'broadcast:rubika_connect_phone' %}" class="wf-btn wf-btn-glass">بازگشت</a>
+                            <button type="submit" class="wf-btn wf-btn-emerald px-4">
+                                <i class="bi bi-check2-circle"></i> تایید و اتصال حساب روبیکا
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-
         </div>
     </div>
 

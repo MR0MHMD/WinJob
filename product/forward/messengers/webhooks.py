@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from core.models import Platform
 from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
 from product.forward.broadcast.services.channel_sync import finalize_verification
-from product.forward.broadcast.services.dispatcher import dispatch_job
+from product.forward.broadcast.services.dispatcher import dispatch_job, enqueue_dispatch_job
 from product.forward.messengers.adapters.base import MessengerError
 from product.forward.messengers.adapters.registry import get_adapter
 from product.forward.messengers.models import BotUser, ConnectToken
@@ -143,7 +143,7 @@ def _handle_bot_added_to_chat(message):
                     f"سلام! کانال «{chat.get('title', '')}» شناسایی شد.\n"
                     "برای مدیریت و ارسال پیام از طریق سایت وین‌فوروارد، ابتدا از لینک زیر حساب بله خود را به سایت متصل کنید، "
                     "سپس ربات را از کانال حذف و مجدداً اضافه کنید:\n"
-                    "https://winjob.ir/broadcast/connect",
+                    "https://winjob.ir/forward/bale/connect/",
                 )
             except Exception as exc:
                 logger.warning(f"Failed to send onboarding DM: {exc}")
@@ -386,10 +386,11 @@ def _handle_callback_query(callback):
                 return JsonResponse({"ok": True, "status": "no targets"})
 
             job.status = BroadcastJob.Status.PENDING
-            job.save(update_fields=["status"])
+            job.total_targets = job.targets.count()
+            job.save(update_fields=["status", "total_targets"])
 
-            # 🔑 dispatcher خودش پیام وضعیت و پیام نهایی رو مدیریت می‌کنه
-            dispatch_job(job.pk, progress_chat_id=str(chat_id))
+            # 🔑 اجرای غیرمسدودکننده در پس‌زمینه تا وب‌هوک بله تایم‌اوت نخورد
+            enqueue_dispatch_job(job.pk, progress_chat_id=str(chat_id))
 
         except Exception as e:
             logger.exception(f"Error in send_ callback: {e}")
@@ -469,6 +470,7 @@ def _handle_private_message(message):
     # استخراج نوع محتوا و file_id (ترتیب مهم است!)
     content_type = "text"
     platform_file_id = None
+    original_file_name = ""
 
     # ۱. اول استیکر (چون ممکن است document هم داشته باشد)
     if "sticker" in message:
@@ -480,6 +482,7 @@ def _handle_private_message(message):
     elif "animation" in message:
         content_type = "animation"
         platform_file_id = message["animation"]["file_id"]
+        original_file_name = message["animation"].get("file_name") or ""
         text_content = message.get("caption", "")
 
     # ۳. سپس بقیه انواع
@@ -491,25 +494,43 @@ def _handle_private_message(message):
     elif "video" in message:
         content_type = "video"
         platform_file_id = message["video"]["file_id"]
+        original_file_name = message["video"].get("file_name") or ""
         text_content = message.get("caption", "")
 
     elif "voice" in message:
         content_type = "voice"
         platform_file_id = message["voice"]["file_id"]
+        original_file_name = message["voice"].get("file_name") or ""
         text_content = message.get("caption", "")
 
     elif "audio" in message:
         content_type = "audio"
-        platform_file_id = message["audio"]["file_id"]
+        audio_obj = message["audio"]
+        platform_file_id = audio_obj["file_id"]
+        original_file_name = audio_obj.get("file_name") or ""
+        if not original_file_name and audio_obj.get("title"):
+            original_file_name = f"{audio_obj['title']}.mp3"
         text_content = message.get("caption", "")
 
     elif "document" in message:
-        content_type = "document"
-        platform_file_id = message["document"]["file_id"]
+        doc_obj = message["document"]
+        platform_file_id = doc_obj["file_id"]
+        original_file_name = doc_obj.get("file_name") or ""
+        doc_mime = (doc_obj.get("mime_type") or "").lower()
+        if doc_mime.startswith("audio/") or original_file_name.lower().endswith((".mp3", ".m4a", ".wav", ".flac", ".aac")):
+            content_type = "audio"
+        else:
+            content_type = "document"
         text_content = message.get("caption", "")
 
     if not text_content and not platform_file_id:
         return JsonResponse({"ok": True, "status": "empty message"})
+
+    file_ids_payload = {}
+    if platform_file_id:
+        file_ids_payload["bale"] = platform_file_id
+        if original_file_name:
+            file_ids_payload["bale_file_name"] = original_file_name
 
     try:
         # ساخت پیام و جاب در حالت پیش‌نویس
@@ -517,7 +538,7 @@ def _handle_private_message(message):
             user=bot_user.user,
             content_type=content_type,
             text=text_content,
-            platform_file_ids={"bale": platform_file_id} if platform_file_id else {}
+            platform_file_ids=file_ids_payload,
         )
         job = BroadcastJob.objects.create(message=msg, status=BroadcastJob.Status.DRAFT)
     except Exception as exc:

@@ -12,7 +12,6 @@ FORWARD_PLATFORMS = (
     ("bale", "بله"),
     ("eitaa", "ایتا"),
     ("rubika", "روبیکا"),
-    ("soroush", "سروش‌پلاس"),
 )
 
 FORWARD_PLATFORM_SLUGS = tuple(slug for slug, _ in FORWARD_PLATFORMS)
@@ -197,6 +196,21 @@ class ForwardSubscriptionOrder(models.Model):
     def __str__(self) -> str:
         """نمایش خوانای سفارش اشتراک برای ادمین و قالب‌ها."""
         return f"سفارش #{self.pk} — {self.plan.name} ({self.get_status_display()})"
+
+    @property
+    def selected_platforms(self) -> list[str]:
+        """سازگاری با نام selected_platforms برای برگرداندن لیست اسلاگ پلتفرم‌ها."""
+        return list(self.platforms or [])
+
+    @property
+    def platforms_count(self) -> int:
+        """تعداد پلتفرم‌های انتخاب‌شده در این سفارش."""
+        return len(self.platforms or [])
+
+    @property
+    def unit_price(self) -> int:
+        """مبلغ واحد هر پلتفرم در این سفارش (معادل price_per_platform)."""
+        return int(self.price_per_platform or 0)
 
     @property
     def platform_labels(self) -> list[str]:

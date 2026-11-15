@@ -39,7 +39,7 @@ def user_has_platform_access(user, platform_slug: str) -> bool:
     """بررسی اینکه آیا کاربر برای پلتفرم مشخص‌شده اشتراک فعال دارد یا خیر.
 
     :param user: نمونه کاربر سایت.
-    :param platform_slug: شناسه پلتفرم ('bale'، 'eitaa'، 'rubika'، 'soroush').
+    :param platform_slug: شناسه پلتفرم ('bale'، 'eitaa'، 'rubika').
     :return: True در صورت داشتن اشتراک فعال، در غیر این صورت False.
     """
     if not user or not getattr(user, "is_authenticated", False):
