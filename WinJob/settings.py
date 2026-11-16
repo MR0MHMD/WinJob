@@ -63,7 +63,6 @@ DAISY_SETTINGS = {
     'SITE_LOGO': '/static/finder/img/logo/logo.webp',
 
     'EXTRA_STYLES': ['/static/finder/css/them.min.css', '/static/finder/css/bootstrap-icons.css'],
-    # 'EXTRA_SCRIPTS': ['static/finder/js/them.min.js'],
     'LOAD_FULL_STYLES': False,
     'SHOW_CHANGELIST_FILTER': True,
     'DONT_SUPPORT_ME': True,

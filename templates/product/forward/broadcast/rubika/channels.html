@@ -37,7 +37,7 @@
                         <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> حساب متصل نشده</span>
                     {% endif %}
                 </div>
-                <p class="text-muted fs-xs mb-0">همگام‌سازی خودکار یا افزودن دستی کانال‌های روبیکایی که در آن‌ها ادمین هستید.</p>
+                <p class="text-muted fs-xs mb-0">همگام‌سازی خودکار کانال‌ها و تصاویر پروفایل روبیکایی که در آن‌ها ادمین هستید.</p>
             </div>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -51,9 +51,6 @@
                         <i class="bi bi-arrow-repeat"></i> شناسایی خودکار کانال‌ها
                     </button>
                 </form>
-                <a href="{% url 'broadcast:rubika_add_channel' %}" class="wf-btn wf-btn-orange">
-                    <i class="bi bi-plus-circle"></i> افزودن دستی
-                </a>
             {% endif %}
         </div>
     </div>
@@ -100,7 +97,11 @@
                     <div class="d-flex align-items-start justify-content-between gap-2">
                         <div class="d-flex align-items-center gap-3 overflow-hidden">
                             <div class="wf-channel-avatar-wrap">
-                                {{ ch.title|slice:":1" }}
+                                {% if ch.avatar %}
+                                    <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">
+                                {% else %}
+                                    {{ ch.title|slice:":1" }}
+                                {% endif %}
                                 {% if platform and platform.logo %}
                                     <img src="{{ platform.logo.url }}" alt="روبیکا" class="wf-channel-platform-corner">
                                 {% endif %}

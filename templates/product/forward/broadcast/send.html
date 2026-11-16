@@ -121,6 +121,18 @@
                     </div>
                     <div class="p-4">
                         {% if form.channel_items %}
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                                {% for pitem in preset_items %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-light rounded-pill px-3 fs-xs wf-web-preset-btn"
+                                            data-channel-ids="{{ pitem.channel_ids|join:',' }}">
+                                        <i class="bi bi-collection-fill text-primary me-1"></i> {{ pitem.preset.name }}
+                                    </button>
+                                {% endfor %}
+                                <a href="{% url 'broadcast:preset_list' %}" class="text-muted fs-xs text-decoration-none ms-auto">
+                                    <i class="bi bi-sliders me-1"></i> مدیریت پروفایل‌های ارسال
+                                </a>
+                            </div>
                             <div class="row g-3">
                                 {% for item in form.channel_items %}
                                 <div class="col-md-6">
@@ -134,7 +146,12 @@
                                                    id="id_channels_{{ item.channel.pk }}"
                                                    {% if item.checked and item.has_access %}checked{% endif %}
                                                    {% if not item.has_access %}disabled{% endif %}>
-                                            {% if item.channel.platform.logo %}
+                                            {% if item.channel.avatar %}
+                                                <img src="{{ item.channel.avatar.url }}"
+                                                     alt="{{ item.channel.title }}"
+                                                     class="wf-channel-platform-logo"
+                                                     style="border-radius:50%;object-fit:cover;">
+                                            {% elif item.channel.platform.logo %}
                                                 <img src="{{ item.channel.platform.logo.url }}"
                                                      alt="{{ item.channel.platform.name }}"
                                                      class="wf-channel-platform-logo">
@@ -229,4 +246,20 @@
     </form>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const cbs = Array.from(document.querySelectorAll(".wf-channel-cb:not(:disabled)"));
+    document.querySelectorAll(".wf-web-preset-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const ids = (btn.dataset.channelIds || "").split(",").filter(Boolean);
+            cbs.forEach(function (c) {
+                c.checked = ids.includes(String(c.value));
+                const tile = c.closest(".wf-channel-tile");
+                if (tile) tile.classList.toggle("is-selected", c.checked);
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

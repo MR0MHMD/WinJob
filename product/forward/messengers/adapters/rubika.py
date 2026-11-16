@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 import random
 import shutil
@@ -32,6 +33,8 @@ from .base import (
     MessengerRateLimitError,
 )
 from .registry import register
+
+logger = logging.getLogger(__name__)
 
 
 class RubikaCrypto:
@@ -225,7 +228,7 @@ class RubikaAdapter(MessengerAdapter):
             self._api_url = self.__class__._CACHED_API_URL
             return self._api_url
         try:
-            resp = self._session.get(self.DC_DISCOVERY_URL, timeout=8)
+            resp = requests.get(self.DC_DISCOVERY_URL, timeout=8)
             resp.raise_for_status()
             payload = resp.json()
             urls = payload.get("data", {}).get("default_api_urls", [])
@@ -649,7 +652,9 @@ class RubikaAdapter(MessengerAdapter):
         if isinstance(cached_file_inline, dict) and cached_file_inline.get("file_id") and cached_file_inline.get("access_hash_rec"):
             file_inline = dict(cached_file_inline)
             file_inline["type"] = rubika_type
+            logger.info("[rubika] Reusing cached file_id=%s (skipping upload) -> %s", file_inline["file_id"], chat_id)
         else:
+            logger.info("[rubika] Uploading new media (%s) -> %s", rubika_type, chat_id)
             uploaded = self._upload_file(file_obj, default_filename=default_filename)
             file_bytes = uploaded.pop("_file_bytes", b"")
 
@@ -859,6 +864,7 @@ class RubikaAdapter(MessengerAdapter):
                     "chat_id": obj_guid,
                     "title": abs_obj.get("title") or obj_guid,
                     "username": abs_obj.get("username") or "",
+                    "avatar_meta": abs_obj.get("avatar_thumbnail") or {},
                 }
             )
         return channels
@@ -913,3 +919,109 @@ class RubikaAdapter(MessengerAdapter):
         :return: رشته خالی.
         """
         return ""
+
+    def _get_storage_url(self, dc_id: str) -> str:
+        """دریافت آدرس دقیق سرور دانلود فایل از سرویس کشف دیتاسنتر روبیکا (کلید storage)."""
+        base_url = f"https://messenger{dc_id}.iranlms.ir"
+        try:
+            resp = self._session.get(self.DC_DISCOVERY_URL, timeout=8)
+            if resp.status_code == 200:
+                data = resp.json().get("data") or {}
+                storage_map = data.get("storage") or data.get("storages") or {}
+                if str(dc_id) in storage_map and storage_map[str(dc_id)]:
+                    base_url = str(storage_map[str(dc_id)]).rstrip("/")
+        except Exception:
+            pass
+        if base_url.endswith("/GetFile.ashx"):
+            return base_url
+        return f"{base_url}/GetFile.ashx"
+
+    def download_chat_avatar(self, chat_id: str, avatar_meta: Optional[Dict[str, Any]] = None) -> Optional[bytes]:
+        """دانلود بایت‌های عکس پروفایل کانال روبیکا مطابق متد download کتابخانه rubpy (POST به GetFile.ashx)."""
+        try:
+            meta = avatar_meta or {}
+            if not meta.get("file_id") and str(chat_id).startswith("c0"):
+                data = self._request("getChannelInfo", {"channel_guid": chat_id})
+                channel_obj = data.get("channel") or {}
+                chat_abs = (data.get("chat") or {}).get("abs_object") or {}
+                meta = channel_obj.get("avatar_thumbnail") or chat_abs.get("avatar_thumbnail") or {}
+
+            file_id = meta.get("file_id")
+            dc_id = meta.get("dc_id")
+            access_hash_rec = meta.get("access_hash_rec") or meta.get("access_hash")
+            if not (file_id and dc_id and access_hash_rec and self._auth):
+                logger.warning(
+                    "[rubika] Missing avatar metadata for %s: keys=%s",
+                    chat_id,
+                    list(meta.keys()) if isinstance(meta, dict) else type(meta),
+                )
+                return None
+
+            url = self._get_storage_url(str(dc_id))
+            chunk_size = 131072  # 128 KB مطابق پیش‌فرض rubpy
+            size = int(meta.get("size") or 0)
+
+            base_headers = {
+                "auth": self._auth,
+                "access-hash-rec": str(access_hash_rec),
+                "file-id": str(file_id),
+                "user-agent": self._session.headers.get("User-Agent", ""),
+            }
+
+            result = bytearray()
+            if size > 0:
+                for start in range(0, size, chunk_size):
+                    end = min(start + chunk_size, size) - 1
+                    headers = {
+                        **base_headers,
+                        "start-index": str(start),
+                        "last-index": str(end),
+                    }
+                    resp = requests.post(url, headers=headers, timeout=15)
+                    if resp.status_code != 200 or not resp.content:
+                        logger.warning(
+                            "[rubika] GetFile failed for %s: status=%s url=%s len=%s",
+                            chat_id,
+                            resp.status_code,
+                            url,
+                            len(resp.content or b""),
+                        )
+                        return None
+                    result.extend(resp.content)
+            else:
+                start = 0
+                for _ in range(16):  # حداکثر ۲ مگابایت برای آواتار
+                    end = start + chunk_size - 1
+                    headers = {
+                        **base_headers,
+                        "start-index": str(start),
+                        "last-index": str(end),
+                    }
+                    resp = requests.post(url, headers=headers, timeout=15)
+                    if resp.status_code != 200:
+                        logger.warning(
+                            "[rubika] GetFile failed for %s: status=%s url=%s len=%s",
+                            chat_id,
+                            resp.status_code,
+                            url,
+                            len(resp.content or b""),
+                        )
+                        return None
+                    if not resp.content:
+                        break
+                    result.extend(resp.content)
+                    if len(resp.content) < chunk_size:
+                        break
+                    start += len(resp.content)
+
+            if len(result) > 100:
+                return bytes(result)
+            logger.warning(
+                "[rubika] GetFile returned empty/too-small body for %s: url=%s len=%s",
+                chat_id,
+                url,
+                len(result),
+            )
+        except Exception as exc:
+            logger.warning("[rubika] download_chat_avatar failed for %s: %s", chat_id, exc)
+        return None

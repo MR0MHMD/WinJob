@@ -1,0 +1,106 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}ویرایش پروفایل «{{ preset.name }}» | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/presets.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:preset_list' %}">پروفایل‌های ارسال</a></li>
+        <li class="breadcrumb-item active">ویرایش {{ preset.name }}</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-preset-hero wf-reveal">
+        <div>
+            <h1 class="h4 text-white fw-bold mb-1">ویرایش پروفایل «{{ preset.name }}»</h1>
+            <p class="text-muted fs-xs mb-0">نام پروفایل یا کانال‌های عضو آن را تغییر دهید.</p>
+        </div>
+        <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-glass">
+            <i class="bi bi-arrow-right"></i> بازگشت به پروفایل‌ها
+        </a>
+    </div>
+
+    <div class="row justify-content-center wf-reveal wf-delay-1">
+        <div class="col-lg-7">
+            <div class="wf-preset-card">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label text-light fs-xs fw-bold" for="{{ form.name.id_for_label }}">
+                            {{ form.name.label }}
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger fs-xs mt-1">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-light fs-xs fw-bold mb-2">کانال‌های عضو:</label>
+                        {% with selected_ids=form.channels.value %}
+                        <div class="d-flex flex-column gap-2">
+                            {% for ch in available_channels %}
+                            <label class="wf-preset-select-tile" for="edit_ch_{{ ch.pk }}">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                    <input class="form-check-input wf-preset-ch-cb mt-0 flex-shrink-0"
+                                           type="checkbox"
+                                           name="channels"
+                                           value="{{ ch.pk }}"
+                                           id="edit_ch_{{ ch.pk }}"
+                                           {% if ch.pk|stringformat:"s" in selected_ids or ch.pk in selected_ids %}checked{% endif %}>
+                                    {% if ch.avatar %}
+                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" width="28" height="28" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
+                                    {% elif ch.platform.logo %}
+                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" width="26" height="26" class="rounded-circle flex-shrink-0">
+                                    {% endif %}
+                                    <div class="overflow-hidden">
+                                        <div class="text-white fw-bold fs-xs text-truncate">{{ ch.title }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">{{ ch.platform.name }}</div>
+                                    </div>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% endwith %}
+                        {% if form.channels.errors %}
+                            <div class="text-danger fs-xs mt-2">{{ form.channels.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-glass">انصراف</a>
+                        <button type="submit" class="wf-btn wf-btn-purple">
+                            <i class="bi bi-check2-circle"></i> ذخیره تغییرات
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".wf-preset-ch-cb").forEach(function (cb) {
+        const tile = cb.closest(".wf-preset-select-tile");
+        if (tile) tile.classList.toggle("is-checked", cb.checked);
+        cb.addEventListener("change", function () {
+            if (tile) tile.classList.toggle("is-checked", cb.checked);
+        });
+    });
+});
+</script>
+{% endblock %}

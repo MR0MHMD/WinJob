@@ -1,0 +1,214 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}پروفایل‌های ارسال (گروه‌بندی کانال‌ها) | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/presets.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">پروفایل‌های ارسال</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-preset-hero wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:58px;height:58px;border-radius:1.15rem;background:linear-gradient(135deg,#5d3cf2,#07c98b);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;">
+                <i class="bi bi-collection-fill"></i>
+            </div>
+            <div>
+                <h1 class="h4 text-white fw-bold mb-1">پروفایل‌های ارسال (دسته‌بندی کانال‌ها)</h1>
+                <p class="text-muted fs-xs mb-0">
+                    کانال‌های خود را در گروه‌های دلخواه (مثل «فروش» یا «اخبار») دسته‌بندی کنید. پس از ساخت حتی یک پروفایل، در ربات بله به‌جای لیست طولانی کانال‌ها، همین پروفایل‌ها و گزینه «انتخاب همه» نمایش داده می‌شوند.
+                </p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass">
+                <i class="bi bi-arrow-right"></i> بازگشت به داشبورد
+            </a>
+            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
+                <i class="bi bi-rocket-takeoff-fill"></i> استودیو ارسال
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ستون ساخت پروفایل جدید -->
+        <div class="col-lg-5 wf-reveal wf-delay-1">
+            <div class="wf-preset-card h-100">
+                <h5 class="text-white fw-bold mb-3 fs-6">
+                    <i class="bi bi-plus-circle-fill text-success me-1"></i> ساخت پروفایل ارسال جدید
+                </h5>
+                <form method="post" action="{% url 'broadcast:preset_list' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label text-light fs-xs fw-bold" for="{{ form.name.id_for_label }}">
+                            {{ form.name.label }}
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger fs-xs mt-1">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label text-light fs-xs fw-bold mb-0">
+                                انتخاب کانال‌های عضو:
+                            </label>
+                            {% if available_channels %}
+                            <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-2 py-0 fs-xs" id="wfPresetToggleAll">
+                                انتخاب همه
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        {% if available_channels %}
+                        <div class="d-flex flex-column gap-2" style="max-height: 360px; overflow-y: auto; padding-left: 4px;">
+                            {% for ch in available_channels %}
+                            <label class="wf-preset-select-tile" for="preset_ch_{{ ch.pk }}">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                    <input class="form-check-input wf-preset-ch-cb mt-0 flex-shrink-0"
+                                           type="checkbox"
+                                           name="channels"
+                                           value="{{ ch.pk }}"
+                                           id="preset_ch_{{ ch.pk }}">
+                                    {% if ch.avatar %}
+                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" width="28" height="28" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
+                                    {% elif ch.platform.logo %}
+                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" width="26" height="26" class="rounded-circle flex-shrink-0">
+                                    {% endif %}
+                                    <div class="overflow-hidden">
+                                        <div class="text-white fw-bold fs-xs text-truncate">{{ ch.title }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">{{ ch.platform.name }}</div>
+                                    </div>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning bg-dark border-warning text-warning fs-xs mb-0">
+                            هنوز کانال فعالی با دسترسی ادمین ثبت نکرده‌اید. ابتدا کانال‌های خود را از داشبورد متصل کنید.
+                        </div>
+                        {% endif %}
+
+                        {% if form.channels.errors %}
+                            <div class="text-danger fs-xs mt-2">{{ form.channels.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="wf-btn wf-btn-purple w-100" {% if not available_channels %}disabled{% endif %}>
+                        <i class="bi bi-check2-circle"></i> ذخیره پروفایل ارسال
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ستون لیست پروفایل‌های ذخیره‌شده -->
+        <div class="col-lg-7 wf-reveal wf-delay-2">
+            <div class="wf-preset-card h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-layers-fill text-primary me-1"></i> پروفایل‌های فعال شما ({{ presets|length }})
+                    </h5>
+                    <span class="badge bg-dark border border-secondary text-light rounded-pill fs-xs">
+                        همگام‌سازی خودکار با ربات بله
+                    </span>
+                </div>
+
+                {% if presets %}
+                <div class="d-flex flex-column gap-3">
+                    {% for preset in presets %}
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-3 py-1">
+                                    <i class="bi bi-box-seam-fill me-1"></i> {{ preset.name }}
+                                </span>
+                                <span class="text-muted fs-xs">{{ preset.channels.count }} کانال</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{% url 'broadcast:preset_edit' preset.pk %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                                    <i class="bi bi-pencil-square"></i> ویرایش
+                                </a>
+                                <form method="post" action="{% url 'broadcast:preset_delete' preset.pk %}" class="d-inline"
+                                      onsubmit="return confirm('آیا از حذف پروفایل «{{ preset.name }}» اطمینان دارید؟');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger">
+                                        <i class="bi bi-trash3"></i> حذف
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for ch in preset.channels.all %}
+                                <span class="wf-preset-channel-chip">
+                                    {% if ch.avatar %}
+                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}">
+                                    {% elif ch.platform.logo %}
+                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}">
+                                    {% endif %}
+                                    <span>{{ ch.title }}</span>
+                                </span>
+                            {% empty %}
+                                <span class="text-muted fs-xs">بدون کانال</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-folder2-open fs-1 text-muted d-block mb-2"></i>
+                    <h6 class="text-white fw-bold mb-1">هنوز پروفایلی نساخته‌اید</h6>
+                    <p class="text-muted fs-xs mb-0">
+                        تا زمانی که پروفایلی نسازید، ربات بله تمام کانال‌های شما را به‌صورت تکی نمایش می‌دهد. با ساخت اولین پروفایل، لیست ربات هوشمند و خلاصه می‌شود.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const checkboxes = document.querySelectorAll(".wf-preset-ch-cb");
+    const toggleBtn = document.getElementById("wfPresetToggleAll");
+
+    function syncTileState(cb) {
+        const tile = cb.closest(".wf-preset-select-tile");
+        if (tile) tile.classList.toggle("is-checked", cb.checked);
+    }
+
+    checkboxes.forEach(function (cb) {
+        syncTileState(cb);
+        cb.addEventListener("change", function () { syncTileState(cb); });
+    });
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", function () {
+            const allChecked = Array.from(checkboxes).every(function (cb) { return cb.checked; });
+            checkboxes.forEach(function (cb) {
+                cb.checked = !allChecked;
+                syncTileState(cb);
+            });
+            toggleBtn.textContent = allChecked ? "انتخاب همه" : "لغو همه";
+        });
+    }
+});
+</script>
+{% endblock %}

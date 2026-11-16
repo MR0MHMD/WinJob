@@ -214,7 +214,8 @@ def dispatch_job(job_id: int, progress_chat_id: str = None) -> dict:
         "bale_file_id": message.platform_file_ids.get("bale"),
         "downloaded_file_bytes": None,
         "downloaded_file_path": "",
-        "rubika_file_inline": None,
+        "rubika_file_inline": message.platform_file_ids.get("rubika_file_inline"),
+        "adapters": {},
     }
 
     tracker = None
@@ -314,7 +315,12 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             target.mark_failed(f"اشتراک فعال وین فوروارد برای پلتفرم {_platform_fa(platform_slug)} وجود ندارد.")
             return
 
-        adapter = _get_adapter_for_channel(target.channel)
+        adapter_key = (platform_slug, target.channel.user_id)
+        adapter = context["adapters"].get(adapter_key)
+        if adapter is None:
+            adapter = _get_adapter_for_channel(target.channel)
+            if adapter is not None:
+                context["adapters"][adapter_key] = adapter
 
         if not adapter:
             target.mark_failed(f"آداپتور پلتفرم {platform_slug} یافت نشد.")
@@ -390,8 +396,12 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             if platform_slug == "rubika" and result.get("rubika_file_inline"):
                 context["rubika_file_inline"] = result["rubika_file_inline"]
 
-        # کش file_id جدید (فقط برای پلتفرم‌های دارای file_id)
-        if new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika"):
+        # کش file_id جدید (بله و متادیتای file_inline روبیکا)
+        if platform_slug == "rubika" and context.get("rubika_file_inline") and not message.platform_file_ids.get("rubika_file_inline"):
+            message.platform_file_ids["rubika_file_inline"] = context["rubika_file_inline"]
+            message.save(update_fields=["platform_file_ids"])
+            logger.info(f"[rubika] Persisted rubika_file_inline for msg {message.pk}")
+        elif new_file_id_to_cache and not cached_file_id and platform_slug not in ("eitaa", "rubika"):
             message.platform_file_ids[platform_slug] = new_file_id_to_cache
             message.save(update_fields=["platform_file_ids"])
             logger.info(f"[{platform_slug}] Cached file_id for msg {message.pk}")

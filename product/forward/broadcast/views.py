@@ -13,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import ListView
 
 from product.forward.broadcast.forms import BroadcastSendForm
-from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget
+from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget, ChannelPreset
 from product.forward.broadcast.services.dispatcher import dispatch_job, enqueue_dispatch_job
 
 
@@ -90,12 +90,26 @@ def send_broadcast(request):
     else:
         form = BroadcastSendForm(user=request.user)
 
+    presets = (
+        ChannelPreset.objects.filter(user=request.user, is_active=True)
+        .prefetch_related("channels")
+        .order_by("-created_at")
+    )
+    preset_items = [
+        {
+            "preset": p,
+            "channel_ids": list(p.channels.filter(is_active=True, bot_is_admin=True).values_list("pk", flat=True)),
+        }
+        for p in presets
+    ]
+
     return render(
         request,
         "product/forward/broadcast/send.html",
         {
             "form": form,
             "nav_platforms": nav_platforms,
+            "preset_items": preset_items,
         },
     )
 
@@ -533,9 +547,12 @@ def rubika_sync_channels(request):
         messages.error(request, f"خطا در دریافت لیست کانال‌ها از روبیکا: {exc}")
         return redirect("broadcast:rubika_channels")
 
+    from product.forward.broadcast.services.channel_sync import sync_channel_avatar
+
     synced_count = 0
+    avatar_count = 0
     for ch in found_channels:
-        BroadcastChannel.objects.update_or_create(
+        channel_obj, _ = BroadcastChannel.objects.update_or_create(
             user=request.user,
             platform=rubika_platform,
             chat_id=ch["chat_id"],
@@ -547,69 +564,16 @@ def rubika_sync_channels(request):
                 "is_active": True,
             },
         )
+        if sync_channel_avatar(channel_obj, adapter=adapter, avatar_meta=ch.get("avatar_meta")):
+            avatar_count += 1
         synced_count += 1
 
-    messages.success(request, f"✅ {synced_count} کانال روبیکا همگام‌سازی شد.")
+    messages.success(
+        request,
+        f"✅ {synced_count} کانال روبیکا همگام‌سازی و عکس پروفایل {avatar_count} کانال به‌روزرسانی شد.",
+    )
     return redirect("broadcast:rubika_channels")
 
-
-@login_required
-def rubika_add_channel(request):
-    """صفحه افزودن دستی کانال روبیکا با نام کاربری یا شناسه GUID."""
-    from core.models import Platform
-    from product.forward.broadcast.forms import RubikaChannelForm
-    from product.forward.messengers.adapters.rubika import RubikaAdapter
-    from product.forward.messengers.models import BotUser
-
-    nav_platforms = _get_forward_platforms_map()
-    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
-    if not rubika_platform:
-        messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:dashboard")
-
-    bot_user = BotUser.objects.filter(user=request.user, platform=rubika_platform).first()
-
-    if not bot_user or not bot_user.has_rubika_session:
-        messages.warning(request, "ابتدا باید حساب روبیکای خود را متصل کنید.")
-        return redirect("broadcast:rubika_connect_phone")
-
-    session_data = bot_user.session_data or {}
-    adapter = RubikaAdapter(
-        auth=session_data.get("auth"),
-        private_key=session_data.get("private_key"),
-    )
-
-    if request.method == "POST":
-        form = RubikaChannelForm(request.POST, user=request.user, rubika_adapter=adapter)
-        if form.is_valid() and form.resolved_channel:
-            resolved = form.resolved_channel
-            channel, _created = BroadcastChannel.objects.update_or_create(
-                user=request.user,
-                platform=rubika_platform,
-                chat_id=resolved["chat_id"],
-                defaults={
-                    "title": resolved["title"],
-                    "username": resolved["username"],
-                    "bot_is_admin": True,
-                    "bot_admin_checked_at": timezone.now(),
-                    "is_active": True,
-                },
-            )
-            messages.success(request, f"✅ کانال «{channel.title}» با موفقیت به وین‌فوروارد متصل شد.")
-            return redirect("broadcast:rubika_channels")
-    else:
-        form = RubikaChannelForm(user=request.user, rubika_adapter=adapter)
-
-    return render(
-        request,
-        "product/forward/broadcast/rubika/add_channel.html",
-        {
-            "form": form,
-            "bot_user": bot_user,
-            "platform": rubika_platform,
-            "nav_platforms": nav_platforms,
-        },
-    )
 
 
 @login_required
@@ -783,6 +747,11 @@ def forward_dashboard(request):
             "access_map": access_map,
             "nav_platforms": nav_platforms,
             "platform_cards": platform_cards,
+            "user_presets": list(
+                ChannelPreset.objects.filter(user=request.user, is_active=True)
+                .prefetch_related("channels")
+                .order_by("-created_at")
+            ),
             "subscribed_platforms_count": len(access_map),
             "connected_platforms_count": connected_platforms_count,
             "total_channels_count": active_channels.count(),
@@ -887,3 +856,120 @@ def bale_delete_channel(request, channel_id):
     channel.save(update_fields=["is_active"])
     messages.success(request, f"کانال «{channel.title}» در بله غیرفعال شد.")
     return redirect("broadcast:bale_channels")
+
+
+# ============================================================
+# Channel Preset Views (پروفایل‌های ارسال کانال)
+# ============================================================
+
+
+@login_required
+def preset_list(request):
+    """صفحه مدیریت و ساخت پروفایل‌های ارسال (گروه‌بندی کانال‌ها برای وب و ربات بله)."""
+    from product.forward.broadcast.forms import ChannelPresetForm
+
+    nav_platforms = _get_forward_platforms_map()
+    if request.method == "POST":
+        form = ChannelPresetForm(request.POST, user=request.user)
+        if form.is_valid():
+            preset = form.save(commit=False)
+            preset.user = request.user
+            preset.save()
+            form.save_m2m()
+            messages.success(request, f"✅ پروفایل ارسال «{preset.name}» با موفقیت ذخیره شد.")
+            return redirect("broadcast:preset_list")
+    else:
+        form = ChannelPresetForm(user=request.user)
+
+    presets = (
+        ChannelPreset.objects.filter(user=request.user, is_active=True)
+        .prefetch_related("channels__platform")
+        .order_by("-created_at")
+    )
+    available_channels = (
+        BroadcastChannel.objects.filter(user=request.user, is_active=True, bot_is_admin=True)
+        .select_related("platform")
+        .order_by("platform__name", "title")
+    )
+
+    return render(
+        request,
+        "product/forward/broadcast/presets.html",
+        {
+            "form": form,
+            "presets": presets,
+            "available_channels": available_channels,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def preset_edit(request, preset_id):
+    """ویرایش نام یا کانال‌های عضو یک پروفایل ارسال."""
+    from product.forward.broadcast.forms import ChannelPresetForm
+
+    nav_platforms = _get_forward_platforms_map()
+    preset = get_object_or_404(ChannelPreset, pk=preset_id, user=request.user)
+
+    if request.method == "POST":
+        form = ChannelPresetForm(request.POST, instance=preset, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ تغییرات پروفایل «{preset.name}» ذخیره شد.")
+            return redirect("broadcast:preset_list")
+    else:
+        form = ChannelPresetForm(instance=preset, user=request.user)
+
+    available_channels = (
+        BroadcastChannel.objects.filter(user=request.user, is_active=True, bot_is_admin=True)
+        .select_related("platform")
+        .order_by("platform__name", "title")
+    )
+
+    return render(
+        request,
+        "product/forward/broadcast/preset_edit.html",
+        {
+            "form": form,
+            "preset": preset,
+            "available_channels": available_channels,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def preset_delete(request, preset_id):
+    """حذف یک پروفایل ارسال (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:preset_list")
+    preset = get_object_or_404(ChannelPreset, pk=preset_id, user=request.user)
+    name = preset.name
+    preset.delete()
+    messages.success(request, f"پروفایل ارسال «{name}» حذف شد.")
+    return redirect("broadcast:preset_list")
+
+
+@login_required
+def bale_sync_avatars(request):
+    """بروزرسانی عکس پروفایل واقعی کانال‌های بله کاربر (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:bale_channels")
+
+    from product.forward.broadcast.services.channel_sync import sync_channel_avatar
+    from product.forward.messengers.adapters.registry import get_adapter
+
+    adapter = get_adapter("bale")
+    bale_channels = BroadcastChannel.objects.filter(
+        user=request.user, platform__slug="bale", is_active=True
+    )
+    updated_count = 0
+    for ch in bale_channels:
+        if sync_channel_avatar(ch, adapter=adapter):
+            updated_count += 1
+
+    messages.success(request, f"✅ عکس پروفایل {updated_count} کانال بله بروزرسانی شد.")
+    return redirect("broadcast:bale_channels")
+
+

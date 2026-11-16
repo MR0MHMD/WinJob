@@ -166,6 +166,38 @@
         </div>
     </div>
 
+    <!-- ── ۲.۵. باکس پروفایل‌های ارسال هوشمند (دومنظوره: نمایش وضعیت + دسترسی سریع) ── -->
+    <div class="wf-reveal wf-delay-1 mb-4" style="background:linear-gradient(135deg,rgba(93,60,242,0.13),rgba(255,255,255,0.03));border:1px solid rgba(93,60,242,0.28);border-radius:1.35rem;padding:1.25rem 1.5rem;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:48px;height:48px;border-radius:1rem;background:rgba(93,60,242,0.22);color:#a78bfa;display:flex;align-items:center;justify-content:center;font-size:1.45rem;flex-shrink:0;">
+                    <i class="bi bi-collection-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <h5 class="text-white fw-bold mb-0 fs-6">پروفایل‌های ارسال هوشمند (گروه‌بندی کانال‌ها)</h5>
+                        <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-2 py-1 fs-xs">
+                            {{ user_presets|length }} پروفایل فعال
+                        </span>
+                    </div>
+                    <p class="text-muted fs-xs mb-0">
+                        {% if user_presets %}
+                            پروفایل‌های فعلی:
+                            {% for pr in user_presets|slice:":4" %}
+                                <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1 ms-1">{{ pr.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            کانال‌های خود را در دسته‌های دلخواه (مثل «فروش» یا «اخبار») گروه کنید تا در ربات بله با یک کلیک ارسال کنید.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-purple py-2 px-4 fs-xs flex-shrink-0">
+                <i class="bi bi-sliders"></i> {% if user_presets %}مدیریت پروفایل‌ها{% else %}ساخت اولین پروفایل{% endif %}
+            </a>
+        </div>
+    </div>
+
     <!-- ── ۳. ویترین ۴ پلتفرم با لوگوی دیتابیس (سبز شونده پس از اتصال!) ── -->
     <div class="wf-section-heading wf-reveal wf-delay-2">
         <div class="d-flex align-items-center gap-3">
@@ -326,7 +358,7 @@
             </div>
         </div>
         <div class="p-4">
-            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
                 <div class="col">
                     <a href="{% url 'broadcast:send' %}" class="wf-dock-tile">
                         <div class="wf-dock-tile-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
@@ -361,6 +393,12 @@
                             <div class="wf-dock-tile-icon"><i class="bi bi-phone-vibrate-fill"></i></div>
                         {% endif %}
                         <span class="fw-bold fs-xs">کانال‌های روبیکا</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'broadcast:preset_list' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon" style="color:#a78bfa;"><i class="bi bi-collection-fill"></i></div>
+                        <span class="fw-bold fs-xs">پروفایل‌های ارسال</span>
                     </a>
                 </div>
                 <div class="col">

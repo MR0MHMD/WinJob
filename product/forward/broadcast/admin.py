@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from .models import BroadcastChannel, BroadcastMessage, BroadcastJob, BroadcastTarget
+from .models import BroadcastChannel, BroadcastMessage, BroadcastJob, BroadcastTarget, ChannelPreset
 
 # ============ استایل‌های مشترک ============
 _BADGE = "display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:500;"
@@ -29,7 +29,7 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
     """مدیریت کانال‌های ثبت‌شده در وین فوروارد."""
 
     list_display = (
-    "id_badge", "title_link", "user_link", "platform_badge", "chat_id_display", "bot_admin_badge", "active_badge",
+    "id_badge", "avatar_preview", "title_link", "user_link", "platform_badge", "chat_id_display", "bot_admin_badge", "active_badge",
     "last_broadcast_display")
     list_display_links = ("id_badge", "title_link")
     list_filter = ("platform", "bot_is_admin", "is_active", ("created_at", admin.DateFieldListFilter))
@@ -46,7 +46,7 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
                "action_deactivate")
     fieldsets = (
         (_("مالکیت"), {"fields": ("user", "platform")}),
-        (_("اطلاعات کانال"), {"fields": ("title", "username", "chat_id")}),
+        (_("اطلاعات کانال"), {"fields": ("title", "username", "chat_id", "avatar")}),
         (_("وضعیت ربات"), {"fields": ("bot_is_admin", "bot_admin_checked_at", "last_broadcast_at")}),
         (_("تأیید مالکیت (Deep Link)"), {"fields": (
         "verification_token", "token_status_display", "verification_token_created_at", "verification_token_used_at"),
@@ -58,6 +58,17 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """بهینه‌سازی کوئری با select_related."""
         return super().get_queryset(request).select_related("user", "platform")
+
+
+    @admin.display(description=_("عکس"))
+    def avatar_preview(self, obj):
+        """نمایش تصویر کوچک پروفایل کانال در لیست ادمین."""
+        if obj.avatar:
+            return format_html(
+                '<img src="{}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />',
+                obj.avatar.url,
+            )
+        return mark_safe('<span style="color:#9691a4;">—</span>')
 
     @admin.display(description=_("ID"), ordering="id")
     def id_badge(self, obj):
@@ -374,3 +385,98 @@ class BroadcastTargetAdmin(admin.ModelAdmin):
                      "failed": _BADGE_DANGER, "skipped": _BADGE_WARNING}
         return format_html('<span style="{}">{}</span>', color_map.get(obj.status, _BADGE_MUTED),
                            obj.get_status_display())
+
+
+# ============================================================
+# ChannelPreset
+# ============================================================
+
+
+@admin.register(ChannelPreset)
+class ChannelPresetAdmin(admin.ModelAdmin):
+    """مدیریت پروفایل‌های ارسال (گروه‌بندی کانال‌ها) در پنل ادمین."""
+
+    list_display = (
+        "id_badge",
+        "name_link",
+        "user_link",
+        "channels_count_badge",
+        "channels_preview",
+        "active_badge",
+        "created_at",
+    )
+    list_display_links = ("id_badge", "name_link")
+    list_filter = ("is_active", ("created_at", admin.DateFieldListFilter))
+    search_fields = ("name", "user__phone_number", "user__nickname", "channels__title")
+    autocomplete_fields = ("user",)
+    filter_horizontal = ("channels",)
+    readonly_fields = ("created_at", "updated_at")
+    list_per_page = 50
+    list_select_related = ("user",)
+    save_on_top = True
+    ordering = ("-created_at",)
+    actions = ("action_activate", "action_deactivate")
+    fieldsets = (
+        (_("مالکیت و عنوان"), {"fields": ("user", "name", "is_active")}),
+        (_("کانال‌های عضو"), {"fields": ("channels",)}),
+        (_("زمان‌ها"), {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+    def get_queryset(self, request):
+        """بهینه‌سازی کوئری با select_related و prefetch_related."""
+        return super().get_queryset(request).select_related("user").prefetch_related("channels__platform")
+
+    @admin.display(description=_("ID"), ordering="id")
+    def id_badge(self, obj):
+        """نمایش شناسه عددی پروفایل."""
+        return format_html('<code style="{}">#{}</code>', _CODE, obj.pk)
+
+    @admin.display(description=_("نام پروفایل"), ordering="name")
+    def name_link(self, obj):
+        """لینک مستقیم به صفحه ویرایش پروفایل ارسال."""
+        url = reverse("admin:broadcast_channelpreset_change", args=[obj.pk])
+        return format_html('<a href="{}"><strong>{}</strong></a>', url, obj.name)
+
+    @admin.display(description=_("کاربر"), ordering="user__phone_number")
+    def user_link(self, obj):
+        """لینک به صفحه کاربر در ادمین."""
+        url = reverse(f"admin:{obj.user._meta.app_label}_{obj.user._meta.model_name}_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.nickname or obj.user.phone_number)
+
+    @admin.display(description=_("تعداد کانال"))
+    def channels_count_badge(self, obj):
+        """نمایش تعداد کانال‌های عضو پروفایل."""
+        count = obj.channels.count()
+        style = _BADGE_INFO if count > 0 else _BADGE_MUTED
+        return format_html('<span style="{}">{} کانال</span>', style, count)
+
+    @admin.display(description=_("کانال‌ها"))
+    def channels_preview(self, obj):
+        """نمایش خلاصه عناوین کانال‌های عضو پروفایل."""
+        titles = [ch.title for ch in obj.channels.all()[:4]]
+        if not titles:
+            return mark_safe('<span style="color:#9691a4;">—</span>')
+        extra = obj.channels.count() - len(titles)
+        text = "، ".join(titles)
+        if extra > 0:
+            text += f" (+{extra})"
+        return text
+
+    @admin.display(description=_("وضعیت"), ordering="is_active")
+    def active_badge(self, obj):
+        """نشان فعال یا غیرفعال بودن پروفایل."""
+        style = _BADGE_SUCCESS if obj.is_active else _BADGE_MUTED
+        text = "✓ فعال" if obj.is_active else "غیرفعال"
+        return format_html('<span style="{}">{}</span>', style, text)
+
+    @admin.action(description=_("فعال‌سازی پروفایل‌ها"))
+    def action_activate(self, request, queryset):
+        """فعال‌سازی پروفایل‌های انتخاب‌شده."""
+        n = queryset.update(is_active=True)
+        self.message_user(request, f"{n} پروفایل ارسال فعال شد.")
+
+    @admin.action(description=_("غیرفعال‌سازی پروفایل‌ها"))
+    def action_deactivate(self, request, queryset):
+        """غیرفعال‌سازی پروفایل‌های انتخاب‌شده."""
+        n = queryset.update(is_active=False)
+        self.message_user(request, f"{n} پروفایل ارسال غیرفعال شد.")

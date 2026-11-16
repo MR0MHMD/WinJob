@@ -1,7 +1,7 @@
 """فرم‌های مربوط به وین فوروارد."""
 
 from django import forms
-from product.forward.broadcast.models import BroadcastMessage, BroadcastChannel
+from product.forward.broadcast.models import BroadcastMessage, BroadcastChannel, ChannelPreset
 
 
 class BroadcastSendForm(forms.ModelForm):
@@ -233,70 +233,65 @@ class RubikaVerifyCodeForm(forms.Form):
         return code
 
 
-class RubikaChannelForm(forms.Form):
-    """فرم افزودن دستی کانال روبیکا با نام کاربری یا شناسه GUID و بررسی دسترسی ارسال."""
 
-    channel_identifier = forms.CharField(
-        label="نام کاربری یا شناسه کانال (GUID)",
-        max_length=64,
-        widget=forms.TextInput(attrs={
-            "class": "form-control form-control-light",
-            "placeholder": "مثلاً: winjob_news یا c0B123456789...",
-            "dir": "ltr",
-            "autocomplete": "off",
-        }),
-        help_text="نام کاربری کانال (بدون یا با @) یا شناسه GUID کانال (شروع با c0) را وارد کنید.",
+# ============================================================
+# Channel Preset Forms (Web Panel)
+# ============================================================
+
+
+class ChannelPresetForm(forms.ModelForm):
+    """فرم ساخت و ویرایش پروفایل ارسال (گروه کانال‌ها) برای انتخاب سریع در وب و ربات بله."""
+
+    channels = forms.ModelMultipleChoiceField(
+        queryset=BroadcastChannel.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="کانال‌های عضو این پروفایل",
+        required=True,
+        error_messages={"required": "لطفاً حداقل یک کانال را برای این پروفایل انتخاب کنید."},
     )
 
-    title = forms.CharField(
-        label="نام نمایشی کانال (اختیاری)",
-        max_length=200,
-        required=False,
-        widget=forms.TextInput(attrs={
-            "class": "form-control form-control-light",
-            "placeholder": "در صورت خالی بودن، عنوان واقعی از روبیکا خوانده می‌شود",
-        }),
-    )
+    class Meta:
+        model = ChannelPreset
+        fields = ["name", "channels"]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-light",
+                    "placeholder": "مثلاً: کانال‌های فروش، اخبار فوری، مشتریان VIP",
+                    "maxlength": "80",
+                }
+            )
+        }
+        labels = {
+            "name": "نام پروفایل ارسال",
+        }
 
     def __init__(self, *args, **kwargs):
-        """دریافت کاربر و نمونه آداپتور روبیکا برای بررسی کانال هنگام اعتبارسنجی."""
+        """فیلتر کردن کانال‌ها به کانال‌های فعال و متصل کاربر."""
         self.user = kwargs.pop("user", None)
-        self.rubika_adapter = kwargs.pop("rubika_adapter", None)
-        self.resolved_channel = None
         super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields["channels"].queryset = (
+                BroadcastChannel.objects.filter(
+                    user=self.user,
+                    is_active=True,
+                    bot_is_admin=True,
+                )
+                .select_related("platform")
+                .order_by("platform__name", "title")
+            )
 
-    def clean(self):
-        """استعلام اطلاعات کانال از روبیکا، بررسی تکراری نبودن و تست دسترسی ارسال."""
-        cleaned = super().clean()
-        identifier = (cleaned.get("channel_identifier") or "").strip().lstrip("@")
-        if not identifier or not self.rubika_adapter or not self.user:
-            return cleaned
+    def clean_name(self):
+        """بررسی تکراری نبودن نام پروفایل برای همین کاربر."""
+        from product.forward.broadcast.models import ChannelPreset
 
-        from core.models import Platform
-        from product.forward.broadcast.models import BroadcastChannel
-        from product.forward.messengers.adapters.base import MessengerError
-
-        try:
-            info = self.rubika_adapter.get_chat_info(identifier)
-        except MessengerError as exc:
-            raise forms.ValidationError(f"کانال در روبیکا یافت نشد یا قابل دسترس نیست: {exc}")
-
-        chat_id = info.get("chat_id")
-        if not chat_id:
-            raise forms.ValidationError("شناسه GUID کانال از روبیکا دریافت نشد.")
-
-        rubika_platform = Platform.objects.filter(slug="rubika").first()
-        if rubika_platform and BroadcastChannel.objects.filter(
-            user=self.user, platform=rubika_platform, chat_id=chat_id, is_active=True
-        ).exists():
-            raise forms.ValidationError("این کانال قبلاً به حساب شما متصل شده است.")
-
-        if not self.rubika_adapter.check_bot_is_admin(chat_id):
-            raise forms.ValidationError("حساب روبیکای شما در این کانال دسترسی ارسال پیام (ادمین) ندارد.")
-
-        self.resolved_channel = {
-            "chat_id": chat_id,
-            "title": (cleaned.get("title") or "").strip() or info.get("title") or chat_id,
-            "username": info.get("username") or (identifier if not identifier.startswith("c0") else ""),
-        }
-        return cleaned
+        name = (self.cleaned_data.get("name") or "").strip()
+        if not name:
+            raise forms.ValidationError("نام پروفایل ارسال الزامی است.")
+        if self.user:
+            qs = ChannelPreset.objects.filter(user=self.user, name__iexact=name)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("پروفایلی با این نام قبلاً ثبت شده است.")
+        return name

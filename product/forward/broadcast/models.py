@@ -20,6 +20,7 @@ class BroadcastChannel(models.Model):
     chat_id = models.CharField(_("شناسه کانال"), max_length=64, help_text=_("شناسه یکتای کانال در پلتفرم (مثلاً @my_channel یا -100123456789)"),)
     title = models.CharField(_("عنوان کانال"), max_length=200,)
     username = models.CharField(_("نام کاربری کانال"), max_length=64, blank=True, help_text=_("در صورت وجود: @username"),)
+    avatar = models.ImageField(_("عکس پروفایل کانال"), upload_to="broadcast/channels/avatars/", null=True, blank=True,)
     bot_is_admin = models.BooleanField(_("ربات ادمین است"), default=False,)
     bot_admin_checked_at = jmodels.jDateTimeField(_("آخرین بررسی ادمین بودن ربات"), null=True, blank=True,)
     verification_token = models.CharField(_("توکن تأیید"), max_length=64, blank=True, db_index=True, help_text=_("توکن یک‌بارمصرف برای تأیید مالکیت از طریق Deep Link"),)
@@ -230,3 +231,44 @@ class BroadcastTarget(models.Model):
         self.status = self.Status.FAILED
         self.error_message = (error_message or "")[:2000]
         self.save(update_fields=["status", "error_message"])
+
+
+class ChannelPreset(models.Model):
+    """پروفایل ارسال (گروه کانال‌ها) برای انتخاب سریع مجموعه کانال‌ها در پنل وب و ربات بله."""
+
+    user = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.CASCADE,
+        related_name="channel_presets",
+        verbose_name=_("کاربر"),
+    )
+    name = models.CharField(
+        _("نام پروفایل ارسال"),
+        max_length=80,
+        help_text=_("مثلاً: کانال‌های فروش، اخبار فوری، مشتریان VIP"),
+    )
+    channels = models.ManyToManyField(
+        BroadcastChannel,
+        related_name="presets",
+        verbose_name=_("کانال‌های عضو"),
+        blank=True,
+    )
+    is_active = models.BooleanField(_("فعال"), default=True)
+    created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True)
+    updated_at = jmodels.jDateTimeField(_("تاریخ ویرایش"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("پروفایل ارسال")
+        verbose_name_plural = _("پروفایل‌های ارسال")
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "name"], name="unique_user_preset_name"),
+        ]
+
+    def __str__(self):
+        """نمایش خوانای نام پروفایل ارسال در ادمین و لاگ."""
+        return f"{self.name} ({self.user})"
+
+    def active_channels(self):
+        """بازگرداندن کانال‌های فعال و دارای دسترسی ادمینِ عضو این پروفایل."""
+        return self.channels.filter(is_active=True, bot_is_admin=True).select_related("platform")

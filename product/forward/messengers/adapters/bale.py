@@ -1,5 +1,6 @@
 """آداپتور پیام‌رسان بله برای وین فوروارد، با استفاده مستقیم از HTTP API."""
 
+import logging
 import re
 from typing import NoReturn
 
@@ -14,6 +15,8 @@ from .base import (
     MessengerRateLimitError,
 )
 from .registry import register
+
+logger = logging.getLogger(__name__)
 
 
 @register
@@ -54,7 +57,6 @@ class BaleAdapter(MessengerAdapter):
                 description=data.get("description", "Unknown error"),
             )
         return data.get("result")
-
 
     def _handle_api_error(self, code: int, description: str) -> NoReturn:
         """تبدیل خطای API بله به خطای معنادار آداپتور."""
@@ -249,6 +251,14 @@ class BaleAdapter(MessengerAdapter):
         except Exception:
             return False
 
+    def delete_message(self, chat_id: str, message_id: int) -> bool:
+        """حذف یک پیام از چت در بله (deleteMessage) با مدیریت امن خطا."""
+        try:
+            self._call("deleteMessage", http_method="POST", chat_id=chat_id, message_id=message_id)
+            return True
+        except Exception:
+            return False
+
     def edit_message_text(self, chat_id: str, message_id: int, text: str, reply_markup: dict = None) -> dict:
         """ویرایش متن یک پیام ارسال‌شده (editMessageText)."""
         import json
@@ -269,3 +279,22 @@ class BaleAdapter(MessengerAdapter):
         if response.status_code != 200:
             raise MessengerAPIError(f"خطا در دانلود فایل از بله (HTTP {response.status_code})")
         return response.content
+
+    def download_chat_avatar(self, chat_id: str):
+        """دریافت و دانلود بایت‌های عکس پروفایل کانال بله از طریق getChat و getFile."""
+        try:
+            chat = self._call("getChat", chat_id=chat_id) or {}
+            photo = chat.get("photo") or {}
+            file_id = photo.get("big_file_id") or photo.get("small_file_id") if isinstance(photo, dict) else None
+            if not file_id:
+                logger.info(f"[bale] No photo found in getChat for chat_id={chat_id}: keys={list(chat.keys())}")
+                return None
+            file_info = self.get_file(file_id) or {}
+            file_path = file_info.get("file_path")
+            if not file_path:
+                logger.warning(f"[bale] getFile missing file_path for file_id={file_id}")
+                return None
+            return self.download_file(file_path)
+        except Exception as exc:
+            logger.warning(f"[bale] download_chat_avatar failed for {chat_id}: {exc}")
+            return None

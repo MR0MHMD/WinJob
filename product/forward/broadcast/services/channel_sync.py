@@ -1,8 +1,11 @@
 """سرویس همگام‌سازی کانال و تأیید مالکیت با Deep Link (بدون کد تأیید)."""
 
+import logging
 import uuid
 from django.db import IntegrityError
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 from product.forward.broadcast.models import BroadcastChannel
 from product.forward.messengers.adapters.base import MessengerError
 from product.forward.messengers.adapters.registry import get_adapter
@@ -102,3 +105,34 @@ def _link_bot_user_silently(user, platform, chat_id: str) -> None:
         BotUser.objects.get_or_create(user=user, platform=platform, defaults={"chat_id": str(chat_id), "is_verified": True})
     except IntegrityError:
         pass
+
+
+def sync_channel_avatar(channel, adapter=None, avatar_meta=None) -> bool:
+    """دریافت و ذخیره عکس پروفایل واقعی کانال از پیام‌رسان روی فیلد avatar کانال."""
+    from django.core.files.base import ContentFile
+
+    try:
+        if adapter is None:
+            adapter = get_adapter(channel.platform.slug)
+        if not adapter or not hasattr(adapter, "download_chat_avatar"):
+            return False
+
+        if channel.platform.slug == "rubika" and avatar_meta is not None:
+            img_bytes = adapter.download_chat_avatar(channel.chat_id, avatar_meta=avatar_meta)
+        else:
+            img_bytes = adapter.download_chat_avatar(channel.chat_id)
+
+        if not img_bytes:
+            return False
+
+        if channel.avatar:
+            try:
+                channel.avatar.delete(save=False)
+            except Exception:
+                pass
+
+        channel.avatar.save(f"channel_{channel.pk}.jpg", ContentFile(img_bytes), save=True)
+        return True
+    except Exception as exc:
+        logger.warning(f'sync_channel_avatar failed for channel {channel.pk}: {exc}')
+        return False
