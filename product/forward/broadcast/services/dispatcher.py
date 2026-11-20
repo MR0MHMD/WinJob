@@ -28,15 +28,16 @@ def _platform_fa(slug: str) -> str:
 
 
 def _download_external_file(source_platform: str, source_file_id: str) -> tuple[bytes, str]:
-    """دانلود فایل از پلتفرم دیگر (فعلاً فقط بله) و بازگرداندن بایت‌ها همراه با مسیر فایل."""
-    if source_platform == "bale":
-        from product.forward.messengers.adapters.bale import BaleAdapter
-        bale = BaleAdapter()
-        file_info = bale.get_file(source_file_id)
+    """دانلود فایل از پلتفرم مبدا (بله یا تلگرام) و بازگرداندن بایت‌ها همراه با مسیر فایل."""
+    if source_platform in ("bale", "telegram"):
+        adapter = get_adapter(source_platform)
+        if not adapter:
+            raise MessengerAPIError(f"آداپتور «{_platform_fa(source_platform)}» ثبت نشده است.")
+        file_info = adapter.get_file(source_file_id)
         file_path = (file_info or {}).get("file_path")
         if not file_path:
-            raise MessengerAPIError("پاسخ getFile از بله فاقد file_path است.")
-        return bale.download_file(file_path), str(file_path)
+            raise MessengerAPIError(f"پاسخ getFile از {_platform_fa(source_platform)} فاقد file_path است.")
+        return adapter.download_file(file_path), str(file_path)
     raise MessengerAPIError(f"دانلود از پلتفرم «{_platform_fa(source_platform)}» پشتیبانی نمی‌شود.")
 
 
@@ -44,7 +45,8 @@ def _make_filename(message, downloaded_file_path: str = "") -> str:
     """ساخت نام فایل با حفظ نام و پسوند اصلی فایل در صورت موجود بودن."""
     import os
 
-    saved_name = (message.platform_file_ids or {}).get("bale_file_name") or ""
+    file_ids = message.platform_file_ids or {}
+    saved_name = file_ids.get("bale_file_name") or file_ids.get("telegram_file_name") or ""
     saved_name = os.path.basename(str(saved_name).strip())
     if saved_name and "." in saved_name:
         return saved_name
@@ -97,8 +99,8 @@ class ProgressTracker:
         except Exception as e:
             logger.warning(f"Failed to send progress message: {e}")
 
-    def start_download(self):
-        self._update("📥 در حال دانلود فایل از بله...")
+    def start_download(self, source_platform: str = "bale"):
+        self._update(f"📥 در حال دانلود فایل از {_platform_fa(source_platform)}...")
 
     def start_upload(self, platform_slug: str = "eitaa"):
         self._update(f"📤 در حال آپلود فایل به {_platform_fa(platform_slug)}...")
@@ -207,31 +209,35 @@ def dispatch_job(job_id: int, progress_chat_id: str = None) -> dict:
         .select_related("channel__platform")
     )
 
-    bale_targets = [t for t in all_targets if t.channel.platform.slug == "bale"]
-    non_bale_targets = [t for t in all_targets if t.channel.platform.slug != "bale"]
+    file_ids = message.platform_file_ids or {}
+    source_platform = file_ids.get("source_platform") or ("telegram" if file_ids.get("telegram") and not file_ids.get("bale") else "bale")
+
+    same_source_targets = [t for t in all_targets if t.channel.platform.slug == source_platform]
+    cross_targets = [t for t in all_targets if t.channel.platform.slug != source_platform]
 
     context = {
-        "bale_file_id": message.platform_file_ids.get("bale"),
+        "source_platform": source_platform,
+        "source_file_id": file_ids.get(source_platform) or file_ids.get("bale") or file_ids.get("telegram"),
         "downloaded_file_bytes": None,
         "downloaded_file_path": "",
-        "rubika_file_inline": message.platform_file_ids.get("rubika_file_inline"),
+        "rubika_file_inline": file_ids.get("rubika_file_inline"),
         "adapters": {},
     }
 
     tracker = None
     if progress_chat_id:
         try:
-            bale_adapter = get_adapter("bale")
-            if bale_adapter:
-                tracker = ProgressTracker(bale_adapter, progress_chat_id)
+            tracker_adapter = get_adapter(source_platform)
+            if tracker_adapter:
+                tracker = ProgressTracker(tracker_adapter, progress_chat_id)
         except Exception as e:
             logger.warning(f"Failed to init tracker: {e}")
 
     try:
-        for target in bale_targets:
+        for target in same_source_targets:
             _process_target(target, message, context=context, tracker=None)
 
-        for target in non_bale_targets:
+        for target in cross_targets:
             _process_target(target, message, context=context, tracker=tracker)
     finally:
         job.recalculate_counts()
@@ -358,19 +364,20 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
                 context["rubika_file_inline"] = result["rubika_file_inline"]
             new_file_id_to_cache = result.get("file_id")
 
-        # ۳. فایل بین‌پلتفرمی (دانلود از بله)
+        # ۳. فایل بین‌پلتفرمی (دانلود از مبدا بله یا تلگرام)
         else:
-            bale_file_id = context.get("bale_file_id")
-            if not bale_file_id:
-                target.mark_failed("file_id بله برای دانلود موجود نیست.")
+            source_platform = context.get("source_platform", "bale")
+            source_file_id = context.get("source_file_id")
+            if not source_file_id:
+                target.mark_failed(f"file_id {_platform_fa(source_platform)} برای دانلود موجود نیست.")
                 return
 
-            # مرحله دانلود (فقط یک‌بار)
+            # مرحله دانلود (فقط یک‌بار برای کل جاب)
             if context.get("downloaded_file_bytes") is None:
                 if tracker:
-                    tracker.start_download()
-                logger.info(f"[{platform_slug}] Downloading from bale for msg {message.pk}")
-                file_bytes, remote_path = _download_external_file("bale", bale_file_id)
+                    tracker.start_download(source_platform)
+                logger.info(f"[{platform_slug}] Downloading from {source_platform} for msg {message.pk}")
+                file_bytes, remote_path = _download_external_file(source_platform, source_file_id)
                 context["downloaded_file_bytes"] = file_bytes
                 context["downloaded_file_path"] = remote_path
 

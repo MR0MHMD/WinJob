@@ -1,0 +1,131 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}اتصال پیام‌رسان تلگرام | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_connect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">اتصال تلگرام</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-connect-hero {% if existing_bot_user and existing_bot_user.is_verified %}is-connected{% endif %} wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-connect-hero-logo">
+                {% if platform and platform.logo %}
+                    <img src="{{ platform.logo.url }}" alt="{{ platform.name }}">
+                {% else %}
+                    <i class="bi bi-telegram fs-2 text-info"></i>
+                {% endif %}
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">اتصال پیام‌رسان تلگرام</h1>
+                    {% if existing_bot_user and existing_bot_user.is_verified %}
+                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> متصل و فعال</span>
+                    {% else %}
+                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> آماده اتصال</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted fs-xs mb-0">
+                    با اتصال حساب تلگرام به ربات رسمی وین فوروارد، می‌توانید پست‌های خود را مستقیم از تلگرام به هر ۴ پیام‌رسان ارسال کنید.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'broadcast:telegram_channels' %}" class="wf-btn wf-btn-glass">
+            <i class="bi bi-list-ul"></i> کانال‌های متصل تلگرام
+        </a>
+    </div>
+
+    <div class="row g-4 wf-reveal wf-delay-1">
+        <div class="col-lg-6">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-link-45deg text-info me-1"></i> لینک اختصاصی اتصال یک‌بارمصرف
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
+                    {% if existing_bot_user and existing_bot_user.is_verified %}
+                    <div class="p-3 rounded-4 mb-4 d-flex align-items-center justify-content-between"
+                         style="background:rgba(7,201,139,0.12);border:1px solid rgba(7,201,139,0.35);">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-patch-check-fill text-success fs-3"></i>
+                            <div>
+                                <div class="text-white fw-bold fs-sm">حساب تلگرام شما متصل است</div>
+                                <div class="text-muted fs-xs" dir="ltr">شناسه: {{ existing_bot_user.username|default:existing_bot_user.chat_id }}</div>
+                            </div>
+                        </div>
+                        <a href="{% url 'broadcast:telegram_channels' %}" class="wf-btn wf-btn-emerald py-1 px-3 fs-xs">کانال‌ها</a>
+                    </div>
+                    {% endif %}
+
+                    <p class="text-muted fs-xs mb-3" style="line-height:1.9;">
+                        روی دکمه زیر کلیک کنید تا مستقیماً وارد ربات وین فوروارد در تلگرام شوید و دکمه <strong class="text-white">Start</strong> را بزنید:
+                    </p>
+
+                    <div class="wf-code-copy-box mb-4">
+                        <code>{{ connect_link }}</code>
+                        <button type="button" class="wf-btn wf-btn-glass py-1 px-3 fs-xs" data-wf-copy="{{ connect_link }}">
+                            <i class="bi bi-clipboard"></i> کپی لینک
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ connect_link }}" target="_blank" rel="noopener" class="wf-btn wf-btn-emerald flex-grow-1 py-3">
+                            <i class="bi bi-box-arrow-up-right"></i> باز کردن مستقیم ربات در تلگرام
+                        </a>
+                        <a href="{% url 'broadcast:telegram_connect' %}" class="wf-btn wf-btn-glass">
+                            <i class="bi bi-arrow-clockwise"></i> ساخت لینک جدید
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-journal-code text-warning me-1"></i> راهنمای گام‌به‌گام افزودن کانال در تلگرام
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
+                    <div class="wf-timeline-step">
+                        <div class="wf-timeline-badge">۱</div>
+                        <div>
+                            <h6 class="text-white fw-bold fs-sm mb-1">استارت زدن ربات</h6>
+                            <p class="text-muted fs-xs mb-0">لینک اختصاصی را باز کرده و در ربات تلگرام دکمه Start را بزنید تا حساب شما متصل شود.</p>
+                        </div>
+                    </div>
+                    <div class="wf-timeline-step">
+                        <div class="wf-timeline-badge">۲</div>
+                        <div>
+                            <h6 class="text-white fw-bold fs-sm mb-1">ادمین کردن ربات در کانال تلگرام</h6>
+                            <p class="text-muted fs-xs mb-0">ربات وین فوروارد را در لیست مدیران کانال تلگرام خود با دسترسی ارسال پیام (Post Messages) اضافه کنید.</p>
+                        </div>
+                    </div>
+                    <div class="wf-timeline-step mb-0">
+                        <div class="wf-timeline-badge">۳</div>
+                        <div>
+                            <h6 class="text-white fw-bold fs-sm mb-1">ثبت خودکار و آماده ارسال</h6>
+                            <p class="text-muted fs-xs mb-0">به محض ادمین کردن ربات در کانال تلگرام، کانال و تصویر پروفایل آن به‌صورت خودکار در پنل ثبت می‌شوند و می‌توانید از داخل تلگرام یا بله یا پنل وب به همه کانال‌ها پیام بفرستید.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

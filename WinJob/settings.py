@@ -380,7 +380,9 @@ else:
     }
 
 FORWARD_BALE_TOKEN = "2100857527:2oDqXkcXJCWpkrpoDYhwvbD6CtTFuJEYEkc"
+FORWARD_TELEGRAM_TOKEN = os.environ.get("FORWARD_TELEGRAM_TOKEN", "9146862431:AAG7B9c9J-Im7Dy9X2uZmIjnJTeIpjxrcqo")
 
-# تنظیمات اشتراک وین فوروارد (برای فعال‌سازی مالیات یا تسهیم در آینده مقدار را True کنید)
 FORWARD_ENABLE_VAT = False
 FORWARD_ENABLE_COMMISSION_SPLIT = False
+
+TELEGRAM_PROXY_URL = os.environ.get("TELEGRAM_PROXY_URL", "http://127.0.0.1:10808")

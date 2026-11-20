@@ -16,6 +16,12 @@ urlpatterns = [
     path("presets/<int:preset_id>/edit/", views.preset_edit, name="preset_edit"),
     path("presets/<int:preset_id>/delete/", views.preset_delete, name="preset_delete"),
 
+    # Telegram web panel
+    path("telegram/connect/", views.telegram_connect, name="telegram_connect"),
+    path("telegram/channels/", views.telegram_channels, name="telegram_channels"),
+    path("telegram/channels/sync-avatars/", views.telegram_sync_avatars, name="telegram_sync_avatars"),
+    path("telegram/channels/<int:channel_id>/delete/", views.telegram_delete_channel, name="telegram_delete_channel"),
+
     # Bale web panel
     path("bale/connect/", views.bale_connect, name="bale_connect"),
     path("bale/channels/", views.bale_channels, name="bale_channels"),

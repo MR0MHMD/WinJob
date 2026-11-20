@@ -623,7 +623,7 @@ def forward_dashboard(request):
         user=request.user, is_active=True
     ).select_related("platform")
 
-    channels_by_slug = {"bale": [], "eitaa": [], "rubika": []}
+    channels_by_slug = {"bale": [], "eitaa": [], "rubika": [], "telegram": []}
     for ch in active_channels:
         if ch.platform.slug in channels_by_slug:
             channels_by_slug[ch.platform.slug].append(ch)
@@ -633,6 +633,15 @@ def forward_dashboard(request):
         bale_connect_link = generate_connect_link(request.user, "bale")
     except Exception:
         bale_connect_link = "https://ble.ir/win_forward_bot"
+
+    telegram_connect_link = ""
+    try:
+        from product.forward.messengers.adapters.registry import get_adapter
+        tg_adapter = get_adapter("telegram")
+        tg_bot_username = tg_adapter.get_bot_username() if tg_adapter else ""
+        telegram_connect_link = generate_connect_link(request.user, "telegram", bot_username=tg_bot_username)
+    except Exception:
+        telegram_connect_link = "https://t.me/"
 
     platform_definitions = [
         {
@@ -672,6 +681,18 @@ def forward_dashboard(request):
                 else ""
             ),
             "summary": "ورود امن با کد تایید (OTP) و همگام‌سازی خودکار تمام کانال‌های روبیکا",
+        },
+        {
+            "slug": "telegram",
+            "name": "تلگرام",
+            "icon": "bi-telegram",
+            "connect_url_name": "broadcast:telegram_connect",
+            "channels_url_name": "broadcast:telegram_channels",
+            "is_connected": bool(bot_users.get("telegram") and bot_users["telegram"].is_verified),
+            "account_identifier": (
+                bot_users["telegram"].username or bot_users["telegram"].chat_id if bot_users.get("telegram") else ""
+            ),
+            "summary": "هسته دوم ارسال و دریافت پست از ربات تلگرام و انتشار هم‌زمان به ۴ پیام‌رسان",
         },
     ]
 
@@ -760,6 +781,7 @@ def forward_dashboard(request):
             "total_failed_count": agg["total_failed"] or 0,
             "recent_jobs": recent_jobs,
             "bale_connect_link": bale_connect_link,
+            "telegram_connect_link": telegram_connect_link,
             "subscription_days_left": subscription_days_left,
             "active_plan_name": active_plan_name,
             "wallet_balance": wallet_balance,
@@ -973,3 +995,123 @@ def bale_sync_avatars(request):
     return redirect("broadcast:bale_channels")
 
 
+# ============================================================
+# Telegram Web Panel Views
+# ============================================================
+
+
+@login_required
+def telegram_connect(request):
+    """صفحه راهنما و دریافت لینک یک‌بارمصرف اتصال حساب تلگرام به ربات وین فوروارد."""
+    from product.forward.subscriptions.access import user_has_platform_access
+
+    if not user_has_platform_access(request.user, "telegram"):
+        messages.warning(request, "🔒 برای اتصال و استفاده از تلگرام ابتدا باید اشتراک فعال پلتفرم تلگرام داشته باشید.")
+        return redirect("forward_subscriptions:plans")
+
+    from core.models import Platform
+    from product.forward.messengers.adapters.registry import get_adapter
+    from product.forward.messengers.models import BotUser
+    from product.forward.messengers.services import generate_connect_link
+
+    nav_platforms = _get_forward_platforms_map()
+    telegram_platform = nav_platforms.get("telegram") or Platform.objects.filter(slug="telegram").first()
+    existing_bot_user = (
+        BotUser.objects.filter(user=request.user, platform=telegram_platform).first() if telegram_platform else None
+    )
+
+    connect_link = ""
+    if telegram_platform:
+        tg_username = ""
+        try:
+            tg_adapter = get_adapter("telegram")
+            if tg_adapter:
+                tg_username = tg_adapter.get_bot_username()
+        except Exception:
+            pass
+        connect_link = generate_connect_link(request.user, "telegram", bot_username=tg_username)
+
+    return render(
+        request,
+        "product/forward/broadcast/telegram/connect.html",
+        {
+            "existing_bot_user": existing_bot_user,
+            "connect_link": connect_link,
+            "platform": telegram_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def telegram_channels(request):
+    """صفحه لیست و مدیریت کانال‌های متصل‌شده کاربر در پیام‌رسان تلگرام."""
+    from core.models import Platform
+    from product.forward.messengers.models import BotUser
+    from product.forward.subscriptions.access import get_user_platform_access_map
+
+    nav_platforms = _get_forward_platforms_map()
+    telegram_platform = nav_platforms.get("telegram") or Platform.objects.filter(slug="telegram").first()
+    if not telegram_platform:
+        messages.error(request, "پلتفرم تلگرام در سیستم ثبت نشده است.")
+        return redirect("broadcast:dashboard")
+
+    bot_user = BotUser.objects.filter(user=request.user, platform=telegram_platform).first()
+    channels = (
+        BroadcastChannel.objects.filter(user=request.user, platform=telegram_platform, is_active=True)
+        .select_related("platform")
+        .order_by("-created_at")
+    )
+    access_map = get_user_platform_access_map(request.user)
+
+    return render(
+        request,
+        "product/forward/broadcast/telegram/channels.html",
+        {
+            "bot_user": bot_user,
+            "channels": channels,
+            "platform": telegram_platform,
+            "platform_access": access_map.get("telegram"),
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def telegram_delete_channel(request, channel_id):
+    """غیرفعال‌سازی کانال تلگرام توسط کاربر (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:telegram_channels")
+
+    channel = get_object_or_404(
+        BroadcastChannel,
+        pk=channel_id,
+        user=request.user,
+        platform__slug="telegram",
+    )
+    channel.is_active = False
+    channel.save(update_fields=["is_active"])
+    messages.success(request, f"کانال «{channel.title}» در تلگرام غیرفعال شد.")
+    return redirect("broadcast:telegram_channels")
+
+
+@login_required
+def telegram_sync_avatars(request):
+    """بروزرسانی عکس پروفایل واقعی کانال‌های تلگرام کاربر (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:telegram_channels")
+
+    from product.forward.broadcast.services.channel_sync import sync_channel_avatar
+    from product.forward.messengers.adapters.registry import get_adapter
+
+    adapter = get_adapter("telegram")
+    tg_channels = BroadcastChannel.objects.filter(
+        user=request.user, platform__slug="telegram", is_active=True
+    )
+    updated_count = 0
+    for ch in tg_channels:
+        if sync_channel_avatar(ch, adapter=adapter):
+            updated_count += 1
+
+    messages.success(request, f"✅ عکس پروفایل {updated_count} کانال تلگرام بروزرسانی شد.")
+    return redirect("broadcast:telegram_channels")

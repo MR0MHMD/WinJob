@@ -218,7 +218,7 @@
 
     <div class="row g-4 mb-5 wf-reveal wf-delay-2">
         {% for p in platform_cards %}
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-xl-3">
             <div class="wf-platform-hub-card {% if p.is_connected %}is-connected{% elif p.has_subscription %}is-subscribed-pending{% else %}is-locked{% endif %}">
 
                 <!-- هدر کارت پلتفرم با لوگوی واقعی دیتابیس -->
@@ -393,6 +393,16 @@
                             <div class="wf-dock-tile-icon"><i class="bi bi-phone-vibrate-fill"></i></div>
                         {% endif %}
                         <span class="fw-bold fs-xs">کانال‌های روبیکا</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a href="{% url 'broadcast:telegram_channels' %}" class="wf-dock-tile">
+                        {% if nav_platforms.telegram and nav_platforms.telegram.logo %}
+                            <img src="{{ nav_platforms.telegram.logo.url }}" alt="تلگرام" class="wf-dock-tile-logo">
+                        {% else %}
+                            <div class="wf-dock-tile-icon text-info"><i class="bi bi-telegram"></i></div>
+                        {% endif %}
+                        <span class="fw-bold fs-xs">کانال‌های تلگرام</span>
                     </a>
                 </div>
                 <div class="col">
@@ -645,6 +655,60 @@
                 <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
                 <a href="{% url 'broadcast:rubika_connect_phone' %}" class="wf-btn wf-btn-emerald">
                     <i class="bi bi-phone-fill"></i> ورود به حساب روبیکا
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade wf-modal" id="wfGuideModal_telegram" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold d-flex align-items-center gap-2">
+                    {% if nav_platforms.telegram and nav_platforms.telegram.logo %}
+                        <img src="{{ nav_platforms.telegram.logo.url }}" alt="تلگرام" width="32" height="32" class="rounded-3">
+                    {% else %}
+                        <i class="bi bi-telegram text-info"></i>
+                    {% endif %}
+                    آموزش اتصال حساب و کانال‌های تلگرام
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۱</div>
+                    <div class="w-100">
+                        <h6 class="text-white fw-bold fs-sm mb-1">استارت ربات وین فوروارد با لینک اختصاصی</h6>
+                        <p class="text-muted fs-xs mb-2">لینک زیر را باز کنید و در تلگرام دکمه Start را بزنید تا حسابتان متصل شود:</p>
+                        <div class="wf-code-copy-box">
+                            <code>{{ telegram_connect_link }}</code>
+                            <button type="button" class="wf-btn wf-btn-glass py-1 px-3 fs-xs" data-wf-copy="{{ telegram_connect_link }}">
+                                <i class="bi bi-clipboard"></i> کپی لینک
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۲</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ادمین کردن ربات در کانال‌های تلگرام</h6>
+                        <p class="text-muted fs-xs mb-0">ربات را به عنوان ادمین (با دسترسی ارسال پیام) به کانال‌های تلگرامی خود اضافه کنید تا خودکار ثبت شوند.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step mb-0">
+                    <div class="wf-guide-step-num">۳</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ارسال هم‌زمان از تلگرام به ۴ پیام‌رسان</h6>
+                        <p class="text-muted fs-xs mb-0">پس از اتصال، هم می‌توانید از داخل ربات تلگرام به تمام کانال‌های بله، ایتا، روبیکا و تلگرام پیام بفرستید و هم از بله و پنل وب به تلگرام ارسال کنید.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
+                <a href="{% url 'broadcast:telegram_connect' %}" class="wf-btn wf-btn-emerald">
+                    <i class="bi bi-telegram"></i> صفحه اتصال تلگرام
                 </a>
             </div>
         </div>

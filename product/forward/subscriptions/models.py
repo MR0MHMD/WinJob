@@ -12,6 +12,7 @@ FORWARD_PLATFORMS = (
     ("bale", "بله"),
     ("eitaa", "ایتا"),
     ("rubika", "روبیکا"),
+    ("telegram", "تلگرام"),
 )
 
 FORWARD_PLATFORM_SLUGS = tuple(slug for slug, _ in FORWARD_PLATFORMS)

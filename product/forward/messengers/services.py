@@ -4,8 +4,8 @@ import uuid
 from .models import ConnectToken
 
 
-def generate_connect_link(user, platform_slug: str, bot_username: str = "win_forward_bot") -> str:
-    """تولید توکن یک‌بارمصرف و ساخت لینک Deep Link برای اتصال به ربات."""
+def generate_connect_link(user, platform_slug: str, bot_username: str = "") -> str:
+    """تولید توکن یک‌بارمصرف و ساخت لینک Deep Link برای اتصال به ربات بله یا تلگرام."""
     if platform_slug in ("eitaa", "rubika"):
         raise ValueError(
             f"پلتفرم {platform_slug} از لینک اتصال (Deep Link) پشتیبانی نمی‌کند."
@@ -20,4 +20,9 @@ def generate_connect_link(user, platform_slug: str, bot_username: str = "win_for
     token = uuid.uuid4().hex
     ConnectToken.objects.create(user=user, platform=platform, token=token)
 
-    return f"https://ble.ir/{bot_username}?start=connect_{token}"
+    if platform_slug == "telegram":
+        username = (bot_username or "win_forward_bot").lstrip("@")
+        return f"https://t.me/{username}?start=connect_{token}"
+
+    username = (bot_username or "win_forward_bot").lstrip("@")
+    return f"https://ble.ir/{username}?start=connect_{token}"

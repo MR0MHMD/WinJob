@@ -1,7 +1,9 @@
-"""دریافت و پردازش آپدیت‌های Webhook ربات بله با UX پیشرفته و کیبورد ثابت تعاملی."""
+"""دریافت و پردازش آپدیت‌های Webhook ربات‌های بله و تلگرام با UX یکپارچه و کیبورد ثابت تعاملی."""
 
+import html
 import json
 import logging
+import re
 
 from django.http import JsonResponse
 from django.utils import timezone
@@ -20,6 +22,11 @@ logger = logging.getLogger(__name__)
 _WINJOB_FORWARD_URL = "https://winjob.ir/forward/"
 _WINJOB_PLANS_URL = "https://winjob.ir/forward/subscriptions/"
 _WINJOB_PRESETS_URL = "https://winjob.ir/forward/presets/"
+
+_PLATFORM_NAMES_FA = {
+    "bale": "بله",
+    "telegram": "تلگرام",
+}
 
 # کیبورد ثابت پایین ربات برای کاربر متصل‌شده
 _USER_KEYBOARD = {
@@ -48,6 +55,22 @@ _CANCEL_SEND_KEYBOARD = {
 }
 
 
+def _md_to_tg_html(text: str) -> str:
+    """تبدیل ایمن Markdown ساده پیام‌های سیستمی ربات به HTML استاندارد تلگرام."""
+    escaped = html.escape(text or "")
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped, flags=re.DOTALL)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    escaped = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", r'<a href="\2">\1</a>', escaped)
+    return escaped
+
+
+def _bot_send(adapter, chat_id, text: str, reply_markup: dict = None, platform_slug: str = "bale"):
+    """ارسال پیام سیستمی ربات با فرمت مناسب هر پیام‌رسان."""
+    if platform_slug == "telegram":
+        return adapter.send_text(chat_id, _md_to_tg_html(text), reply_markup=reply_markup, parse_mode="HTML")
+    return adapter.send_text(chat_id, text, reply_markup=reply_markup)
+
+
 def _set_awaiting_broadcast(bot_user: BotUser, state: bool) -> None:
     """ثبت یا پاکسازی وضعیت انتظار دریافت پیام برای ارسال روی session_data کاربر."""
     data = dict(bot_user.session_data or {})
@@ -59,18 +82,20 @@ def _set_awaiting_broadcast(bot_user: BotUser, state: bool) -> None:
     bot_user.save(update_fields=["session_data"])
 
 
-def _send_guest_welcome(adapter, chat_id) -> None:
+def _send_guest_welcome(adapter, chat_id, platform_slug: str = "bale") -> None:
     """ارسال پیام خوش‌آمدگویی کامل و راهنمای اتصال برای کاربران متصل‌نشده."""
+    p_name = _PLATFORM_NAMES_FA.get(platform_slug, platform_slug)
     welcome_text = (
         "سلام! به ربات هوشمند **وین فوروارد** خوش آمدید ✨\n\n"
-        "با وین فوروارد می‌توانید پست‌های خود را هم‌زمان در کانال‌های **بله، ایتا و روبیکا** منتشر کنید.\n\n"
+        "با وین فوروارد می‌توانید پست‌های خود را هم‌زمان در کانال‌های **بله، ایتا، روبیکا و تلگرام** منتشر کنید.\n\n"
         "📌 **برای شروع، این ۳ قدم ساده را انجام دهید:**\n"
         "۱️⃣ روی دکمه زیر بزنید و وارد سایت **وینجاب** شوید (اگر حساب ندارید در چند ثانیه ثبت‌نام کنید).\n"
-        "۲️⃣ پس از ورود، مستقیماً به پنل وین فوروارد هدایت می‌شوید؛ همان‌جا روی **«اتصال حساب بله»** بزنید تا ربات به حسابتان وصل شود.\n"
+        f"۲️⃣ پس از ورود، مستقیماً به پنل وین فوروارد هدایت می‌شوید؛ همان‌جا روی **«اتصال حساب {p_name}»** بزنید تا ربات به حسابتان وصل شود.\n"
         "۳️⃣ اشتراک **۷ روزه رایگان** را از بخش اشتراک‌ها فعال کنید و ربات را در کانال‌هایتان ادمین نمایید.\n\n"
         "👇 برای شروع روی دکمه زیر بزنید:"
     )
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         welcome_text,
         reply_markup={
@@ -78,15 +103,18 @@ def _send_guest_welcome(adapter, chat_id) -> None:
                 [{"text": "🌐 ورود به پنل وینجاب و شروع", "url": _WINJOB_FORWARD_URL}],
             ]
         },
+        platform_slug=platform_slug,
     )
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         "از دکمه پایین هم همیشه می‌توانید وارد پنل وینجاب شوید 👇",
         reply_markup=_GUEST_KEYBOARD,
+        platform_slug=platform_slug,
     )
 
 
-def _send_user_home(adapter, chat_id, bot_user: BotUser) -> None:
+def _send_user_home(adapter, chat_id, bot_user: BotUser, platform_slug: str = "bale") -> None:
     """ارسال پیام خوش‌آمدگویی و منوی اصلی همراه با کیبورد ثابت برای کاربر متصل."""
     from product.forward.subscriptions.access import get_active_platform_slugs
 
@@ -106,7 +134,7 @@ def _send_user_home(adapter, chat_id, bot_user: BotUser) -> None:
         f"• پروفایل‌های ارسال: **{presets_count} پروفایل**\n\n"
         "برای ارسال پیام جدید، از منوی پایین دکمه **«📤 ارسال پیام»** را بزن 👇"
     )
-    adapter.send_text(chat_id, text, reply_markup=_USER_KEYBOARD)
+    _bot_send(adapter, chat_id, text, reply_markup=_USER_KEYBOARD, platform_slug=platform_slug)
 
 
 @csrf_exempt
@@ -123,21 +151,140 @@ def bale_webhook(request):
     logger.info(f"Bale webhook received: {json.dumps(data, ensure_ascii=False)}")
 
     if "message" in data:
-        return _handle_message(data["message"])
+        return _handle_message(data["message"], platform_slug="bale")
 
     if "callback_query" in data:
-        return _handle_callback_query(data["callback_query"])
+        return _handle_callback_query(data["callback_query"], platform_slug="bale")
 
     return JsonResponse({"ok": True, "status": "ignored"})
 
 
-def _handle_message(message):
+@csrf_exempt
+def telegram_webhook(request):
+    """نقطه ورود Webhook تلگرام برای دریافت پیام‌ها، دکمه‌های شیشه‌ای و وضعیت ادمینی کانال‌ها."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    logger.info(f"Telegram webhook received: {json.dumps(data, ensure_ascii=False)}")
+
+    if "my_chat_member" in data:
+        return _handle_telegram_my_chat_member(data["my_chat_member"])
+
+    if "message" in data:
+        return _handle_message(data["message"], platform_slug="telegram")
+
+    if "callback_query" in data:
+        cb = data["callback_query"]
+        adapter = get_adapter("telegram")
+        if adapter and cb.get("id"):
+            adapter.answer_callback_query(cb["id"])
+        return _handle_callback_query(cb, platform_slug="telegram")
+
+    return JsonResponse({"ok": True, "status": "ignored"})
+
+
+def _handle_telegram_my_chat_member(update_obj: dict):
+    """مدیریت خودکار اضافه شدن، ادمین شدن یا حذف شدن ربات تلگرام در کانال‌ها (my_chat_member)."""
+    chat = update_obj.get("chat") or {}
+    from_user = update_obj.get("from") or {}
+    new_member = update_obj.get("new_chat_member") or {}
+
+    if chat.get("type") != "channel":
+        return JsonResponse({"ok": True, "status": "not a channel"})
+
+    platform = Platform.objects.filter(slug="telegram").first()
+    if not platform:
+        return JsonResponse({"ok": False, "error": "Platform missing"}, status=500)
+
+    chat_id_str = str(chat.get("id"))
+    new_status = new_member.get("status", "")
+    adapter = get_adapter("telegram")
+
+    if new_status in ("left", "kicked"):
+        updated = BroadcastChannel.objects.filter(
+            platform=platform, chat_id=chat_id_str
+        ).update(is_active=False, bot_is_admin=False, bot_admin_checked_at=timezone.now())
+        return JsonResponse({"ok": True, "status": "channel deactivated" if updated else "channel not found"})
+
+    from_chat_id = from_user.get("id")
+    bot_user = BotUser.objects.filter(platform=platform, chat_id=str(from_chat_id)).select_related("user").first()
+
+    if not bot_user:
+        if adapter and from_chat_id:
+            try:
+                _bot_send(
+                    adapter,
+                    from_chat_id,
+                    f"سلام! کانال «{chat.get('title', '')}» در تلگرام شناسایی شد.\n"
+                    "برای مدیریت و ارسال پیام، ابتدا وارد پنل وینجاب شوید و حساب تلگرام خود را متصل کنید، "
+                    "سپس از پنل وب کانال را اضافه کنید یا ربات را یک‌بار دوباره در کانال ادمین نمایید:",
+                    reply_markup={
+                        "inline_keyboard": [
+                            [{"text": "🌐 ورود به پنل وینجاب", "url": _WINJOB_FORWARD_URL}]
+                        ]
+                    },
+                    platform_slug="telegram",
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to send telegram onboarding DM: {exc}")
+        return JsonResponse({"ok": True, "status": "user not linked, dm sent"})
+
+    is_admin = new_status in ("administrator", "creator")
+    channel, created = BroadcastChannel.objects.update_or_create(
+        user=bot_user.user,
+        platform=platform,
+        chat_id=chat_id_str,
+        defaults={
+            "title": chat.get("title", "") or chat.get("username", "") or "کانال بدون عنوان",
+            "username": chat.get("username", "") or "",
+            "bot_is_admin": is_admin,
+            "bot_admin_checked_at": timezone.now(),
+            "is_active": True,
+        },
+    )
+
+    if adapter:
+        try:
+            sync_channel_avatar(channel, adapter=adapter)
+            if is_admin:
+                _bot_send(
+                    adapter,
+                    from_chat_id,
+                    f"✅ کانال تلگرام «{channel.title}» با دسترسی ادمین ثبت شد و آماده دریافت پیام است!",
+                    reply_markup=_USER_KEYBOARD,
+                    platform_slug="telegram",
+                )
+            else:
+                _bot_send(
+                    adapter,
+                    from_chat_id,
+                    f"⚠️ ربات در کانال تلگرام «{channel.title}» اضافه شد، اما دسترسی ارسال پیام (ادمین) ندارد.\n"
+                    "لطفاً ربات را با دسترسی ارسال پیام ادمین کنید تا در لیست ارسال ظاهر شود.",
+                    reply_markup=_USER_KEYBOARD,
+                    platform_slug="telegram",
+                )
+        except Exception as exc:
+            logger.warning(f"Failed to handle telegram my_chat_member notify: {exc}")
+
+    return JsonResponse({
+        "ok": True,
+        "status": "channel created" if created else "channel updated",
+        "channel_id": channel.pk,
+    })
+
+
+def _handle_message(message, platform_slug: str = "bale"):
     """پردازش پیام‌های دریافتی — شامل دستورات، دکمه‌های کیبورد، رویدادهای کانال و پیش‌نویس."""
     if "new_chat_members" in message:
-        return _handle_bot_added_to_chat(message)
+        return _handle_bot_added_to_chat(message, platform_slug=platform_slug)
 
     if "left_chat_member" in message:
-        return _handle_bot_removed_from_chat(message)
+        return _handle_bot_removed_from_chat(message, platform_slug=platform_slug)
 
     text = (message.get("text") or "").strip()
     chat_id = message.get("chat", {}).get("id")
@@ -146,72 +293,90 @@ def _handle_message(message):
 
     if text.startswith("/"):
         parts = text.split(" ")
-        command = parts[0].lower()
+        command = parts[0].split("@")[0].lower()
 
-        adapter = get_adapter("bale")
+        adapter = get_adapter(platform_slug)
         if adapter is None:
-            logger.error("BaleAdapter is not registered")
+            logger.error(f"Adapter for '{platform_slug}' is not registered")
             return JsonResponse({"ok": False, "error": "Adapter missing"}, status=500)
 
         if command == "/start":
             if len(parts) > 1 and parts[1].startswith("verify_"):
                 token = parts[1].replace("verify_", "")
-                result = finalize_verification(token, "bale", str(chat_id))
+                result = finalize_verification(token, platform_slug, str(chat_id))
                 if result["ok"]:
-                    adapter.send_text(chat_id, f"✅ کانال «{result['channel'].title}» با موفقیت به وین فوروارد متصل شد.")
+                    if adapter:
+                        sync_channel_avatar(result["channel"], adapter=adapter)
+                    _bot_send(
+                        adapter,
+                        chat_id,
+                        f"✅ کانال «{result['channel'].title}» با موفقیت به وین فوروارد متصل شد.",
+                        platform_slug=platform_slug,
+                    )
                 else:
                     error_map = {
                         "invalid_or_used_token": "❌ لینک نامعتبر است یا قبلاً استفاده شده.",
                         "expired_token": "❌ لینک منقضی شده است. لطفاً از سایت لینک جدید بگیرید.",
                         "bot_not_admin": "❌ ربات در کانال ادمین نیست. لطفاً ربات را ادمین کنید.",
-                        "api_error": "❌ خطا در ارتباط با بله. لطفاً بعداً تلاش کنید.",
+                        "api_error": f"❌ خطا در ارتباط با {_PLATFORM_NAMES_FA.get(platform_slug, platform_slug)}. لطفاً بعداً تلاش کنید.",
                     }
-                    adapter.send_text(chat_id, error_map.get(result.get("error"), "❌ خطای نامشخص."))
+                    _bot_send(
+                        adapter,
+                        chat_id,
+                        error_map.get(result.get("error"), "❌ خطای نامشخص."),
+                        platform_slug=platform_slug,
+                    )
                 return JsonResponse({"ok": True, "status": "verify processed"})
 
             if len(parts) > 1 and parts[1].startswith("connect_"):
                 token = parts[1].replace("connect_", "")
                 from_user = message.get("from", {})
-                return _handle_connect_user(token, chat_id, from_user)
+                return _handle_connect_user(token, chat_id, from_user, platform_slug=platform_slug)
 
-            bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+            bot_user = BotUser.objects.filter(
+                platform__slug=platform_slug, chat_id=str(chat_id)
+            ).select_related("user").first()
             if bot_user:
-                _send_user_home(adapter, chat_id, bot_user)
+                _send_user_home(adapter, chat_id, bot_user, platform_slug=platform_slug)
             else:
-                _send_guest_welcome(adapter, chat_id)
+                _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
             return JsonResponse({"ok": True, "status": "welcome sent"})
 
         if command == "/status":
-            return _handle_status_command(chat_id)
+            return _handle_status_command(chat_id, platform_slug=platform_slug)
 
         if command == "/channels":
-            return _handle_channels_command(chat_id)
+            return _handle_channels_command(chat_id, platform_slug=platform_slug)
 
         if command == "/presets":
-            return _handle_presets_command(chat_id)
+            return _handle_presets_command(chat_id, platform_slug=platform_slug)
 
         if command == "/send":
-            return _handle_start_send_command(chat_id)
+            return _handle_start_send_command(chat_id, platform_slug=platform_slug)
 
         if command == "/help":
-            return _handle_help_command(chat_id)
+            return _handle_help_command(chat_id, platform_slug=platform_slug)
 
-        bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
-        adapter.send_text(
+        bot_user = BotUser.objects.filter(
+            platform__slug=platform_slug, chat_id=str(chat_id)
+        ).select_related("user").first()
+        _bot_send(
+            adapter,
             chat_id,
             "دستور واردشده معتبر نیست؛ از دکمه‌های منوی پایین استفاده کنید 👇",
             reply_markup=_USER_KEYBOARD if bot_user else _GUEST_KEYBOARD,
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "unknown command"})
 
     chat_type = message.get("chat", {}).get("type")
     if chat_type == "private":
-        return _handle_private_message(message)
+        return _handle_private_message(message, platform_slug=platform_slug)
 
     return JsonResponse({"ok": True, "status": "ignored"})
 
 
-def _handle_bot_added_to_chat(message):
+def _handle_bot_added_to_chat(message, platform_slug: str = "bale"):
     """پردازش رویداد اضافه شدن ربات به کانال (new_chat_members)."""
     chat = message.get("chat", {})
     from_user = message.get("from", {})
@@ -223,29 +388,32 @@ def _handle_bot_added_to_chat(message):
     if chat_type != "channel":
         return JsonResponse({"ok": True, "status": "not a channel"})
 
-    platform = Platform.objects.filter(slug="bale").first()
+    platform = Platform.objects.filter(slug=platform_slug).first()
     if not platform:
-        logger.error("Platform 'bale' not found")
+        logger.error(f"Platform '{platform_slug}' not found")
         return JsonResponse({"ok": False, "error": "Platform missing"}, status=500)
 
     chat_id_str = str(chat_id)
-    adapter = get_adapter("bale")
+    adapter = get_adapter(platform_slug)
+    p_name = _PLATFORM_NAMES_FA.get(platform_slug, platform_slug)
 
     bot_user = BotUser.objects.filter(platform=platform, chat_id=str(from_chat_id)).select_related("user").first()
 
     if not bot_user:
         if adapter and from_chat_id:
             try:
-                adapter.send_text(
+                _bot_send(
+                    adapter,
                     from_chat_id,
                     f"سلام! کانال «{chat.get('title', '')}» شناسایی شد.\n"
-                    "برای مدیریت و ارسال پیام، ابتدا وارد پنل وینجاب شوید و حساب بله خود را متصل کنید، "
+                    f"برای مدیریت و ارسال پیام، ابتدا وارد پنل وینجاب شوید و حساب {p_name} خود را متصل کنید، "
                     "سپس ربات را یک‌بار از کانال حذف و دوباره اضافه کنید:",
                     reply_markup={
                         "inline_keyboard": [
                             [{"text": "🌐 ورود به پنل وینجاب", "url": _WINJOB_FORWARD_URL}]
                         ]
                     },
+                    platform_slug=platform_slug,
                 )
             except Exception as exc:
                 logger.warning(f"Failed to send onboarding DM: {exc}")
@@ -273,17 +441,21 @@ def _handle_bot_added_to_chat(message):
             sync_channel_avatar(channel, adapter=adapter)
 
             if is_admin:
-                adapter.send_text(
+                _bot_send(
+                    adapter,
                     from_chat_id,
                     f"✅ کانال «{channel.title}» با دسترسی ادمین ثبت شد و آماده دریافت پیام است!",
                     reply_markup=_USER_KEYBOARD,
+                    platform_slug=platform_slug,
                 )
             else:
-                adapter.send_text(
+                _bot_send(
+                    adapter,
                     from_chat_id,
                     f"⚠️ ربات به کانال «{channel.title}» اضافه شد، اما هنوز ادمین نیست.\n"
                     "لطفاً ربات را با دسترسی ارسال پیام ادمین کنید تا در لیست ارسال ظاهر شود.",
                     reply_markup=_USER_KEYBOARD,
+                    platform_slug=platform_slug,
                 )
         except Exception as exc:
             logger.warning(f"Failed to verify admin status: {exc}")
@@ -295,7 +467,7 @@ def _handle_bot_added_to_chat(message):
     })
 
 
-def _handle_bot_removed_from_chat(message):
+def _handle_bot_removed_from_chat(message, platform_slug: str = "bale"):
     """پردازش حذف شدن ربات از کانال (left_chat_member)."""
     chat = message.get("chat", {})
     chat_id = chat.get("id")
@@ -303,7 +475,7 @@ def _handle_bot_removed_from_chat(message):
     if chat.get("type") != "channel":
         return JsonResponse({"ok": True, "status": "not a channel"})
 
-    platform = Platform.objects.filter(slug="bale").first()
+    platform = Platform.objects.filter(slug=platform_slug).first()
     if not platform:
         return JsonResponse({"ok": False, "error": "Platform missing"}, status=500)
 
@@ -317,26 +489,28 @@ def _handle_bot_removed_from_chat(message):
     return JsonResponse({"ok": True, "status": "channel deactivated" if updated else "channel not found"})
 
 
-def _handle_connect_user(token, chat_id, from_user):
+def _handle_connect_user(token, chat_id, from_user, platform_slug: str = "bale"):
     """اتصال کاربر سایت به ربات با استفاده از توکن تولیدشده در سایت."""
     token_obj = ConnectToken.objects.filter(token=token, used_at__isnull=True).select_related("user", "platform").first()
 
-    adapter = get_adapter("bale")
+    adapter = get_adapter(platform_slug)
     if not adapter:
         return JsonResponse({"ok": False, "error": "Adapter missing"}, status=500)
 
     if not token_obj or not token_obj.is_valid():
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             "❌ لینک اتصال نامعتبر است یا منقضی شده.\nلطفاً دوباره وارد پنل وینجاب شوید و لینک اتصال جدید بگیرید.",
             reply_markup=_GUEST_KEYBOARD,
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "invalid token"})
 
     bot_user, created = BotUser.objects.get_or_create(
         user=token_obj.user,
         platform=token_obj.platform,
-        defaults={"chat_id": str(chat_id), "is_verified": True, "username": from_user.get("username", "")},
+        defaults={"chat_id": str(chat_id), "is_verified": True, "username": from_user.get("username", "") or ""},
     )
     if not created:
         bot_user.chat_id = str(chat_id)
@@ -347,31 +521,36 @@ def _handle_connect_user(token, chat_id, from_user):
     token_obj.save(update_fields=["used_at"])
 
     _set_awaiting_broadcast(bot_user, False)
-    adapter.send_text(
+    p_name = _PLATFORM_NAMES_FA.get(platform_slug, platform_slug)
+    _bot_send(
+        adapter,
         chat_id,
-        "🎉 حساب بله شما با موفقیت به **وین فوروارد** متصل شد!\n\n"
-        "الان می‌توانید ربات را در کانال‌های بله خود ادمین کنید تا خودکار ثبت شوند، "
-        "و یا از پنل وب کانال‌های ایتا و روبیکا را متصل کنید.\n\n"
+        f"🎉 حساب {p_name} شما با موفقیت به **وین فوروارد** متصل شد!\n\n"
+        f"الان می‌توانید ربات را در کانال‌های {p_name} خود ادمین کنید تا خودکار ثبت شوند، "
+        "و یا از پنل وب سایر پیام‌رسان‌ها را متصل کنید.\n\n"
         "همه گزینه‌ها از منوی پایین در دسترس است 👇",
         reply_markup=_USER_KEYBOARD,
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "connected"})
 
 
-def _handle_status_command(chat_id):
+def _handle_status_command(chat_id, platform_slug: str = "bale"):
     """نمایش وضعیت حساب کاربری، اشتراک پلتفرم‌ها و تعداد کانال‌ها."""
     from product.forward.subscriptions.access import get_user_platform_access_map, platform_label
 
-    adapter = get_adapter("bale")
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    adapter = get_adapter(platform_slug)
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
 
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     access_map = get_user_platform_access_map(bot_user.user)
     sub_lines = []
-    for slug in ("bale", "eitaa", "rubika"):
+    for slug in ("bale", "eitaa", "rubika", "telegram"):
         acc = access_map.get(slug)
         if acc and acc.is_valid:
             sub_lines.append(f"  ✅ {platform_label(slug)}: فعال ({acc.remaining_days} روز مانده)")
@@ -382,16 +561,19 @@ def _handle_status_command(chat_id):
     bale_cnt = channels.filter(platform__slug="bale").count()
     eitaa_cnt = channels.filter(platform__slug="eitaa").count()
     rubika_cnt = channels.filter(platform__slug="rubika").count()
+    telegram_cnt = channels.filter(platform__slug="telegram").count()
 
+    p_name = _PLATFORM_NAMES_FA.get(platform_slug, platform_slug)
     msg = (
         f"👤 **وضعیت حساب و اشتراک شما**\n\n"
         f"📱 شماره موبایل: `{bot_user.user.phone_number}`\n"
-        f"📅 تاریخ اتصال بله: {bot_user.linked_at.strftime('%Y/%m/%d') if bot_user.linked_at else 'نامشخص'}\n\n"
+        f"📅 تاریخ اتصال {p_name}: {bot_user.linked_at.strftime('%Y/%m/%d') if bot_user.linked_at else 'نامشخص'}\n\n"
         f"💎 **وضعیت اشتراک پلتفرم‌ها:**\n" + "\n".join(sub_lines) + "\n\n"
         f"📢 **کانال‌های آماده ارسال:**\n"
-        f"• بله: {bale_cnt} | ایتا: {eitaa_cnt} | روبیکا: {rubika_cnt}"
+        f"• بله: {bale_cnt} | ایتا: {eitaa_cnt} | روبیکا: {rubika_cnt} | تلگرام: {telegram_cnt}"
     )
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         msg,
         reply_markup={
@@ -399,19 +581,22 @@ def _handle_status_command(chat_id):
                 [{"text": "💎 خرید یا تمدید اشتراک در سایت", "url": _WINJOB_PLANS_URL}],
             ]
         },
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "status sent"})
 
 
-def _handle_channels_command(chat_id):
+def _handle_channels_command(chat_id, platform_slug: str = "bale"):
     """نمایش لیست کامل کانال‌های کاربر در همه پلتفرم‌ها با دکمه‌های شیشه‌ای."""
     from product.forward.subscriptions.access import get_active_platform_slugs
 
-    adapter = get_adapter("bale")
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    adapter = get_adapter(platform_slug)
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
 
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     channels = list(
@@ -421,15 +606,17 @@ def _handle_channels_command(chat_id):
     )
 
     if not channels:
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             "📋 هنوز هیچ کانالی ثبت نکرده‌اید.\n\n"
-            "برای بله، ربات را در کانالتان ادمین کنید؛ و برای ایتا و روبیکا از پنل وب اقدام کنید:",
+            "برای بله و تلگرام، ربات را در کانالتان ادمین کنید؛ و برای ایتا و روبیکا از پنل وب اقدام کنید:",
             reply_markup={
                 "inline_keyboard": [
                     [{"text": "🌐 افزودن کانال در پنل وب", "url": _WINJOB_FORWARD_URL}],
                 ]
             },
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "no channels"})
 
@@ -447,21 +634,25 @@ def _handle_channels_command(chat_id):
         ])
 
     inline_keyboard.append([{"text": "🌐 مدیریت و افزودن کانال در سایت", "url": _WINJOB_FORWARD_URL}])
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         "📢 **لیست کانال‌های شما**\nبرای مشاهده جزئیات، روی هر کانال بزنید (حذف یا ویرایش از طریق پنل وب انجام می‌شود):",
         reply_markup={"inline_keyboard": inline_keyboard},
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "channels sent"})
 
 
-def _handle_presets_command(chat_id):
+def _handle_presets_command(chat_id, platform_slug: str = "bale"):
     """نمایش لیست پروفایل‌های ارسال کاربر برای مشاهده جزئیات یا مدیریت در پنل وب."""
-    adapter = get_adapter("bale")
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    adapter = get_adapter(platform_slug)
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
 
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     presets = list(
@@ -471,7 +662,8 @@ def _handle_presets_command(chat_id):
     )
 
     if not presets:
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             "📦 شما هنوز هیچ پروفایل ارسالی نساخته‌اید.\n\n"
             "با ساخت پروفایل (مثلاً «فروش» یا «اخبار»)، هنگام ارسال پیام فقط با یک کلیک به کل آن گروه کانال پیام می‌فرستید.",
@@ -480,6 +672,7 @@ def _handle_presets_command(chat_id):
                     [{"text": "➕ ساخت پروفایل در پنل وب", "url": _WINJOB_PRESETS_URL}],
                 ]
             },
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "no presets"})
 
@@ -489,51 +682,60 @@ def _handle_presets_command(chat_id):
     ]
     inline_keyboard.append([{"text": "⚙️ ساخت یا مدیریت پروفایل‌ها در سایت", "url": _WINJOB_PRESETS_URL}])
 
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         "📦 **پروفایل‌های ارسال شما**\nبرای دیدن کانال‌های عضو هر پروفایل روی آن بزنید (ویرایش و حذف در پنل وب انجام می‌شود):",
         reply_markup={"inline_keyboard": inline_keyboard},
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "presets sent"})
 
 
-def _handle_start_send_command(chat_id):
+def _handle_start_send_command(chat_id, platform_slug: str = "bale"):
     """ورود کاربر به حالت مرحله‌ای انتظار دریافت پیام/رسانه برای ارسال همگانی."""
-    adapter = get_adapter("bale")
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    adapter = get_adapter(platform_slug)
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
 
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     _set_awaiting_broadcast(bot_user, True)
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         "✍️ **آماده دریافت پیام شما هستم!**\n\n"
         "الان می‌توانید متن، عکس، ویدیو، ویس، آهنگ یا فایل خود را همین‌جا بفرستید یا از کانال دیگری **فوروارد** کنید.\n"
         "اگر منصرف شدید، روی «🔙 بازگشت به منوی اصلی» بزنید.",
         reply_markup=_CANCEL_SEND_KEYBOARD,
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "awaiting broadcast"})
 
 
-def _handle_help_command(chat_id):
+def _handle_help_command(chat_id, platform_slug: str = "bale"):
     """نمایش راهنمای سریع کار با ربات و پشتیبانی وین فوروارد."""
-    adapter = get_adapter("bale")
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    adapter = get_adapter(platform_slug)
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
 
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     help_text = (
         "❓ **راهنمای سریع وین فوروارد**\n\n"
         "1️⃣ **ارسال پیام:** دکمه «📤 ارسال پیام» را بزنید، پست یا فایل خود را بفرستید، پروفایل یا کانال‌ها را انتخاب کنید و «🚀 تایید و ارسال» را بزنید.\n"
         "2️⃣ **پروفایل‌های ارسال:** از پنل وب کانال‌هایتان را دسته‌بندی کنید تا هر بار مجبور به انتخاب تکی کانال‌ها نباشید.\n"
-        "3️⃣ **اتصال ایتا و روبیکا:** از طریق پنل وب وین فوروارد انجام می‌شود و مستقیماً در همین ربات هم قابل ارسال است.\n\n"
+        "3️⃣ **اتصال ۴ پلتفرم:** بله، تلگرام، ایتا و روبیکا همگی از طریق پنل وب قابل اتصال‌اند و از همین ربات می‌توانید به همه آن‌ها پیام بفرستید.\n\n"
         f"🌐 **پنل وب و پشتیبانی:** [ورود به پنل وین فوروارد]({_WINJOB_FORWARD_URL})"
     )
-    adapter.send_text(
+    _bot_send(
+        adapter,
         chat_id,
         help_text,
         reply_markup={
@@ -541,6 +743,7 @@ def _handle_help_command(chat_id):
                 [{"text": "🌐 ورود به پنل وین فوروارد", "url": _WINJOB_FORWARD_URL}],
             ]
         },
+        platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "help sent"})
 
@@ -616,7 +819,7 @@ def _build_draft_keyboard(job, manual_mode: bool = False):
             else:
                 is_selected = ch.pk in selected_channel_ids
                 icon = "✅" if is_selected else "⬜"
-                inline_keyboard.append([{"text": f"{icon} {ch.title}", "callback_data": f"sel_{job.pk}_{ch.pk}"}])
+                inline_keyboard.append([{"text": f"{icon} {ch.title} ({ch.platform.name})", "callback_data": f"sel_{job.pk}_{ch.pk}"}])
 
     inline_keyboard.append([
         {"text": "🚀 تایید و ارسال", "callback_data": f"send_{job.pk}"},
@@ -625,9 +828,9 @@ def _build_draft_keyboard(job, manual_mode: bool = False):
     return {"inline_keyboard": inline_keyboard}
 
 
-def _handle_callback_query(callback):
+def _handle_callback_query(callback, platform_slug: str = "bale"):
     """پردازش کلیک کاربر روی دکمه‌های شیشه‌ای."""
-    adapter = get_adapter("bale")
+    adapter = get_adapter(platform_slug)
     data = callback.get("data", "")
     chat_id = callback.get("message", {}).get("chat", {}).get("id")
     message_id = callback.get("message", {}).get("message_id")
@@ -635,20 +838,24 @@ def _handle_callback_query(callback):
     if not chat_id:
         return JsonResponse({"ok": True, "status": "no chat"})
 
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=str(chat_id)).select_related("user").first()
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=str(chat_id)
+    ).select_related("user").first()
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "unauthorized"})
 
     # ۰. کلیک روی کانال نیازمند اشتراک
     if data.startswith("locked_"):
         from product.forward.subscriptions.access import platform_label
         slug = data.replace("locked_", "")
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             f"🔒 اشتراک فعال برای پلتفرم «{platform_label(slug)}» ندارید.\n"
             "برای فعال‌سازی، به بخش اشتراک وین‌فوروارد در سایت مراجعه کنید.",
             reply_markup={"inline_keyboard": [[{"text": "💎 خرید اشتراک", "url": _WINJOB_PLANS_URL}]]},
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "locked platform"})
 
@@ -670,9 +877,11 @@ def _handle_callback_query(callback):
                 if ch.platform.slug in active_slugs
             ]
             if not eligible_ids:
-                adapter.send_text(
+                _bot_send(
+                    adapter,
                     chat_id,
                     f"⚠️ پروفایل «{preset.name}» هیچ کانال فعالی با اشتراک معتبر ندارد.",
+                    platform_slug=platform_slug,
                 )
                 return JsonResponse({"ok": True, "status": "preset has no eligible channels"})
 
@@ -777,10 +986,12 @@ def _handle_callback_query(callback):
             if message_id:
                 adapter.delete_message(chat_id, message_id)
             still_awaiting = bool((bot_user.session_data or {}).get("awaiting_broadcast"))
-            adapter.send_text(
+            _bot_send(
+                adapter,
                 chat_id,
                 "❌ پیش‌نویس ارسال لغو و پاک شد.",
                 reply_markup=_CANCEL_SEND_KEYBOARD if still_awaiting else _USER_KEYBOARD,
+                platform_slug=platform_slug,
             )
         except Exception as e:
             logger.error(f"Error in cancel_ callback: {e}")
@@ -794,11 +1005,22 @@ def _handle_callback_query(callback):
                 pk=job_id, message__user=bot_user.user, status=BroadcastJob.Status.DRAFT
             ).first()
             if not job:
-                adapter.send_text(chat_id, "❌ پیش‌نویس یافت نشد یا قبلاً ارسال شده است.", reply_markup=_USER_KEYBOARD)
+                _bot_send(
+                    adapter,
+                    chat_id,
+                    "❌ پیش‌نویس یافت نشد یا قبلاً ارسال شده است.",
+                    reply_markup=_USER_KEYBOARD,
+                    platform_slug=platform_slug,
+                )
                 return JsonResponse({"ok": True, "status": "job not found"})
 
             if not job.targets.exists():
-                adapter.send_text(chat_id, "⚠️ لطفاً حداقل یک پروفایل یا کانال را انتخاب کنید.")
+                _bot_send(
+                    adapter,
+                    chat_id,
+                    "⚠️ لطفاً حداقل یک پروفایل یا کانال را انتخاب کنید.",
+                    platform_slug=platform_slug,
+                )
                 return JsonResponse({"ok": True, "status": "no targets"})
 
             job.status = BroadcastJob.Status.PENDING
@@ -812,7 +1034,13 @@ def _handle_callback_query(callback):
             enqueue_dispatch_job(job.pk, progress_chat_id=str(chat_id))
         except Exception as e:
             logger.exception(f"Error in send_ callback: {e}")
-            adapter.send_text(chat_id, "❌ خطایی در شروع ارسال رخ داد.", reply_markup=_USER_KEYBOARD)
+            _bot_send(
+                adapter,
+                chat_id,
+                "❌ خطایی در شروع ارسال رخ داد.",
+                reply_markup=_USER_KEYBOARD,
+                platform_slug=platform_slug,
+            )
 
         return JsonResponse({"ok": True, "status": "send processed"})
 
@@ -824,12 +1052,12 @@ def _handle_callback_query(callback):
         or data.startswith("viewpreset_")
         or data == "back_presets"
     ):
-        return _handle_dashboard_callback(callback, adapter, chat_id, bot_user)
+        return _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_slug=platform_slug)
 
     return JsonResponse({"ok": True, "status": "ignored"})
 
 
-def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
+def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_slug: str = "bale"):
     """مدیریت مشاهده جزئیات کانال‌ها و پروفایل‌ها در ربات (حذف و ویرایش از طریق پنل وب)."""
     from product.forward.subscriptions.access import user_has_platform_access
 
@@ -839,7 +1067,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
         channel_id = data.replace("ch_", "")
         channel = BroadcastChannel.objects.filter(pk=channel_id, user=bot_user.user).select_related("platform").first()
         if not channel:
-            adapter.send_text(chat_id, "❌ کانال یافت نشد.")
+            _bot_send(adapter, chat_id, "❌ کانال یافت نشد.", platform_slug=platform_slug)
             return JsonResponse({"ok": True})
 
         admin_status = "✅ ربات/اکانت متصل است" if channel.bot_is_admin else "⚠️ دسترسی ارسال تایید نشده"
@@ -858,33 +1086,37 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
         )
         web_channel_url = f"https://winjob.ir/forward/{channel.platform.slug}/channels/"
         inline_keyboard = []
-        if channel.platform.slug == "bale":
+        if channel.platform.slug in ("bale", "telegram"):
             inline_keyboard.append([{"text": "🔄 بروزرسانی وضعیت ادمین", "callback_data": f"refresh_{channel.pk}"}])
         inline_keyboard.append([{"text": "⚙️ حذف یا مدیریت در پنل وب", "url": web_channel_url}])
         inline_keyboard.append([{"text": "🔙 بازگشت به لیست کانال‌ها", "callback_data": "back_list"}])
 
-        adapter.send_text(chat_id, text, reply_markup={"inline_keyboard": inline_keyboard})
+        _bot_send(adapter, chat_id, text, reply_markup={"inline_keyboard": inline_keyboard}, platform_slug=platform_slug)
         return JsonResponse({"ok": True})
 
     if data.startswith("refresh_"):
         channel_id = data.replace("refresh_", "")
         channel = BroadcastChannel.objects.filter(pk=channel_id, user=bot_user.user).select_related("platform").first()
-        if channel and adapter and channel.platform.slug == "bale":
-            try:
-                is_admin = adapter.check_bot_is_admin(channel.chat_id)
-                channel.bot_is_admin = is_admin
-                channel.save(update_fields=["bot_is_admin"])
-                sync_channel_avatar(channel, adapter=adapter)
-                adapter.send_text(
-                    chat_id,
-                    f"✅ وضعیت «{channel.title}» بروزرسانی شد:\n{'✅ ربات ادمین است' if is_admin else '⚠️ ربات ادمین نیست'}",
-                )
-            except Exception as e:
-                adapter.send_text(chat_id, f"❌ خطا در بروزرسانی: {e}")
+        if channel and channel.platform.slug in ("bale", "telegram"):
+            ch_adapter = get_adapter(channel.platform.slug)
+            if ch_adapter:
+                try:
+                    is_admin = ch_adapter.check_bot_is_admin(channel.chat_id)
+                    channel.bot_is_admin = is_admin
+                    channel.save(update_fields=["bot_is_admin"])
+                    sync_channel_avatar(channel, adapter=ch_adapter)
+                    _bot_send(
+                        adapter,
+                        chat_id,
+                        f"✅ وضعیت «{channel.title}» بروزرسانی شد:\n{'✅ ربات ادمین است' if is_admin else '⚠️ ربات ادمین نیست'}",
+                        platform_slug=platform_slug,
+                    )
+                except Exception as e:
+                    _bot_send(adapter, chat_id, f"❌ خطا در بروزرسانی: {e}", platform_slug=platform_slug)
         return JsonResponse({"ok": True})
 
     if data == "back_list":
-        return _handle_channels_command(chat_id)
+        return _handle_channels_command(chat_id, platform_slug=platform_slug)
 
     if data.startswith("viewpreset_"):
         preset_id = data.replace("viewpreset_", "")
@@ -894,7 +1126,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
             .first()
         )
         if not preset:
-            adapter.send_text(chat_id, "❌ پروفایل یافت نشد.")
+            _bot_send(adapter, chat_id, "❌ پروفایل یافت نشد.", platform_slug=platform_slug)
             return JsonResponse({"ok": True})
 
         ch_lines = [
@@ -908,7 +1140,8 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
             "برای ویرایش یا حذف این پروفایل از پنل وب اقدام کنید:"
         )
         edit_url = f"https://winjob.ir/forward/presets/{preset.pk}/edit/"
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             text,
             reply_markup={
@@ -917,27 +1150,30 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user):
                     [{"text": "🔙 بازگشت به لیست پروفایل‌ها", "callback_data": "back_presets"}],
                 ]
             },
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True})
 
     if data == "back_presets":
-        return _handle_presets_command(chat_id)
+        return _handle_presets_command(chat_id, platform_slug=platform_slug)
 
     return JsonResponse({"ok": True})
 
 
-def _handle_private_message(message):
+def _handle_private_message(message, platform_slug: str = "bale"):
     """پردازش دکمه‌های کیبورد ثابت و ساخت پیش‌نویس در حالت مرحله‌ای ارسال پیام."""
     from product.forward.broadcast.models import BroadcastMessage
 
     chat_id = message.get("chat", {}).get("id")
     chat_str = str(chat_id)
     text_content = (message.get("text") or "").strip()
-    adapter = get_adapter("bale")
+    adapter = get_adapter(platform_slug)
 
-    bot_user = BotUser.objects.filter(platform__slug="bale", chat_id=chat_str).select_related("user").first()
+    bot_user = BotUser.objects.filter(
+        platform__slug=platform_slug, chat_id=chat_str
+    ).select_related("user").first()
     if not bot_user:
-        _send_guest_welcome(adapter, chat_id)
+        _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
     if text_content.startswith("/"):
@@ -946,31 +1182,32 @@ def _handle_private_message(message):
     # ۱. پردازش دکمه‌های کیبورد ثابت پایین ربات
     if text_content == "📢 کانال‌های من":
         _set_awaiting_broadcast(bot_user, False)
-        return _handle_channels_command(chat_id)
+        return _handle_channels_command(chat_id, platform_slug=platform_slug)
 
     if text_content == "📦 پروفایل‌های ارسال":
         _set_awaiting_broadcast(bot_user, False)
-        return _handle_presets_command(chat_id)
+        return _handle_presets_command(chat_id, platform_slug=platform_slug)
 
     if text_content == "👤 حساب و اشتراک":
         _set_awaiting_broadcast(bot_user, False)
-        return _handle_status_command(chat_id)
+        return _handle_status_command(chat_id, platform_slug=platform_slug)
 
     if text_content == "📤 ارسال پیام":
-        return _handle_start_send_command(chat_id)
+        return _handle_start_send_command(chat_id, platform_slug=platform_slug)
 
     if text_content == "🔙 بازگشت به منوی اصلی":
         _set_awaiting_broadcast(bot_user, False)
-        adapter.send_text(chat_id, "به منوی اصلی برگشتید 👇", reply_markup=_USER_KEYBOARD)
+        _bot_send(adapter, chat_id, "به منوی اصلی برگشتید 👇", reply_markup=_USER_KEYBOARD, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "send cancelled"})
 
     if text_content == "❓ راهنما و پشتیبانی":
         _set_awaiting_broadcast(bot_user, False)
-        return _handle_help_command(chat_id)
+        return _handle_help_command(chat_id, platform_slug=platform_slug)
 
     if text_content == "🌐 پنل وب":
         _set_awaiting_broadcast(bot_user, False)
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             f"🌐 برای مدیریت کامل کانال‌ها، پروفایل‌ها و گزارش ارسال‌ها روی [ورود به پنل وین فوروارد]({_WINJOB_FORWARD_URL}) بزنید.",
             reply_markup={
@@ -978,20 +1215,21 @@ def _handle_private_message(message):
                     [{"text": "🌐 باز کردن پنل وین فوروارد", "url": _WINJOB_FORWARD_URL}]
                 ]
             },
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "web panel sent"})
 
     # ۲. بررسی حالت مرحله‌ای (کاربر باید اول دکمه «📤 ارسال پیام» را زده باشد)
     is_awaiting = bool((bot_user.session_data or {}).get("awaiting_broadcast"))
     if not is_awaiting:
-        adapter.send_text(
+        _bot_send(
+            adapter,
             chat_id,
             "برای ارسال پیام یا فایل به کانال‌ها، لطفاً اول دکمه **«📤 ارسال پیام»** را از منوی پایین بزنید 👇",
             reply_markup=_USER_KEYBOARD,
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "not awaiting broadcast"})
-
-    # کاربر همچنان در حالت ارسال پیام باقی می‌ماند تا با «🔙 بازگشت به منوی اصلی» خارج شود
 
     # ۳. استخراج نوع محتوا و file_id
     content_type = "text"
@@ -1041,14 +1279,14 @@ def _handle_private_message(message):
         text_content = message.get("caption", "")
 
     if not text_content and not platform_file_id:
-        adapter.send_text(chat_id, "⚠️ محتوای پیام قابل پردازش نبود.", reply_markup=_USER_KEYBOARD)
+        _bot_send(adapter, chat_id, "⚠️ محتوای پیام قابل پردازش نبود.", reply_markup=_CANCEL_SEND_KEYBOARD, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "empty message"})
 
-    file_ids_payload = {}
+    file_ids_payload = {"source_platform": platform_slug}
     if platform_file_id:
-        file_ids_payload["bale"] = platform_file_id
+        file_ids_payload[platform_slug] = platform_file_id
         if original_file_name:
-            file_ids_payload["bale_file_name"] = original_file_name
+            file_ids_payload[f"{platform_slug}_file_name"] = original_file_name
 
     try:
         msg = BroadcastMessage.objects.create(
@@ -1060,36 +1298,49 @@ def _handle_private_message(message):
         job = BroadcastJob.objects.create(message=msg, status=BroadcastJob.Status.DRAFT)
     except Exception as exc:
         logger.exception(f"Failed to create draft message/job: {exc}")
-        adapter.send_text(chat_id, f"❌ خطا در ساخت پیش‌نویس: {exc}", reply_markup=_USER_KEYBOARD)
+        _bot_send(adapter, chat_id, f"❌ خطا در ساخت پیش‌نویس: {exc}", reply_markup=_USER_KEYBOARD, platform_slug=platform_slug)
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
 
     from product.forward.subscriptions.access import user_has_platform_access
-    if not user_has_platform_access(bot_user.user, "bale"):
-        adapter.send_text(
+    if not user_has_platform_access(bot_user.user, platform_slug):
+        _bot_send(
+            adapter,
             chat_id,
             "🔒 اشتراک وین‌فوروارد شما فعال نیست یا منقضی شده است.\n"
-            "لطفاً ابتدا از سایت اشتراک خود را فعال یا تمدید کنید.",
-            reply_markup={"inline_keyboard": [[{"text": "💎 خرید اشتراک", "url": _WINJOB_PLANS_URL}]]},
+            "برای ارسال پیام از طریق ربات، اشتراک خود را در سایت فعال کنید:",
+            reply_markup={
+                "inline_keyboard": [
+                    [{"text": "💎 فعال‌سازی / تمدید اشتراک در سایت", "url": _WINJOB_PLANS_URL}],
+                ]
+            },
+            platform_slug=platform_slug,
         )
-        return JsonResponse({"ok": True, "status": "subscription required"})
+        return JsonResponse({"ok": True, "status": "no subscription"})
 
-    channels = BroadcastChannel.objects.filter(user=bot_user.user, is_active=True, bot_is_admin=True)
-    if not channels.exists():
-        adapter.send_text(
+    has_channels = BroadcastChannel.objects.filter(
+        user=bot_user.user, is_active=True, bot_is_admin=True
+    ).exists()
+    if not has_channels:
+        _bot_send(
+            adapter,
             chat_id,
-            "⚠️ هنوز هیچ کانال فعالی با دسترسی ادمین ندارید.",
-            reply_markup=_USER_KEYBOARD,
+            "⚠️ هنوز هیچ کانالی ثبت نکرده‌اید که ربات در آن ادمین باشد.\n"
+            "ابتدا ربات را در کانال خود ادمین کنید یا از پنل وب کانال‌های ایتا و روبیکا را اضافه نمایید.",
+            reply_markup={
+                "inline_keyboard": [
+                    [{"text": "🌐 مدیریت کانال‌ها در سایت", "url": _WINJOB_FORWARD_URL}],
+                ]
+            },
+            platform_slug=platform_slug,
         )
         return JsonResponse({"ok": True, "status": "no channels"})
 
     reply_markup = _build_draft_keyboard(job)
-    try:
-        adapter.send_text(
-            chat_id,
-            "📝 **پیش‌نویس پیام شما آماده شد!**\nپروفایل یا کانال‌های مقصد را انتخاب کنید و «🚀 تایید و ارسال» را بزنید (یا پیام بعدی خود را بفرستید):",
-            reply_markup=reply_markup,
-        )
-    except Exception as exc:
-        logger.exception(f"Failed to send draft keyboard: {exc}")
-
-    return JsonResponse({"ok": True, "status": "draft created"})
+    _bot_send(
+        adapter,
+        chat_id,
+        "📝 **پیش‌نویس آماده ارسال است!**\nپروفایل ارسال یا کانال‌های مقصد را انتخاب کنید و سپس «🚀 تایید و ارسال» را بزنید:",
+        reply_markup=reply_markup,
+        platform_slug=platform_slug,
+    )
+    return JsonResponse({"ok": True, "status": "draft created", "job_id": job.pk})

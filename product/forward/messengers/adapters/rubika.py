@@ -30,7 +30,7 @@ from .base import (
     MessengerAPIError,
     MessengerNotFoundError,
     MessengerPermissionError,
-    MessengerRateLimitError,
+    MessengerRateLimitError, MessengerError,
 )
 from .registry import register
 
@@ -176,6 +176,7 @@ class RubikaAdapter(MessengerAdapter):
     TIMEOUT = 30
     CHUNK_SIZE = 524288  # ۵۱۲ کیلوبایت برای آپلود پایدارتر و سریع‌تر
     _CACHED_API_URL: Optional[str] = None
+    _CACHED_API_URLS: List[str] = []
     _CACHED_API_URL_TS: float = 0.0
     _DC_CACHE_TTL: float = 600.0
 
@@ -216,30 +217,62 @@ class RubikaAdapter(MessengerAdapter):
             }
         )
 
-    def _get_api_url(self) -> str:
-        """دریافت آدرس دیتاسنتر فعال روبیکا با کش ۱۰ دقیقه‌ای برای حذف تاخیر اضافی در هر ارسال.
-
-        :return: آدرس URL دیتاسنتر روبیکا.
-        """
+    def _get_api_urls(self) -> List[str]:
+        """دریافت لیست اولویت‌دار دیتاسنترهای فعال روبیکا با استفاده از کلیدهای واقعی getdcmess (API و default_apis)."""
         if self._api_url:
-            return self._api_url
+            urls = [self._api_url]
+            for fb in self.FALLBACK_API_URLS:
+                if fb not in urls:
+                    urls.append(fb)
+            return urls
+
         now = time.monotonic()
-        if self.__class__._CACHED_API_URL and (now - self.__class__._CACHED_API_URL_TS) < self._DC_CACHE_TTL:
-            self._api_url = self.__class__._CACHED_API_URL
-            return self._api_url
+        if self.__class__._CACHED_API_URLS and (now - self.__class__._CACHED_API_URL_TS) < self._DC_CACHE_TTL:
+            return list(self.__class__._CACHED_API_URLS)
+
+        discovered: List[str] = []
         try:
             resp = requests.get(self.DC_DISCOVERY_URL, timeout=8)
             resp.raise_for_status()
-            payload = resp.json()
-            urls = payload.get("data", {}).get("default_api_urls", [])
-            if urls:
-                self._api_url = urls[0]
-                self.__class__._CACHED_API_URL = self._api_url
-                self.__class__._CACHED_API_URL_TS = now
-                return self._api_url
+            data = resp.json().get("data") or {}
+            api_map = data.get("API") or {}
+            default_id = str(data.get("default_api") or "")
+            default_ids = [str(x) for x in (data.get("default_apis") or [])]
+
+            candidate_ids = ([default_id] if default_id else []) + default_ids
+            for dc_id in candidate_ids:
+                dc_url = api_map.get(dc_id)
+                if dc_url:
+                    clean_url = str(dc_url).rstrip("/")
+                    if clean_url not in discovered:
+                        discovered.append(clean_url)
+
+            # افزودن چند دیتاسنتر دیگر از نقشه API برای Failover
+            for dc_url in api_map.values():
+                clean_url = str(dc_url).rstrip("/")
+                if clean_url not in discovered:
+                    discovered.append(clean_url)
+                if len(discovered) >= 6:
+                    break
         except requests.RequestException:
             pass
-        self._api_url = self.FALLBACK_API_URLS[0]
+
+        for fb in self.FALLBACK_API_URLS:
+            if fb not in discovered:
+                discovered.append(fb)
+
+        if discovered:
+            self.__class__._CACHED_API_URLS = list(discovered)
+            self.__class__._CACHED_API_URL = discovered[0]
+            self.__class__._CACHED_API_URL_TS = now
+        return discovered
+
+    def _get_api_url(self) -> str:
+        """دریافت آدرس دیتاسنتر فعال روبیکا با کش ۱۰ دقیقه‌ای."""
+        if self._api_url:
+            return self._api_url
+        urls = self._get_api_urls()
+        self._api_url = urls[0] if urls else self.FALLBACK_API_URLS[0]
         return self._api_url
 
     def _handle_api_error(self, status: str, status_det: str) -> NoReturn:
@@ -299,14 +332,36 @@ class RubikaAdapter(MessengerAdapter):
                 "sign": RubikaCrypto.sign(self._private_key, data_enc),
             }
 
-        try:
-            response = self._session.post(self._get_api_url(), json=body, timeout=self.TIMEOUT)
-            response.raise_for_status()
-            res_json = response.json()
-        except requests.RequestException as exc:
-            raise MessengerAPIError(f"خطا در ارتباط با سرور روبیکا: {exc}") from exc
-        except ValueError as exc:
-            raise MessengerAPIError(f"پاسخ نامعتبر از سرور روبیکا: {exc}") from exc
+        res_json = None
+        last_exc: Optional[Exception] = None
+        candidate_urls = self._get_api_urls()[:5]
+        for idx, target_url in enumerate(candidate_urls):
+            try:
+                response = self._session.post(target_url, json=body, timeout=self.TIMEOUT)
+                if response.status_code >= 500:
+                    last_exc = requests.HTTPError(
+                        f"{response.status_code} Server Error for url: {target_url}",
+                        response=response,
+                    )
+                    logger.warning("[rubika] DC %s returned %s, failing over...", target_url, response.status_code)
+                    continue
+                response.raise_for_status()
+                res_json = response.json()
+                # اگر با سرور جایگزین موفق شد، آن را در اولویت کش قرار می‌دهیم
+                if idx > 0:
+                    self._api_url = target_url
+                    self.__class__._CACHED_API_URL = target_url
+                    if target_url in self.__class__._CACHED_API_URLS:
+                        reordered = [target_url] + [u for u in self.__class__._CACHED_API_URLS if u != target_url]
+                        self.__class__._CACHED_API_URLS = reordered
+                break
+            except (requests.RequestException, ValueError) as exc:
+                last_exc = exc
+                logger.warning("[rubika] DC %s failed (%s), trying next...", target_url, exc)
+                continue
+
+        if res_json is None:
+            raise MessengerAPIError(f"خطا در ارتباط با سرور روبیکا: {last_exc}") from last_exc
 
         if "data_enc" in res_json:
             try:
