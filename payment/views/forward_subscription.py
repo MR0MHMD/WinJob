@@ -33,15 +33,18 @@ def forward_subscription_callback(request):
 
     if request.GET.get("Status") == "OK":
         try:
-            verify_forward_subscription_gateway(payment)
-            messages.success(request, "✅ پرداخت با موفقیت تایید و اشتراک وین فوروارد فعال شد.")
+            order = verify_forward_subscription_gateway(payment)
+            messages.success(request, f"✅ پرداخت با موفقیت تایید و {order.tokens_amount:,} توکن به کیف توکن وین فوروارد شما اضافه شد.")
         except ValidationError as error:
             messages.error(request, error.messages[0])
         except Exception:
             logger.exception("خطای تایید پرداخت وین فوروارد %s", payment.pk)
             messages.error(request, "تایید درگاه فعلاً ممکن نشد. از صفحه سفارش دوباره بررسی کنید.")
     else:
-        messages.warning(request, "پرداخت درگاه لغو یا ناموفق بود.")
+        if payment.status == Payment.Status.PENDING:
+            payment.status = Payment.Status.FAILED
+            payment.save(update_fields=["status"])
+        messages.warning(request, "پرداخت درگاه لغو یا ناموفق بود. در صورت تمایل می‌توانید دوباره اقدام کنید.")
 
     return redirect("forward_subscriptions:order_detail", order_id=payment.invoice.forward_subscription_order_id)
 
@@ -62,8 +65,8 @@ def forward_subscription_reverify(request, pk):
         authority__isnull=False,
     )
     try:
-        verify_forward_subscription_gateway(payment)
-        messages.success(request, "✅ پرداخت تایید و اشتراک وین فوروارد فعال شد.")
+        order = verify_forward_subscription_gateway(payment)
+        messages.success(request, f"✅ پرداخت تایید و {order.tokens_amount:,} توکن به کیف توکن شما اضافه شد.")
     except ValidationError as error:
         messages.error(request, error.messages[0])
     except Exception:

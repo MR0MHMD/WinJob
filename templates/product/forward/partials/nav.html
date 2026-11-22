@@ -1,3 +1,31 @@
 {% load static %}
-{# نوار ناوبری به درخواست کاربر حذف شد؛ فقط اسکریپت تعاملی وین‌فوروارد لود می‌شود #}
+{# اسکریپت تعاملی و مودال تایید اختصاصی وین‌فوروارد (جایگزین confirm مرورگر) #}
 <script src="{% static 'forward/js/forward.js' %}" defer></script>
+
+<div class="modal fade wf-modal" id="wfGlobalConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:linear-gradient(155deg,#211c33,#151224);border:1px solid rgba(255,255,255,0.12);border-radius:1.4rem;box-shadow:0 28px 64px rgba(0,0,0,0.75);">
+            <div class="modal-header border-0 pb-1">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:42px;height:42px;border-radius:12px;background:rgba(242,60,73,0.16);border:1px solid rgba(242,60,73,0.35);color:#ff6b78;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h5 class="modal-title text-white fw-bold fs-6 mb-0" id="wfConfirmModalTitle">تایید عملیات</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body pt-2 pb-3">
+                <p class="text-muted fs-sm mb-0" id="wfConfirmModalBody" style="line-height:1.85;">
+                    آیا از انجام این عملیات اطمینان دارید؟
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0 gap-2">
+                <button type="button" class="wf-btn wf-btn-glass py-2 px-4 fs-xs" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="wf-btn py-2 px-4 fs-xs" id="wfConfirmModalSubmit"
+                        style="background:linear-gradient(135deg,#f23c49,#c81e2c);color:#fff;box-shadow:0 8px 22px -6px rgba(242,60,73,0.55);">
+                    <i class="bi bi-trash3-fill"></i> تایید و انجام
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

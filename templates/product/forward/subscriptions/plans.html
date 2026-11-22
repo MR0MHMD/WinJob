@@ -1,357 +1,220 @@
 {% extends "parent/base.html" %}
-{% load static humanize l10n %}
+{% load static humanize %}
 
-{% block title %}پلن‌های اشتراک وین فوروارد | وین‌جاب{% endblock %}
-{% block description %}انتخاب و خرید اشتراک پیام‌رسان‌های وین فوروارد با کانال و پیام نامحدود{% endblock %}
+{% block title %}کیف توکن و خرید بسته | وین فوروارد{% endblock %}
 
 {% block extra_style %}
 <link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
 <link rel="stylesheet" href="{% static 'forward/css/pages/plans.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_channels.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container py-4 wf-shell">
 
-    <!-- بردکرامب -->
-    <ol class="breadcrumb breadcrumb-light mb-4">
+    <ol class="breadcrumb breadcrumb-light mb-3">
         <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">داشبورد وین فوروارد</a></li>
-        <li class="breadcrumb-item active">پلن‌ها و اشتراک</li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">کیف توکن و خرید بسته</li>
     </ol>
 
     {% include "product/forward/partials/nav.html" %}
 
-    <!-- ── ۱. هدر صفحه اشتراک‌ها (به سبک وین‌دایرکت) ── -->
-    <div class="wf-plans-header wf-reveal">
+    <!-- هدر موجودی کیف توکن -->
+    <div class="wf-channels-header wf-reveal mb-4">
         <div class="d-flex align-items-center gap-3">
-            <div class="wf-plans-header-icon"><i class="bi bi-gem"></i></div>
+            <div style="width:62px;height:62px;border-radius:1.25rem;background:linear-gradient(135deg,#fdbc31,#fd5631);display:flex;align-items:center;justify-content:center;font-size:1.85rem;color:#fff;flex-shrink:0;box-shadow:0 12px 26px -8px rgba(253,188,49,0.55);">
+                <i class="bi bi-coin"></i>
+            </div>
             <div>
-                <h1 class="h3 text-white fw-bold mb-1">پلن‌های اشتراک وین فوروارد</h1>
-                <p class="text-muted fs-sm mb-0">
-                    انتخاب منعطف پیام‌رسان‌ها؛ با خرید اشتراک هر پلتفرم، تعداد کانال و ارسال پیام در آن پلتفرم کاملاً نامحدود است.
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">کیف توکن وین فوروارد</h1>
+                    <span class="wf-pill-tag is-emerald"><i class="bi bi-infinity"></i> بدون تاریخ انقضا</span>
+                    <span class="wf-pill-tag is-blue">قابل استفاده در همه ۴ پلتفرم</span>
+                </div>
+                <p class="text-muted fs-xs mb-0">
+                    تنها به اندازه ارسال‌های موفق توکن مصرف کنید؛ اگر کانالی خطا بدهد هیچ توکنی کسر نمی‌شود.
                 </p>
             </div>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass">
-                <i class="bi bi-grid-1x2-fill text-primary"></i> داشبورد وین فوروارد
-            </a>
-            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
-                <i class="bi bi-rocket-takeoff-fill"></i> ارسال پیام
-            </a>
-        </div>
-    </div>
-
-    <!-- ── ۲. نوار وضعیت فعلی ۴ پلتفرم همراه با لوگوی دیتابیس ── -->
-    <div class="row g-3 mb-4 wf-reveal wf-delay-1">
-        {% for item in platform_items %}
-        <div class="col-sm-6 col-lg-4">
-            <div class="wf-access-mini-card {% if item.has_access %}is-active{% endif %}">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        {% if item.logo_url %}
-                            <img src="{{ item.logo_url }}" alt="{{ item.label }}" class="wf-access-logo">
-                        {% else %}
-                            <div class="wf-access-logo d-flex align-items-center justify-content-center bg-dark text-white">
-                                <i class="bi bi-broadcast"></i>
-                            </div>
-                        {% endif %}
-                        <div>
-                            <h6 class="text-white fw-bold mb-0 fs-sm">{{ item.label }}</h6>
-                            <span class="text-muted fs-xs">
-                                {% if item.has_access %}کانال و پیام نامحدود{% else %}نیاز به اشتراک{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% if item.has_access %}
-                        <span class="wf-badge-status is-connected py-1 px-2">
-                            <span class="wf-pulse-dot"></span> فعال
-                        </span>
-                    {% else %}
-                        <span class="wf-badge-status is-locked py-1 px-2">
-                            <span class="wf-pulse-dot"></span> غیرفعال
-                        </span>
-                    {% endif %}
-                </div>
-                <div class="d-flex justify-content-between align-items-center fs-xs pt-2 border-top border-light">
-                    <span class="text-muted">اعتبار باقی‌مانده:</span>
-                    {% if item.has_access %}
-                        <strong class="text-success">{{ item.remaining_days }} روز</strong>
-                    {% else %}
-                        <span class="text-muted">۰ روز</span>
-                    {% endif %}
-                </div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="px-4 py-2 rounded-4 text-center" style="background:rgba(255,255,255,0.05);border:1px solid rgba(253,188,49,0.35);">
+                <div class="text-muted" style="font-size:0.7rem;">موجودی فعلی شما</div>
+                <div class="text-warning fw-bold fs-4">{{ account.token_balance|intcomma }} <span class="fs-xs text-light fw-normal">توکن</span></div>
             </div>
         </div>
-        {% endfor %}
     </div>
 
-    <!-- ── ۳. بنر تست رایگان ۷ روزه (به سبک wd-trial-banner همراه با لوگوی پلتفرم‌ها) ── -->
-    {% for plan in plans %}
-        {% if plan.is_trial %}
-        <div class="wf-trial-banner wf-reveal wf-delay-1">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="wf-trial-banner-icon">
+    <!-- بنر دریافت هدیه ۳۵۰ توکن رایگان اولیه (فقط اگر هنوز دریافت نکرده) -->
+    {% if gift_plan and account.can_use_trial %}
+    <div class="p-4 rounded-4 mb-5 wf-reveal wf-delay-1"
+         style="background:linear-gradient(135deg,rgba(7,201,139,0.18),rgba(93,60,242,0.18));border:1.5px solid rgba(7,201,139,0.45);box-shadow:0 20px 44px -16px rgba(7,201,139,0.28);">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:56px;height:56px;border-radius:1.15rem;background:linear-gradient(135deg,#07c98b,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0;">
                     <i class="bi bi-gift-fill"></i>
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                        <h2 class="h5 text-white fw-bold mb-0">{{ plan.name }}</h2>
-                        <span class="badge bg-info bg-opacity-25 text-info rounded-pill px-3 py-1">۷ روز رایگان · همه پلتفرم‌ها</span>
-                        <div class="wf-logo-stack ms-2">
-                            {% for item in platform_items %}
-                                {% if item.logo_url %}
-                                    <img src="{{ item.logo_url }}" alt="{{ item.label }}" title="{{ item.label }}">
-                                {% else %}
-                                    <span class="wf-stack-fallback" title="{{ item.label }}">{{ item.label|slice:":1" }}</span>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
+                        <h5 class="text-white fw-bold mb-0 fs-5">هدیه شروع رایگان: {{ gift_plan.tokens_amount|intcomma }} توکن هدیه!</h5>
+                        <span class="wf-pill-tag is-emerald">یک‌بار برای هر کاربر</span>
                     </div>
-                    <p class="text-muted fs-sm mb-0">
-                        {{ plan.description|default:"به مدت ۷ روز تمام امکانات بله، ایتا و روبیکا را بدون محدودیت کانال و پیام رایگان امتحان کنید." }}
+                    <p class="text-light fs-xs mb-0 opacity-75">
+                        همین الان {{ gift_plan.tokens_amount|intcomma }} توکن رایگان بدون تاریخ انقضا دریافت کنید و ارسال همزمان به بله، ایتا، روبیکا و تلگرام را تست کنید.
                     </p>
                 </div>
             </div>
-            <div>
-                {% if account.can_use_trial %}
-                    <form method="post" action="{% url 'forward_subscriptions:create_order' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="plan_id" value="{{ plan.pk|unlocalize }}">
-                        <input type="hidden" name="order_kind" value="new">
-                        <button type="submit" class="wf-btn wf-btn-purple px-4 py-3">
-                            <i class="bi bi-lightning-charge-fill"></i> فعال‌سازی رایگان ۷ روزه
-                        </button>
-                    </form>
-                {% else %}
-                    <span class="wf-badge-status is-locked py-2 px-3">
-                        <i class="bi bi-check2-circle"></i> قبلاً استفاده شده
-                    </span>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-    {% endfor %}
-
-    <!-- ── ۴. ارتقای میان‌دوره‌ای (افزودن پلتفرم جدید همگام با انقضای فعلی) ── -->
-    {% if has_active_paid_bale and missing_platform_items %}
-    <div class="wf-prorated-card wf-reveal wf-delay-2">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-5">
-                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-1 mb-2">
-                    <i class="bi bi-calculator me-1"></i> محاسبه هوشمند روزشمار
-                </span>
-                <h4 class="text-white fw-bold fs-5 mb-2">افزودن پیام‌رسان جدید به اشتراک فعلی شما</h4>
-                <p class="text-muted fs-xs mb-0" style="line-height: 1.9;">
-                    شما در حال حاضر اشتراک فعال بله دارید که <strong class="text-white">{{ bale_access.remaining_days }} روز</strong> از اعتبار آن باقی مانده است.
-                    با انتخاب هر یک از پیام‌رسان‌های زیر، فقط هزینه روزهای باقی‌مانده (<strong class="text-success">{{ prorated_unit|intcomma }} تومان</strong> به ازای هر پلتفرم) محاسبه شده و تاریخ انقضای آن با اشتراک فعلی شما هماهنگ می‌شود.
-                </p>
-            </div>
-            <div class="col-lg-7">
-                <form method="post" action="{% url 'forward_subscriptions:create_order' %}" id="wfProratedForm" data-prorated-unit="{{ prorated_unit|unlocalize }}">
-                    {% csrf_token %}
-                    <input type="hidden" name="plan_id" value="{{ bale_access.plan_id|unlocalize }}">
-                    <input type="hidden" name="order_kind" value="add_platform">
-
-                    <div class="row g-2 mb-3">
-                        {% for item in missing_platform_items %}
-                        <div class="col-sm-6">
-                            <label class="wf-platform-option-tile">
-                                <div class="d-flex align-items-center gap-2">
-                                    <input class="form-check-input wf-prorated-cb mt-0" type="checkbox" name="platforms" value="{{ item.slug }}">
-                                    {% if item.logo_url %}
-                                        <img src="{{ item.logo_url }}" alt="{{ item.label }}" class="wf-platform-tile-logo">
-                                    {% endif %}
-                                    <span class="text-white fw-bold fs-sm">{{ item.label }}</span>
-                                </div>
-                                <span class="text-success fw-bold fs-xs">+{{ prorated_unit|intcomma }} ت</span>
-                            </label>
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 border-top border-light">
-                        <div>
-                            <span class="text-muted fs-xs">مبلغ قابل پرداخت برای روزهای باقی‌مانده:</span>
-                            <strong class="text-white fs-4 ms-1" id="wfProratedTotal">0</strong>
-                            <span class="text-muted fs-xs">تومان</span>
-                        </div>
-                        <button type="submit" class="wf-btn wf-btn-emerald" id="wfProratedSubmit" disabled>
-                            <i class="bi bi-plus-circle-fill"></i> افزودن به اشتراک فعلی
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <form method="post" action="{% url 'forward_subscriptions:create_order' %}">
+                {% csrf_token %}
+                <input type="hidden" name="plan_id" value="{{ gift_plan.pk }}">
+                <button type="submit" class="wf-btn wf-btn-emerald px-4 py-3 fs-sm">
+                    <i class="bi bi-stars"></i> دریافت {{ gift_plan.tokens_amount|intcomma }} توکن رایگان
+                </button>
+            </form>
         </div>
     </div>
     {% endif %}
 
-    <!-- ── ۵. کارت‌های پلن‌های اشتراک (۳۰ روزه، ۹۰ روزه، یک‌ساله با لوگوهای دیتابیس و قیمت بدون کاما در data-unit-price) ── -->
+    <!-- ۴ کارت بسته‌های فروش توکن -->
     <div class="row g-4 mb-5 wf-reveal wf-delay-2">
-        {% for plan in plans %}
-            {% if not plan.is_trial %}
-            <div class="col-lg-4 col-md-6">
-                <article class="wf-plan-card {% if plan.is_featured %}is-featured{% elif plan.duration_days >= 365 %}is-annual{% endif %}">
-                    {% if plan.is_featured %}
-                        <span class="wf-plan-badge-featured">
-                            <i class="bi bi-star-fill"></i> پیشنهاد ویژه وین فوروارد
-                        </span>
+        {% for pkg in paid_packages %}
+        <div class="col-md-6 col-xl-3">
+            <div class="p-4 rounded-4 h-100 d-flex flex-column position-relative"
+                 style="background:linear-gradient(160deg,rgba(35,30,52,0.92),rgba(19,16,30,0.96));border:{% if pkg.is_featured %}2px solid #fd5631{% else %}1px solid rgba(255,255,255,0.1){% endif %};box-shadow:0 20px 44px -18px rgba(0,0,0,0.65);">
+                {% if pkg.is_featured %}
+                <span class="wf-pill-tag is-orange position-absolute" style="top:-12px;left:18px;">
+                    <i class="bi bi-fire"></i> پرفروش‌ترین
+                </span>
+                {% endif %}
+
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="text-white fw-bold mb-0 fs-5">{{ pkg.name }}</h5>
+                    {% if pkg.discount_percent > 0 %}
+                        <span class="wf-pill-tag is-emerald">{{ pkg.discount_percent }}٪ تخفیف</span>
                     {% endif %}
+                </div>
 
-                    <div class="wf-plan-header">
-                        <div class="wf-plan-icon {% if plan.duration_days >= 365 %}yearly{% elif plan.is_featured %}quarterly{% else %}monthly{% endif %}">
-                            {% if plan.duration_days >= 365 %}
-                                <i class="bi bi-trophy-fill"></i>
-                            {% elif plan.is_featured %}
-                                <i class="bi bi-gem"></i>
-                            {% else %}
-                                <i class="bi bi-rocket-takeoff-fill"></i>
-                            {% endif %}
-                        </div>
-                        <h2 class="h4 text-white fw-bold mb-1">{{ plan.name }}</h2>
-                        <p class="text-muted fs-xs mb-0">{{ plan.description }}</p>
+                <div class="p-3 rounded-4 mb-3 text-center" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                    <div class="text-warning fw-bold" style="font-size:1.9rem;line-height:1.1;">
+                        {{ pkg.tokens_amount|intcomma }}
                     </div>
+                    <div class="text-muted fs-xs mt-1">توکن بدون تاریخ انقضا</div>
+                </div>
 
-                    <div class="wf-plan-price">
-                        <div class="wf-plan-price-value">
-                            {{ plan.price_per_platform|intcomma }}
-                            <span class="fs-xs text-muted fw-normal">تومان / هر پلتفرم</span>
-                        </div>
-                        <p class="text-muted fs-xs mb-0 mt-1">
-                            مدت اعتبار: <strong class="text-white">{{ plan.duration_days }} روز کامل</strong> · کانال و پیام نامحدود
-                        </p>
-                    </div>
+                <div class="text-center mb-3">
+                    <div class="text-white fw-bold fs-4">{{ pkg.price_per_platform|intcomma }} <span class="fs-xs text-muted fw-normal">تومان</span></div>
+                    <div class="text-info fs-xs mt-1">هر توکن فقط {{ pkg.per_token_price }} تومان</div>
+                </div>
 
-                    <div class="p-4 d-flex flex-column flex-grow-1">
-                        <form method="post" action="{% url 'forward_subscriptions:create_order' %}"
-                              class="d-flex flex-column flex-grow-1 wf-plan-form"
-                              data-unit-price="{{ plan.price_per_platform|unlocalize }}">
-                            {% csrf_token %}
-                            <input type="hidden" name="plan_id" value="{{ plan.pk|unlocalize }}">
-                            <input type="hidden" name="order_kind" value="new">
+                <p class="text-muted fs-xs mb-4" style="line-height:1.8;">{{ pkg.description }}</p>
 
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="text-white fw-bold fs-xs">
-                                    <i class="bi bi-ui-checks-grid text-primary me-1"></i> انتخاب پیام‌رسان‌ها:
-                                </span>
-                                <span class="badge bg-dark border border-secondary text-light rounded-pill">
-                                    <span class="wf-selected-count">1</span> پلتفرم انتخابی
-                                </span>
-                            </div>
-
-                            <div class="wf-platform-selector-list">
-                                {% for item in platform_items %}
-                                    {% if item.slug == 'bale' %}
-                                        <label class="wf-platform-option-tile is-checked is-mandatory">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <input class="form-check-input wf-platform-cb mt-0" type="checkbox" name="platforms" value="bale" checked onclick="return false;">
-                                                {% if item.logo_url %}
-                                                    <img src="{{ item.logo_url }}" alt="{{ item.label }}" class="wf-platform-tile-logo">
-                                                {% endif %}
-                                                <span class="text-white fw-bold fs-sm">{{ item.label }}</span>
-                                            </div>
-                                            <span class="badge bg-success bg-opacity-25 text-success rounded-pill">هسته اصلی (اجباری)</span>
-                                        </label>
-                                    {% else %}
-                                        <label class="wf-platform-option-tile">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <input class="form-check-input wf-platform-cb mt-0" type="checkbox" name="platforms" value="{{ item.slug }}">
-                                                {% if item.logo_url %}
-                                                    <img src="{{ item.logo_url }}" alt="{{ item.label }}" class="wf-platform-tile-logo">
-                                                {% endif %}
-                                                <span class="text-white fs-sm">{{ item.label }}</span>
-                                            </div>
-                                            <span class="text-muted fs-xs">+{{ plan.price_per_platform|intcomma }} ت</span>
-                                        </label>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-
-                            <div class="mt-auto">
-                                <div class="wf-plan-total-strip">
-                                    <span class="text-muted fs-xs">مبلغ کل اشتراک:</span>
-                                    <div>
-                                        <strong class="wf-total-price text-warning fs-4">{{ plan.price_per_platform|intcomma }}</strong>
-                                        <span class="text-muted fs-xs ms-1">تومان</span>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="wf-btn {% if plan.is_featured %}wf-btn-orange{% elif plan.duration_days >= 365 %}wf-btn-purple{% else %}wf-btn-emerald{% endif %} w-100 py-3">
-                                    <i class="bi bi-cart-check-fill"></i> انتخاب و ادامه خرید
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </article>
+                <form method="post" action="{% url 'forward_subscriptions:create_order' %}" class="mt-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="plan_id" value="{{ pkg.pk }}">
+                    <button type="submit" class="wf-btn {% if pkg.is_featured %}wf-btn-orange{% else %}wf-btn-purple{% endif %} w-100 py-2">
+                        <i class="bi bi-bag-check-fill"></i> خرید این بسته
+                    </button>
+                </form>
             </div>
-            {% endif %}
+        </div>
         {% endfor %}
     </div>
 
-    <!-- ── ۶. سوابق سفارش‌ها و قوانین اشتراک ── -->
+    <!-- جدول شفاف تعرفه مصرف توکن + دفترکل تراکنش‌های کاربر -->
     <div class="row g-4 wf-reveal wf-delay-3">
-        <div class="col-lg-7">
-            <div class="wf-terms-card h-100">
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light">
-                    <h5 class="text-white fw-bold mb-0 fs-6">
-                        <i class="bi bi-receipt text-primary me-1"></i> سفارش‌های اخیر اشتراک شما
-                    </h5>
-                </div>
-                {% if recent_orders %}
-                    {% for ord in recent_orders %}
-                        <a href="{% url 'forward_subscriptions:order_detail' ord.pk %}" class="wf-order-row-link">
-                            <div>
-                                <div class="text-white fw-bold fs-sm mb-1">
-                                    سفارش #{{ ord.pk }} · {{ ord.plan.name }} ({{ ord.get_order_kind_display }})
-                                </div>
-                                <div class="text-muted fs-xs d-flex flex-wrap align-items-center gap-2">
-                                    <span><i class="bi bi-calendar3 me-1"></i>{{ ord.created_at|date:"Y/m/d H:i" }}</span>
-                                    <span>•</span>
-                                    <span>پلتفرم‌ها: {{ ord.platform_labels|join:"، " }}</span>
-                                    <span>•</span>
-                                    <strong class="text-white">{{ ord.total_amount|intcomma }} تومان</strong>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                {% if ord.status == 'paid' %}
-                                    <span class="wf-badge-status is-connected py-1 px-2">پرداخت‌شده</span>
-                                {% elif ord.status == 'pending' %}
-                                    <span class="wf-badge-status is-ready py-1 px-2">در انتظار پرداخت</span>
-                                {% else %}
-                                    <span class="wf-badge-status is-locked py-1 px-2">{{ ord.get_status_display }}</span>
-                                {% endif %}
-                                <i class="bi bi-chevron-left text-muted"></i>
-                            </div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4 text-muted fs-sm">
-                        هنوز هیچ سفارش اشتراکی ثبت نکرده‌اید.
+        <div class="col-lg-5">
+            <div class="p-4 rounded-4 h-100" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
+                <h5 class="text-white fw-bold fs-6 mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-calculator-fill text-warning"></i> تعرفه شفاف مصرف توکن (به ازای هر کانال)
+                </h5>
+                <div class="d-flex flex-column gap-2 fs-xs">
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">پیام متنی ساده (نرخ پایه)</span>
+                        <span class="wf-pill-tag is-blue">{{ pricing.text_cost }} توکن</span>
                     </div>
-                {% endif %}
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">تصویر (بدون کپشن / با کپشن)</span>
+                        <span class="wf-pill-tag is-blue">{{ pricing.photo_cost }} / {{ pricing.photo_cost|add:pricing.caption_extra_cost }} توکن</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">استیکر و گیف</span>
+                        <span class="wf-pill-tag is-blue">{{ pricing.sticker_gif_cost }} توکن</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">صوت، ویس، فایل، ویدیو زیر ۵ مگ</span>
+                        <span class="wf-pill-tag is-purple">{{ pricing.media_under_5mb_cost }} (+{{ pricing.caption_extra_cost }} کپشن)</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">فایل / ویدیو ۵ تا ۱۰ مگابایت</span>
+                        <span class="wf-pill-tag is-purple">{{ pricing.media_5_to_10mb_cost }} (+{{ pricing.caption_extra_cost }} کپشن)</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.035);">
+                        <span class="text-light">فایل / ویدیو ۱۰ تا {{ pricing.max_file_size_mb }} مگابایت</span>
+                        <span class="wf-pill-tag is-orange">{{ pricing.media_10_to_20mb_cost }} (+{{ pricing.caption_extra_cost }} کپشن)</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);">
+                        <span class="text-info fw-bold">افزونه ارسال از هاب تیمی</span>
+                        <span class="wf-pill-tag is-blue">+{{ pricing.hub_extra_cost }} توکن</span>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 px-3 rounded-3" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);">
+                        <span class="text-light fw-bold">افزونه حذف واترمارک هوش مصنوعی</span>
+                        <span class="wf-pill-tag is-purple">+{{ pricing.ai_watermark_extra_cost }} توکن</span>
+                    </div>
+                </div>
+                <div class="text-muted mt-3" style="font-size:0.72rem;">
+                    <i class="bi bi-info-circle text-info me-1"></i>
+                    حداکثر حجم مجاز انتقال فایل {{ pricing.max_file_size_mb }} مگابایت است. کسر توکن فقط پس از تحویل موفق انجام می‌شود.
+                </div>
             </div>
         </div>
 
-        <div class="col-lg-5">
-            <div class="wf-terms-card h-100">
-                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-light">
-                    <i class="bi bi-shield-check text-warning fs-5"></i>
-                    <h5 class="text-white fw-bold mb-0 fs-6">قوانین و مزایای اشتراک وین فوروارد</h5>
+        <div class="col-lg-7">
+            <div class="wf-channels-table-wrap h-100">
+                <div class="p-3 px-4 border-bottom border-light d-flex align-items-center justify-content-between">
+                    <h5 class="text-white fw-bold fs-6 mb-0">
+                        <i class="bi bi-receipt-cutoff text-success me-1"></i> تاریخچه تراکنش‌های توکن
+                    </h5>
+                    <span class="wf-pill-tag is-gold">کل مصرف: {{ account.total_tokens_spent|intcomma }} توکن</span>
                 </div>
-                <ul class="list-unstyled text-muted fs-xs mb-0" style="line-height: 2.1;">
-                    <li class="mb-2 d-flex align-items-start gap-2">
-                        <i class="bi bi-check2-circle text-success fs-6 mt-1"></i>
-                        <span><strong class="text-white">کانال و پیام نامحدود:</strong> در هر پلتفرمی که اشتراک آن را تهیه کنید، هیچ محدودیتی در تعداد کانال‌های متصل یا تعداد پست‌های ارسالی ندارید.</span>
-                    </li>
-                    <li class="mb-2 d-flex align-items-start gap-2">
-                        <i class="bi bi-check2-circle text-success fs-6 mt-1"></i>
-                        <span><strong class="text-white">هسته مرکزی بله:</strong> پیام‌رسان بله به عنوان بازوبند فرماندهی در تمام پلن‌ها فعال است تا بتوانید حتی بدون باز کردن سایت، پست‌ها را از داخل بله فوروارد کنید.</span>
-                    </li>
-                    <li class="d-flex align-items-start gap-2">
-                        <i class="bi bi-check2-circle text-success fs-6 mt-1"></i>
-                        <span><strong class="text-white">ارتقای روزشمار میان‌دوره‌ای:</strong> هر زمان در میانه دوره تصمیم به افزودن ایتا یا روبیکا بگیرید، هزینه فقط به نسبت روزهای باقی‌مانده محاسبه می‌شود.</span>
-                    </li>
-                </ul>
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-borderless wf-channels-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>شرح</th>
+                                <th>تغییر</th>
+                                <th>موجودی بعد</th>
+                                <th>زمان</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>
+                                    <div class="text-white fs-xs fw-bold">{{ tx.get_tx_type_display }}</div>
+                                    <div class="text-muted" style="font-size:0.72rem;">{{ tx.description|truncatechars:55 }}</div>
+                                </td>
+                                <td dir="ltr" class="fw-bold fs-xs {% if tx.amount >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if tx.amount >= 0 %}+{% endif %}{{ tx.amount|intcomma }}
+                                </td>
+                                <td class="text-warning fw-bold fs-xs">{{ tx.balance_after|intcomma }}</td>
+                                <td class="text-muted text-nowrap" style="font-size:0.72rem;">{{ tx.created_at|date:"Y/m/d H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if is_paginated %}
+                <div class="p-3 border-top border-light">
+                    {% include "partials/pagination.html" %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-coin fs-1 text-muted d-block mb-2"></i>
+                    <p class="text-muted fs-xs mb-0">هنوز تراکنش توکنی ثبت نشده است.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

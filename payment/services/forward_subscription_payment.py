@@ -128,7 +128,7 @@ def pay_forward_subscription_wallet(order: ForwardSubscriptionOrder, user) -> Fo
         amount=amount,
         type=Transaction.Type.FORWARD_SUBSCRIPTION_PAYMENT,
         reference_id=payment.ref_id,
-        description=f"پرداخت اشتراک وین فوروارد ({order.plan.name}) از کیف پول",
+        description=f"خرید بسته توکن وین فوروارد ({order.plan.name} · {order.tokens_amount:,} توکن) از کیف پول",
     )
 
     _record_forward_success(order, invoice)
@@ -236,7 +236,7 @@ def settle_forward_subscription_gateway(payment: Payment, record) -> ForwardSubs
         amount=invoice.payable_amount,
         type=Transaction.Type.FORWARD_SUBSCRIPTION_GATEWAY,
         reference_id=record.reference_id,
-        description=f"پرداخت اشتراک وین فوروارد ({order.plan.name}) از زرین‌پال",
+        description=f"خرید بسته توکن وین فوروارد ({order.plan.name} · {order.tokens_amount:,} توکن) از زرین‌پال - کد پیگیری: {record.reference_id}",
     )
 
     _record_forward_success(order, invoice)

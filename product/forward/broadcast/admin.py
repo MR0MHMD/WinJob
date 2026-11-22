@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from .models import BroadcastChannel, BroadcastMessage, BroadcastJob, BroadcastTarget, ChannelPreset
+from .models import BroadcastChannel, BroadcastHub, BroadcastMessage, BroadcastJob, BroadcastTarget, ChannelPreset
 
 # ============ استایل‌های مشترک ============
 _BADGE = "display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:500;"
@@ -480,3 +480,14 @@ class ChannelPresetAdmin(admin.ModelAdmin):
         """غیرفعال‌سازی پروفایل‌های انتخاب‌شده."""
         n = queryset.update(is_active=False)
         self.message_user(request, f"{n} پروفایل ارسال غیرفعال شد.")
+
+
+@admin.register(BroadcastHub)
+class BroadcastHubAdmin(admin.ModelAdmin):
+    """مدیریت هاب‌های گروهی تیمی در پنل ادمین."""
+
+    list_display = ("id", "title", "user", "platform", "group_chat_id", "preset", "publish_mode", "is_active", "created_at")
+    list_filter = ("platform", "publish_mode", "is_active")
+    search_fields = ("title", "group_chat_id", "user__phone_number", "user__nickname")
+    autocomplete_fields = ("user", "platform", "preset")
+    filter_horizontal = ("channels",)

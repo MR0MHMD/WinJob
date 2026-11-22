@@ -230,3 +230,42 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+
+/* ── مودال تایید اختصاصی وین‌فوروارد (جایگزین کامل window.confirm) ── */
+document.addEventListener("DOMContentLoaded", function () {
+    const modalEl = document.getElementById("wfGlobalConfirmModal");
+    if (!modalEl) return;
+    const titleEl = document.getElementById("wfConfirmModalTitle");
+    const bodyEl = document.getElementById("wfConfirmModalBody");
+    const submitBtn = document.getElementById("wfConfirmModalSubmit");
+    let pendingForm = null;
+
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+        if (!form || !form.matches("form[data-wf-confirm]")) return;
+        if (form.dataset.wfConfirmed === "1") return;
+
+        e.preventDefault();
+        pendingForm = form;
+        if (titleEl) titleEl.textContent = form.dataset.wfConfirmTitle || "تایید حذف یا تغییر";
+        if (bodyEl) bodyEl.textContent = form.dataset.wfConfirm || "آیا از انجام این عملیات اطمینان دارید؟";
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-check2-circle"></i> ' + (form.dataset.wfConfirmBtn || "بله، انجام شود");
+        }
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    });
+
+    if (submitBtn) {
+        submitBtn.addEventListener("click", function () {
+            if (!pendingForm) return;
+            pendingForm.dataset.wfConfirmed = "1";
+            if (window.bootstrap && window.bootstrap.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            }
+            pendingForm.submit();
+            pendingForm = null;
+        });
+    }
+});

@@ -1,0 +1,121 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}تنظیم هاب {{ hub.title }} | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_connect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:hub_list' %}">هاب‌های تیمی</a></li>
+        <li class="breadcrumb-item active">{{ hub.title }}</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-connect-card wf-reveal">
+        <div class="wf-connect-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <div class="wf-avatar-with-badge">
+                    <i class="bi bi-diagram-3-fill text-info"></i>
+                    {% if hub.platform.logo %}
+                        <img src="{{ hub.platform.logo.url }}" alt="{{ hub.platform.name }}" class="wf-av-plat">
+                    {% endif %}
+                </div>
+                <div>
+                    <h5 class="text-white fw-bold mb-0 fs-6">تنظیمات هاب «{{ hub.title }}»</h5>
+                    <span class="text-muted fs-xs">پلتفرم {{ hub.platform.name }} · شناسه {{ hub.group_chat_id }}</span>
+                </div>
+            </div>
+            <a href="{% url 'broadcast:hub_list' %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                <i class="bi bi-arrow-right"></i> بازگشت
+            </a>
+        </div>
+        <div class="wf-connect-card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger rounded-4 fs-xs mb-3">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-white fs-xs fw-bold">{{ form.title.label }}</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white fs-xs fw-bold">{{ form.publish_mode.label }}</label>
+                        {{ form.publish_mode }}
+                        <div class="text-muted fs-xs mt-1">در حالت «#ارسال»، فقط پیام‌های دارای هشتگ #ارسال منتشر و خود هشتگ حذف می‌شود.</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-white fs-xs fw-bold">{{ form.preset.label }}</label>
+                    {{ form.preset }}
+                    <div class="text-muted fs-xs mt-1">
+                        توصیه می‌شود یک <a href="{% url 'broadcast:preset_list' %}" class="text-info fw-bold">پکیج ارسال</a> انتخاب کنید تا تمام کانال‌های عضو آن یک‌جا هدف این هاب شوند.
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-white fs-xs fw-bold d-block mb-2">{{ form.channels.label }}</label>
+                    {% if available_channels %}
+                        <div class="row g-2">
+                            {% for ch in available_channels %}
+                            <div class="col-md-6 col-lg-4">
+                                <label class="d-flex align-items-center gap-2 p-2 rounded-4"
+                                       style="cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);">
+                                    <input type="checkbox" name="channels" value="{{ ch.pk }}"
+                                           class="form-check-input m-0 flex-shrink-0"
+                                           {% if ch in hub.channels.all %}checked{% endif %}>
+                                    <div class="wf-avatar-with-badge" style="width:36px;height:36px;border-radius:10px;">
+                                        {% if ch.avatar %}
+                                            <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" class="wf-av-img">
+                                        {% else %}
+                                            {{ ch.title|slice:":1" }}
+                                        {% endif %}
+                                        {% if ch.platform.logo %}
+                                            <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" class="wf-av-plat" style="width:15px;height:15px;">
+                                        {% endif %}
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <div class="text-white fw-bold fs-xs text-truncate">{{ ch.title }}</div>
+                                        <div class="text-muted" style="font-size:0.68rem;">{{ ch.platform.name }}</div>
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted fs-xs">هنوز کانال فعالی ثبت نکرده‌اید.</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    {{ form.is_active }}
+                    <label class="form-check-label text-white fs-xs fw-bold ms-2" for="{{ form.is_active.id_for_label }}">
+                        {{ form.is_active.label }}
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="submit" class="wf-btn wf-btn-emerald px-4">
+                        <i class="bi bi-check2-circle"></i> ذخیره تنظیمات هاب
+                    </button>
+                    <a href="{% url 'broadcast:hub_list' %}" class="wf-btn wf-btn-glass">انصراف</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

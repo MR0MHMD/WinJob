@@ -58,14 +58,18 @@
                                 <i class="bi bi-calendar3 ms-1 text-warning"></i> امروز {{ persian_date }}
                             </span>
                             <span>•</span>
-                            {% if subscription_days_left > 0 %}
-                                <span class="text-success fw-bold">
-                                    <i class="bi bi-patch-check-fill ms-1"></i>{{ active_plan_name }} ({{ subscription_days_left }} روز اعتبار فعال)
-                                </span>
-                            {% else %}
+                            {% if token_balance > 0 %}
                                 <span class="text-warning fw-bold">
-                                    <i class="bi bi-exclamation-circle ms-1"></i>اشتراک فعالی ندارید — از تست رایگان ۷ روزه شروع کنید
+                                    <i class="bi bi-coin ms-1"></i>موجودی کیف توکن: {{ token_balance|intcomma }} توکن (بدون تاریخ انقضا)
                                 </span>
+                            {% elif can_claim_gift %}
+                                <a href="{% url 'forward_subscriptions:plans' %}" class="text-success fw-bold text-decoration-none">
+                                    <i class="bi bi-gift-fill ms-1"></i>۳۵۰ توکن هدیه رایگان شما آماده دریافت است!
+                                </a>
+                            {% else %}
+                                <a href="{% url 'forward_subscriptions:plans' %}" class="text-warning fw-bold text-decoration-none">
+                                    <i class="bi bi-coin ms-1"></i>موجودی توکن صفر است — خرید بسته توکن
+                                </a>
                             {% endif %}
                         </div>
                     </div>
@@ -73,15 +77,9 @@
             </div>
 
             <div class="col-xl-5 text-xl-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-xl-end">
-                    <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange px-4 py-3">
-                        <i class="bi bi-rocket-takeoff-fill"></i> ارسال پیام جدید
-                    </a>
-                    <a href="{% url 'forward_subscriptions:plans' %}" class="wf-btn wf-btn-purple px-3 py-3">
-                        <i class="bi bi-gem"></i> پلن‌ها و اشتراک
-                    </a>
-                    <a href="{% url 'broadcast:job_list' %}" class="wf-btn wf-btn-glass px-3 py-3">
-                        <i class="bi bi-clock-history"></i> تاریخچه
+                <div class="d-flex justify-content-xl-end">
+                    <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange px-5 py-3 fs-sm">
+                        <i class="bi bi-rocket-takeoff-fill"></i> ورود به استدیو ارسال
                     </a>
                 </div>
             </div>
@@ -90,27 +88,22 @@
 
     <!-- ── ۲. کارت‌های آماری نئونی-شیشه‌ای (KPI Stat Cards) ── -->
     <div class="row g-4 mb-5 wf-reveal wf-delay-1">
-        <!-- اشتراک -->
+        <!-- کیف توکن وین‌فوروارد -->
         <div class="col-xl-3 col-md-6">
             <div class="wf-stat-card accent-orange">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="wf-stat-icon orange"><i class="bi bi-gem"></i></div>
-                    {% if subscription_days_left > 0 %}
-                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> فعال</span>
+                    <div class="wf-stat-icon orange"><i class="bi bi-coin"></i></div>
+                    {% if token_balance > 0 %}
+                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> بدون انقضا</span>
                     {% else %}
-                        <span class="wf-badge-status is-locked"><span class="wf-pulse-dot"></span> غیرفعال</span>
+                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> نیاز به شارژ</span>
                     {% endif %}
                 </div>
-                {% if subscription_days_left > 0 %}
-                    <div class="wf-stat-value">{{ subscription_days_left }} <span class="fs-6 fw-normal text-muted">روز</span></div>
-                    <div class="wf-stat-label">{{ active_plan_name }} · {{ subscribed_platforms_count }} پلتفرم مجاز</div>
-                {% else %}
-                    <div class="wf-stat-value">۰ <span class="fs-6 fw-normal text-muted">روز</span></div>
-                    <div class="wf-stat-label">اشتراک فعالی ثبت نشده</div>
-                {% endif %}
+                <div class="wf-stat-value">{{ token_balance|intcomma }} <span class="fs-6 fw-normal text-muted">توکن</span></div>
+                <div class="wf-stat-label">کل مصرف: {{ total_tokens_spent|intcomma }} توکن · هر ۵ پلتفرم باز</div>
                 <div class="mt-3 pt-2 border-top border-light">
                     <a href="{% url 'forward_subscriptions:plans' %}" class="small text-primary text-decoration-none fw-bold">
-                        {% if subscription_days_left > 0 %}تمدید یا افزودن پلتفرم{% else %}دریافت اشتراک / تست رایگان{% endif %}
+                        {% if can_claim_gift %}🎁 دریافت ۳۵۰ توکن رایگان / خرید بسته{% else %}خرید بسته توکن و تعرفه‌ها{% endif %}
                         <i class="bi bi-arrow-left ms-1"></i>
                     </a>
                 </div>
@@ -127,7 +120,7 @@
                 <div class="wf-stat-value">{{ connected_platforms_count }} <span class="fs-6 fw-normal text-muted">از ۴</span></div>
                 <div class="wf-stat-label">پیام‌رسان متصل‌شده</div>
                 <div class="mt-3 pt-2 border-top border-light small text-muted d-flex justify-content-between">
-                    <span class="text-success">✓ {{ subscribed_platforms_count }} دارای اشتراک</span>
+                    <span class="text-success">✓ هر ۴ پلتفرم آزاد</span>
                     <span class="text-info">✓ {{ total_channels_count }} کانال فعال</span>
                 </div>
             </div>
@@ -166,35 +159,92 @@
         </div>
     </div>
 
-    <!-- ── ۲.۵. باکس پروفایل‌های ارسال هوشمند (دومنظوره: نمایش وضعیت + دسترسی سریع) ── -->
-    <div class="wf-reveal wf-delay-1 mb-4" style="background:linear-gradient(135deg,rgba(93,60,242,0.13),rgba(255,255,255,0.03));border:1px solid rgba(93,60,242,0.28);border-radius:1.35rem;padding:1.25rem 1.5rem;">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <div style="width:48px;height:48px;border-radius:1rem;background:rgba(93,60,242,0.22);color:#a78bfa;display:flex;align-items:center;justify-content:center;font-size:1.45rem;flex-shrink:0;">
-                    <i class="bi bi-collection-fill"></i>
-                </div>
+    <!-- ── ۲.۵. دو کارت ویژه: پکیج‌های ارسال و هاب‌های تیمی ── -->
+    <div class="row g-4 mb-5 wf-reveal wf-delay-1">
+        <!-- کارت پکیج‌های ارسال -->
+        <div class="col-lg-6">
+            <div class="wf-feature-duo-card is-packages">
                 <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                        <h5 class="text-white fw-bold mb-0 fs-6">پروفایل‌های ارسال هوشمند (گروه‌بندی کانال‌ها)</h5>
-                        <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-2 py-1 fs-xs">
-                            {{ user_presets|length }} پروفایل فعال
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="wf-feature-icon-box">
+                                <i class="bi bi-box-seam-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-white fw-bold mb-1 fs-5">پکیج‌های ارسال هوشمند</h5>
+                                <p class="text-muted fs-xs mb-0">دسته‌بندی کانال‌ها برای انتشار یک‌کلیکی در وب و ربات‌ها</p>
+                            </div>
+                        </div>
+                        <span class="wf-badge-status is-connected">
+                            <span class="wf-pulse-dot"></span> {{ user_presets|length }} پکیج فعال
                         </span>
                     </div>
-                    <p class="text-muted fs-xs mb-0">
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
                         {% if user_presets %}
-                            پروفایل‌های فعلی:
                             {% for pr in user_presets|slice:":4" %}
-                                <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1 ms-1">{{ pr.name }}</span>
+                                <span class="wf-feature-chip">
+                                    <i class="bi bi-layers-fill text-primary"></i>
+                                    {{ pr.name }} ({{ pr.channels.count }})
+                                </span>
                             {% endfor %}
                         {% else %}
-                            کانال‌های خود را در دسته‌های دلخواه (مثل «فروش» یا «اخبار») گروه کنید تا در ربات بله با یک کلیک ارسال کنید.
+                            <span class="text-muted fs-xs">هنوز پکیجی نساخته‌اید — کانال‌هایتان را در پکیج‌های «فروش»، «اخبار» یا «VIP» دسته‌بندی کنید.</span>
                         {% endif %}
-                    </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between pt-3 border-top border-light">
+                    <span class="text-muted fs-xs">همگام با ربات بله، تلگرام و استدیو ارسال</span>
+                    <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-purple py-2 px-4 fs-xs">
+                        <i class="bi bi-sliders"></i> {% if user_presets %}مدیریت پکیج‌ها{% else %}ساخت اولین پکیج{% endif %}
+                    </a>
                 </div>
             </div>
-            <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-purple py-2 px-4 fs-xs flex-shrink-0">
-                <i class="bi bi-sliders"></i> {% if user_presets %}مدیریت پروفایل‌ها{% else %}ساخت اولین پروفایل{% endif %}
-            </a>
+        </div>
+
+        <!-- کارت هاب‌های تیمی -->
+        <div class="col-lg-6">
+            <div class="wf-feature-duo-card is-hubs">
+                <div>
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="wf-feature-icon-box">
+                                <i class="bi bi-diagram-3-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-white fw-bold mb-1 fs-5">هاب‌های ارسال گروهی (تیمی)</h5>
+                                <p class="text-muted fs-xs mb-0">انتشار خودکار پیام‌های گروه خصوصی تیم شما به کانال‌های منتخب</p>
+                            </div>
+                        </div>
+                        <span class="wf-badge-status is-connected">
+                            <span class="wf-pulse-dot"></span> {{ user_hubs|length }} هاب ثبت‌شده
+                        </span>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        {% if user_hubs %}
+                            {% for hub in user_hubs|slice:":4" %}
+                                <span class="wf-feature-chip">
+                                    {% if hub.platform.logo %}
+                                        <img src="{{ hub.platform.logo.url }}" alt="{{ hub.platform.name }}">
+                                    {% endif %}
+                                    {{ hub.title }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted fs-xs">ربات را به گروه خصوصی خود در بله یا تلگرام اضافه کنید تا اعضای تیم بدون دسترسی مستقیم پست منتشر کنند.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between pt-3 border-top border-light">
+                    <span class="text-muted fs-xs">ری‌اکشن خودکار ✅ + گزارش در پی‌وی فرستنده</span>
+                    <a href="{% url 'broadcast:hub_list' %}" class="wf-btn wf-btn-emerald py-2 px-4 fs-xs">
+                        <i class="bi bi-diagram-3-fill"></i> {% if user_hubs %}مدیریت هاب‌ها{% else %}مشاهده و تنظیم هاب‌ها{% endif %}
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -212,13 +262,13 @@
             </div>
         </div>
         <a href="{% url 'forward_subscriptions:plans' %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
-            <i class="bi bi-plus-circle-fill text-success"></i> ارتقا و افزودن پلتفرم
+            <i class="bi bi-plus-circle-fill text-success"></i> شارژ کیف توکن
         </a>
     </div>
 
     <div class="row g-4 mb-5 wf-reveal wf-delay-2">
         {% for p in platform_cards %}
-        <div class="col-md-6 col-xl-3">
+        <div class="col-lg-6">
             <div class="wf-platform-hub-card {% if p.is_connected %}is-connected{% elif p.has_subscription %}is-subscribed-pending{% else %}is-locked{% endif %}">
 
                 <!-- هدر کارت پلتفرم با لوگوی واقعی دیتابیس -->
@@ -242,7 +292,7 @@
                             <h5 class="text-white fw-bold mb-1 fs-5">{{ p.name }}</h5>
                             {% if p.has_subscription %}
                                 <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2 py-1">
-                                    <i class="bi bi-shield-check me-1"></i>{{ p.remaining_days }} روز اعتبار
+                                    <i class="bi bi-shield-check me-1"></i>آزاد با توکن
                                 </span>
                             {% else %}
                                 <span class="badge bg-dark border border-secondary text-muted rounded-pill px-2 py-1">
@@ -349,24 +399,27 @@
         {% endfor %}
     </div>
 
-    <!-- ── ۴. نوار دسترسی سریع تصویری با لوگوهای دیتابیس (Quick Launch Dock) ── -->
+    <!-- ── ۴. نوار دسترسی سریع تصویری (۶ کاشی اصلی) ── -->
     <div class="wf-dashboard-card mb-5 wf-reveal wf-delay-3">
         <div class="wf-dashboard-card-header">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
                 <h5 class="text-white fw-bold mb-0 fs-6">دسترسی سریع به بخش‌های وین فوروارد</h5>
             </div>
+            <a href="{% url 'broadcast:connected_channels' %}" class="small text-primary text-decoration-none fw-bold">
+                همه کانال‌های متصل <i class="bi bi-arrow-left ms-1"></i>
+            </a>
         </div>
         <div class="p-4">
             <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
                 <div class="col">
                     <a href="{% url 'broadcast:send' %}" class="wf-dock-tile">
                         <div class="wf-dock-tile-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
-                        <span class="fw-bold fs-xs">ارسال پیام همگانی</span>
+                        <span class="fw-bold fs-xs">استدیو ارسال</span>
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:bale_channels' %}" class="wf-dock-tile">
+                    <a href="{% url 'broadcast:connected_channels' %}?platform=bale" class="wf-dock-tile">
                         {% if nav_platforms.bale and nav_platforms.bale.logo %}
                             <img src="{{ nav_platforms.bale.logo.url }}" alt="بله" class="wf-dock-tile-logo">
                         {% else %}
@@ -376,7 +429,7 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:eitaa_channels' %}" class="wf-dock-tile">
+                    <a href="{% url 'broadcast:connected_channels' %}?platform=eitaa" class="wf-dock-tile">
                         {% if nav_platforms.eitaa and nav_platforms.eitaa.logo %}
                             <img src="{{ nav_platforms.eitaa.logo.url }}" alt="ایتا" class="wf-dock-tile-logo">
                         {% else %}
@@ -386,7 +439,7 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:rubika_channels' %}" class="wf-dock-tile">
+                    <a href="{% url 'broadcast:connected_channels' %}?platform=rubika" class="wf-dock-tile">
                         {% if nav_platforms.rubika and nav_platforms.rubika.logo %}
                             <img src="{{ nav_platforms.rubika.logo.url }}" alt="روبیکا" class="wf-dock-tile-logo">
                         {% else %}
@@ -396,7 +449,7 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:telegram_channels' %}" class="wf-dock-tile">
+                    <a href="{% url 'broadcast:connected_channels' %}?platform=telegram" class="wf-dock-tile">
                         {% if nav_platforms.telegram and nav_platforms.telegram.logo %}
                             <img src="{{ nav_platforms.telegram.logo.url }}" alt="تلگرام" class="wf-dock-tile-logo">
                         {% else %}
@@ -406,40 +459,64 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:preset_list' %}" class="wf-dock-tile">
-                        <div class="wf-dock-tile-icon" style="color:#a78bfa;"><i class="bi bi-collection-fill"></i></div>
-                        <span class="fw-bold fs-xs">پروفایل‌های ارسال</span>
-                    </a>
-                </div>
-                <div class="col">
                     <a href="{% url 'forward_subscriptions:plans' %}" class="wf-dock-tile">
                         <div class="wf-dock-tile-icon" style="color:#fdbc31;"><i class="bi bi-gem"></i></div>
-                        <span class="fw-bold fs-xs">خرید و تمدید اشتراک</span>
+                        <span class="fw-bold fs-xs">خرید بسته توکن</span>
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ── ۵. نمودار فعالیت ۳۰ روز اخیر و لیست آخرین ارسال‌ها ── -->
+    <!-- ── ۵. نمودار تحلیلی غیرخالی (۲۴ ساعت / ۷ / ۱۴ / ۳۰ روز) و آخرین عملیات‌ها ── -->
     <div class="row g-4 wf-reveal wf-delay-4">
         <div class="col-lg-7">
             <div class="wf-dashboard-card h-100">
-                <div class="wf-dashboard-card-header">
-                    <div class="d-flex align-items-center gap-2">
+                <div class="wf-dashboard-card-header flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         <i class="bi bi-graph-up-arrow text-primary fs-5"></i>
-                        <h5 class="text-white fw-bold mb-0 fs-6">نمودار عملکرد انتشار در ۳۰ روز اخیر</h5>
+                        <h5 class="text-white fw-bold mb-0 fs-6" id="wfChartMainTitle">نمودار عملکرد انتشار (زمان تهران)</h5>
+                        <div class="wf-chart-range-tabs ms-1" id="wfChartModeTabs" style="background:rgba(255,255,255,0.05);padding:3px;border-radius:999px;">
+                            <button type="button" class="wf-chart-mode-btn wf-chart-range-btn is-active" data-mode="deliveries">
+                                <i class="bi bi-send-check me-1"></i>ارسال‌ها
+                            </button>
+                            <button type="button" class="wf-chart-mode-btn wf-chart-range-btn" data-mode="tokens">
+                                <i class="bi bi-coin text-warning me-1"></i>مصرف توکن
+                            </button>
+                        </div>
                     </div>
-                    <span class="badge bg-dark border border-secondary text-muted rounded-pill px-3 py-1">
-                        تحویل موفق و ناموفق
-                    </span>
+                    <div class="wf-chart-range-tabs">
+                        <button type="button" class="wf-chart-range-btn is-active" data-range="24h">۲۴ ساعت</button>
+                        <button type="button" class="wf-chart-range-btn" data-range="7d">۷ روز</button>
+                        <button type="button" class="wf-chart-range-btn" data-range="14d">۱۴ روز</button>
+                        <button type="button" class="wf-chart-range-btn" data-range="30d">۳۰ روز</button>
+                    </div>
                 </div>
-                <div class="p-4">
-                    <div class="wf-chart-container">
-                        <canvas id="winforwardActivityChart"
-                                data-labels='{{ activity_labels_json|safe }}'
-                                data-success='{{ activity_success_data_json|safe }}'
-                                data-failed='{{ activity_failed_data_json|safe }}'></canvas>
+                <div class="p-3 p-md-4">
+                    <div class="wf-chart-kpi-strip">
+                        <div class="wf-chart-kpi-pill">
+                            <div class="text-muted" style="font-size:0.7rem;" id="wfKpi1Lbl">تحویل موفق بازه</div>
+                            <div class="text-success fw-bold fs-5" id="wfKpiSent">{{ chart_total_sent|intcomma }}</div>
+                        </div>
+                        <div class="wf-chart-kpi-pill">
+                            <div class="text-muted" style="font-size:0.7rem;" id="wfKpi2Lbl">ناموفق بازه</div>
+                            <div class="text-danger fw-bold fs-5" id="wfKpiFailed">{{ chart_total_failed|intcomma }}</div>
+                        </div>
+                        <div class="wf-chart-kpi-pill">
+                            <div class="text-muted" style="font-size:0.7rem;" id="wfKpi3Lbl">نرخ موفقیت</div>
+                            <div class="text-info fw-bold fs-5" id="wfKpiRate">{{ chart_success_rate }}٪</div>
+                        </div>
+                        <div class="wf-chart-kpi-pill">
+                            <div class="text-muted" style="font-size:0.7rem;"><span id="wfKpi4Prefix">اوج</span> (<span id="wfKpiPeakLbl">{{ chart_peak_label }}</span>)</div>
+                            <div class="text-warning fw-bold fs-5" id="wfKpiPeakVal">{{ chart_peak_val|intcomma }}</div>
+                        </div>
+                    </div>
+                    <div class="wf-chart-container position-relative">
+                        <canvas id="winforwardActivityChart" data-series='{{ chart_series_json|safe }}'></canvas>
+                        <div id="wfChartEmptyState" class="position-absolute top-50 start-50 translate-middle text-center w-100 px-3" style="display:none;">
+                            <i class="bi bi-bar-chart-line fs-1 text-muted d-block mb-2"></i>
+                            <div class="text-muted fs-xs">در این بازه زمانی هنوز ارسالی ثبت نشده است.</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -453,41 +530,53 @@
                         <h5 class="text-white fw-bold mb-0 fs-6">آخرین عملیات‌های ارسال</h5>
                     </div>
                     <a href="{% url 'broadcast:job_list' %}" class="small text-primary text-decoration-none fw-bold">
-                        مشاهده همه <i class="bi bi-arrow-left ms-1"></i>
+                        مشاهده تاریخچه <i class="bi bi-arrow-left ms-1"></i>
                     </a>
                 </div>
-                <div class="p-3" style="max-height: 360px; overflow-y: auto;">
+                <div class="p-3 d-flex flex-column gap-2" style="max-height: 415px; overflow-y: auto;">
                     {% if recent_jobs %}
                         {% for job in recent_jobs %}
-                            <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-job-row">
-                                <div class="overflow-hidden">
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1">
-                                            #{{ job.pk }} · {{ job.message.get_content_type_display }}
-                                        </span>
-                                        <span class="text-white fw-bold fs-xs text-truncate" style="max-width: 170px;">
-                                            {{ job.message.text|truncatechars:35|default:"(رسانه بدون کپشن)" }}
-                                        </span>
+                            <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-job-row flex-column align-items-stretch gap-2 p-3 rounded-4"
+                               style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);">
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <span class="wf-pill-tag is-purple">#{{ job.pk }}</span>
+                                        <span class="wf-pill-tag is-blue">{{ job.message.get_content_type_display }}</span>
+                                        <div class="d-inline-flex align-items-center" style="direction:ltr;">
+                                            {% for pl in job.unique_platforms %}
+                                                {% if pl.logo %}
+                                                    <img src="{{ pl.logo.url }}" alt="{{ pl.name }}" title="{{ pl.name }}"
+                                                         style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid #181526;margin-left:-4px;">
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
                                     </div>
-                                    <div class="text-muted fs-xs">
-                                        {{ job.created_at|date:"Y/m/d H:i" }} ·
-                                        <span class="text-success">{{ job.success_count }} موفق</span>
-                                        {% if job.failed_count %}
-                                            / <span class="text-danger">{{ job.failed_count }} خطا</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     {% if job.status == 'done' %}
-                                        <span class="wf-badge-status is-connected py-1 px-2">موفق</span>
+                                        <span class="wf-pill-tag is-emerald">{{ job.success_rate }}٪ موفق</span>
                                     {% elif job.status == 'partial' %}
-                                        <span class="wf-badge-status is-ready py-1 px-2">نیمه‌موفق</span>
+                                        <span class="wf-pill-tag is-gold">{{ job.success_rate }}٪ نیمه‌موفق</span>
                                     {% elif job.status == 'running' or job.status == 'pending' %}
-                                        <span class="wf-badge-status is-ready py-1 px-2">در حال ارسال</span>
+                                        <span class="wf-pill-tag is-blue">در حال ارسال...</span>
                                     {% else %}
-                                        <span class="wf-badge-status is-danger py-1 px-2">ناموفق</span>
+                                        <span class="wf-pill-tag is-danger">ناموفق</span>
                                     {% endif %}
-                                    <i class="bi bi-chevron-left text-muted"></i>
+                                </div>
+                                <div class="text-white fs-xs text-truncate">
+                                    {{ job.message.text|truncatechars:62|default:"(پیام رسانه‌ای بدون متن کپشن)" }}
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div class="wf-progress-track flex-grow-1" style="height:6px;">
+                                        <div class="wf-progress-fill {% if job.success_rate >= 80 %}is-high{% elif job.success_rate >= 40 %}is-mid{% else %}is-low{% endif %}"
+                                             style="width:{{ job.success_rate }}%;"></div>
+                                    </div>
+                                    <span class="d-inline-flex align-items-center gap-2 flex-shrink-0">
+                                        <span class="wf-pill-tag is-gold" style="font-size:0.66rem;padding:0.15rem 0.45rem;" title="معادل {{ job.tokens_toman|intcomma }} تومان">
+                                            <i class="bi bi-coin"></i> {{ job.tokens_spent|intcomma }}
+                                        </span>
+                                        <span class="text-muted" style="font-size:0.7rem;">
+                                            {{ job.success_count }}/{{ job.total_targets }} · {{ job.created_at|date:"m/d H:i" }}
+                                        </span>
+                                    </span>
                                 </div>
                             </a>
                         {% endfor %}
@@ -496,7 +585,7 @@
                             <i class="bi bi-send-slash fs-1 text-muted d-block mb-2"></i>
                             <p class="text-muted fs-sm mb-3">هنوز هیچ پیامی ارسال نکرده‌اید.</p>
                             <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange py-2 px-4 fs-xs">
-                                ارسال اولین پیام
+                                شروع از استدیو ارسال
                             </a>
                         </div>
                     {% endif %}
@@ -715,6 +804,53 @@
     </div>
 </div>
 
+<div class="modal fade wf-modal" id="wfGuideModal_soroush" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold d-flex align-items-center gap-2">
+                    {% if nav_platforms.soroush and nav_platforms.soroush.logo %}
+                        <img src="{{ nav_platforms.soroush.logo.url }}" alt="سروش‌پلاس" width="32" height="32" class="rounded-3">
+                    {% else %}
+                        <i class="bi bi-chat-dots-fill text-info"></i>
+                    {% endif %}
+                    آموزش اتصال سروش‌پلاس به وین فوروارد
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۱</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">ورود امن با شماره موبایل و کد تایید (OTP)</h6>
+                        <p class="text-muted fs-xs mb-0">شماره موبایل اکانت سروش‌پلاسی که در کانال‌هایتان ادمین یا سازنده است را وارد کرده و کد یک‌بارمصرف دریافتی را ثبت کنید.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step">
+                    <div class="wf-guide-step-num">۲</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">همگام‌سازی خودکار کانال‌ها و آواتارها</h6>
+                        <p class="text-muted fs-xs mb-0">پس از ورود، با یک کلیک روی «شناسایی خودکار سروش‌پلاس»، تمام کانال‌هایی که دسترسی ارسال دارید همراه با عکس پروفایل به وین فوروارد اضافه می‌شوند.</p>
+                    </div>
+                </div>
+                <div class="wf-guide-step mb-0">
+                    <div class="wf-guide-step-num">۳</div>
+                    <div>
+                        <h6 class="text-white fw-bold fs-sm mb-1">انتشار هم‌زمان متن، عکس، ویدیو و فایل</h6>
+                        <p class="text-muted fs-xs mb-0">کانال‌های سروش‌پلاس بلافاصله در استدیو ارسال، پکیج‌ها، هاب‌های تیمی و ربات‌های بله و تلگرام در دسترس شما خواهند بود.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="wf-btn wf-btn-glass" data-bs-dismiss="modal">بستن</button>
+                <a href="{% url 'broadcast:soroush_connect_phone' %}" class="wf-btn wf-btn-emerald">
+                    <i class="bi bi-plug-fill"></i> رفتن به صفحه اتصال سروش‌پلاس
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block script %}
@@ -722,82 +858,217 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const canvas = document.getElementById("winforwardActivityChart");
+    const emptyEl = document.getElementById("wfChartEmptyState");
     if (!canvas || typeof Chart === "undefined") return;
 
-    const labels = JSON.parse(canvas.dataset.labels || "[]");
-    const successData = JSON.parse(canvas.dataset.success || "[]");
-    const failedData = JSON.parse(canvas.dataset.failed || "[]");
+    const allSeries = JSON.parse(canvas.dataset.series || "{}");
     const ctx = canvas.getContext("2d");
+    let chartInstance = null;
 
-    if (labels.length === 0) {
-        ctx.font = "13px IRANSans, Vazir, sans-serif";
-        ctx.fillStyle = "#9691a4";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("پس از اولین ارسال همگانی، نمودار تحویل ۳۰ روزه در اینجا رسم می‌شود", canvas.width / 2, canvas.height / 2);
-        return;
-    }
+    let currentRange = "24h";
+    let currentMode = "deliveries";
 
-    const gradSuccess = ctx.createLinearGradient(0, 0, 0, 260);
-    gradSuccess.addColorStop(0, "rgba(7, 201, 139, 0.38)");
-    gradSuccess.addColorStop(1, "rgba(7, 201, 139, 0.01)");
+    const elTitle = document.getElementById("wfChartMainTitle");
+    const el1Lbl = document.getElementById("wfKpi1Lbl");
+    const el2Lbl = document.getElementById("wfKpi2Lbl");
+    const el3Lbl = document.getElementById("wfKpi3Lbl");
+    const el4Prefix = document.getElementById("wfKpi4Prefix");
+    const elSent = document.getElementById("wfKpiSent");
+    const elFail = document.getElementById("wfKpiFailed");
+    const elRate = document.getElementById("wfKpiRate");
+    const elPeakLbl = document.getElementById("wfKpiPeakLbl");
+    const elPeakVal = document.getElementById("wfKpiPeakVal");
 
-    const gradFailed = ctx.createLinearGradient(0, 0, 0, 260);
-    gradFailed.addColorStop(0, "rgba(253, 86, 49, 0.34)");
-    gradFailed.addColorStop(1, "rgba(253, 86, 49, 0.01)");
+    function renderChart() {
+        const s = allSeries[currentRange] || {
+            labels: [], success: [], failed: [], jobs: [], tokens: [],
+            total_sent: 0, total_failed: 0, success_rate: 100, peak_val: 0, peak_label: "—",
+            total_tokens: 0, total_toman: 0, avg_tokens_per_job: 0, peak_token_val: 0, peak_token_label: "—"
+        };
 
-    new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: labels,
-            datasets: [
+        if (currentMode === "tokens") {
+            if (elTitle) elTitle.textContent = "نمودار مصرف توکن (زمان تهران)";
+            if (el1Lbl) el1Lbl.textContent = "کل توکن مصرفی بازه";
+            if (el2Lbl) el2Lbl.textContent = "معادل تومانی (۵۰ ت)";
+            if (el3Lbl) el3Lbl.textContent = "میانگین هر ارسال";
+            if (el4Prefix) el4Prefix.textContent = "اوج مصرف";
+            if (elSent) { elSent.className = "text-warning fw-bold fs-5"; elSent.textContent = (s.total_tokens || 0).toLocaleString("fa-IR"); }
+            if (elFail) { elFail.className = "text-success fw-bold fs-6"; elFail.textContent = (s.total_toman || 0).toLocaleString("fa-IR") + " ت"; }
+            if (elRate) { elRate.className = "text-info fw-bold fs-5"; elRate.textContent = (s.avg_tokens_per_job || 0).toLocaleString("fa-IR"); }
+            if (elPeakLbl) elPeakLbl.textContent = s.peak_token_label || "—";
+            if (elPeakVal) elPeakVal.textContent = (s.peak_token_val || 0).toLocaleString("fa-IR");
+        } else {
+            if (elTitle) elTitle.textContent = "نمودار عملکرد انتشار (زمان تهران)";
+            if (el1Lbl) el1Lbl.textContent = "تحویل موفق بازه";
+            if (el2Lbl) el2Lbl.textContent = "ناموفق بازه";
+            if (el3Lbl) el3Lbl.textContent = "نرخ موفقیت";
+            if (el4Prefix) el4Prefix.textContent = "اوج";
+            if (elSent) { elSent.className = "text-success fw-bold fs-5"; elSent.textContent = (s.total_sent || 0).toLocaleString("fa-IR"); }
+            if (elFail) { elFail.className = "text-danger fw-bold fs-5"; elFail.textContent = (s.total_failed || 0).toLocaleString("fa-IR"); }
+            if (elRate) { elRate.className = "text-info fw-bold fs-5"; elRate.textContent = (s.success_rate ?? 100) + "٪"; }
+            if (elPeakLbl) elPeakLbl.textContent = s.peak_label || "—";
+            if (elPeakVal) elPeakVal.textContent = (s.peak_val || 0).toLocaleString("fa-IR");
+        }
+
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
+        if (!s.labels || s.labels.length === 0) {
+            if (emptyEl) emptyEl.style.display = "block";
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = "none";
+
+        let datasets = [];
+        if (currentMode === "tokens") {
+            const gradGold = ctx.createLinearGradient(0, 0, 0, 290);
+            gradGold.addColorStop(0, "rgba(253, 188, 49, 0.38)");
+            gradGold.addColorStop(1, "rgba(253, 188, 49, 0.01)");
+            datasets = [{
+                label: "توکن مصرفی",
+                data: s.tokens || [],
+                borderColor: "#fdbc31",
+                backgroundColor: gradGold,
+                borderWidth: 2.8,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4.5,
+                pointHoverRadius: 6.5,
+                pointBackgroundColor: "#fdbc31",
+                pointBorderColor: "#141122",
+                pointBorderWidth: 2,
+            }];
+        } else {
+            const gradSuccess = ctx.createLinearGradient(0, 0, 0, 290);
+            gradSuccess.addColorStop(0, "rgba(7, 201, 139, 0.35)");
+            gradSuccess.addColorStop(1, "rgba(7, 201, 139, 0.01)");
+            datasets = [
                 {
                     label: "تحویل موفق",
-                    data: successData,
+                    data: s.success,
                     borderColor: "#07c98b",
                     backgroundColor: gradSuccess,
-                    borderWidth: 2.5,
+                    borderWidth: 2.8,
                     fill: true,
                     tension: 0.35,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
                     pointBackgroundColor: "#07c98b",
-                    pointBorderColor: "#fff",
-                    pointRadius: 3.5,
+                    pointBorderColor: "#141122",
+                    pointBorderWidth: 2,
                 },
                 {
-                    label: "خطای ارسال",
-                    data: failedData,
-                    borderColor: "#fd5631",
-                    backgroundColor: gradFailed,
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.35,
-                    pointBackgroundColor: "#fd5631",
-                    pointBorderColor: "#fff",
-                    pointRadius: 3,
+                    label: "ناموفق",
+                    data: s.failed,
+                    borderColor: "#f23c49",
+                    backgroundColor: "rgba(242, 60, 73, 0.12)",
+                    borderWidth: 2.2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 5.5,
+                    pointBackgroundColor: "#f23c49",
+                    pointBorderColor: "#141122",
+                    pointBorderWidth: 1.5,
                 },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            interaction: { mode: "index", intersect: false },
-            plugins: {
-                legend: {
-                    labels: { color: "#fff", font: { family: "IRANSans, Vazir", size: 12 }, usePointStyle: true },
+            ];
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: "line",
+            data: { labels: s.labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: {
+                        position: "top",
+                        align: "end",
+                        labels: {
+                            color: "#d8d4e6",
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            font: { family: "IRANSans, Vazir, sans-serif", size: 11, weight: "bold" },
+                        },
+                    },
+                    tooltip: {
+                        backgroundColor: "rgba(20, 17, 34, 0.96)",
+                        titleColor: "#fff",
+                        bodyColor: "#e2dfee",
+                        borderColor: "rgba(255,255,255,0.14)",
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 12,
+                        callbacks: {
+                            afterBody: function (items) {
+                                if (!items.length) return "";
+                                const idx = items[0].dataIndex;
+                                const jb = s.jobs[idx] || 0;
+                                if (currentMode === "tokens") {
+                                    const tk = (s.tokens && s.tokens[idx]) || 0;
+                                    const tm = tk * 50;
+                                    return [
+                                        "معادل ریالی: " + tm.toLocaleString("fa-IR") + " تومان",
+                                        "تعداد عملیات: " + jb.toLocaleString("fa-IR"),
+                                    ];
+                                }
+                                const sc = s.success[idx] || 0;
+                                const fl = s.failed[idx] || 0;
+                                const tk = (s.tokens && s.tokens[idx]) || 0;
+                                const tot = sc + fl;
+                                const rate = tot > 0 ? Math.round((sc / tot) * 100) : 100;
+                                return [
+                                    "تعداد عملیات: " + jb,
+                                    "نرخ موفقیت: " + rate + "٪",
+                                    "توکن مصرفی: " + tk.toLocaleString("fa-IR") + " توکن",
+                                ];
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: "#b1acc0",
+                            font: { family: "IRANSans, Vazir, sans-serif", size: 10 },
+                        },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "rgba(255,255,255,0.05)", drawBorder: false },
+                        ticks: {
+                            precision: 0,
+                            color: "#9691a4",
+                            font: { family: "IRANSans, Vazir, sans-serif", size: 10 },
+                        },
+                    },
                 },
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: "rgba(255,255,255,0.05)" },
-                    ticks: { color: "#9691a4", precision: 0 },
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: "#9691a4" },
-                },
-            },
-        },
+        });
+    }
+
+    renderChart();
+
+    document.querySelectorAll(".wf-chart-range-btn[data-range]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            document.querySelectorAll(".wf-chart-range-btn[data-range]").forEach(function (b) { b.classList.remove("is-active"); });
+            btn.classList.add("is-active");
+            currentRange = btn.dataset.range || "24h";
+            renderChart();
+        });
+    });
+
+    document.querySelectorAll(".wf-chart-mode-btn[data-mode]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            document.querySelectorAll(".wf-chart-mode-btn[data-mode]").forEach(function (b) { b.classList.remove("is-active"); });
+            btn.classList.add("is-active");
+            currentMode = btn.dataset.mode || "deliveries";
+            renderChart();
+        });
     });
 });
 </script>

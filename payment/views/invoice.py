@@ -70,12 +70,20 @@ def invoice_list(request):
 
     invoices = Invoice.objects.filter(
         user=request.user
-    ).select_related('campaign').order_by('-created_at')
+    ).select_related(
+        'campaign',
+        'content_order',
+        'content_order__team',
+        'subscription_order',
+        'market_order',
+        'forward_subscription_order',
+        'forward_subscription_order__plan',
+    ).order_by('-created_at')
 
     type_filter = request.GET.get('type')
     if type_filter == 'campaign':
         invoices = invoices.filter(type=Invoice.Type.CAMPAIGN)
-    elif type_filter in ('wallet', 'windirect', 'content_order', 'market_order'):
+    elif type_filter in ('wallet', 'windirect', 'winforward', 'content_order', 'market_order'):
         invoices = invoices.filter(type=type_filter)
 
     status_filter = request.GET.get('status')
@@ -97,6 +105,7 @@ def invoice_list(request):
         'campaign_count': base_qs.filter(type=Invoice.Type.CAMPAIGN).count(),
         'wallet_count': base_qs.filter(type=Invoice.Type.WALLET).count(),
         'market_order_count': base_qs.filter(type=Invoice.Type.MARKET_ORDER).count(),
+        'winforward_count': base_qs.filter(type=Invoice.Type.WINFORWARD).count(),
     }
 
     return render(request, 'payment/invoices/invoice_list.html', context)
@@ -115,6 +124,8 @@ def invoice_detail(request, invoice_id):
             'campaign__advertiser__user',
             'subscription_order',
             'subscription_order__offer__plan',
+            'forward_subscription_order',
+            'forward_subscription_order__plan',
             'content_order',
             'market_order',
         ).prefetch_related(
@@ -134,10 +145,11 @@ def invoice_detail(request, invoice_id):
         'invoice': invoice,
         'transactions': transactions,
         'can_cancel': not invoice.is_paid and invoice.type == Invoice.Type.CAMPAIGN,
-        'can_pay': not invoice.is_paid and invoice.type == Invoice.Type.CAMPAIGN,
+        'can_pay': not invoice.is_paid and invoice.type in (Invoice.Type.CAMPAIGN, Invoice.Type.WINFORWARD),
         'is_wallet_invoice': invoice.type == Invoice.Type.WALLET,
         'is_campaign_invoice': invoice.type == Invoice.Type.CAMPAIGN,
         'is_windirect_invoice': invoice.type == Invoice.Type.WINDIRECT,
+        'is_winforward_invoice': invoice.type == Invoice.Type.WINFORWARD,
         'is_content_order_invoice': invoice.type == Invoice.Type.CONTENT_ORDER,
         'is_market_order_invoice': invoice.type == Invoice.Type.MARKET_ORDER,
     }
@@ -155,6 +167,15 @@ def invoice_detail(request, invoice_id):
     # اطلاعات اضافی برای فاکتور اشتراک
     if invoice.type == Invoice.Type.WINDIRECT:
         context['order'] = invoice.subscription_order
+
+    # اطلاعات اضافی برای فاکتور بسته توکن وین فوروارد
+    if invoice.type == Invoice.Type.WINFORWARD:
+        fwd_order = invoice.forward_subscription_order
+        context['forward_order'] = fwd_order
+        if fwd_order:
+            qty = int(fwd_order.tokens_amount or (fwd_order.plan.tokens_amount if fwd_order.plan else 0))
+            context['forward_tokens_amount'] = qty
+            context['forward_per_token_price'] = int(round(fwd_order.subtotal_amount / max(1, qty))) if qty else 0
 
     # اطلاعات اضافی برای فاکتور سفارش محتوا
     if invoice.type == Invoice.Type.CONTENT_ORDER:
@@ -190,6 +211,8 @@ def invoice_print(request, invoice_id):
             'content_order__plan',
             'subscription_order',
             'subscription_order__offer__plan',
+            'forward_subscription_order',
+            'forward_subscription_order__plan',
             'market_order',
         ),
         id=invoice_id,
@@ -217,6 +240,41 @@ def invoice_print(request, invoice_id):
             'invoice': invoice,
             'order': order,
             'is_windirect_invoice': True,
+            'base_plan_cost_rial': base_plan_cost_rial,
+            'plan_discount_amount_rial': plan_discount_amount_rial,
+            'plan_cost_rial': plan_cost_rial,
+            'plan_vat_rial': plan_vat_rial,
+            'payable_amount_rial': payable_amount_rial,
+            'payable_amount_words': payable_amount_words,
+        }
+        return render(request, 'payment/invoices/invoice_print.html', context)
+
+    # ============================================================
+    # ۱.۵ فاکتور بسته توکن وین فوروارد (WINFORWARD)
+    # ============================================================
+    if invoice.type == Invoice.Type.WINFORWARD:
+        fwd_order = invoice.forward_subscription_order
+
+        def convert_to_rial(value):
+            return int(value or 0) * 10
+
+        base_cost = invoice.base_plan_cost if invoice.base_plan_cost is not None else invoice.plan_cost
+        base_plan_cost_rial = convert_to_rial(base_cost)
+        plan_discount_amount_rial = convert_to_rial(invoice.plan_discount_amount)
+        plan_cost_rial = convert_to_rial(invoice.plan_cost or invoice.payable_amount)
+        plan_vat_rial = convert_to_rial(invoice.plan_vat)
+        payable_amount_rial = convert_to_rial(invoice.payable_amount)
+        payable_amount_words = number_to_words(payable_amount_rial, 'ریال')
+        tokens_qty = int(
+            (fwd_order.tokens_amount if fwd_order else 0)
+            or (fwd_order.plan.tokens_amount if (fwd_order and fwd_order.plan) else 0)
+        )
+
+        context = {
+            'invoice': invoice,
+            'forward_order': fwd_order,
+            'forward_tokens_amount': tokens_qty,
+            'is_winforward_invoice': True,
             'base_plan_cost_rial': base_plan_cost_rial,
             'plan_discount_amount_rial': plan_discount_amount_rial,
             'plan_cost_rial': plan_cost_rial,
@@ -458,6 +516,9 @@ def redirect_to_payment(request, invoice_id):
         user=request.user,
         is_paid=False
     )
+
+    if invoice.type == Invoice.Type.WINFORWARD and invoice.forward_subscription_order_id:
+        return redirect('forward_subscriptions:order_detail', order_id=invoice.forward_subscription_order_id)
 
     if invoice.type != Invoice.Type.CAMPAIGN:
         messages.error(request, "این فاکتور قابل پرداخت نیست.")

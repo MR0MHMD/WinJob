@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models import Platform
-from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget, ChannelPreset
+from product.forward.broadcast.models import BroadcastChannel, BroadcastHub, BroadcastJob, BroadcastTarget, ChannelPreset
 from product.forward.broadcast.services.channel_sync import finalize_verification, sync_channel_avatar
 from product.forward.broadcast.services.dispatcher import enqueue_dispatch_job
 from product.forward.messengers.adapters.registry import get_adapter
@@ -26,13 +26,14 @@ _WINJOB_PRESETS_URL = "https://winjob.ir/forward/presets/"
 _PLATFORM_NAMES_FA = {
     "bale": "بله",
     "telegram": "تلگرام",
+    "soroush": "سروش‌پلاس",
 }
 
 # کیبورد ثابت پایین ربات برای کاربر متصل‌شده
 _USER_KEYBOARD = {
     "keyboard": [
-        [{"text": "📢 کانال‌های من"}, {"text": "📦 پروفایل‌های ارسال"}],
-        [{"text": "👤 حساب و اشتراک"}, {"text": "📤 ارسال پیام"}],
+        [{"text": "📢 کانال‌های من"}, {"text": "📦 پکیج‌های ارسال"}],
+        [{"text": "🪙 حساب و توکن"}, {"text": "📤 ارسال پیام"}],
         [{"text": "❓ راهنما و پشتیبانی"}, {"text": "🌐 پنل وب"}],
     ],
     "resize_keyboard": True,
@@ -91,7 +92,7 @@ def _send_guest_welcome(adapter, chat_id, platform_slug: str = "bale") -> None:
         "📌 **برای شروع، این ۳ قدم ساده را انجام دهید:**\n"
         "۱️⃣ روی دکمه زیر بزنید و وارد سایت **وینجاب** شوید (اگر حساب ندارید در چند ثانیه ثبت‌نام کنید).\n"
         f"۲️⃣ پس از ورود، مستقیماً به پنل وین فوروارد هدایت می‌شوید؛ همان‌جا روی **«اتصال حساب {p_name}»** بزنید تا ربات به حسابتان وصل شود.\n"
-        "۳️⃣ اشتراک **۷ روزه رایگان** را از بخش اشتراک‌ها فعال کنید و ربات را در کانال‌هایتان ادمین نمایید.\n\n"
+        "۳️⃣ **۳۵۰ توکن رایگان** شروع را از بخش توکن‌ها دریافت کنید و ربات را در کانال‌هایتان ادمین نمایید.\n\n"
         "👇 برای شروع روی دکمه زیر بزنید:"
     )
     _bot_send(
@@ -116,22 +117,21 @@ def _send_guest_welcome(adapter, chat_id, platform_slug: str = "bale") -> None:
 
 def _send_user_home(adapter, chat_id, bot_user: BotUser, platform_slug: str = "bale") -> None:
     """ارسال پیام خوش‌آمدگویی و منوی اصلی همراه با کیبورد ثابت برای کاربر متصل."""
-    from product.forward.subscriptions.access import get_active_platform_slugs
+    from product.forward.subscriptions.access import get_user_token_balance
 
     _set_awaiting_broadcast(bot_user, False)
-    active_slugs = get_active_platform_slugs(bot_user.user)
+    token_balance = get_user_token_balance(bot_user.user)
     channels_count = BroadcastChannel.objects.filter(
         user=bot_user.user, is_active=True, bot_is_admin=True
     ).count()
     presets_count = ChannelPreset.objects.filter(user=bot_user.user, is_active=True).count()
 
-    sub_status = "✅ فعال" if active_slugs else "🔒 غیرفعال (نیاز به تهیه اشتراک)"
     text = (
         "سلام رفیق! به **وین فوروارد** خوش برگشتی 👋\n\n"
         f"📊 **وضعیت فعلی شما:**\n"
-        f"• اشتراک: {sub_status}\n"
+        f"• موجودی توکن: **{token_balance:,} توکن** (بدون انقضا)\n"
         f"• کانال‌های آماده ارسال: **{channels_count} کانال**\n"
-        f"• پروفایل‌های ارسال: **{presets_count} پروفایل**\n\n"
+        f"• پکیج‌های ارسال: **{presets_count} پکیج**\n\n"
         "برای ارسال پیام جدید، از منوی پایین دکمه **«📤 ارسال پیام»** را بزن 👇"
     )
     _bot_send(adapter, chat_id, text, reply_markup=_USER_KEYBOARD, platform_slug=platform_slug)
@@ -194,7 +194,15 @@ def _handle_telegram_my_chat_member(update_obj: dict):
     from_user = update_obj.get("from") or {}
     new_member = update_obj.get("new_chat_member") or {}
 
-    if chat.get("type") != "channel":
+    chat_type = chat.get("type")
+    if chat_type in ("group", "supergroup"):
+        return _handle_hub_membership_event(
+            chat=chat,
+            from_user=from_user,
+            is_removed=(new_member.get("status", "") in ("left", "kicked")),
+            platform_slug="telegram",
+        )
+    if chat_type != "channel":
         return JsonResponse({"ok": True, "status": "not a channel"})
 
     platform = Platform.objects.filter(slug="telegram").first()
@@ -278,13 +286,46 @@ def _handle_telegram_my_chat_member(update_obj: dict):
     })
 
 
+def _is_our_bot_user(member: dict, platform_slug: str) -> bool:
+    """بررسی اینکه آیا عضو اضافه یا حذف‌شده در گروه دقیقاً خود ربات وین‌فوروارد است یا خیر."""
+    if not isinstance(member, dict):
+        return False
+    adapter = get_adapter(platform_slug)
+    token = getattr(adapter, "_token", "") if adapter else ""
+    bot_id = token.split(":", 1)[0] if ":" in token else ""
+    if bot_id and str(member.get("id", "")) == bot_id:
+        return True
+    if adapter:
+        try:
+            bot_uname = (adapter.get_bot_username() or "").lower()
+            if bot_uname and (member.get("username") or "").lower() == bot_uname:
+                return True
+        except Exception:
+            pass
+    return bool(member.get("is_bot"))
+
+
 def _handle_message(message, platform_slug: str = "bale"):
     """پردازش پیام‌های دریافتی — شامل دستورات، دکمه‌های کیبورد، رویدادهای کانال و پیش‌نویس."""
+    if message.get("group_chat_created") or message.get("supergroup_chat_created"):
+        return _handle_hub_membership_event(
+            chat=message.get("chat", {}),
+            from_user=message.get("from", {}),
+            is_removed=False,
+            platform_slug=platform_slug,
+        )
+
     if "new_chat_members" in message:
-        return _handle_bot_added_to_chat(message, platform_slug=platform_slug)
+        members = message.get("new_chat_members") or []
+        if any(_is_our_bot_user(m, platform_slug) for m in members):
+            return _handle_bot_added_to_chat(message, platform_slug=platform_slug)
+        return JsonResponse({"ok": True, "status": "non-bot member joined ignored"})
 
     if "left_chat_member" in message:
-        return _handle_bot_removed_from_chat(message, platform_slug=platform_slug)
+        left_member = message.get("left_chat_member") or {}
+        if _is_our_bot_user(left_member, platform_slug):
+            return _handle_bot_removed_from_chat(message, platform_slug=platform_slug)
+        return JsonResponse({"ok": True, "status": "non-bot member left ignored"})
 
     text = (message.get("text") or "").strip()
     chat_id = message.get("chat", {}).get("id")
@@ -357,6 +398,19 @@ def _handle_message(message, platform_slug: str = "bale"):
         if command == "/help":
             return _handle_help_command(chat_id, platform_slug=platform_slug)
 
+        if command == "/bindhub":
+            chat_obj = message.get("chat", {})
+            if chat_obj.get("type") in ("group", "supergroup"):
+                return _handle_hub_membership_event(
+                    chat=chat_obj,
+                    from_user=message.get("from", {}),
+                    is_removed=False,
+                    platform_slug=platform_slug,
+                )
+
+        if message.get("chat", {}).get("type") in ("group", "supergroup"):
+            return JsonResponse({"ok": True, "status": "group command ignored"})
+
         bot_user = BotUser.objects.filter(
             platform__slug=platform_slug, chat_id=str(chat_id)
         ).select_related("user").first()
@@ -373,17 +427,28 @@ def _handle_message(message, platform_slug: str = "bale"):
     if chat_type == "private":
         return _handle_private_message(message, platform_slug=platform_slug)
 
+    if chat_type in ("group", "supergroup"):
+        return _handle_hub_group_message(message, platform_slug=platform_slug)
+
     return JsonResponse({"ok": True, "status": "ignored"})
 
 
 def _handle_bot_added_to_chat(message, platform_slug: str = "bale"):
-    """پردازش رویداد اضافه شدن ربات به کانال (new_chat_members)."""
+    """پردازش رویداد اضافه شدن ربات به کانال یا گروه هاب (new_chat_members)."""
     chat = message.get("chat", {})
     from_user = message.get("from", {})
 
     chat_id = chat.get("id")
     chat_type = chat.get("type")
     from_chat_id = from_user.get("id")
+
+    if chat_type in ("group", "supergroup"):
+        return _handle_hub_membership_event(
+            chat=chat,
+            from_user=from_user,
+            is_removed=False,
+            platform_slug=platform_slug,
+        )
 
     if chat_type != "channel":
         return JsonResponse({"ok": True, "status": "not a channel"})
@@ -472,6 +537,13 @@ def _handle_bot_removed_from_chat(message, platform_slug: str = "bale"):
     chat = message.get("chat", {})
     chat_id = chat.get("id")
 
+    if chat.get("type") in ("group", "supergroup"):
+        return _handle_hub_membership_event(
+            chat=chat,
+            from_user=message.get("from", {}),
+            is_removed=True,
+            platform_slug=platform_slug,
+        )
     if chat.get("type") != "channel":
         return JsonResponse({"ok": True, "status": "not a channel"})
 
@@ -536,8 +608,8 @@ def _handle_connect_user(token, chat_id, from_user, platform_slug: str = "bale")
 
 
 def _handle_status_command(chat_id, platform_slug: str = "bale"):
-    """نمایش وضعیت حساب کاربری، اشتراک پلتفرم‌ها و تعداد کانال‌ها."""
-    from product.forward.subscriptions.access import get_user_platform_access_map, platform_label
+    """نمایش وضعیت حساب کاربری، موجودی توکن و تعداد کانال‌ها."""
+    from product.forward.subscriptions.services import account_for
 
     adapter = get_adapter(platform_slug)
     bot_user = BotUser.objects.filter(
@@ -548,29 +620,24 @@ def _handle_status_command(chat_id, platform_slug: str = "bale"):
         _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "not connected"})
 
-    access_map = get_user_platform_access_map(bot_user.user)
-    sub_lines = []
-    for slug in ("bale", "eitaa", "rubika", "telegram"):
-        acc = access_map.get(slug)
-        if acc and acc.is_valid:
-            sub_lines.append(f"  ✅ {platform_label(slug)}: فعال ({acc.remaining_days} روز مانده)")
-        else:
-            sub_lines.append(f"  🔒 {platform_label(slug)}: غیرفعال")
-
+    acc = account_for(bot_user.user)
     channels = BroadcastChannel.objects.filter(user=bot_user.user, is_active=True, bot_is_admin=True)
     bale_cnt = channels.filter(platform__slug="bale").count()
     eitaa_cnt = channels.filter(platform__slug="eitaa").count()
     rubika_cnt = channels.filter(platform__slug="rubika").count()
     telegram_cnt = channels.filter(platform__slug="telegram").count()
+    soroush_cnt = channels.filter(platform__slug="soroush").count()
 
     p_name = _PLATFORM_NAMES_FA.get(platform_slug, platform_slug)
+    gift_hint = "\n🎁 **هدیه ۳۵۰ توکن رایگان شما هنوز دریافت نشده!** از لینک زیر دریافت کنید." if acc.can_use_trial else ""
     msg = (
-        f"👤 **وضعیت حساب و اشتراک شما**\n\n"
+        f"🪙 **وضعیت حساب و کیف توکن شما**\n\n"
         f"📱 شماره موبایل: `{bot_user.user.phone_number}`\n"
         f"📅 تاریخ اتصال {p_name}: {bot_user.linked_at.strftime('%Y/%m/%d') if bot_user.linked_at else 'نامشخص'}\n\n"
-        f"💎 **وضعیت اشتراک پلتفرم‌ها:**\n" + "\n".join(sub_lines) + "\n\n"
+        f"💎 **موجودی فعلی:** `{acc.token_balance:,} توکن` (بدون انقضا · قابل استفاده در هر ۵ پلتفرم)\n"
+        f"📊 **کل مصرف تا امروز:** {acc.total_tokens_spent:,} توکن{gift_hint}\n\n"
         f"📢 **کانال‌های آماده ارسال:**\n"
-        f"• بله: {bale_cnt} | ایتا: {eitaa_cnt} | روبیکا: {rubika_cnt} | تلگرام: {telegram_cnt}"
+        f"• بله: {bale_cnt} | ایتا: {eitaa_cnt} | روبیکا: {rubika_cnt} | تلگرام: {telegram_cnt} · سروش‌پلاس: {soroush_cnt}"
     )
     _bot_send(
         adapter,
@@ -578,7 +645,7 @@ def _handle_status_command(chat_id, platform_slug: str = "bale"):
         msg,
         reply_markup={
             "inline_keyboard": [
-                [{"text": "💎 خرید یا تمدید اشتراک در سایت", "url": _WINJOB_PLANS_URL}],
+                [{"text": "🪙 شارژ توکن / دریافت هدیه رایگان", "url": _WINJOB_PLANS_URL}],
             ]
         },
         platform_slug=platform_slug,
@@ -645,7 +712,7 @@ def _handle_channels_command(chat_id, platform_slug: str = "bale"):
 
 
 def _handle_presets_command(chat_id, platform_slug: str = "bale"):
-    """نمایش لیست پروفایل‌های ارسال کاربر برای مشاهده جزئیات یا مدیریت در پنل وب."""
+    """نمایش لیست پکیج‌های ارسال کاربر برای مشاهده جزئیات یا مدیریت در پنل وب."""
     adapter = get_adapter(platform_slug)
     bot_user = BotUser.objects.filter(
         platform__slug=platform_slug, chat_id=str(chat_id)
@@ -665,11 +732,11 @@ def _handle_presets_command(chat_id, platform_slug: str = "bale"):
         _bot_send(
             adapter,
             chat_id,
-            "📦 شما هنوز هیچ پروفایل ارسالی نساخته‌اید.\n\n"
-            "با ساخت پروفایل (مثلاً «فروش» یا «اخبار»)، هنگام ارسال پیام فقط با یک کلیک به کل آن گروه کانال پیام می‌فرستید.",
+            "📦 شما هنوز هیچ پکیج ارسالی نساخته‌اید.\n\n"
+            "با ساخت پکیج (مثلاً «فروش» یا «اخبار»)، هنگام ارسال پیام فقط با یک کلیک به کل آن گروه کانال پیام می‌فرستید.",
             reply_markup={
                 "inline_keyboard": [
-                    [{"text": "➕ ساخت پروفایل در پنل وب", "url": _WINJOB_PRESETS_URL}],
+                    [{"text": "➕ ساخت پکیج در پنل وب", "url": _WINJOB_PRESETS_URL}],
                 ]
             },
             platform_slug=platform_slug,
@@ -680,12 +747,12 @@ def _handle_presets_command(chat_id, platform_slug: str = "bale"):
         [{"text": f"📦 {p.name} ({p.channels.count()} کانال)", "callback_data": f"viewpreset_{p.pk}"}]
         for p in presets
     ]
-    inline_keyboard.append([{"text": "⚙️ ساخت یا مدیریت پروفایل‌ها در سایت", "url": _WINJOB_PRESETS_URL}])
+    inline_keyboard.append([{"text": "⚙️ ساخت یا مدیریت پکیج‌ها در سایت", "url": _WINJOB_PRESETS_URL}])
 
     _bot_send(
         adapter,
         chat_id,
-        "📦 **پروفایل‌های ارسال شما**\nبرای دیدن کانال‌های عضو هر پروفایل روی آن بزنید (ویرایش و حذف در پنل وب انجام می‌شود):",
+        "📦 **پکیج‌های ارسال شما**\nبرای دیدن کانال‌های عضو هر پکیج روی آن بزنید (ویرایش و حذف در پنل وب انجام می‌شود):",
         reply_markup={"inline_keyboard": inline_keyboard},
         platform_slug=platform_slug,
     )
@@ -729,8 +796,8 @@ def _handle_help_command(chat_id, platform_slug: str = "bale"):
 
     help_text = (
         "❓ **راهنمای سریع وین فوروارد**\n\n"
-        "1️⃣ **ارسال پیام:** دکمه «📤 ارسال پیام» را بزنید، پست یا فایل خود را بفرستید، پروفایل یا کانال‌ها را انتخاب کنید و «🚀 تایید و ارسال» را بزنید.\n"
-        "2️⃣ **پروفایل‌های ارسال:** از پنل وب کانال‌هایتان را دسته‌بندی کنید تا هر بار مجبور به انتخاب تکی کانال‌ها نباشید.\n"
+        "1️⃣ **ارسال پیام:** دکمه «📤 ارسال پیام» را بزنید، پست یا فایل خود را بفرستید، پکیج یا کانال‌ها را انتخاب کنید و «🚀 تایید و ارسال» را بزنید.\n"
+        "2️⃣ **پکیج‌های ارسال:** از پنل وب کانال‌هایتان را دسته‌بندی کنید تا هر بار مجبور به انتخاب تکی کانال‌ها نباشید.\n"
         "3️⃣ **اتصال ۴ پلتفرم:** بله، تلگرام، ایتا و روبیکا همگی از طریق پنل وب قابل اتصال‌اند و از همین ربات می‌توانید به همه آن‌ها پیام بفرستید.\n\n"
         f"🌐 **پنل وب و پشتیبانی:** [ورود به پنل وین فوروارد]({_WINJOB_FORWARD_URL})"
     )
@@ -748,17 +815,32 @@ def _handle_help_command(chat_id, platform_slug: str = "bale"):
     return JsonResponse({"ok": True, "status": "help sent"})
 
 
+def _is_soroush_locked_for_message(msg) -> tuple[bool, str]:
+    """بررسی قفل بودن کانال‌های سروش‌پلاس برای پیام فعلی (فقط متن و رسانه دارای کپشن مجاز است)."""
+    ctype = getattr(msg, "content_type", "text")
+    if ctype in ("sticker", "animation"):
+        return True, "ارسال استیکر و گیف در سروش‌پلاس پشتیبانی نمی‌شود."
+    if ctype != "text" and not (getattr(msg, "text", "") or "").strip():
+        return True, "برای ارسال به سروش‌پلاس، فایل باید دارای کپشن باشد (فقط متن کپشن ارسال می‌شود)."
+    return False, ""
+
+
 def _build_draft_keyboard(job, manual_mode: bool = False):
-    """ساخت کیبورد شیشه‌ای هوشمند برای انتخاب پروفایل‌ها، انتخاب دستی کانال‌ها، انتخاب همه و لغو پیش‌نویس."""
+    """ساخت کیبورد شیشه‌ای هوشمند برای انتخاب پکیج‌ها، انتخاب دستی کانال‌ها، انتخاب همه و لغو پیش‌نویس."""
     from product.forward.subscriptions.access import get_active_platform_slugs
 
     active_slugs = get_active_platform_slugs(job.message.user)
+    soroush_locked, _ = _is_soroush_locked_for_message(job.message)
     channels = list(
         BroadcastChannel.objects.filter(
             user=job.message.user, is_active=True, bot_is_admin=True
         ).select_related("platform")
     )
-    eligible_channel_ids = {ch.pk for ch in channels if ch.platform.slug in active_slugs}
+    eligible_channel_ids = {
+        ch.pk
+        for ch in channels
+        if ch.platform.slug in active_slugs and not (soroush_locked and ch.platform.slug == "soroush")
+    }
     selected_channel_ids = set(job.targets.values_list("channel_id", flat=True))
 
     presets = list(
@@ -778,7 +860,7 @@ def _build_draft_keyboard(job, manual_mode: bool = False):
             }
             if not preset_eligible_ids:
                 inline_keyboard.append([
-                    {"text": f"🔒 📦 {preset.name} (نیاز به اشتراک یا کانال فعال)", "callback_data": f"preset_{job.pk}_{preset.pk}"}
+                    {"text": f"🔒 📦 {preset.name} (نیاز به توکن یا کانال فعال)", "callback_data": f"preset_{job.pk}_{preset.pk}"}
                 ])
             else:
                 is_selected = preset_eligible_ids.issubset(selected_channel_ids)
@@ -800,7 +882,7 @@ def _build_draft_keyboard(job, manual_mode: bool = False):
     else:
         if presets:
             inline_keyboard.append([
-                {"text": "🔙 بازگشت به پروفایل‌های ارسال", "callback_data": f"presetsview_{job.pk}"}
+                {"text": "🔙 بازگشت به پکیج‌های ارسال", "callback_data": f"presetsview_{job.pk}"}
             ])
 
         if eligible_channel_ids:
@@ -814,7 +896,11 @@ def _build_draft_keyboard(job, manual_mode: bool = False):
         for ch in channels:
             if ch.platform.slug not in active_slugs:
                 inline_keyboard.append([
-                    {"text": f"🔒 {ch.title} ({ch.platform.name} - نیاز به اشتراک)", "callback_data": f"locked_{ch.platform.slug}"}
+                    {"text": f"🔒 {ch.title} ({ch.platform.name} - نیاز به توکن)", "callback_data": f"locked_{ch.platform.slug}"}
+                ])
+            elif soroush_locked and ch.platform.slug == "soroush":
+                inline_keyboard.append([
+                    {"text": f"🔒 {ch.title} (سروش‌پلاس - فقط متن/کپشن)", "callback_data": "soroush_locked"}
                 ])
             else:
                 is_selected = ch.pk in selected_channel_ids
@@ -845,21 +931,29 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
         _send_guest_welcome(adapter, chat_id, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "unauthorized"})
 
-    # ۰. کلیک روی کانال نیازمند اشتراک
+    # ۰. کلیک روی کانال نیازمند شارژ توکن
     if data.startswith("locked_"):
-        from product.forward.subscriptions.access import platform_label
-        slug = data.replace("locked_", "")
         _bot_send(
             adapter,
             chat_id,
-            f"🔒 اشتراک فعال برای پلتفرم «{platform_label(slug)}» ندارید.\n"
-            "برای فعال‌سازی، به بخش اشتراک وین‌فوروارد در سایت مراجعه کنید.",
-            reply_markup={"inline_keyboard": [[{"text": "💎 خرید اشتراک", "url": _WINJOB_PLANS_URL}]]},
+            "🪙 موجودی توکن شما برای ارسال پیام کافی نیست (حداقل ۲ توکن لازم است).\n"
+            f"می‌توانید از [بخش کیف توکن وین‌فوروارد]({_WINJOB_PLANS_URL}) هدیه ۳۵۰ توکنی رایگان بگیرید یا بسته توکن تهیه کنید.",
             platform_slug=platform_slug,
         )
-        return JsonResponse({"ok": True, "status": "locked platform"})
+        return JsonResponse({"ok": True, "status": "insufficient tokens"})
 
-    # ۱-الف. انتخاب/لغو انتخاب یک پروفایل ارسال
+    # ۰-ب. کلیک روی کانال قفل‌شده سروش‌پلاس (فایل بدون کپشن / استیکر / گیف)
+    if data == "soroush_locked":
+        _bot_send(
+            adapter,
+            chat_id,
+            "🔒 در سروش‌پلاس فقط پیام متنی یا کپشن فایل‌ها ارسال می‌شود (۲ توکن).\n"
+            "چون این پیام فایل بدون کپشن (یا استیکر/گیف) است، کانال‌های سروش‌پلاس قفل شده‌اند.",
+            platform_slug=platform_slug,
+        )
+        return JsonResponse({"ok": True, "status": "soroush locked"})
+
+    # ۱-الف. انتخاب/لغو انتخاب یک پکیج ارسال
     if data.startswith("preset_"):
         try:
             from product.forward.subscriptions.access import get_active_platform_slugs
@@ -880,7 +974,7 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
                 _bot_send(
                     adapter,
                     chat_id,
-                    f"⚠️ پروفایل «{preset.name}» هیچ کانال فعالی با اشتراک معتبر ندارد.",
+                    f"⚠️ پکیج «{preset.name}» هیچ کانال فعالی ندارد یا موجودی توکن شما کافی نیست.",
                     platform_slug=platform_slug,
                 )
                 return JsonResponse({"ok": True, "status": "preset has no eligible channels"})
@@ -901,7 +995,7 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
 
         return JsonResponse({"ok": True, "status": "preset toggled"})
 
-    # ۱-ب. جابجایی به حالت انتخاب دستی کانال‌ها یا بازگشت به پروفایل‌ها
+    # ۱-ب. جابجایی به حالت انتخاب دستی کانال‌ها یا بازگشت به پکیج‌ها
     if data.startswith("manual_") or data.startswith("presetsview_"):
         try:
             is_manual = data.startswith("manual_")
@@ -926,12 +1020,13 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
                 return JsonResponse({"ok": True, "status": "job not found"})
 
             active_slugs = get_active_platform_slugs(bot_user.user)
+            soroush_locked, _ = _is_soroush_locked_for_message(job.message)
             eligible_ids = [
                 ch.pk
                 for ch in BroadcastChannel.objects.filter(
                     user=bot_user.user, is_active=True, bot_is_admin=True
                 ).select_related("platform")
-                if ch.platform.slug in active_slugs
+                if ch.platform.slug in active_slugs and not (soroush_locked and ch.platform.slug == "soroush")
             ]
             selected_ids = set(job.targets.values_list("channel_id", flat=True))
             if eligible_ids and set(eligible_ids).issubset(selected_ids):
@@ -961,6 +1056,11 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
             if target:
                 target.delete()
             else:
+                ch_obj = BroadcastChannel.objects.filter(pk=channel_id, user=bot_user.user).select_related("platform").first()
+                soroush_locked, lock_reason = _is_soroush_locked_for_message(job.message)
+                if ch_obj and ch_obj.platform.slug == "soroush" and soroush_locked:
+                    _bot_send(adapter, chat_id, f"🔒 {lock_reason}", platform_slug=platform_slug)
+                    return JsonResponse({"ok": True, "status": "soroush locked"})
                 BroadcastTarget.objects.create(job=job, channel_id=channel_id)
 
             if message_id:
@@ -1018,7 +1118,7 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
                 _bot_send(
                     adapter,
                     chat_id,
-                    "⚠️ لطفاً حداقل یک پروفایل یا کانال را انتخاب کنید.",
+                    "⚠️ لطفاً حداقل یک پکیج یا کانال را انتخاب کنید.",
                     platform_slug=platform_slug,
                 )
                 return JsonResponse({"ok": True, "status": "no targets"})
@@ -1044,7 +1144,7 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
 
         return JsonResponse({"ok": True, "status": "send processed"})
 
-    # ۳. مدیریت کانال‌ها و پروفایل‌ها
+    # ۳. مدیریت کانال‌ها و پکیج‌ها
     if (
         data.startswith("ch_")
         or data == "back_list"
@@ -1058,7 +1158,7 @@ def _handle_callback_query(callback, platform_slug: str = "bale"):
 
 
 def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_slug: str = "bale"):
-    """مدیریت مشاهده جزئیات کانال‌ها و پروفایل‌ها در ربات (حذف و ویرایش از طریق پنل وب)."""
+    """مدیریت مشاهده جزئیات کانال‌ها و پکیج‌ها در ربات (حذف و ویرایش از طریق پنل وب)."""
     from product.forward.subscriptions.access import user_has_platform_access
 
     data = callback.get("data", "")
@@ -1072,7 +1172,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_sl
 
         admin_status = "✅ ربات/اکانت متصل است" if channel.bot_is_admin else "⚠️ دسترسی ارسال تایید نشده"
         has_sub = user_has_platform_access(bot_user.user, channel.platform.slug)
-        sub_status = "✅ اشتراک فعال" if has_sub else "🔒 نیاز به اشتراک"
+        tok_status = "✅ آماده ارسال با توکن" if has_sub else "🪙 نیاز به شارژ توکن"
         username_line = f"🔗 آیدی: @{channel.username}\n" if channel.username else ""
 
         text = (
@@ -1081,7 +1181,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_sl
             f"{username_line}"
             f"🆔 شناسه: `{channel.chat_id}`\n"
             f"🛡️ وضعیت اتصال: {admin_status}\n"
-            f"💎 وضعیت اشتراک: {sub_status}\n\n"
+            f"🪙 وضعیت توکن: {tok_status}\n\n"
             "برای حذف یا ویرایش این کانال از پنل وب استفاده کنید:"
         )
         web_channel_url = f"https://winjob.ir/forward/{channel.platform.slug}/channels/"
@@ -1126,7 +1226,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_sl
             .first()
         )
         if not preset:
-            _bot_send(adapter, chat_id, "❌ پروفایل یافت نشد.", platform_slug=platform_slug)
+            _bot_send(adapter, chat_id, "❌ پکیج یافت نشد.", platform_slug=platform_slug)
             return JsonResponse({"ok": True})
 
         ch_lines = [
@@ -1135,9 +1235,9 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_sl
         ]
         channels_block = "\n".join(ch_lines) if ch_lines else "  (بدون کانال)"
         text = (
-            f"📦 **جزئیات پروفایل «{preset.name}»**\n\n"
+            f"📦 **جزئیات پکیج «{preset.name}»**\n\n"
             f"📢 **کانال‌های عضو ({len(ch_lines)}):**\n{channels_block}\n\n"
-            "برای ویرایش یا حذف این پروفایل از پنل وب اقدام کنید:"
+            "برای ویرایش یا حذف این پکیج از پنل وب اقدام کنید:"
         )
         edit_url = f"https://winjob.ir/forward/presets/{preset.pk}/edit/"
         _bot_send(
@@ -1147,7 +1247,7 @@ def _handle_dashboard_callback(callback, adapter, chat_id, bot_user, platform_sl
             reply_markup={
                 "inline_keyboard": [
                     [{"text": "✏️ ویرایش یا حذف در پنل وب", "url": edit_url}],
-                    [{"text": "🔙 بازگشت به لیست پروفایل‌ها", "callback_data": "back_presets"}],
+                    [{"text": "🔙 بازگشت به لیست پکیج‌ها", "callback_data": "back_presets"}],
                 ]
             },
             platform_slug=platform_slug,
@@ -1184,11 +1284,11 @@ def _handle_private_message(message, platform_slug: str = "bale"):
         _set_awaiting_broadcast(bot_user, False)
         return _handle_channels_command(chat_id, platform_slug=platform_slug)
 
-    if text_content == "📦 پروفایل‌های ارسال":
+    if text_content == "📦 پکیج‌های ارسال":
         _set_awaiting_broadcast(bot_user, False)
         return _handle_presets_command(chat_id, platform_slug=platform_slug)
 
-    if text_content == "👤 حساب و اشتراک":
+    if text_content in ("👤 حساب و اشتراک", "🪙 حساب و توکن"):
         _set_awaiting_broadcast(bot_user, False)
         return _handle_status_command(chat_id, platform_slug=platform_slug)
 
@@ -1209,7 +1309,7 @@ def _handle_private_message(message, platform_slug: str = "bale"):
         _bot_send(
             adapter,
             chat_id,
-            f"🌐 برای مدیریت کامل کانال‌ها، پروفایل‌ها و گزارش ارسال‌ها روی [ورود به پنل وین فوروارد]({_WINJOB_FORWARD_URL}) بزنید.",
+            f"🌐 برای مدیریت کامل کانال‌ها، پکیج‌ها و گزارش ارسال‌ها روی [ورود به پنل وین فوروارد]({_WINJOB_FORWARD_URL}) بزنید.",
             reply_markup={
                 "inline_keyboard": [
                     [{"text": "🌐 باز کردن پنل وین فوروارد", "url": _WINJOB_FORWARD_URL}]
@@ -1282,7 +1382,27 @@ def _handle_private_message(message, platform_slug: str = "bale"):
         _bot_send(adapter, chat_id, "⚠️ محتوای پیام قابل پردازش نبود.", reply_markup=_CANCEL_SEND_KEYBOARD, platform_slug=platform_slug)
         return JsonResponse({"ok": True, "status": "empty message"})
 
-    file_ids_payload = {"source_platform": platform_slug}
+    incoming_size = 0
+    for media_key in ("video", "document", "audio", "voice", "animation", "sticker"):
+        if media_key in message and isinstance(message[media_key], dict):
+            incoming_size = int(message[media_key].get("file_size") or 0)
+            break
+    if not incoming_size and "photo" in message and isinstance(message["photo"], list) and message["photo"]:
+        incoming_size = int(message["photo"][-1].get("file_size") or 0)
+
+    from product.forward.subscriptions.services import calculate_delivery_token_cost, get_max_file_size_bytes
+    max_bytes = get_max_file_size_bytes()
+    if incoming_size > max_bytes:
+        _bot_send(
+            adapter,
+            chat_id,
+            f"⚠️ حجم این فایل بیشتر از سقف مجاز (**{max_bytes // (1024 * 1024)} مگابایت**) است و امکان انتقال آن وجود ندارد.",
+            reply_markup=_CANCEL_SEND_KEYBOARD,
+            platform_slug=platform_slug,
+        )
+        return JsonResponse({"ok": True, "status": "file too large"})
+
+    file_ids_payload = {"source_platform": platform_slug, "file_size": incoming_size}
     if platform_file_id:
         file_ids_payload[platform_slug] = platform_file_id
         if original_file_name:
@@ -1301,21 +1421,28 @@ def _handle_private_message(message, platform_slug: str = "bale"):
         _bot_send(adapter, chat_id, f"❌ خطا در ساخت پیش‌نویس: {exc}", reply_markup=_USER_KEYBOARD, platform_slug=platform_slug)
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
 
-    from product.forward.subscriptions.access import user_has_platform_access
-    if not user_has_platform_access(bot_user.user, platform_slug):
+    from product.forward.subscriptions.access import get_user_token_balance
+    unit_cost = calculate_delivery_token_cost(
+        content_type=content_type,
+        has_caption=bool((text_content or "").strip()),
+        file_size_bytes=incoming_size,
+        is_hub=False,
+    )
+    user_tokens = get_user_token_balance(bot_user.user)
+    if user_tokens < unit_cost:
         _bot_send(
             adapter,
             chat_id,
-            "🔒 اشتراک وین‌فوروارد شما فعال نیست یا منقضی شده است.\n"
-            "برای ارسال پیام از طریق ربات، اشتراک خود را در سایت فعال کنید:",
+            f"🪙 موجودی توکن شما کافی نیست! (موجودی: **{user_tokens:,}** | نیاز برای هر کانال: **{unit_cost} توکن**)\n"
+            "برای دریافت ۳۵۰ توکن رایگان یا خرید بسته توکن وارد سایت شوید:",
             reply_markup={
                 "inline_keyboard": [
-                    [{"text": "💎 فعال‌سازی / تمدید اشتراک در سایت", "url": _WINJOB_PLANS_URL}],
+                    [{"text": "🪙 شارژ توکن / دریافت هدیه رایگان", "url": _WINJOB_PLANS_URL}],
                 ]
             },
             platform_slug=platform_slug,
         )
-        return JsonResponse({"ok": True, "status": "no subscription"})
+        return JsonResponse({"ok": True, "status": "insufficient tokens"})
 
     has_channels = BroadcastChannel.objects.filter(
         user=bot_user.user, is_active=True, bot_is_admin=True
@@ -1339,8 +1466,251 @@ def _handle_private_message(message, platform_slug: str = "bale"):
     _bot_send(
         adapter,
         chat_id,
-        "📝 **پیش‌نویس آماده ارسال است!**\nپروفایل ارسال یا کانال‌های مقصد را انتخاب کنید و سپس «🚀 تایید و ارسال» را بزنید:",
+        f"📝 **پیش‌نویس آماده ارسال است!**\n🪙 هزینه هر کانال: **{unit_cost} توکن** | موجودی شما: **{user_tokens:,} توکن**\nپکیج یا کانال‌های مقصد را انتخاب کنید و سپس «🚀 تایید و ارسال» را بزنید:",
         reply_markup=reply_markup,
         platform_slug=platform_slug,
     )
     return JsonResponse({"ok": True, "status": "draft created", "job_id": job.pk})
+
+
+def _extract_message_media(message: dict) -> tuple[str, str | None, str, str]:
+    """استخراج یکپارچه نوع محتوا، شناسه فایل، نام فایل و متن/کپشن از آبجکت پیام."""
+    content_type = "text"
+    platform_file_id = None
+    original_file_name = ""
+    text_content = (message.get("text") or "").strip()
+
+    if "sticker" in message:
+        content_type = "sticker"
+        platform_file_id = message["sticker"]["file_id"]
+        text_content = ""
+    elif "animation" in message:
+        content_type = "animation"
+        platform_file_id = message["animation"]["file_id"]
+        original_file_name = message["animation"].get("file_name") or ""
+        text_content = message.get("caption", "") or ""
+    elif "photo" in message:
+        content_type = "photo"
+        platform_file_id = message["photo"][-1]["file_id"]
+        text_content = message.get("caption", "") or ""
+    elif "video" in message:
+        content_type = "video"
+        platform_file_id = message["video"]["file_id"]
+        original_file_name = message["video"].get("file_name") or ""
+        text_content = message.get("caption", "") or ""
+    elif "voice" in message:
+        content_type = "voice"
+        platform_file_id = message["voice"]["file_id"]
+        original_file_name = message["voice"].get("file_name") or ""
+        text_content = message.get("caption", "") or ""
+    elif "audio" in message:
+        content_type = "audio"
+        audio_obj = message["audio"]
+        platform_file_id = audio_obj["file_id"]
+        original_file_name = audio_obj.get("file_name") or ""
+        if not original_file_name and audio_obj.get("title"):
+            original_file_name = f"{audio_obj['title']}.mp3"
+        text_content = message.get("caption", "") or ""
+    elif "document" in message:
+        doc_obj = message["document"]
+        platform_file_id = doc_obj["file_id"]
+        original_file_name = doc_obj.get("file_name") or ""
+        doc_mime = (doc_obj.get("mime_type") or "").lower()
+        if doc_mime.startswith("audio/") or original_file_name.lower().endswith(
+            (".mp3", ".m4a", ".wav", ".flac", ".aac")
+        ):
+            content_type = "audio"
+        else:
+            content_type = "document"
+        text_content = message.get("caption", "") or ""
+
+    return content_type, platform_file_id, original_file_name, text_content
+
+
+def _handle_hub_membership_event(chat: dict, from_user: dict, is_removed: bool, platform_slug: str):
+    """ثبت خودکار یا غیرفعال‌سازی گروه هاب هنگام اضافه یا حذف شدن ربات در گروه."""
+    logger.warning(
+        "[HUB] membership event: platform=%s chat_id=%s from_id=%s is_removed=%s",
+        platform_slug,
+        chat.get("id"),
+        from_user.get("id"),
+        is_removed,
+    )
+    platform = Platform.objects.filter(slug=platform_slug).first()
+    if not platform:
+        return JsonResponse({"ok": False, "error": "Platform missing"}, status=500)
+
+    group_chat_id = str(chat.get("id") or "")
+    if not group_chat_id:
+        return JsonResponse({"ok": True, "status": "missing group chat_id"})
+
+    if is_removed:
+        updated = BroadcastHub.objects.filter(platform=platform, group_chat_id=group_chat_id).update(is_active=False)
+        return JsonResponse({"ok": True, "status": "hub deactivated" if updated else "hub not found"})
+
+    adapter = get_adapter(platform_slug)
+    from_chat_id = from_user.get("id")
+    bot_user = BotUser.objects.filter(platform=platform, chat_id=str(from_chat_id)).select_related("user").first()
+
+    if not bot_user:
+        if adapter and group_chat_id:
+            try:
+                _bot_send(
+                    adapter,
+                    group_chat_id,
+                    "سلام! 👋 برای ثبت این گروه به عنوان **هاب ارسال تیمی**، ابتدا باید حسابتان در پنل وین‌فوروارد متصل باشد.\n"
+                    "پس از اتصال حساب، کافی است دستور `/bindhub` را در همین گروه ارسال کنید.",
+                    reply_markup={
+                        "inline_keyboard": [[{"text": "🌐 ورود به پنل وین فوروارد", "url": _WINJOB_FORWARD_URL}]]
+                    },
+                    platform_slug=platform_slug,
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to send hub onboarding message: {exc}")
+        return JsonResponse({"ok": True, "status": "hub user not linked"})
+
+    group_title = chat.get("title") or f"گروه {group_chat_id}"
+    hub, created = BroadcastHub.objects.update_or_create(
+        platform=platform,
+        group_chat_id=group_chat_id,
+        defaults={
+            "user": bot_user.user,
+            "title": group_title,
+            "is_active": True,
+        },
+    )
+
+    hub_edit_url = f"https://winjob.ir/forward/hubs/{hub.pk}/edit/"
+    if adapter and from_chat_id:
+        try:
+            _bot_send(
+                adapter,
+                from_chat_id,
+                f"🚀 گروه **«{hub.title}»** با موفقیت به عنوان **هاب تیمی** ثبت شد!\n\n"
+                "الان از لینک زیر وارد تنظیمات این هاب شوید و پکیج ارسال (یا کانال‌های مقصد) آن را انتخاب کنید:",
+                reply_markup={
+                    "inline_keyboard": [[{"text": "⚙️ تنظیم پروفایل و کانال‌های هاب", "url": hub_edit_url}]]
+                },
+                platform_slug=platform_slug,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to send hub DM to owner: {exc}")
+
+    return JsonResponse({
+        "ok": True,
+        "status": "hub created" if created else "hub updated",
+        "hub_id": hub.pk,
+    })
+
+
+def _handle_hub_group_message(message: dict, platform_slug: str):
+    """پردازش خودکار پیام‌های اعضای گروه هاب، انتشار به کانال‌ها، ری‌اکشن ✅ و گزارش در پی‌وی فرستنده."""
+    from product.forward.broadcast.models import BroadcastMessage
+    from product.forward.subscriptions.access import user_has_platform_access
+
+    chat_id = str(message.get("chat", {}).get("id") or "")
+    from_user = message.get("from") or {}
+    if from_user.get("is_bot"):
+        return JsonResponse({"ok": True, "status": "bot message ignored"})
+
+    hub = (
+        BroadcastHub.objects.filter(platform__slug=platform_slug, group_chat_id=chat_id, is_active=True)
+        .select_related("user", "preset")
+        .first()
+    )
+    if not hub:
+        return JsonResponse({"ok": True, "status": "not an active hub"})
+
+    content_type, platform_file_id, original_file_name, text_content = _extract_message_media(message)
+    if not text_content and not platform_file_id:
+        return JsonResponse({"ok": True, "status": "empty group message ignored"})
+
+    # بررسی شرط هشتگ #ارسال در صورت تنظیم شدن روی هاب
+    if hub.publish_mode == BroadcastHub.PublishMode.HASHTAG:
+        if "#ارسال" not in text_content:
+            return JsonResponse({"ok": True, "status": "skipped without #ارسال"})
+        text_content = re.sub(r"\s*#ارسال\s*", " ", text_content).strip()
+        if not text_content and not platform_file_id:
+            return JsonResponse({"ok": True, "status": "empty after hashtag removal"})
+
+    adapter = get_adapter(platform_slug)
+    sender_chat_id = str(from_user.get("id") or "")
+
+    # بررسی موجودی توکن مالک هاب و وجود کانال‌های مقصد تنظیم‌شده
+    if not user_has_platform_access(hub.user, platform_slug):
+        owner_bu = BotUser.objects.filter(user=hub.user, platform__slug=platform_slug).first()
+        if adapter and owner_bu:
+            try:
+                _bot_send(
+                    adapter,
+                    owner_bu.chat_id,
+                    f"🪙 پیامی در هاب «{hub.title}» ارسال شد اما موجودی توکن شما کافی نیست.",
+                    reply_markup={"inline_keyboard": [[{"text": "🪙 شارژ توکن", "url": _WINJOB_PLANS_URL}]]},
+                    platform_slug=platform_slug,
+                )
+            except Exception:
+                pass
+        return JsonResponse({"ok": True, "status": "hub owner no subscription"})
+
+    target_channels = hub.get_target_channels()
+    if not target_channels:
+        owner_bu = BotUser.objects.filter(user=hub.user, platform__slug=platform_slug).first()
+        if adapter and owner_bu:
+            try:
+                _bot_send(
+                    adapter,
+                    owner_bu.chat_id,
+                    f"⚠️ پیامی در هاب «{hub.title}» فرستاده شد اما هنوز پکیج یا کانال مقصدی برای این هاب انتخاب نکرده‌اید:",
+                    reply_markup={
+                        "inline_keyboard": [
+                            [{"text": "⚙️ تنظیم کانال‌های هاب", "url": f"https://winjob.ir/forward/hubs/{hub.pk}/edit/"}]
+                        ]
+                    },
+                    platform_slug=platform_slug,
+                )
+            except Exception:
+                pass
+        return JsonResponse({"ok": True, "status": "hub has no target channels"})
+
+    hub_file_size = 0
+    for media_key in ("video", "document", "audio", "voice", "animation", "sticker"):
+        if media_key in message and isinstance(message[media_key], dict):
+            hub_file_size = int(message[media_key].get("file_size") or 0)
+            break
+    if not hub_file_size and "photo" in message and isinstance(message["photo"], list) and message["photo"]:
+        hub_file_size = int(message["photo"][-1].get("file_size") or 0)
+
+    from product.forward.subscriptions.services import get_max_file_size_bytes
+    if hub_file_size > get_max_file_size_bytes():
+        return JsonResponse({"ok": True, "status": "hub file exceeds 20mb"})
+
+    file_ids_payload = {"source_platform": platform_slug, "hub_id": hub.pk, "file_size": hub_file_size}
+    if platform_file_id:
+        file_ids_payload[platform_slug] = platform_file_id
+        if original_file_name:
+            file_ids_payload[f"{platform_slug}_file_name"] = original_file_name
+
+    msg = BroadcastMessage.objects.create(
+        user=hub.user,
+        content_type=content_type,
+        text=text_content,
+        platform_file_ids=file_ids_payload,
+    )
+    job = BroadcastJob.objects.create(
+        message=msg,
+        status=BroadcastJob.Status.PENDING,
+        total_targets=len(target_channels),
+    )
+    BroadcastTarget.objects.bulk_create([
+        BroadcastTarget(job=job, channel=ch) for ch in target_channels
+    ])
+
+    enqueue_dispatch_job(
+        job.pk,
+        progress_chat_id=sender_chat_id or None,
+        reaction_chat_id=chat_id,
+        reaction_message_id=message.get("message_id"),
+        reaction_platform=platform_slug,
+    )
+    return JsonResponse({"ok": True, "status": "hub job queued", "job_id": job.pk})
+

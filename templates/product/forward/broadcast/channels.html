@@ -1,0 +1,324 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}کانال‌های متصل | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_channels.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">کانال‌های متصل</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <!-- هدر صفحه یکپارچه کانال‌های متصل -->
+    <div class="wf-channels-header wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-channels-header-logo" style="background:linear-gradient(135deg,rgba(7,201,139,0.22),rgba(93,60,242,0.22));border-color:rgba(7,201,139,0.4);">
+                <i class="bi bi-broadcast-pin fs-2 text-success"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">کانال‌های متصل وین فوروارد</h1>
+                    <span class="wf-badge-status is-connected">
+                        <span class="wf-pulse-dot"></span> {{ counts_by_platform.all }} کانال فعال
+                    </span>
+                </div>
+                <p class="text-muted fs-xs mb-0">
+                    مدیریت یکپارچه تمام کانال‌های بله، ایتا، روبیکا، تلگرام و سروش‌پلاس در یک صفحه با فیلتر پیشرفته و نمای کارتی/جدولی.
+                </p>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            {% if selected_platform == 'rubika' or selected_platform == 'all' %}
+                {% if bot_users.rubika and bot_users.rubika.has_rubika_session %}
+                <form method="post" action="{% url 'broadcast:rubika_sync_channels' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-emerald py-2 px-3 fs-xs">
+                        <i class="bi bi-arrow-repeat"></i> شناسایی خودکار روبیکا
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+            {% if selected_platform == 'soroush' or selected_platform == 'all' %}
+                {% if bot_users.soroush and bot_users.soroush.has_soroush_session %}
+                <form method="post" action="{% url 'broadcast:soroush_sync_channels' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-emerald py-2 px-3 fs-xs">
+                        <i class="bi bi-arrow-repeat"></i> شناسایی خودکار سروش‌پلاس
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+            {% if selected_platform == 'eitaa' or selected_platform == 'all' %}
+                {% if bot_users.eitaa and bot_users.eitaa.api_token %}
+                <a href="{% url 'broadcast:eitaa_add_channel' %}" class="wf-btn wf-btn-orange py-2 px-3 fs-xs">
+                    <i class="bi bi-plus-circle-fill"></i> افزودن کانال ایتا
+                </a>
+                {% endif %}
+            {% endif %}
+            {% if selected_platform == 'bale' and counts_by_platform.bale %}
+                <form method="post" action="{% url 'broadcast:bale_sync_avatars' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                        <i class="bi bi-image"></i> بروزرسانی عکس بله
+                    </button>
+                </form>
+            {% endif %}
+            {% if selected_platform == 'telegram' and counts_by_platform.telegram %}
+                <form method="post" action="{% url 'broadcast:telegram_sync_avatars' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                        <i class="bi bi-image"></i> بروزرسانی عکس تلگرام
+                    </button>
+                </form>
+            {% endif %}
+            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-purple py-2 px-3 fs-xs">
+                <i class="bi bi-rocket-takeoff-fill"></i> استدیو ارسال
+            </a>
+        </div>
+    </div>
+
+    <!-- نوار فیلترهای قدرتمند + جستجو + تغییر نمای کارتی/جدولی -->
+    <div class="wf-channels-toolbar wf-reveal wf-delay-1">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom border-light">
+            <div class="wf-platform-filter-pills">
+                {% for tab in platform_tabs %}
+                <a href="?platform={{ tab.slug }}&q={{ search_q|urlencode }}&status={{ status_filter }}&view={{ view_mode }}"
+                   class="wf-platform-pill {% if selected_platform == tab.slug %}is-active{% endif %}">
+                    {% if tab.obj and tab.obj.logo %}
+                        <img src="{{ tab.obj.logo.url }}" alt="{{ tab.name }}">
+                    {% elif tab.slug == 'all' %}
+                        <i class="bi bi-grid-fill text-warning"></i>
+                    {% elif tab.slug == 'telegram' %}
+                        <i class="bi bi-telegram text-info"></i>
+                    {% elif tab.slug == 'bale' %}
+                        <i class="bi bi-send-check-fill text-success"></i>
+                    {% elif tab.slug == 'eitaa' %}
+                        <i class="bi bi-broadcast-pin text-warning"></i>
+                    {% elif tab.slug == 'rubika' %}
+                        <i class="bi bi-phone-vibrate-fill text-primary"></i>
+                    {% elif tab.slug == 'soroush' %}
+                        <i class="bi bi-chat-dots-fill text-info"></i>
+                    {% endif %}
+                    <span>{{ tab.name }}</span>
+                    <span class="wf-platform-pill-count">{{ tab.count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+
+            <div class="wf-view-toggle-group" role="group" aria-label="تغییر نمای نمایش کانال‌ها">
+                <a href="?platform={{ selected_platform }}&q={{ search_q|urlencode }}&status={{ status_filter }}&view=grid"
+                   class="wf-view-toggle-btn {% if view_mode == 'grid' %}is-active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> کارتی
+                </a>
+                <a href="?platform={{ selected_platform }}&q={{ search_q|urlencode }}&status={{ status_filter }}&view=table"
+                   class="wf-view-toggle-btn {% if view_mode == 'table' %}is-active{% endif %}">
+                    <i class="bi bi-table"></i> جدولی
+                </a>
+            </div>
+        </div>
+
+        <form method="get" class="row g-2 align-items-center">
+            <input type="hidden" name="platform" value="{{ selected_platform }}">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ search_q }}"
+                           class="form-control form-control-light"
+                           placeholder="جستجو بر اساس نام کانال، @یوزرنیم یا شناسه...">
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <select name="status" class="form-select form-control-light">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>همه وضعیت‌ها</option>
+                    <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>آماده ارسال (ادمین تاییدشده)</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>نیازمند دسترسی ادمین</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-lg-4 d-flex gap-2 justify-content-md-end">
+                <button type="submit" class="wf-btn wf-btn-emerald py-2 px-3 fs-xs">
+                    <i class="bi bi-funnel-fill"></i> اعمال فیلتر
+                </button>
+                {% if search_q or status_filter != 'all' or selected_platform != 'all' %}
+                <a href="{% url 'broadcast:connected_channels' %}?view={{ view_mode }}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                    پاک کردن
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {% if channels %}
+        {% if view_mode == 'table' %}
+            <!-- نمای جدولی ریسپانسیو -->
+            <div class="wf-channels-table-wrap wf-reveal wf-delay-2">
+                <div class="table-responsive">
+                    <table class="table table-dark table-borderless wf-channels-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>کانال</th>
+                                <th>پلتفرم</th>
+                                <th>یوزرنیم / شناسه</th>
+                                <th>وضعیت</th>
+                                <th>آخرین ارسال</th>
+                                <th class="text-end">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ch in channels %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="wf-channel-avatar-wrap" style="width:46px;height:46px;border-radius:14px;flex-shrink:0;">
+                                            {% if ch.avatar %}
+                                                <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" class="wf-avatar-main">
+                                            {% else %}
+                                                {{ ch.title|slice:":1" }}
+                                            {% endif %}
+                                            {% if ch.platform.logo %}
+                                                <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" class="wf-channel-platform-corner">
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="text-white fw-bold fs-sm">{{ ch.title }}</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">ثبت: {{ ch.created_at|date:"Y/m/d" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1 fs-xs">
+                                        {{ ch.platform.name }}
+                                    </span>
+                                </td>
+                                <td dir="ltr" class="fs-xs">
+                                    {% if ch.username %}
+                                        <div class="text-white fw-bold">@{{ ch.username }}</div>
+                                    {% endif %}
+                                    <div class="text-muted">{{ ch.chat_id }}</div>
+                                </td>
+                                <td>
+                                    {% if ch.bot_is_admin %}
+                                        <span class="wf-badge-status is-connected py-1 px-2"><span class="wf-pulse-dot"></span> آماده</span>
+                                    {% else %}
+                                        <span class="wf-badge-status is-ready py-1 px-2"><span class="wf-pulse-dot"></span> بدون دسترسی</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fs-xs text-muted">
+                                    {{ ch.last_broadcast_at|date:"Y/m/d H:i"|default:"آماده اولین ارسال" }}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-glass py-1 px-2 fs-xs" title="ارسال پیام">
+                                            <i class="bi bi-send-fill text-success"></i>
+                                        </a>
+                                        <form method="post"
+                                              action="{% if ch.platform.slug == 'bale' %}{% url 'broadcast:bale_delete_channel' ch.pk %}{% elif ch.platform.slug == 'eitaa' %}{% url 'broadcast:eitaa_delete_channel' ch.pk %}{% elif ch.platform.slug == 'rubika' %}{% url 'broadcast:rubika_delete_channel' ch.pk %}{% elif ch.platform.slug == 'soroush' %}{% url 'broadcast:soroush_delete_channel' ch.pk %}{% else %}{% url 'broadcast:telegram_delete_channel' ch.pk %}{% endif %}"
+                                              data-wf-confirm="آیا از غیرفعال‌سازی کانال «{{ ch.title }}» اطمینان دارید؟" data-wf-confirm-title="تایید عملیات" data-wf-confirm-btn="بله، انجام شود">
+                                            {% csrf_token %}
+                                            <button type="submit" class="wf-btn wf-btn-glass py-1 px-2 fs-xs text-danger" title="حذف">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <!-- نمای کارتی پیش‌فرض (با عکس پروفایل و لوگوی پلتفرم در گوشه پایین) -->
+            <div class="row g-4 wf-reveal wf-delay-2">
+                {% for ch in channels %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="wf-connected-channel-card">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-3 overflow-hidden">
+                                <div class="wf-channel-avatar-wrap">
+                                    {% if ch.avatar %}
+                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" class="wf-avatar-main">
+                                    {% else %}
+                                        {{ ch.title|slice:":1" }}
+                                    {% endif %}
+                                    {% if ch.platform.logo %}
+                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" class="wf-channel-platform-corner">
+                                    {% endif %}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h5 class="text-white fw-bold fs-6 mb-1 text-truncate">{{ ch.title }}</h5>
+                                    <div class="text-muted fs-xs text-truncate" dir="ltr">
+                                        {% if ch.username %}@{{ ch.username }}{% else %}{{ ch.chat_id }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if ch.bot_is_admin %}
+                                <span class="wf-badge-status is-connected py-1 px-2"><span class="wf-pulse-dot"></span> فعال</span>
+                            {% else %}
+                                <span class="wf-badge-status is-ready py-1 px-2"><span class="wf-pulse-dot"></span> نیاز به ادمین</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="wf-channel-meta-grid">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">پلتفرم:</span>
+                                <strong class="text-white">{{ ch.platform.name }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">تاریخ ثبت:</span>
+                                <span class="text-white">{{ ch.created_at|date:"Y/m/d" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">آخرین ارسال:</span>
+                                <span class="text-success">{{ ch.last_broadcast_at|date:"Y/m/d H:i"|default:"آماده اولین ارسال" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-light">
+                            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                                <i class="bi bi-send-fill text-success"></i> ارسال پیام
+                            </a>
+                            <form method="post"
+                                  action="{% if ch.platform.slug == 'bale' %}{% url 'broadcast:bale_delete_channel' ch.pk %}{% elif ch.platform.slug == 'eitaa' %}{% url 'broadcast:eitaa_delete_channel' ch.pk %}{% elif ch.platform.slug == 'rubika' %}{% url 'broadcast:rubika_delete_channel' ch.pk %}{% elif ch.platform.slug == 'soroush' %}{% url 'broadcast:soroush_delete_channel' ch.pk %}{% else %}{% url 'broadcast:telegram_delete_channel' ch.pk %}{% endif %}"
+                                  data-wf-confirm="آیا از غیرفعال‌سازی کانال «{{ ch.title }}» اطمینان دارید؟" data-wf-confirm-title="تایید عملیات" data-wf-confirm-btn="بله، انجام شود">
+                                {% csrf_token %}
+                                <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger">
+                                    <i class="bi bi-trash"></i> حذف
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if is_paginated %}
+        <div class="mt-4">
+            {% include "partials/pagination.html" %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5 rounded-4 wf-reveal wf-delay-2" style="background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.12);">
+            <i class="bi bi-megaphone fs-1 text-muted d-block mb-2"></i>
+            <h5 class="text-white fw-bold mb-2">کانالی با این فیلتر یافت نشد</h5>
+            <p class="text-muted fs-xs mb-4">می‌توانید از داشبورد پیام‌رسان‌های بله، ایتا، روبیکا، تلگرام و سروش‌پلاس خود را متصل کرده و کانال‌ها را اضافه کنید.</p>
+            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-orange">
+                <i class="bi bi-grid-1x2-fill"></i> بازگشت به داشبورد
+            </a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

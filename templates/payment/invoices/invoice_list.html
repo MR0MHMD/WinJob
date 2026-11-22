@@ -160,6 +160,12 @@
             border: 1px solid rgba(192, 132, 252, 0.3);
         }
 
+        .type-badge.winforward {
+            background: rgba(251, 146, 60, 0.15);
+            color: #fb923c;
+            border: 1px solid rgba(251, 146, 60, 0.32);
+        }
+
         .invoice-table .campaign-name {
             color: #fff;
             font-weight: 500;
@@ -388,7 +394,7 @@
                     فاکتورهای من
                 </h4>
                 <p class="text-secondary small m-0">
-                    لیست تمام فاکتورهای ثبت‌شده برای کمپین‌ها، وین‌مارکت، اشتراک‌ها و شارژ کیف پول
+                    لیست تمام فاکتورهای ثبت‌شده برای کمپین‌ها، وین‌مارکت، بسته‌های توکن وین‌فوروارد، اشتراک‌ها و شارژ کیف پول
                 </p>
             </div>
         </div>
@@ -404,38 +410,11 @@
                     <div class="stat-icon fi-file"></div>
                 </div>
             </div>
-            <div class="stat-card campaign">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-number">{{ campaign_count }}</div>
-                        <div class="stat-label">کمپین</div>
-                    </div>
-                    <div class="stat-icon fi-flag"></div>
-                </div>
-            </div>
-            <div class="stat-card market_order">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-number">{{ market_order_count }}</div>
-                        <div class="stat-label">وین‌مارکت</div>
-                    </div>
-                    <div class="stat-icon fi-shopping-bag"></div>
-                </div>
-            </div>
-            <div class="stat-card wallet">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-number">{{ wallet_count }}</div>
-                        <div class="stat-label">شارژ کیف پول</div>
-                    </div>
-                    <div class="stat-icon fi-wallet"></div>
-                </div>
-            </div>
             <div class="stat-card paid">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-number">{{ paid_count }}</div>
-                        <div class="stat-label">پرداخت شده</div>
+                        <div class="stat-label">فاکتورهای پرداخت شده</div>
                     </div>
                     <div class="stat-icon fi-check-circle"></div>
                 </div>
@@ -444,7 +423,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-number">{{ unpaid_count }}</div>
-                        <div class="stat-label">پرداخت نشده</div>
+                        <div class="stat-label">فاکتورهای پرداخت نشده</div>
                     </div>
                     <div class="stat-icon fi-alert-circle"></div>
                 </div>
@@ -469,6 +448,9 @@
                     </option>
                     <option value="{% url 'payment:invoice_list' %}?type=windirect"
                             {% if type_filter == 'windirect' %}selected{% endif %}>اشتراک وین دایرکت
+                    </option>
+                    <option value="{% url 'payment:invoice_list' %}?type=winforward"
+                            {% if type_filter == 'winforward' %}selected{% endif %}>بسته توکن وین‌فوروارد
                     </option>
                 </select>
                 {% if type_filter %}
@@ -544,6 +526,10 @@
                                         <span class="type-badge market-order">
                                             <i class="fi-shopping-bag me-1"></i> وین‌مارکت
                                         </span>
+                                    {% elif invoice.type == 'winforward' %}
+                                        <span class="type-badge winforward">
+                                            <i class="bi bi-coin me-1"></i> توکن وین‌فوروارد
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td data-label="عنوان">
@@ -566,6 +552,13 @@
                                             <a href="{% url 'market:order_detail' invoice.market_order.id %}">
                                                 سفارش #{{ invoice.market_order.id }}
                                                 ({{ invoice.market_order.items.count }} آیتم)
+                                            </a>
+                                        </span>
+                                    {% elif invoice.type == 'winforward' and invoice.forward_subscription_order %}
+                                        <span class="campaign-name">
+                                            <a href="{% url 'forward_subscriptions:order_detail' invoice.forward_subscription_order_id %}">
+                                                {{ invoice.forward_subscription_order.plan.name }}
+                                                ({{ invoice.forward_subscription_order.tokens_amount|intcomma }} توکن)
                                             </a>
                                         </span>
                                     {% else %}
@@ -605,6 +598,11 @@
                                         </a>
                                         {% if not invoice.is_paid and invoice.type == 'campaign' %}
                                             <a href="{% url 'payment:redirect_to_payment' invoice_id=invoice.id %}"
+                                               class="btn btn-success btn-sm rounded-pill px-3">
+                                                <i class="fi-cart me-1"></i> پرداخت
+                                            </a>
+                                        {% elif not invoice.is_paid and invoice.type == 'winforward' and invoice.forward_subscription_order and invoice.forward_subscription_order.status == 'pending' %}
+                                            <a href="{% url 'forward_subscriptions:order_detail' invoice.forward_subscription_order_id %}"
                                                class="btn btn-success btn-sm rounded-pill px-3">
                                                 <i class="fi-cart me-1"></i> پرداخت
                                             </a>

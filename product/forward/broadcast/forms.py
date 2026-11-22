@@ -1,7 +1,7 @@
 """فرم‌های مربوط به وین فوروارد."""
 
 from django import forms
-from product.forward.broadcast.models import BroadcastMessage, BroadcastChannel, ChannelPreset
+from product.forward.broadcast.models import BroadcastMessage, BroadcastChannel, ChannelPreset, BroadcastHub
 
 
 class BroadcastSendForm(forms.ModelForm):
@@ -235,19 +235,87 @@ class RubikaVerifyCodeForm(forms.Form):
 
 
 # ============================================================
+# Soroush+ Forms (Web Panel)
+# ============================================================
+
+
+class SoroushPhoneForm(forms.Form):
+    """فرم مرحله اول ورود به سروش‌پلاس — دریافت شماره موبایل و ارسال کد تایید."""
+
+    phone_number = forms.CharField(
+        label="شماره موبایل سروش‌پلاس",
+        max_length=15,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light",
+            "placeholder": "مثلاً: 09123456789",
+            "dir": "ltr",
+            "autocomplete": "tel",
+        }),
+        help_text="شماره موبایل اکانت سروش‌پلاسی که در کانال‌هایتان ادمین یا سازنده است را وارد کنید.",
+    )
+
+    def clean_phone_number(self):
+        """نرمال‌سازی شماره موبایل به فرمت استاندارد +989xxxxxxxxx برای سروش‌پلاس."""
+        raw = self.cleaned_data["phone_number"].strip().replace(" ", "").replace("-", "")
+        if raw.startswith("+"):
+            raw = raw[1:]
+        if raw.startswith("0098"):
+            raw = raw[2:]
+        if raw.startswith("09") and len(raw) == 11:
+            raw = "98" + raw[1:]
+        elif raw.startswith("9") and len(raw) == 10:
+            raw = "98" + raw
+        if not raw.startswith("989") or len(raw) != 12 or not raw.isdigit():
+            raise forms.ValidationError("فرمت شماره موبایل معتبر نیست (مثال صحیح: 09123456789).")
+        return "+" + raw
+
+
+class SoroushVerifyCodeForm(forms.Form):
+    """فرم مرحله دوم ورود به سروش‌پلاس — تایید کد OTP و رمز دو مرحله‌ای اختیاری."""
+
+    phone_code = forms.CharField(
+        label="کد تایید (OTP)",
+        max_length=10,
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-light text-center",
+            "placeholder": "کد ارسال‌شده به سروش‌پلاس یا پیامک",
+            "dir": "ltr",
+            "autocomplete": "one-time-code",
+        }),
+        help_text="کد تاییدی که به پیامک یا برنامه سروش‌پلاس شما ارسال شده را وارد کنید.",
+    )
+    two_step_password = forms.CharField(
+        label="رمز تایید دو مرحله‌ای (اختیاری)",
+        required=False,
+        widget=forms.PasswordInput(attrs={
+            "class": "form-control form-control-light",
+            "placeholder": "فقط در صورتی که روی اکانت سروش‌پلاس رمز دو مرحله‌ای فعال دارید",
+            "dir": "ltr",
+            "autocomplete": "current-password",
+        }),
+    )
+
+    def clean_phone_code(self):
+        code = self.cleaned_data["phone_code"].strip()
+        if not code.isdigit():
+            raise forms.ValidationError("کد تایید باید فقط شامل اعداد باشد.")
+        return code
+
+
+# ============================================================
 # Channel Preset Forms (Web Panel)
 # ============================================================
 
 
 class ChannelPresetForm(forms.ModelForm):
-    """فرم ساخت و ویرایش پروفایل ارسال (گروه کانال‌ها) برای انتخاب سریع در وب و ربات بله."""
+    """فرم ساخت و ویرایش پکیج ارسال (گروه کانال‌ها) برای انتخاب سریع در وب و ربات بله."""
 
     channels = forms.ModelMultipleChoiceField(
         queryset=BroadcastChannel.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        label="کانال‌های عضو این پروفایل",
+        label="کانال‌های عضو این پکیج",
         required=True,
-        error_messages={"required": "لطفاً حداقل یک کانال را برای این پروفایل انتخاب کنید."},
+        error_messages={"required": "لطفاً حداقل یک کانال را برای این پکیج انتخاب کنید."},
     )
 
     class Meta:
@@ -263,7 +331,7 @@ class ChannelPresetForm(forms.ModelForm):
             )
         }
         labels = {
-            "name": "نام پروفایل ارسال",
+            "name": "نام پکیج ارسال",
         }
 
     def __init__(self, *args, **kwargs):
@@ -282,16 +350,68 @@ class ChannelPresetForm(forms.ModelForm):
             )
 
     def clean_name(self):
-        """بررسی تکراری نبودن نام پروفایل برای همین کاربر."""
+        """بررسی تکراری نبودن نام پکیج برای همین کاربر."""
         from product.forward.broadcast.models import ChannelPreset
 
         name = (self.cleaned_data.get("name") or "").strip()
         if not name:
-            raise forms.ValidationError("نام پروفایل ارسال الزامی است.")
+            raise forms.ValidationError("نام پکیج ارسال الزامی است.")
         if self.user:
             qs = ChannelPreset.objects.filter(user=self.user, name__iexact=name)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
-                raise forms.ValidationError("پروفایلی با این نام قبلاً ثبت شده است.")
+                raise forms.ValidationError("پکیجی با این نام قبلاً ثبت شده است.")
         return name
+
+
+class BroadcastHubForm(forms.ModelForm):
+    """فرم ویرایش و پیکربندی پکیج، کانال‌های مقصد و حالت انتشار گروه هاب."""
+
+    channels = forms.ModelMultipleChoiceField(
+        queryset=BroadcastChannel.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="کانال‌های مقصد اضافی (اختیاری)",
+        required=False,
+    )
+
+    class Meta:
+        model = BroadcastHub
+        fields = ["title", "preset", "channels", "publish_mode", "is_active"]
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-control form-control-light", "maxlength": "255"}),
+            "preset": forms.Select(attrs={"class": "form-select form-control-light"}),
+            "publish_mode": forms.Select(attrs={"class": "form-select form-control-light"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "title": "نام نمایشی هاب",
+            "preset": "پکیج ارسال متصل (پیشنهادی)",
+            "publish_mode": "شرط ارسال پیام‌های گروه",
+            "is_active": "هاب فعال باشد",
+        }
+
+    def __init__(self, *args, **kwargs):
+        """محدودسازی پکیج‌ها و کانال‌ها به دارایی‌های فعال کاربر مالک هاب."""
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields["preset"].queryset = ChannelPreset.objects.filter(
+                user=self.user, is_active=True
+            ).order_by("-created_at")
+            self.fields["preset"].empty_label = "— بدون پکیج (استفاده از کانال‌های تکی) —"
+            self.fields["channels"].queryset = (
+                BroadcastChannel.objects.filter(
+                    user=self.user, is_active=True, bot_is_admin=True
+                )
+                .select_related("platform")
+                .order_by("platform__name", "title")
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        preset = cleaned.get("preset")
+        channels = cleaned.get("channels")
+        if not preset and not channels:
+            raise forms.ValidationError("لطفاً حداقل یک پکیج ارسال یا یک کانال مقصد برای این هاب انتخاب کنید.")
+        return cleaned

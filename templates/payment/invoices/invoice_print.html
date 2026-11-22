@@ -33,6 +33,8 @@
                         صورت حساب / فاکتور رسمی اشتراک وین دایرکت
                     {% elif invoice.type == 'market_order' %}
                         صورت حساب / فاکتور رسمی سفارش وین‌مارکت
+                    {% elif invoice.type == 'winforward' %}
+                        صورت حساب / فاکتور رسمی بسته توکن وین فوروارد
                     {% endif %}
                 </div>
                 <div class="header-left">
@@ -64,7 +66,7 @@
             <!-- ============================================================ -->
             <!-- ===== بخش اطلاعات پرداخت ===== -->
             <!-- ============================================================ -->
-            {% if invoice.is_paid and invoice.payments.first.payment_method == 'gateway' %}
+            {% if invoice.is_paid and invoice.payments.first %}
                 <div class="payment-info-print mb-2">
                     <div class="payment-title">
                         <i class="fi-check-circle" style="color: #28a745;"></i>
@@ -318,6 +320,67 @@
                         </table>
                     {% endwith %}
         
+                {% elif invoice.type == 'winforward' %}
+                    <!-- ===== فاکتور بسته توکن وین فوروارد ===== -->
+                    <table class="main-table">
+                        <thead>
+                        <tr>
+                            <th style="width:5%;">ردیف</th>
+                            <th style="width:43%;">شرح بسته توکن</th>
+                            <th style="width:12%;">تعداد توکن</th>
+                            <th style="width:13%;">مبلغ پایه (ریال)</th>
+                            <th style="width:12%;">تخفیف (ریال)</th>
+                            <th style="width:15%;">جمع کل (ریال)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>۱</td>
+                            <td class="text-right">
+                                <strong>{% if forward_order and forward_order.plan %}{{ forward_order.plan.name }}{% else %}بسته توکن وین فوروارد{% endif %}</strong>
+                                <span class="sub-text">
+                                    شارژ دائمی کیف توکن وین‌فوروارد (بدون تاریخ انقضا)
+                                    {% if forward_order %} · سفارش #{{ forward_order.pk }}{% endif %}
+                                </span>
+                                <span class="sub-text">
+                                    قابل استفاده در هر ۵ پیام‌رسان (بله، ایتا، روبیکا، تلگرام و سروش‌پلاس) و هاب‌های تیمی
+                                </span>
+                            </td>
+                            <td><strong>{{ forward_tokens_amount|intcomma }}</strong></td>
+                            <td>{{ base_plan_cost_rial|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if plan_discount_amount_rial > 0 %}
+                                    <span class="discount-text">-{{ plan_discount_amount_rial|floatformat:0|intcomma }}</span>
+                                {% else %}
+                                    ۰
+                                {% endif %}
+                            </td>
+                            <td>{{ plan_cost_rial|floatformat:0|intcomma }}</td>
+                        </tr>
+                        <tr class="summary-row">
+                            <td colspan="5" style="text-align: center; padding-left: 15px;">
+                                <span>مالیات بر ارزش افزوده:</span>
+                            </td>
+                            <td>{{ plan_vat_rial|floatformat:0|intcomma }}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- ردیف نهایی -->
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-weight: bold; font-size: 12px; width: 25%; background: #fafafa;">
+                                مبلغ قابل پرداخت
+                            </td>
+                            <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-size: 11px; width: 50%;">
+                                {{ payable_amount_words }}
+                            </td>
+                            <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-weight: bold; font-size: 14px; width: 25%;">
+                                {{ payable_amount_rial|floatformat:0|intcomma }} ريال
+                            </td>
+                        </tr>
+                    </table>
+
                 {% elif invoice.type == 'market_order' %}
                     <!-- ===== فاکتور وین‌مارکت ===== -->
                     <table class="main-table">

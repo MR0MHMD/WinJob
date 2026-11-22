@@ -5,6 +5,10 @@
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+import secrets
+import string
+
+from django.conf import settings
 from django.db import models
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -119,6 +123,14 @@ class BroadcastMessage(models.Model):
         super().save(*args, **kwargs)
 
 
+_SLUG_ALPHABET = string.ascii_letters + string.digits
+
+
+def generate_job_public_slug(length: int = 15) -> str:
+    """تولید اسلاگ تصادفی ۱۵ کاراکتری ترکیبی از حروف کوچک، بزرگ و اعداد."""
+    return "".join(secrets.choice(_SLUG_ALPHABET) for _ in range(length))
+
+
 class BroadcastJob(models.Model):
     """یک عملیات ارسال گروهی — یک پیام به چند کانال."""
 
@@ -137,12 +149,37 @@ class BroadcastJob(models.Model):
     failed_count = models.PositiveIntegerField(_("ناموفق"), default=0,)
     started_at = jmodels.jDateTimeField(_("زمان شروع"), null=True, blank=True,)
     finished_at = jmodels.jDateTimeField(_("زمان پایان"), null=True, blank=True,)
+    public_slug = models.CharField(
+        _("شناسه عمومی گزارش"),
+        max_length=15,
+        unique=True,
+        db_index=True,
+        blank=True,
+        help_text=_("کد ۱۵ کاراکتری تصادفی برای مشاهده عمومی گزارش بدون نیاز به لاگین"),
+    )
     created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True,)
 
     class Meta:
         verbose_name = _("جاب ارسال")
         verbose_name_plural = _("جاب‌های ارسال")
         ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        """تولید خودکار اسلاگ عمومی ۱۵ کاراکتری یکتا پیش از ذخیره."""
+        if not self.public_slug:
+            for _ in range(20):
+                candidate = generate_job_public_slug(15)
+                if not BroadcastJob.objects.filter(public_slug=candidate).exists():
+                    self.public_slug = candidate
+                    break
+        super().save(*args, **kwargs)
+
+    def get_public_report_url(self) -> str:
+        """آدرس کامل لینک عمومی گزارش ارسال بدون نیاز به لاگین."""
+        if not self.public_slug:
+            self.save(update_fields=["public_slug"])
+        base = getattr(settings, "SITE_URL", "https://winjob.ir").rstrip("/")
+        return f"{base}/forward/r/{self.public_slug}/"
 
     def __str__(self):
         """نمایش خوانای جاب برای ادمین و لاگ."""
@@ -161,23 +198,26 @@ class BroadcastJob(models.Model):
         return int(self.success_count * 100 / self.total_targets)
 
     def recalculate_counts(self, save=True):
-        """بازشماری موفق/ناموفق/کل از روی Targetها و به‌روزرسانی خودکار وضعیت."""
+        """بازشماری موفق/ناموفق/ردشده/کل از روی Targetها و به‌روزرسانی خودکار وضعیت."""
         agg = self.targets.aggregate(
             total=Count("id"),
             success=Count("id", filter=Q(status=BroadcastTarget.Status.SUCCESS)),
             failed=Count("id", filter=Q(status=BroadcastTarget.Status.FAILED)),
+            skipped=Count("id", filter=Q(status=BroadcastTarget.Status.SKIPPED)),
         )
         self.total_targets = agg["total"] or 0
         self.success_count = agg["success"] or 0
         self.failed_count = agg["failed"] or 0
+        skipped_count = agg["skipped"] or 0
+        finished_count = self.success_count + self.failed_count + skipped_count
         if self.total_targets > 0:
             if self.success_count == self.total_targets:
                 self.status = self.Status.DONE
                 self.finished_at = timezone.now()
-            elif self.failed_count == self.total_targets:
+            elif (self.failed_count + skipped_count) == self.total_targets:
                 self.status = self.Status.FAILED
                 self.finished_at = timezone.now()
-            elif (self.success_count + self.failed_count) == self.total_targets:
+            elif finished_count == self.total_targets:
                 self.status = self.Status.PARTIAL
                 self.finished_at = timezone.now()
         if save:
@@ -232,6 +272,12 @@ class BroadcastTarget(models.Model):
         self.error_message = (error_message or "")[:2000]
         self.save(update_fields=["status", "error_message"])
 
+    def mark_skipped(self, reason=""):
+        """علامت‌گذاری به عنوان رد شده (مثلاً رسانه بدون کپشن یا استیکر/گیف در سروش‌پلاس)."""
+        self.status = self.Status.SKIPPED
+        self.error_message = (reason or "")[:2000]
+        self.save(update_fields=["status", "error_message"])
+
 
 class ChannelPreset(models.Model):
     """پروفایل ارسال (گروه کانال‌ها) برای انتخاب سریع مجموعه کانال‌ها در پنل وب و ربات بله."""
@@ -272,3 +318,91 @@ class ChannelPreset(models.Model):
     def active_channels(self):
         """بازگرداندن کانال‌های فعال و دارای دسترسی ادمینِ عضو این پروفایل."""
         return self.channels.filter(is_active=True, bot_is_admin=True).select_related("platform")
+
+
+class BroadcastHub(models.Model):
+    """گروه هاب تیمی در بله یا تلگرام برای انتشار خودکار پیام‌های گروه به پروفایل یا کانال‌های منتخب."""
+
+    class PublishMode(models.TextChoices):
+        ALL = "all", _("همه پیام‌های گروه")
+        HASHTAG = "hashtag", _("فقط پیام‌های دارای #ارسال")
+
+    user = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.CASCADE,
+        related_name="broadcast_hubs",
+        verbose_name=_("مالک هاب"),
+    )
+    platform = models.ForeignKey(
+        "core.Platform",
+        on_delete=models.PROTECT,
+        related_name="broadcast_hubs",
+        verbose_name=_("پلتفرم گروه"),
+    )
+    group_chat_id = models.CharField(
+        _("شناسه عددی گروه"),
+        max_length=128,
+        db_index=True,
+    )
+    title = models.CharField(
+        _("نام گروه / هاب"),
+        max_length=255,
+    )
+    preset = models.ForeignKey(
+        ChannelPreset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hubs",
+        verbose_name=_("پروفایل ارسال متصل"),
+        help_text=_("پروفایلی که پیام‌های این گروه خودکار به کانال‌های آن ارسال می‌شوند."),
+    )
+    channels = models.ManyToManyField(
+        BroadcastChannel,
+        related_name="hubs",
+        verbose_name=_("کانال‌های مقصد اضافی"),
+        blank=True,
+    )
+    publish_mode = models.CharField(
+        _("حالت انتشار"),
+        max_length=20,
+        choices=PublishMode.choices,
+        default=PublishMode.ALL,
+    )
+    is_active = models.BooleanField(_("فعال"), default=True)
+    created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True)
+    updated_at = jmodels.jDateTimeField(_("تاریخ ویرایش"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("هاب ارسال گروهی")
+        verbose_name_plural = _("هاب‌های ارسال گروهی")
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["platform", "group_chat_id"], name="unique_hub_platform_group"),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.platform.name})"
+
+    def get_target_channels(self):
+        """استخراج لیست یکتای کانال‌های فعال و مجاز متصل به این هاب (از پروفایل + کانال‌های تکی)."""
+        from product.forward.subscriptions.access import get_active_platform_slugs
+
+        active_slugs = get_active_platform_slugs(self.user)
+        seen_ids = set()
+        result = []
+
+        candidates = []
+        if self.preset and self.preset.is_active:
+            candidates.extend(
+                self.preset.channels.filter(user=self.user, is_active=True, bot_is_admin=True).select_related("platform")
+            )
+        candidates.extend(
+            self.channels.filter(user=self.user, is_active=True, bot_is_admin=True).select_related("platform")
+        )
+
+        for ch in candidates:
+            if ch.pk not in seen_ids and ch.platform.slug in active_slugs:
+                seen_ids.add(ch.pk)
+                result.append(ch)
+        return result

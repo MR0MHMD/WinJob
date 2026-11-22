@@ -1,7 +1,7 @@
 {% extends "parent/base.html" %}
-{% load static %}
+{% load static humanize l10n %}
 
-{% block title %}استودیو ارسال پیام همگانی | وین فوروارد{% endblock %}
+{% block title %}استدیو ارسال | وین فوروارد{% endblock %}
 
 {% block extra_style %}
 <link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
@@ -14,90 +14,85 @@
     <ol class="breadcrumb breadcrumb-light mb-3">
         <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
         <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
-        <li class="breadcrumb-item active">استودیو ارسال پیام</li>
+        <li class="breadcrumb-item active">استدیو ارسال</li>
     </ol>
 
     {% include "product/forward/partials/nav.html" %}
 
     <div class="wf-studio-header wf-reveal">
         <div class="d-flex align-items-center gap-3">
-            <div class="wf-plans-header-icon" style="width:58px;height:58px;border-radius:1.15rem;background:linear-gradient(135deg,#fd5631,#5d3cf2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;">
+            <div style="width:58px;height:58px;border-radius:1.2rem;background:linear-gradient(135deg,#fd5631,#5d3cf2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;flex-shrink:0;">
                 <i class="bi bi-rocket-takeoff-fill"></i>
             </div>
             <div>
-                <h1 class="h4 text-white fw-bold mb-1">استودیو انتشار همزمان چندپلتفرمی</h1>
+                <h1 class="h4 text-white fw-bold mb-1">استدیو ارسال همزمان چندپلتفرمی</h1>
                 <p class="text-muted fs-xs mb-0">
-                    محتوای خود را یک‌بار بنویسید و با یک کلیک در تمام کانال‌های متصل بله، ایتا و روبیکا منتشر کنید.
+                    پیام یا رسانه خود را با پیش‌نمایش زنده آماده کنید و هم‌زمان در کانال‌های بله، ایتا، روبیکا و تلگرام منتشر کنید.
                 </p>
             </div>
         </div>
-        <a href="{% url 'broadcast:job_list' %}" class="wf-btn wf-btn-glass">
-            <i class="bi bi-clock-history"></i> تاریخچه ارسال‌ها
-        </a>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="{% url 'forward_subscriptions:plans' %}" class="wf-pill-tag is-gold text-decoration-none py-2 px-3">
+                <i class="bi bi-coin"></i> موجودی: {{ token_balance }} توکن
+            </a>
+            <a href="{% url 'broadcast:job_list' %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                <i class="bi bi-clock-history"></i> تاریخچه
+            </a>
+        </div>
     </div>
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="row g-4 wf-reveal wf-delay-1">
-            <!-- ستون راست: تنظیم محتوا و انتخاب کانال‌ها -->
             <div class="col-lg-8">
+                <!-- بخش ۱: محتوا -->
                 <div class="wf-studio-card">
-                    <div class="wf-studio-card-header">
+                    <div class="wf-studio-card-header flex-wrap gap-2">
                         <h5 class="text-white fw-bold mb-0 fs-6">
                             <i class="bi bi-pencil-square text-primary me-1"></i> ۱. نوع محتوا و متن پیام
                         </h5>
-                        <span class="badge bg-dark border border-secondary text-muted rounded-pill px-3 py-1" id="wfCharCounter">
-                            0 / 4,096 کاراکتر
-                        </span>
+                        <span class="wf-pill-tag is-purple" id="wfCharCounter">0 / 4,096 کاراکتر</span>
                     </div>
-                    <div class="p-4">
-                        <!-- تب‌های تصویری انتخاب نوع محتوا -->
-                        <label class="text-white fw-bold fs-xs mb-2 d-block">انتخاب قالب پیام:</label>
+                    <div class="p-3 p-md-4">
+                        <label class="text-white fw-bold fs-xs mb-2 d-block">قالب پیام:</label>
                         <div class="wf-content-type-pills">
                             <button type="button" class="wf-type-pill-btn is-active" data-content-type="text">
-                                <i class="bi bi-chat-right-text-fill"></i>
-                                <span>پیام متنی</span>
+                                <i class="bi bi-chat-right-text-fill"></i><span>متن</span>
                             </button>
                             <button type="button" class="wf-type-pill-btn" data-content-type="photo">
-                                <i class="bi bi-image-fill"></i>
-                                <span>تصویر + کپشن</span>
+                                <i class="bi bi-image-fill"></i><span>تصویر</span>
                             </button>
                             <button type="button" class="wf-type-pill-btn" data-content-type="video">
-                                <i class="bi bi-camera-reels-fill"></i>
-                                <span>ویدیو + کپشن</span>
+                                <i class="bi bi-camera-reels-fill"></i><span>ویدیو</span>
                             </button>
                             <button type="button" class="wf-type-pill-btn" data-content-type="audio">
-                                <i class="bi bi-music-note-beamed"></i>
-                                <span>فایل صوتی</span>
+                                <i class="bi bi-music-note-beamed"></i><span>صوت</span>
                             </button>
                             <button type="button" class="wf-type-pill-btn" data-content-type="document">
-                                <i class="bi bi-file-earmark-zip-fill"></i>
-                                <span>سند / فایل</span>
+                                <i class="bi bi-file-earmark-zip-fill"></i><span>سند / فایل</span>
                             </button>
                         </div>
 
-                        <div class="d-none">
-                            {{ form.content_type }}
-                        </div>
+                        <div class="d-none">{{ form.content_type }}</div>
 
-                        <!-- باکس آپلود فایل رسانه -->
+                        <!-- ناحیه Drag & Drop و کلیک‌پذیر واقعی -->
                         <div class="mb-4" id="file-upload-section" style="display: none;">
-                            <div class="wf-upload-dropzone">
-                                <i class="bi bi-cloud-arrow-up-fill fs-1 text-primary d-block mb-2"></i>
-                                <div class="text-white fw-bold fs-sm mb-1">فایل رسانه را انتخاب کنید</div>
-                                <div class="text-muted fs-xs mb-3">پشتیبانی از عکس، ویدیو، صوت و فایل تا سقف ۵۰ مگابایت</div>
-                                {{ form.file }}
-                                <div id="wfFileNameDisplay" class="text-success fs-xs fw-bold mt-2" style="display: none;"></div>
+                            <div class="wf-upload-dropzone" id="wfDropzoneArea">
+                                <i class="bi bi-cloud-arrow-up-fill fs-1 text-info d-block mb-2"></i>
+                                <div class="text-white fw-bold fs-sm mb-1">فایل را اینجا بکشید و رها کنید یا کلیک کنید</div>
+                                <div class="text-muted fs-xs mb-2">پشتیبانی از عکس، ویدیو، صوت و فایل (حداکثر ۲۰ مگابایت)</div>
+                                <div class="d-none">{{ form.file }}</div>
+                                <span class="wf-pill-tag is-blue mt-1"><i class="bi bi-folder2-open"></i> انتخاب فایل از سیستم</span>
+                                <div id="wfFileNameDisplay" class="text-success fs-xs fw-bold mt-3" style="display: none;"></div>
                             </div>
                             {% if form.file.errors %}
                                 <div class="text-danger fs-xs mt-2">{{ form.file.errors }}</div>
                             {% endif %}
                         </div>
 
-                        <!-- متن پیام / کپشن -->
                         <div>
                             <label for="{{ form.text.id_for_label }}" class="text-white fw-bold fs-xs mb-2 d-block">
-                                <i class="bi bi-body-text text-primary me-1"></i> متن پیام یا کپشن رسانه:
+                                <i class="bi bi-body-text text-primary me-1"></i> متن پیام یا کپشن:
                             </label>
                             {{ form.text }}
                             {% if form.text.errors %}
@@ -107,79 +102,103 @@
                     </div>
                 </div>
 
-                <!-- انتخاب کانال‌های مقصد همراه با لوگوی دیتابیس پلتفرم -->
+                <!-- بخش ۲: انتخاب کانال‌ها به تفکیک پلتفرم -->
                 <div class="wf-studio-card mb-0">
-                    <div class="wf-studio-card-header">
+                    <div class="wf-studio-card-header flex-wrap gap-2">
                         <h5 class="text-white fw-bold mb-0 fs-6">
-                            <i class="bi bi-diagram-3-fill text-success me-1"></i> ۲. انتخاب کانال‌های مقصد انتشار
+                            <i class="bi bi-diagram-3-fill text-success me-1"></i> ۲. انتخاب کانال‌های مقصد (به تفکیک پلتفرم)
                         </h5>
-                        {% if form.channel_items %}
+                        {% if channel_groups %}
                             <button type="button" id="wfSelectAllChannels" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
-                                <i class="bi bi-check2-all"></i> انتخاب همه کانال‌های مجاز
+                                <i class="bi bi-check2-all"></i> انتخاب همه مجازها
                             </button>
                         {% endif %}
                     </div>
-                    <div class="p-4">
-                        {% if form.channel_items %}
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <div class="p-3 p-md-4">
+                        {% if channel_groups %}
+                            <!-- پکیج‌های ارسال سریع -->
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom border-light">
+                                <span class="text-muted fs-xs"><i class="bi bi-box-seam-fill text-primary me-1"></i>پکیج‌های سریع:</span>
                                 {% for pitem in preset_items %}
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-light rounded-pill px-3 fs-xs wf-web-preset-btn"
+                                            class="wf-pill-tag is-purple border-0 wf-web-preset-btn"
+                                            style="cursor:pointer;"
                                             data-channel-ids="{{ pitem.channel_ids|join:',' }}">
-                                        <i class="bi bi-collection-fill text-primary me-1"></i> {{ pitem.preset.name }}
+                                        <i class="bi bi-collection-fill"></i> {{ pitem.preset.name }}
                                     </button>
+                                {% empty %}
+                                    <span class="text-muted fs-xs">هنوز پکیجی نساخته‌اید</span>
                                 {% endfor %}
-                                <a href="{% url 'broadcast:preset_list' %}" class="text-muted fs-xs text-decoration-none ms-auto">
-                                    <i class="bi bi-sliders me-1"></i> مدیریت پروفایل‌های ارسال
+                                <a href="{% url 'broadcast:preset_list' %}" class="text-info fs-xs text-decoration-none ms-auto fw-bold">
+                                    <i class="bi bi-sliders me-1"></i> مدیریت پکیج‌ها
                                 </a>
                             </div>
-                            <div class="row g-3">
-                                {% for item in form.channel_items %}
-                                <div class="col-md-6">
-                                    <label class="wf-channel-tile w-100 {% if item.checked and item.has_access %}is-selected{% endif %} {% if not item.has_access %}is-locked{% endif %}"
-                                           for="id_channels_{{ item.channel.pk }}">
-                                        <div class="d-flex align-items-center gap-3 overflow-hidden">
-                                            <input class="form-check-input wf-channel-cb mt-0 flex-shrink-0"
-                                                   type="checkbox"
-                                                   name="channels"
-                                                   value="{{ item.channel.pk }}"
-                                                   id="id_channels_{{ item.channel.pk }}"
-                                                   {% if item.checked and item.has_access %}checked{% endif %}
-                                                   {% if not item.has_access %}disabled{% endif %}>
-                                            {% if item.channel.avatar %}
-                                                <img src="{{ item.channel.avatar.url }}"
-                                                     alt="{{ item.channel.title }}"
-                                                     class="wf-channel-platform-logo"
-                                                     style="border-radius:50%;object-fit:cover;">
-                                            {% elif item.channel.platform.logo %}
-                                                <img src="{{ item.channel.platform.logo.url }}"
-                                                     alt="{{ item.channel.platform.name }}"
-                                                     class="wf-channel-platform-logo">
-                                            {% else %}
-                                                <div class="wf-channel-platform-logo d-flex align-items-center justify-content-center bg-dark text-white">
-                                                    <i class="bi bi-megaphone-fill"></i>
-                                                </div>
-                                            {% endif %}
-                                            <div class="overflow-hidden">
-                                                <div class="text-white fw-bold fs-sm text-truncate">{{ item.channel.title }}</div>
-                                                <div class="text-muted fs-xs text-truncate">
-                                                    {{ item.channel.platform.name }}
-                                                    {% if item.channel.username %} · <span dir="ltr">@{{ item.channel.username }}</span>{% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
 
-                                        {% if not item.has_access %}
-                                            <a href="{% url 'forward_subscriptions:plans' %}"
-                                               class="badge bg-warning text-dark text-decoration-none rounded-pill px-2 py-1 flex-shrink-0">
-                                                🔒 نیاز به اشتراک
-                                            </a>
-                                        {% else %}
-                                            <span class="wf-badge-status is-connected py-1 px-2 flex-shrink-0">
-                                                <span class="wf-pulse-dot"></span> آماده
-                                            </span>
-                                        {% endif %}
-                                    </label>
+                            <!-- گروه‌بندی کانال‌ها بر اساس هر پلتفرم -->
+                            <div class="d-flex flex-column gap-4">
+                                {% for grp in channel_groups %}
+                                <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if grp.logo_url %}
+                                                <img src="{{ grp.logo_url }}" alt="{{ grp.name }}" style="width:26px;height:26px;border-radius:8px;object-fit:cover;">
+                                            {% endif %}
+                                            <strong class="text-white fs-sm">{{ grp.name }}</strong>
+                                            <span class="wf-pill-tag is-blue">{{ grp.items|length }} کانال</span>
+                                            {% if grp.slug == 'soroush' %}
+                                                <span class="wf-pill-tag is-gold" id="wfSoroushModeHint">
+                                                    <i class="bi bi-chat-text"></i> فقط متن و کپشن · ۲ توکن
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <button type="button" class="wf-btn wf-btn-glass py-1 px-2 fs-xs wf-select-platform-btn" data-platform="{{ grp.slug }}">
+                                            انتخاب همه {{ grp.name }}
+                                        </button>
+                                    </div>
+                                    <div class="row g-2">
+                                        {% for item in grp.items %}
+                                        <div class="col-md-6">
+                                            <label class="wf-channel-tile w-100 {% if item.checked and item.has_access %}is-selected{% endif %} {% if not item.has_access %}is-locked{% endif %}"
+                                                   for="id_channels_{{ item.channel.pk }}">
+                                                <div class="d-flex align-items-center gap-3 overflow-hidden">
+                                                    <input class="form-check-input wf-channel-cb mt-0 flex-shrink-0"
+                                                           type="checkbox"
+                                                           name="channels"
+                                                           value="{{ item.channel.pk }}"
+                                                           data-platform="{{ grp.slug }}"
+                                                           data-base-locked="{% if not item.has_access %}1{% else %}0{% endif %}"
+                                                           id="id_channels_{{ item.channel.pk }}"
+                                                           {% if item.checked and item.has_access %}checked{% endif %}
+                                                           {% if not item.has_access %}disabled{% endif %}>
+                                                    <div class="wf-avatar-with-badge" style="width:40px;height:40px;border-radius:12px;">
+                                                        {% if item.channel.avatar %}
+                                                            <img src="{{ item.channel.avatar.url }}" alt="{{ item.channel.title }}" class="wf-av-img">
+                                                        {% else %}
+                                                            {{ item.channel.title|slice:":1" }}
+                                                        {% endif %}
+                                                        {% if item.channel.platform.logo %}
+                                                            <img src="{{ item.channel.platform.logo.url }}" alt="{{ item.channel.platform.name }}" class="wf-av-plat" style="width:17px;height:17px;">
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="overflow-hidden">
+                                                        <div class="text-white fw-bold fs-xs text-truncate">{{ item.channel.title }}</div>
+                                                        <div class="text-muted text-truncate" style="font-size:0.7rem;" dir="ltr">
+                                                            {% if item.channel.username %}@{{ item.channel.username }}{% else %}{{ item.channel.chat_id }}{% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {% if not item.has_access %}
+                                                    <a href="{% url 'forward_subscriptions:plans' %}" class="wf-pill-tag is-gold text-decoration-none flex-shrink-0">
+                                                        🔒 اشتراک
+                                                    </a>
+                                                {% else %}
+                                                    <span class="wf-pill-tag is-emerald flex-shrink-0 wf-channel-status-badge">آماده</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -187,7 +206,7 @@
                             <div class="text-center py-4">
                                 <i class="bi bi-megaphone fs-1 text-muted d-block mb-2"></i>
                                 <h6 class="text-white fw-bold mb-1">هنوز کانالی متصل نکرده‌اید</h6>
-                                <p class="text-muted fs-xs mb-3">از داشبورد وین فوروارد کانال‌های بله، ایتا یا روبیکا خود را متصل کنید.</p>
+                                <p class="text-muted fs-xs mb-3">از داشبورد وین فوروارد کانال‌های بله، ایتا، روبیکا، تلگرام یا سروش‌پلاس خود را متصل کنید.</p>
                                 <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-orange">
                                     <i class="bi bi-grid-1x2-fill"></i> رفتن به داشبورد
                                 </a>
@@ -198,19 +217,63 @@
                             <div class="text-danger fs-xs mt-3">{{ form.channels.errors }}</div>
                         {% endif %}
 
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3 border-top border-light">
-                            <span class="text-muted fs-xs">
-                                <i class="bi bi-shield-check text-success me-1"></i> ارسال بدون تگ فوروارد و بهینه‌شده برای هر پیام‌رسان
-                            </span>
-                            <button type="submit" class="wf-btn wf-btn-orange px-5 py-3">
-                                <i class="bi bi-rocket-takeoff-fill"></i> شروع انتشار همگانی
-                            </button>
+                        <!-- پنل زنده برآورد هزینه توکن و موجودی -->
+                        <div class="mt-4 p-3 p-md-4 rounded-4"
+                             id="wfLiveCostPanel"
+                             data-pricing='{{ pricing_json|safe }}'
+                             data-balance="{{ token_balance|default:0|unlocalize }}"
+                             data-toman-rate="50"
+                             style="background:linear-gradient(145deg,rgba(253,188,49,0.09),rgba(20,17,32,0.94));border:1px solid rgba(253,188,49,0.28);">
+                            <div class="row align-items-center g-3">
+                                <div class="col-md-7">
+                                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                        <span class="wf-pill-tag is-gold" id="wfTokenEstimateBadge">
+                                            <i class="bi bi-coin"></i> کل مصرف: ۰ توکن
+                                        </span>
+                                        <span class="wf-pill-tag is-emerald" id="wfTokenTomanBadge">
+                                            معادل ۰ تومان
+                                        </span>
+                                        <span class="text-muted fs-xs" id="wfTokenFormulaText">۰ کانال × ۲ توکن</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 flex-wrap fs-xs text-muted">
+                                        <span>موجودی فعلی: <strong class="text-white">{{ token_balance|default:0|intcomma }} توکن</strong></span>
+                                        <span>·</span>
+                                        <span>باقی‌مانده پس از ارسال: <strong class="text-info" id="wfTokenRemaining">{{ token_balance|default:0|intcomma }} توکن</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-5 text-md-end">
+                                    <button type="submit" id="wfSubmitBroadcastBtn" class="wf-btn wf-btn-orange px-4 py-3 w-100 w-md-auto justify-content-center">
+                                        <i class="bi bi-rocket-takeoff-fill"></i> شروع انتشار همگانی
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- هشدار هوشمند کسری توکن -->
+                            <div id="wfTokenDeficitAlert"
+                                 class="mt-3 p-2.5 px-3 rounded-3 d-none align-items-center justify-content-between flex-wrap gap-2"
+                                 style="background:rgba(242,60,73,0.12);border:1px solid rgba(242,60,73,0.35);">
+                                <div class="text-danger fs-xs fw-bold">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    <span id="wfTokenDeficitText">موجودی توکن شما کافی نیست.</span>
+                                </div>
+                                <a href="{% url 'forward_subscriptions:plans' %}" class="btn btn-sm btn-warning rounded-pill px-3 fw-bold">
+                                    <i class="bi bi-plus-circle me-1"></i> شارژ سریع توکن
+                                </a>
+                            </div>
+
+                            <!-- هشدار سقف حجم ۲۰ مگابایت -->
+                            <div id="wfFileSizeOverAlert"
+                                 class="mt-2 p-2.5 px-3 rounded-3 d-none align-items-center gap-2 fs-xs fw-bold text-danger"
+                                 style="background:rgba(242,60,73,0.12);border:1px solid rgba(242,60,73,0.35);">
+                                <i class="bi bi-file-earmark-x-fill"></i>
+                                <span>حجم فایل انتخاب‌شده بیش از سقف مجاز ۲۰ مگابایت است و قابل انتقال نیست.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ستون چپ: شبیه‌ساز موبایل پیش‌نمایش زنده -->
+            <!-- ستون چپ: شبیه‌ساز موبایل با پیش‌نمایش زنده فایل واقعی -->
             <div class="col-lg-4">
                 <div class="position-sticky" style="top: 90px;">
                     <div class="wf-phone-frame">
@@ -222,16 +285,13 @@
                                     <i class="bi bi-megaphone-fill"></i>
                                 </div>
                                 <div>
-                                    <div class="text-white fw-bold fs-xs">پیش‌نمایش کانال شما</div>
-                                    <div class="text-muted" style="font-size:0.68rem;">نمایش زنده خروجی پیام</div>
+                                    <div class="text-white fw-bold fs-xs">پیش‌نمایش زنده کانال</div>
+                                    <div class="text-muted" style="font-size:0.68rem;">نمای واقعی پیام و رسانه</div>
                                 </div>
                             </div>
 
                             <div class="wf-chat-bubble">
-                                <div id="wfPreviewMediaBadge" class="mb-2 p-2 rounded-3 text-center fs-xs fw-bold"
-                                     style="display:none;background:rgba(253,86,49,0.16);color:#fd5631;border:1px dashed rgba(253,86,49,0.4);">
-                                    📎 پیوست رسانه
-                                </div>
+                                <div id="wfLiveMediaPreview" class="mb-2" style="display:none;"></div>
                                 <div id="wfPreviewText" style="white-space: pre-wrap;">متن یا کپشن پیام شما به صورت زنده در این حباب نمایش داده می‌شود...</div>
                                 <div class="d-flex align-items-center justify-content-end gap-1 mt-2 text-muted" style="font-size:0.68rem;">
                                     <span>الان</span>
@@ -246,17 +306,274 @@
     </form>
 
 </div>
+{% endblock %}
 
+{% block script %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const cbs = Array.from(document.querySelectorAll(".wf-channel-cb:not(:disabled)"));
+    const typeSelect = document.getElementById("id_content_type");
+    const fileSection = document.getElementById("file-upload-section");
+    const dropzone = document.getElementById("wfDropzoneArea");
+    const fileInput = document.getElementById("id_file");
+    const fileNameEl = document.getElementById("wfFileNameDisplay");
+    const textInput = document.getElementById("id_text");
+    const costPanel = document.getElementById("wfLiveCostPanel");
+    const estBadge = document.getElementById("wfTokenEstimateBadge");
+    const tomanBadge = document.getElementById("wfTokenTomanBadge");
+    const formulaEl = document.getElementById("wfTokenFormulaText");
+    const remainingEl = document.getElementById("wfTokenRemaining");
+    const deficitAlert = document.getElementById("wfTokenDeficitAlert");
+    const deficitText = document.getElementById("wfTokenDeficitText");
+    const sizeOverAlert = document.getElementById("wfFileSizeOverAlert");
+    const submitBtn = document.getElementById("wfSubmitBroadcastBtn");
+    const pricing = costPanel ? JSON.parse(costPanel.dataset.pricing || "{}") : {};
+    const userBalance = costPanel ? (parseInt(String(costPanel.dataset.balance || "0").replace(/[^\d]/g, ""), 10) || 0) : 0;
+    const tomanRate = costPanel ? parseInt(costPanel.dataset.tomanRate || "50", 10) : 50;
+    const maxFileMb = pricing.max_mb || 20;
+    let currentFileSizeBytes = 0;
+
+    function syncSoroushLock() {
+        const ctype = typeSelect ? typeSelect.value : "text";
+        const hasCaption = textInput && (textInput.value || "").trim().length > 0;
+        const isMedia = ctype !== "text";
+        const shouldLock = isMedia && !hasCaption;
+        const soroushCbs = document.querySelectorAll('.wf-channel-cb[data-platform="soroush"]');
+
+        soroushCbs.forEach(function (cb) {
+            if (cb.dataset.baseLocked === "1") return;
+            const tile = cb.closest(".wf-channel-tile");
+            const badge = tile ? tile.querySelector(".wf-channel-status-badge") : null;
+            if (shouldLock) {
+                cb.checked = false;
+                cb.disabled = true;
+                if (tile) {
+                    tile.classList.add("is-locked");
+                    tile.classList.remove("is-selected");
+                }
+                if (badge) {
+                    badge.className = "wf-pill-tag is-gold flex-shrink-0 wf-channel-status-badge";
+                    badge.textContent = "🔒 نیاز به کپشن";
+                }
+            } else {
+                cb.disabled = false;
+                if (tile) {
+                    tile.classList.remove("is-locked");
+                    tile.classList.toggle("is-selected", cb.checked);
+                }
+                if (badge) {
+                    badge.className = "wf-pill-tag is-emerald flex-shrink-0 wf-channel-status-badge";
+                    badge.textContent = isMedia ? "فقط کپشن · ۲ توکن" : "آماده";
+                }
+            }
+        });
+
+        const soroushPlatBtn = document.querySelector('.wf-select-platform-btn[data-platform="soroush"]');
+        if (soroushPlatBtn) {
+            soroushPlatBtn.disabled = shouldLock;
+            soroushPlatBtn.style.opacity = shouldLock ? "0.45" : "";
+        }
+    }
+
+    function updateTokenEstimate() {
+        if (!estBadge) return;
+        const ctype = typeSelect ? typeSelect.value : "text";
+        const hasCaption = textInput && (textInput.value || "").trim().length > 0;
+        const checkedCbs = Array.from(document.querySelectorAll(".wf-channel-cb:checked:not(:disabled)"));
+        const soroushCount = checkedCbs.filter(function (cb) { return cb.dataset.platform === "soroush"; }).length;
+        const otherCount = checkedCbs.length - soroushCount;
+        const mb = currentFileSizeBytes / (1024 * 1024);
+        const isOverMax = ctype !== "text" && mb > maxFileMb;
+
+        const textCost = pricing.text || 2;
+        let perCh = textCost;
+        if (ctype === "photo") {
+            perCh = (pricing.photo || 2) + (hasCaption ? (pricing.caption_extra || 2) : 0);
+        } else if (ctype === "sticker" || ctype === "animation") {
+            perCh = pricing.sticker_gif || 3;
+        } else if (ctype !== "text") {
+            let base = pricing.under_5 || 5;
+            if (mb > 10) base = pricing.from_10_20 || 10;
+            else if (mb > 5) base = pricing.from_5_10 || 7;
+            perCh = base + (hasCaption ? (pricing.caption_extra || 2) : 0);
+        }
+
+        const total = (otherCount * perCh) + (soroushCount * textCost);
+        const totalToman = total * tomanRate;
+        const remaining = userBalance - total;
+
+        estBadge.innerHTML = '<i class="bi bi-coin"></i> کل مصرف: ' + total.toLocaleString("fa-IR") + ' توکن';
+        if (tomanBadge) {
+            tomanBadge.textContent = "معادل " + totalToman.toLocaleString("fa-IR") + " تومان";
+        }
+        if (formulaEl) {
+            if (soroushCount > 0 && otherCount > 0 && perCh !== textCost) {
+                formulaEl.textContent = otherCount.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR") + " + " + soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR") + " توکن";
+            } else if (soroushCount > 0 && otherCount === 0) {
+                formulaEl.textContent = soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR") + " توکن";
+            } else {
+                formulaEl.textContent = checkedCbs.length.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR") + " توکن";
+            }
+        }
+        if (remainingEl) {
+            if (remaining >= 0) {
+                remainingEl.className = "text-info";
+                remainingEl.textContent = remaining.toLocaleString("fa-IR") + " توکن";
+            } else {
+                remainingEl.className = "text-danger";
+                remainingEl.textContent = "کمبود " + Math.abs(remaining).toLocaleString("fa-IR") + " توکن";
+            }
+        }
+        if (deficitAlert) {
+            if (total > userBalance) {
+                deficitAlert.classList.remove("d-none");
+                deficitAlert.classList.add("d-flex");
+                if (deficitText) {
+                    deficitText.textContent = "موجودی توکن برای ارسال به همه کانال‌های انتخابی کافی نیست (کمبود " + (total - userBalance).toLocaleString("fa-IR") + " توکن).";
+                }
+            } else {
+                deficitAlert.classList.add("d-none");
+                deficitAlert.classList.remove("d-flex");
+            }
+        }
+        if (sizeOverAlert) {
+            if (isOverMax) {
+                sizeOverAlert.classList.remove("d-none");
+                sizeOverAlert.classList.add("d-flex");
+            } else {
+                sizeOverAlert.classList.add("d-none");
+                sizeOverAlert.classList.remove("d-flex");
+            }
+        }
+        if (submitBtn) {
+            submitBtn.disabled = isOverMax;
+            submitBtn.style.opacity = isOverMax ? "0.5" : "";
+        }
+    }
+    const charCounter = document.getElementById("wfCharCounter");
+    const previewText = document.getElementById("wfPreviewText");
+    const liveMediaBox = document.getElementById("wfLiveMediaPreview");
+    const pillBtns = document.querySelectorAll(".wf-type-pill-btn");
+
+    function updateTypeUI(val) {
+        if (typeSelect) typeSelect.value = val;
+        syncSoroushLock();
+        updateTokenEstimate();
+        pillBtns.forEach(function (b) { b.classList.toggle("is-active", b.dataset.contentType === val); });
+        if (fileSection) fileSection.style.display = val === "text" ? "none" : "block";
+        if (val === "text" && liveMediaBox) {
+            liveMediaBox.style.display = "none";
+            liveMediaBox.innerHTML = "";
+        }
+    }
+
+    pillBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () { updateTypeUI(btn.dataset.contentType); });
+    });
+    if (typeSelect && typeSelect.value) updateTypeUI(typeSelect.value);
+
+    function renderFilePreview(file) {
+        if (!file) return;
+        currentFileSizeBytes = file.size || 0;
+        updateTokenEstimate();
+        if (fileNameEl) {
+            const mb = (file.size / (1024 * 1024)).toFixed(2);
+            fileNameEl.textContent = "✅ " + file.name + " (" + mb + " MB)";
+            fileNameEl.style.display = "block";
+        }
+        if (!liveMediaBox) return;
+        const url = URL.createObjectURL(file);
+        liveMediaBox.style.display = "block";
+        if (file.type.startsWith("image/")) {
+            liveMediaBox.innerHTML = '<img src="' + url + '" style="width:100%;max-height:210px;object-fit:cover;border-radius:10px;" />';
+        } else if (file.type.startsWith("video/")) {
+            liveMediaBox.innerHTML = '<video src="' + url + '" controls style="width:100%;max-height:210px;border-radius:10px;background:#000;"></video>';
+        } else if (file.type.startsWith("audio/")) {
+            liveMediaBox.innerHTML = '<audio src="' + url + '" controls style="width:100%;"></audio>';
+        } else {
+            liveMediaBox.innerHTML = '<div class="p-2 rounded-3 fs-xs text-info" style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);"><i class="bi bi-file-earmark-arrow-up me-1"></i> ' + file.name + '</div>';
+        }
+    }
+
+    if (dropzone && fileInput) {
+        dropzone.addEventListener("click", function () { fileInput.click(); });
+        fileInput.addEventListener("change", function () {
+            if (fileInput.files && fileInput.files[0]) renderFilePreview(fileInput.files[0]);
+        });
+        ["dragenter", "dragover"].forEach(function (ev) {
+            dropzone.addEventListener(ev, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add("is-dragover");
+            });
+        });
+        ["dragleave", "drop"].forEach(function (ev) {
+            dropzone.addEventListener(ev, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove("is-dragover");
+            });
+        });
+        dropzone.addEventListener("drop", function (e) {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const dt = new DataTransfer();
+                dt.items.add(files[0]);
+                fileInput.files = dt.files;
+                renderFilePreview(files[0]);
+            }
+        });
+    }
+
+    if (textInput) {
+        function syncText() {
+            const val = textInput.value || "";
+            if (charCounter) charCounter.textContent = val.length.toLocaleString("fa-IR") + " / 4,096 کاراکتر";
+            if (previewText) previewText.textContent = val.trim() ? val : "متن یا کپشن پیام شما به صورت زنده در این حباب نمایش داده می‌شود...";
+        }
+        textInput.addEventListener("input", syncText);
+        syncText();
+        textInput.addEventListener("input", function () {
+            syncSoroushLock();
+            updateTokenEstimate();
+        });
+        syncSoroushLock();
+        updateTokenEstimate();
+    }
+
+    function syncTile(cb) {
+        const tile = cb.closest(".wf-channel-tile");
+        if (tile) tile.classList.toggle("is-selected", cb.checked);
+        updateTokenEstimate();
+    }
+    document.querySelectorAll(".wf-channel-cb").forEach(function (cb) {
+        if (!cb.disabled) syncTile(cb);
+        cb.addEventListener("change", function () { syncTile(cb); });
+    });
+
+    const selectAllBtn = document.getElementById("wfSelectAllChannels");
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener("click", function () {
+            const activeCbs = Array.from(document.querySelectorAll(".wf-channel-cb:not(:disabled)"));
+            const allChecked = activeCbs.length > 0 && activeCbs.every(function (cb) { return cb.checked; });
+            activeCbs.forEach(function (cb) { cb.checked = !allChecked; syncTile(cb); });
+        });
+    }
+
+    document.querySelectorAll(".wf-select-platform-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const plat = btn.dataset.platform;
+            const platCbs = Array.from(document.querySelectorAll('.wf-channel-cb[data-platform="' + plat + '"]:not(:disabled)'));
+            const allChecked = platCbs.every(function (cb) { return cb.checked; });
+            platCbs.forEach(function (cb) { cb.checked = !allChecked; syncTile(cb); });
+        });
+    });
+
     document.querySelectorAll(".wf-web-preset-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
             const ids = (btn.dataset.channelIds || "").split(",").filter(Boolean);
-            cbs.forEach(function (c) {
-                c.checked = ids.includes(String(c.value));
-                const tile = c.closest(".wf-channel-tile");
-                if (tile) tile.classList.toggle("is-selected", c.checked);
+            document.querySelectorAll(".wf-channel-cb:not(:disabled)").forEach(function (cb) {
+                cb.checked = ids.includes(cb.value);
+                syncTile(cb);
             });
         });
     });

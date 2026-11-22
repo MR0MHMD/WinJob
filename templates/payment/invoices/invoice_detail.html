@@ -11,6 +11,8 @@
         فاکتور سفارش محتوا {{ invoice.invoice_number }} | WinJob
     {% elif invoice.type == 'market_order' %}
         فاکتور سفارش وین‌مارکت {{ invoice.invoice_number }} | WinJob
+    {% elif invoice.type == 'winforward' %}
+        فاکتور بسته توکن وین فوروارد {{ invoice.invoice_number }} | WinJob
     {% else %}
         فاکتور شارژ کیف پول {{ invoice.invoice_number }} | WinJob
     {% endif %}
@@ -213,6 +215,11 @@
                                   style="background: rgba(192, 132, 252, 0.2) !important; color: #c084fc !important;">
                                 <i class="fi-shopping-bag me-1"></i> فاکتور وین‌مارکت
                             </span>
+                        {% elif invoice.type == 'winforward' %}
+                            <span class="badge px-3 py-1 rounded-pill"
+                                  style="background: rgba(251, 146, 60, 0.2) !important; color: #fb923c !important;">
+                                <i class="bi bi-coin me-1"></i> فاکتور بسته توکن وین‌فوروارد
+                            </span>
                         {% endif %}
 
                         {% if invoice.is_paid %}
@@ -244,6 +251,12 @@
                                class="btn btn-success rounded-pill px-4">
                                 <i class="fi-cart me-2"></i>
                                 پرداخت فاکتور
+                            </a>
+                        {% elif not invoice.is_paid and invoice.type == 'winforward' and forward_order and forward_order.status == 'pending' %}
+                            <a href="{% url 'forward_subscriptions:order_detail' forward_order.pk %}"
+                               class="btn btn-success rounded-pill px-4">
+                                <i class="fi-cart me-2"></i>
+                                ادامه و پرداخت فاکتور
                             </a>
                         {% endif %}
                     </div>
@@ -379,6 +392,76 @@
                                 {% endif %}
                             </div>
                         {% endwith %}
+                    </div>
+
+                {% elif invoice.type == 'winforward' and forward_order %}
+                    <!-- ===== اطلاعات بسته توکن وین فوروارد ===== -->
+                    <div class="info-card mb-4">
+                        <div class="info-title">
+                            <i class="bi bi-coin text-warning"></i>
+                            اطلاعات بسته توکن وین‌فوروارد
+                        </div>
+
+                        <div class="wd-plan-summary">
+                            <div class="wd-plan-summary-icon">
+                                <i class="bi bi-coin"></i>
+                            </div>
+                            <div class="wd-plan-summary-content">
+                                <h3 class="wd-plan-summary-name">{{ forward_order.plan.name }}</h3>
+                                <p class="wd-plan-summary-meta">
+                                    <strong>{{ forward_tokens_amount|intcomma }} توکن</strong> ·
+                                    بدون تاریخ انقضا ·
+                                    نرخ مؤثر: {{ forward_per_token_price|intcomma }} تومان / توکن
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="wd-features-list">
+                            <div class="wd-feature-row">
+                                <i class="bi bi-check-circle-fill"></i>
+                                اعتبار دائمی بدون انقضا
+                            </div>
+                            <div class="wd-feature-row">
+                                <i class="bi bi-check-circle-fill"></i>
+                                فعال در هر ۵ پیام‌رسان (بله، ایتا، روبیکا، تلگرام و سروش‌پلاس)
+                            </div>
+                            <div class="wd-feature-row">
+                                <i class="bi bi-check-circle-fill"></i>
+                                پشتیبانی از پکیج‌ها و هاب‌های تیمی
+                            </div>
+                            <div class="wd-feature-row">
+                                <i class="bi bi-check-circle-fill"></i>
+                                کسر توکن فقط در صورت ارسال موفق
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-3">
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">شناسه سفارش</div>
+                                <div class="info-value">
+                                    <a href="{% url 'forward_subscriptions:order_detail' forward_order.pk %}">
+                                        #{{ forward_order.pk }}
+                                        <i class="fi-external-link ms-1" style="font-size:0.7rem;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">وضعیت سفارش</div>
+                                <div class="info-value">
+                                    <span class="badge {% if forward_order.status == 'paid' %}bg-success{% elif forward_order.status == 'canceled' %}bg-danger{% else %}bg-warning{% endif %} bg-opacity-25 text-light">
+                                        {{ forward_order.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">تعداد توکن شارژی</div>
+                                <div class="info-value text-warning fw-bold">{{ forward_tokens_amount|intcomma }} توکن</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="text-secondary small">تاریخ ثبت سفارش</div>
+                                <div class="info-value">{{ forward_order.created_at|jformat:"%Y/%m/%d - %H:%M" }}</div>
+                            </div>
+                        </div>
                     </div>
 
                 {% elif invoice.type == 'content_order' %}
@@ -649,6 +732,60 @@
                             </span>
                             <span class="value text-warning" style="font-size:0.85rem;">
                                 پس‌کرایه 🚚
+                            </span>
+                        </div>
+
+                        <div class="cost-divider"></div>
+
+                        <div class="d-flex justify-content-between my-3 text-accent">
+                            <span class="label fw-bold fs-4">مبلغ قابل پرداخت</span>
+                            <span class="value fw-bold fs-4">
+                                {{ invoice.payable_amount|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-accent.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                    {% elif invoice.type == 'winforward' %}
+                        <!-- ===== فاکتور بسته توکن وین فوروارد ===== -->
+                        <div class="d-flex justify-content-between my-3">
+                            <span class="label text-light">
+                                <i class="bi bi-coin text-warning"></i> قیمت پایه بسته
+                            </span>
+                            <span class="value fw-bold text-light">
+                                {% if invoice.base_plan_cost %}{{ invoice.base_plan_cost|floatformat:0|intcomma }}{% else %}{{ invoice.plan_cost|floatformat:0|intcomma }}{% endif %}
+                                <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                        {% if invoice.plan_discount_amount > 0 %}
+                            <div class="d-flex justify-content-between my-3">
+                                <span class="label text-success">
+                                    <i class="fi-ticket me-1"></i> تخفیف پلکانی بسته
+                                </span>
+                                <span class="value text-success">
+                                    - {{ invoice.plan_discount_amount|floatformat:0|intcomma }}
+                                    <img src="{% static 'core/svg/toman/toman-success.svg' %}" alt="">
+                                </span>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between my-3">
+                            <span class="label text-light">
+                                <i class="fi-wallet2"></i> مبلغ پس از تخفیف
+                            </span>
+                            <span class="value fw-bold text-light">
+                                {{ invoice.plan_cost|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-light.svg' %}" alt="">
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between my-3 text-primary">
+                            <span class="label">
+                                <i class="fi-percent me-1"></i> مالیات بر ارزش افزوده
+                            </span>
+                            <span class="value">
+                                <span class="me-2">+</span>{{ invoice.plan_vat|floatformat:0|intcomma }}
+                                <img src="{% static 'core/svg/toman/toman-primary.svg' %}" alt="">
                             </span>
                         </div>
 
@@ -985,6 +1122,25 @@
                                class="btn btn-primary flex-fill">
                                 <i class="fi-shopping-bag me-2"></i>
                                 مشاهده سفارش وین‌مارکت
+                            </a>
+                        {% elif invoice.type == 'winforward' and forward_order %}
+                            {% if not invoice.is_paid and forward_order.status == 'pending' %}
+                                <a href="{% url 'forward_subscriptions:order_detail' forward_order.pk %}"
+                                   class="btn btn-success flex-fill">
+                                    <i class="fi-cart me-2"></i>
+                                    ادامه و پرداخت فاکتور
+                                </a>
+                            {% else %}
+                                <a href="{% url 'forward_subscriptions:order_detail' forward_order.pk %}"
+                                   class="btn btn-primary flex-fill">
+                                    <i class="bi bi-coin me-2"></i>
+                                    مشاهده سفارش توکن
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'forward_subscriptions:plans' %}"
+                               class="btn btn-outline-light flex-fill">
+                                <i class="fi-wallet me-2"></i>
+                                کیف توکن وین‌فوروارد
                             </a>
                         {% elif invoice.type == 'windirect' %}
                             <a href="{% url 'windirect:subscription_order' invoice.subscription_order.pk %}"

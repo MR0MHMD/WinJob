@@ -1,6 +1,9 @@
 """ویوهای پنل وب وین فوروارد (همراه با ارسال لوگوهای پلتفرم از دیتابیس و داده‌های تحلیلی داشبورد)."""
 
 from datetime import timedelta
+from zoneinfo import ZoneInfo
+from django.core.paginator import Paginator
+from django.urls import reverse
 import json
 import jdatetime
 from django.contrib import messages
@@ -13,21 +16,70 @@ from django.utils.decorators import method_decorator
 from django.views.generic import ListView
 
 from product.forward.broadcast.forms import BroadcastSendForm
-from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget, ChannelPreset
+from product.forward.broadcast.models import BroadcastChannel, BroadcastJob, BroadcastTarget, ChannelPreset, \
+    BroadcastHub
 from product.forward.broadcast.services.dispatcher import dispatch_job, enqueue_dispatch_job
+
+TOKEN_TOMAN_RATE = 50
+
+
+def _get_token_balance_safe(user) -> int:
+    """دریافت ایمن موجودی توکن کاربر."""
+    from product.forward.subscriptions.access import get_user_token_balance
+    return get_user_token_balance(user)
+
+
+def _get_jobs_token_spend_map(user, job_ids: list) -> dict:
+    """محاسبه تجمیعی توکن مصرف‌شده هر عملیات ارسال در یک کوئری واحد."""
+    if not job_ids:
+        return {}
+    from product.forward.subscriptions.models import ForwardTokenTransaction
+
+    rows = (
+        ForwardTokenTransaction.objects.filter(
+            user=user,
+            tx_type=ForwardTokenTransaction.TxType.SPEND,
+            broadcast_job_id__in=job_ids,
+        )
+        .values("broadcast_job_id")
+        .annotate(total=Sum("amount"))
+    )
+    return {r["broadcast_job_id"]: abs(int(r["total"] or 0)) for r in rows}
+
+
+def _get_pricing_json() -> str:
+    """سریال‌سازی جدول نرخ مصرف توکن برای محاسبه‌گر زنده در استدیو ارسال."""
+    from product.forward.subscriptions.services import get_pricing_config
+    cfg = get_pricing_config()
+    return json.dumps(
+        {
+            "text": cfg.text_cost,
+            "photo": cfg.photo_cost,
+            "caption_extra": cfg.caption_extra_cost,
+            "sticker_gif": cfg.sticker_gif_cost,
+            "under_5": cfg.media_under_5mb_cost,
+            "from_5_10": cfg.media_5_to_10mb_cost,
+            "from_10_20": cfg.media_10_to_20mb_cost,
+            "max_mb": cfg.max_file_size_mb,
+            "hub_extra": cfg.hub_extra_cost,
+            "ai_extra": cfg.ai_watermark_extra_cost,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _get_forward_platforms_map() -> dict:
     """واکشی دیکشنری پلتفرم‌های وین‌فوروارد از دیتابیس (شامل فیلد logo) بر اساس اسلاگ."""
     from core.models import Platform
 
-    qs = Platform.objects.filter(slug__in=["bale", "eitaa", "rubika"])
+    qs = Platform.objects.filter(slug__in=["bale", "eitaa", "rubika", "telegram", "soroush"])
     return {p.slug: p for p in qs}
 
 
 def _format_persian_date() -> str:
     """تولید رشته تاریخ شمسی خوانا مشابه داشبورد وین‌دایرکت و تبلیغ‌دهندگان."""
-    today = jdatetime.date.today()
+    now_tehran = timezone.now().astimezone(ZoneInfo("Asia/Tehran"))
+    today = jdatetime.date.fromgregorian(date=now_tehran.date())
     persian_date = today.strftime("%A %d %B %Y")
     weekdays = {
         "Saturday": "شنبه",
@@ -103,6 +155,25 @@ def send_broadcast(request):
         for p in presets
     ]
 
+    platform_order = ["bale", "eitaa", "rubika", "telegram", "soroush"]
+    grouped_map = {}
+    for item in getattr(form, "channel_items", []):
+        slug = item["channel"].platform.slug
+        if slug not in grouped_map:
+            p_obj = item["channel"].platform
+            grouped_map[slug] = {
+                "slug": slug,
+                "name": p_obj.name,
+                "logo_url": p_obj.logo.url if p_obj.logo else "",
+                "items": [],
+            }
+        grouped_map[slug]["items"].append(item)
+
+    channel_groups = [grouped_map[s] for s in platform_order if s in grouped_map]
+    for s, g in grouped_map.items():
+        if s not in platform_order:
+            channel_groups.append(g)
+
     return render(
         request,
         "product/forward/broadcast/send.html",
@@ -110,18 +181,80 @@ def send_broadcast(request):
             "form": form,
             "nav_platforms": nav_platforms,
             "preset_items": preset_items,
+            "channel_groups": channel_groups,
+            "token_balance": _get_token_balance_safe(request.user),
+            "pricing_json": _get_pricing_json(),
         },
     )
 
 
-@login_required
-def job_detail(request, job_id):
-    """نمایش جزئیات یک عملیات ارسال همگانی و وضعیت تحویل به تفکیک هر کانال."""
+def _render_job_report(request, job: BroadcastJob, is_public_view: bool = False):
+    """ساخت کانتکست مشترک گزارش تحلیلی ارسال همگانی برای نمای مالک و نمای عمومی بدون لاگین."""
     nav_platforms = _get_forward_platforms_map()
-    job = get_object_or_404(BroadcastJob.objects.select_related("message"), pk=job_id, message__user=request.user)
-    targets = job.targets.select_related("channel", "channel__platform").all()
-    total_targets = job.total_targets or targets.count()
+    targets = list(job.targets.select_related("channel", "channel__platform").all())
+    total_targets = job.total_targets or len(targets)
     success_rate = int(round((job.success_count / total_targets) * 100)) if total_targets > 0 else 0
+    pending_count = max(0, total_targets - (job.success_count + job.failed_count))
+
+    plat_order = ["bale", "eitaa", "rubika", "telegram", "soroush"]
+    plat_stats = {}
+    for t in targets:
+        slug = t.channel.platform.slug
+        if slug not in plat_stats:
+            plat_stats[slug] = {"name": t.channel.platform.name, "success": 0, "failed": 0, "pending": 0}
+        if t.status == BroadcastTarget.Status.SUCCESS:
+            plat_stats[slug]["success"] += 1
+        elif t.status in (BroadcastTarget.Status.FAILED, BroadcastTarget.Status.SKIPPED):
+            plat_stats[slug]["failed"] += 1
+        else:
+            plat_stats[slug]["pending"] += 1
+
+    ordered_slugs = [s for s in plat_order if s in plat_stats] + [s for s in plat_stats if s not in plat_order]
+    platform_chart = {
+        "labels": [plat_stats[s]["name"] for s in ordered_slugs],
+        "success": [plat_stats[s]["success"] for s in ordered_slugs],
+        "failed": [plat_stats[s]["failed"] for s in ordered_slugs],
+    }
+
+    from product.forward.subscriptions.services import calculate_delivery_token_cost
+
+    job_tokens_spent = _get_jobs_token_spend_map(job.message.user, [job.pk]).get(job.pk, 0)
+    job_tokens_toman = job_tokens_spent * TOKEN_TOMAN_RATE
+    unit_token_cost = (
+        int(round(job_tokens_spent / job.success_count))
+        if (job.success_count > 0 and job_tokens_spent > 0)
+        else 0
+    )
+    meta = job.message.platform_file_ids or {}
+    is_hub_msg = bool(meta.get("hub_id"))
+    soroush_text_cost = calculate_delivery_token_cost(
+        content_type="text",
+        has_caption=False,
+        file_size_bytes=0,
+        is_hub=is_hub_msg,
+    )
+    file_size_bytes = int(meta.get("file_size") or 0)
+    if job.message.file:
+        try:
+            file_size_bytes = int(job.message.file.size or file_size_bytes)
+        except Exception:
+            pass
+    normal_cost = calculate_delivery_token_cost(
+        content_type=job.message.content_type,
+        has_caption=bool((job.message.text or "").strip()),
+        file_size_bytes=file_size_bytes,
+        is_hub=is_hub_msg,
+        use_ai_watermark=bool(meta.get("use_ai_watermark")),
+    )
+    for t in targets:
+        if t.status == BroadcastTarget.Status.SUCCESS:
+            t_cost = soroush_text_cost if t.channel.platform.slug == "soroush" else (
+                normal_cost if job_tokens_spent > 0 else unit_token_cost)
+            t.tokens_spent = t_cost
+            t.tokens_toman = t_cost * TOKEN_TOMAN_RATE
+        else:
+            t.tokens_spent = 0
+            t.tokens_toman = 0
 
     return render(
         request,
@@ -129,42 +262,104 @@ def job_detail(request, job_id):
         {
             "job": job,
             "targets": targets,
+            "total_targets": total_targets,
             "success_rate": success_rate,
+            "pending_count": pending_count,
+            "job_tokens_spent": job_tokens_spent,
+            "job_tokens_toman": job_tokens_toman,
+            "unit_token_cost": unit_token_cost,
+            "token_toman_rate": TOKEN_TOMAN_RATE,
+            "platform_chart_json": json.dumps(platform_chart, ensure_ascii=False),
             "nav_platforms": nav_platforms,
+            "is_public_view": is_public_view,
+            "public_report_url": job.get_public_report_url(),
         },
     )
 
 
+@login_required
+def job_detail(request, job_id):
+    """نمایش گزارش تحلیلی ارسال همگانی برای کاربر لاگین‌شده مالک ارسال."""
+    job = get_object_or_404(BroadcastJob.objects.select_related("message", "message__user"), pk=job_id,
+                            message__user=request.user)
+    return _render_job_report(request, job, is_public_view=False)
+
+
+def public_job_detail(request, slug):
+    """نمایش عمومی گزارش ارسال از طریق اسلاگ تصادفی ۱۵ کاراکتری بدون نیاز به لاگین."""
+    job = get_object_or_404(BroadcastJob.objects.select_related("message", "message__user"), public_slug=slug)
+    is_owner = request.user.is_authenticated and (request.user.pk == job.message.user_id)
+    return _render_job_report(request, job, is_public_view=not is_owner)
+
+
 @method_decorator(login_required, name="dispatch")
 class JobListView(ListView):
-    """نمایش تاریخچه عملیات‌های ارسال همگانی کاربر به همراه آمار کلی."""
+    """نمایش تاریخچه ارسال‌ها با فیلترهای پیشرفته، نمای جدولی (پیش‌فرض) و کارتی، و نرخ موفقیت هر ارسال."""
 
     model = BroadcastJob
     template_name = "product/forward/broadcast/job_list.html"
     context_object_name = "jobs"
-    paginate_by = 15
+    paginate_by = 12
 
     def get_queryset(self):
-        """واکشی جاب‌های مربوط به کاربر لاگین‌شده به همراه کانال‌ها و پلتفرم‌های مقصد."""
-        return (
+        qs = (
             BroadcastJob.objects.filter(message__user=self.request.user)
             .select_related("message")
             .prefetch_related("targets__channel__platform")
             .order_by("-created_at")
         )
+        q = (self.request.GET.get("q") or "").strip()
+        status = (self.request.GET.get("status") or "all").strip().lower()
+        ctype = (self.request.GET.get("content_type") or "all").strip().lower()
+        plat = (self.request.GET.get("platform") or "all").strip().lower()
+
+        if q:
+            if q.isdigit():
+                qs = qs.filter(Q(pk=int(q)) | Q(message__text__icontains=q))
+            else:
+                qs = qs.filter(message__text__icontains=q)
+        if status in ("done", "partial", "failed", "running", "pending"):
+            qs = qs.filter(status=status)
+        if ctype in ("text", "photo", "video", "audio", "voice", "document", "animation", "sticker"):
+            qs = qs.filter(message__content_type=ctype)
+        if plat in ("bale", "eitaa", "rubika", "telegram", "soroush"):
+            qs = qs.filter(targets__channel__platform__slug=plat).distinct()
+        return qs
 
     def get_context_data(self, **kwargs):
-        """افزودن آمار کلی ارسال‌ها و لوگوهای پلتفرم به کانتکست صفحه تاریخچه."""
         ctx = super().get_context_data(**kwargs)
         ctx["nav_platforms"] = _get_forward_platforms_map()
-        qs = BroadcastJob.objects.filter(message__user=self.request.user)
-        agg = qs.aggregate(
-            total_sent=Sum("success_count"),
-            total_failed=Sum("failed_count"),
-        )
-        ctx["total_jobs_count"] = qs.count()
-        ctx["total_sent_count"] = agg["total_sent"] or 0
-        ctx["total_failed_count"] = agg["total_failed"] or 0
+        qs_all = BroadcastJob.objects.filter(message__user=self.request.user)
+        agg = qs_all.aggregate(total_sent=Sum("success_count"), total_failed=Sum("failed_count"))
+        total_sent = agg["total_sent"] or 0
+        total_failed = agg["total_failed"] or 0
+        total_all = total_sent + total_failed
+
+        ctx["total_jobs_count"] = qs_all.count()
+        ctx["total_sent_count"] = total_sent
+        ctx["total_failed_count"] = total_failed
+        ctx["overall_success_rate"] = int(round((total_sent / total_all) * 100)) if total_all > 0 else 100
+
+        view_mode = (self.request.GET.get("view") or "table").strip().lower()
+        ctx["view_mode"] = view_mode if view_mode in ("table", "grid") else "table"
+        ctx["search_q"] = (self.request.GET.get("q") or "").strip()
+        ctx["status_filter"] = (self.request.GET.get("status") or "all").strip().lower()
+        ctx["content_type_filter"] = (self.request.GET.get("content_type") or "all").strip().lower()
+        ctx["platform_filter"] = (self.request.GET.get("platform") or "all").strip().lower()
+
+        # محاسبه نرخ موفقیت، لیست یکتای پلتفرم‌ها و توکن مصرفی برای هر جاب در صفحه فعلی
+        page_jobs = list(ctx["jobs"])
+        spend_map = _get_jobs_token_spend_map(self.request.user, [j.pk for j in page_jobs])
+        for job in page_jobs:
+            seen_p = {}
+            for t in job.targets.all():
+                p = t.channel.platform
+                if p.slug not in seen_p:
+                    seen_p[p.slug] = p
+            job.unique_platforms = list(seen_p.values())
+            job.tokens_spent = spend_map.get(job.pk, 0)
+            job.tokens_toman = job.tokens_spent * TOKEN_TOMAN_RATE
+        ctx["jobs"] = page_jobs
         return ctx
 
 
@@ -178,9 +373,7 @@ def eitaa_connect_token(request):
     """صفحه اتصال توکن ایتایار (گام ۱)."""
     from product.forward.subscriptions.access import user_has_platform_access
 
-    if not user_has_platform_access(request.user, "eitaa"):
-        messages.warning(request, "🔒 برای اتصال و استفاده از ایتا ابتدا باید اشتراک فعال آن را تهیه کنید.")
-        return redirect("forward_subscriptions:plans")
+    # در سیستم توکنی، اتصال حساب‌ها و کانال‌ها برای همه کاربران آزاد است
 
     from core.models import Platform
     from product.forward.broadcast.forms import EitaaTokenForm
@@ -235,36 +428,8 @@ def eitaa_connect_token(request):
 
 @login_required
 def eitaa_channels(request):
-    """صفحه لیست و مدیریت کانال‌های ایتا."""
-    from core.models import Platform
-    from product.forward.messengers.models import BotUser
-    from product.forward.subscriptions.access import get_user_platform_access_map
-
-    nav_platforms = _get_forward_platforms_map()
-    eitaa_platform = nav_platforms.get("eitaa") or Platform.objects.filter(slug="eitaa").first()
-    if not eitaa_platform:
-        messages.error(request, "پلتفرم ایتا در سیستم ثبت نشده است.")
-        return redirect("broadcast:dashboard")
-
-    bot_user = BotUser.objects.filter(user=request.user, platform=eitaa_platform).first()
-    channels = (
-        BroadcastChannel.objects.filter(user=request.user, platform=eitaa_platform, is_active=True)
-        .select_related("platform")
-        .order_by("-created_at")
-    )
-    access_map = get_user_platform_access_map(request.user)
-
-    return render(
-        request,
-        "product/forward/broadcast/eitaa/channels.html",
-        {
-            "bot_user": bot_user,
-            "channels": channels,
-            "platform": eitaa_platform,
-            "platform_access": access_map.get("eitaa"),
-            "nav_platforms": nav_platforms,
-        },
-    )
+    """هدایت به صفحه یکپارچه کانال‌های متصل با فیلتر پیش‌فرض eitaa."""
+    return redirect(f"{reverse('broadcast:connected_channels')}?platform=eitaa")
 
 
 @login_required
@@ -351,9 +516,7 @@ def rubika_connect_phone(request):
     """گام اول اتصال به روبیکا: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
     from product.forward.subscriptions.access import user_has_platform_access
 
-    if not user_has_platform_access(request.user, "rubika"):
-        messages.warning(request, "🔒 برای اتصال و استفاده از روبیکا ابتدا باید اشتراک فعال آن را تهیه کنید.")
-        return redirect("forward_subscriptions:plans")
+    # در سیستم توکنی، اتصال حساب‌ها و کانال‌ها برای همه کاربران آزاد است
 
     from core.models import Platform
     from product.forward.broadcast.forms import RubikaPhoneForm
@@ -485,36 +648,8 @@ def rubika_verify_code(request):
 
 @login_required
 def rubika_channels(request):
-    """صفحه لیست و مدیریت کانال‌های متصل‌شده روبیکا."""
-    from core.models import Platform
-    from product.forward.messengers.models import BotUser
-    from product.forward.subscriptions.access import get_user_platform_access_map
-
-    nav_platforms = _get_forward_platforms_map()
-    rubika_platform = nav_platforms.get("rubika") or Platform.objects.filter(slug="rubika").first()
-    if not rubika_platform:
-        messages.error(request, "پلتفرم روبیکا در سیستم ثبت نشده است.")
-        return redirect("broadcast:dashboard")
-
-    bot_user = BotUser.objects.filter(user=request.user, platform=rubika_platform).first()
-    channels = (
-        BroadcastChannel.objects.filter(user=request.user, platform=rubika_platform, is_active=True)
-        .select_related("platform")
-        .order_by("-created_at")
-    )
-    access_map = get_user_platform_access_map(request.user)
-
-    return render(
-        request,
-        "product/forward/broadcast/rubika/channels.html",
-        {
-            "bot_user": bot_user,
-            "channels": channels,
-            "platform": rubika_platform,
-            "platform_access": access_map.get("rubika"),
-            "nav_platforms": nav_platforms,
-        },
-    )
+    """هدایت به صفحه یکپارچه کانال‌های متصل با فیلتر پیش‌فرض rubika."""
+    return redirect(f"{reverse('broadcast:connected_channels')}?platform=rubika")
 
 
 @login_required
@@ -575,7 +710,6 @@ def rubika_sync_channels(request):
     return redirect("broadcast:rubika_channels")
 
 
-
 @login_required
 def rubika_delete_channel(request, channel_id):
     """غیرفعال‌سازی کانال روبیکا (POST only)."""
@@ -610,6 +744,11 @@ def forward_dashboard(request):
 
     nav_platforms = _get_forward_platforms_map()
     account = account_for(request.user)
+    token_balance = int(getattr(account, "token_balance", 0) or 0)
+    total_tokens_spent = int(getattr(account, "total_tokens_spent", 0) or 0)
+    can_claim_gift = bool(getattr(account, "can_use_trial", False))
+    subscription_days_left = token_balance
+    active_plan_name = "کیف توکن وین‌فوروارد"
     access_map = get_user_platform_access_map(request.user)
     wallet = Wallet.objects.filter(user=request.user).first()
     wallet_balance = wallet.balance if wallet else 0
@@ -623,7 +762,7 @@ def forward_dashboard(request):
         user=request.user, is_active=True
     ).select_related("platform")
 
-    channels_by_slug = {"bale": [], "eitaa": [], "rubika": [], "telegram": []}
+    channels_by_slug = {"bale": [], "eitaa": [], "rubika": [], "telegram": [], "soroush": []}
     for ch in active_channels:
         if ch.platform.slug in channels_by_slug:
             channels_by_slug[ch.platform.slug].append(ch)
@@ -692,7 +831,21 @@ def forward_dashboard(request):
             "account_identifier": (
                 bot_users["telegram"].username or bot_users["telegram"].chat_id if bot_users.get("telegram") else ""
             ),
-            "summary": "هسته دوم ارسال و دریافت پست از ربات تلگرام و انتشار هم‌زمان به ۴ پیام‌رسان",
+            "summary": "هسته دوم ارسال و دریافت پست از ربات تلگرام و انتشار هم‌زمان به ۵ پیام‌رسان",
+        },
+        {
+            "slug": "soroush",
+            "name": "سروش‌پلاس",
+            "icon": "bi-chat-dots-fill",
+            "connect_url_name": "broadcast:soroush_connect_phone",
+            "channels_url_name": "broadcast:soroush_channels",
+            "is_connected": bool(bot_users.get("soroush") and bot_users["soroush"].has_soroush_session),
+            "account_identifier": (
+                (bot_users["soroush"].session_data or {}).get("phone_number", "")
+                if bot_users.get("soroush")
+                else ""
+            ),
+            "summary": "ورود امن با شماره و کد تایید (OTP)، همگام‌سازی خودکار کانال‌ها و ارسال پرسرعت رسانه به سروش‌پلاس",
         },
     ]
 
@@ -703,7 +856,7 @@ def forward_dashboard(request):
         p_obj = nav_platforms.get(slug)
         logo_url = p_obj.logo.url if (p_obj and p_obj.logo) else ""
         acc = access_map.get(slug)
-        has_sub = bool(acc and acc.is_valid)
+        has_sub = True
         if p["is_connected"]:
             connected_platforms_count += 1
         ch_list = channels_by_slug.get(slug, [])
@@ -714,7 +867,7 @@ def forward_dashboard(request):
                 "logo_url": logo_url,
                 "has_subscription": has_sub,
                 "access": acc,
-                "remaining_days": acc.remaining_days if has_sub else 0,
+                "remaining_days": token_balance,
                 "channels_count": len(ch_list),
                 "channels": ch_list[:4],
             }
@@ -733,32 +886,193 @@ def forward_dashboard(request):
     )
     recent_jobs = jobs_qs[:6]
 
-    # داده‌های نمودار ۳۰ روز اخیر ارسال‌ها
-    now = timezone.now()
-    last_30_days = now - timedelta(days=30)
-    daily_stats = (
-        BroadcastJob.objects.filter(message__user=request.user, created_at__gte=last_30_days)
-        .annotate(day=TruncDate("created_at"))
-        .values("day")
-        .annotate(
-            sent_sum=Sum("success_count"),
-            failed_sum=Sum("failed_count"),
-        )
-        .order_by("day")
+    # داده‌های دقیق نمودار (فقط روزها و ساعت/دقیقه‌هایی که واقعاً ارسال داشته‌اند — به وقت تهران)
+    tehran_tz = ZoneInfo("Asia/Tehran")
+    now_tehran = timezone.now().astimezone(tehran_tz)
+    today_tehran = now_tehran.date()
+    start_30_date = today_tehran - timedelta(days=29)
+    start_30_dt = timezone.datetime(
+        start_30_date.year, start_30_date.month, start_30_date.day, 0, 0, 0, tzinfo=tehran_tz
     )
-    activity_labels = []
-    activity_success_data = []
-    activity_failed_data = []
-    for item in daily_stats:
-        if item["day"]:
-            jalali = jdatetime.date.fromgregorian(date=item["day"])
-            activity_labels.append(jalali.strftime("%m/%d"))
-            activity_success_data.append(item["sent_sum"] or 0)
-            activity_failed_data.append(item["failed_sum"] or 0)
+    cutoff_24h = now_tehran - timedelta(hours=24)
 
-    bale_access = access_map.get("bale")
-    subscription_days_left = bale_access.remaining_days if (bale_access and bale_access.is_valid) else 0
-    active_plan_name = bale_access.plan.name if (bale_access and bale_access.plan) else ""
+    recent_30_jobs = list(
+        BroadcastJob.objects.filter(message__user=request.user, created_at__gte=start_30_dt)
+        .values("id", "created_at", "success_count", "failed_count")
+        .order_by("created_at")
+    )
+    recent_30_spend = _get_jobs_token_spend_map(request.user, [r["id"] for r in recent_30_jobs])
+
+    def _build_day_series(days_count: int) -> dict:
+        min_day = today_tehran - timedelta(days=days_count - 1)
+        buckets = {}
+        for row in recent_30_jobs:
+            dt_val = row["created_at"]
+            if not dt_val:
+                continue
+            if timezone.is_naive(dt_val):
+                dt_val = timezone.make_aware(dt_val, tehran_tz)
+            local_dt = dt_val.astimezone(tehran_tz)
+            d = local_dt.date()
+            if d < min_day or d > today_tehran:
+                continue
+            s_val = int(row["success_count"] or 0)
+            f_val = int(row["failed_count"] or 0)
+            tok_val = int(recent_30_spend.get(row["id"], 0))
+            if s_val == 0 and f_val == 0 and tok_val == 0:
+                continue
+            if d not in buckets:
+                buckets[d] = {"sent": 0, "failed": 0, "jobs": 0, "tokens": 0}
+            buckets[d]["sent"] += s_val
+            buckets[d]["failed"] += f_val
+            buckets[d]["jobs"] += 1
+            buckets[d]["tokens"] += tok_val
+
+        sorted_days = sorted(buckets.keys())
+        labels, succ, fail, jobs_c, toks = [], [], [], [], []
+        tot_s = tot_f = tot_tok = tot_jobs = peak_v = peak_tok_v = 0
+        peak_l = peak_tok_l = "—"
+        for d in sorted_days:
+            b = buckets[d]
+            lbl = jdatetime.date.fromgregorian(date=d).strftime("%m/%d")
+            labels.append(lbl)
+            succ.append(b["sent"])
+            fail.append(b["failed"])
+            jobs_c.append(b["jobs"])
+            toks.append(b["tokens"])
+            tot_s += b["sent"]
+            tot_f += b["failed"]
+            tot_tok += b["tokens"]
+            tot_jobs += b["jobs"]
+            if b["sent"] > peak_v:
+                peak_v = b["sent"]
+                peak_l = lbl
+            if b["tokens"] > peak_tok_v:
+                peak_tok_v = b["tokens"]
+                peak_tok_l = lbl
+        tot_all = tot_s + tot_f
+        return {
+            "labels": labels,
+            "success": succ,
+            "failed": fail,
+            "jobs": jobs_c,
+            "tokens": toks,
+            "total_sent": tot_s,
+            "total_failed": tot_f,
+            "success_rate": int(round((tot_s / tot_all) * 100)) if tot_all > 0 else 100,
+            "peak_val": peak_v,
+            "peak_label": peak_l,
+            "total_tokens": tot_tok,
+            "total_toman": tot_tok * TOKEN_TOMAN_RATE,
+            "avg_tokens_per_job": int(round(tot_tok / tot_jobs)) if tot_jobs > 0 else 0,
+            "peak_token_val": peak_tok_v,
+            "peak_token_label": peak_tok_l,
+        }
+
+    # سری ۲۴ ساعت گذشته: دقیقاً بر اساس ساعت:دقیقه (HH:MM) فقط زمان‌هایی که ارسال انجام شده
+    h24_buckets = {}
+    for row in recent_30_jobs:
+        dt_val = row["created_at"]
+        if not dt_val:
+            continue
+        if timezone.is_naive(dt_val):
+            dt_val = timezone.make_aware(dt_val, tehran_tz)
+        local_dt = dt_val.astimezone(tehran_tz)
+        if local_dt < cutoff_24h:
+            continue
+        s_val = int(row["success_count"] or 0)
+        f_val = int(row["failed_count"] or 0)
+        tok_val = int(recent_30_spend.get(row["id"], 0))
+        if s_val == 0 and f_val == 0 and tok_val == 0:
+            continue
+        slot_key = local_dt.replace(second=0, microsecond=0)
+        if slot_key not in h24_buckets:
+            h24_buckets[slot_key] = {"sent": 0, "failed": 0, "jobs": 0, "tokens": 0}
+        h24_buckets[slot_key]["sent"] += s_val
+        h24_buckets[slot_key]["failed"] += f_val
+        h24_buckets[slot_key]["jobs"] += 1
+        h24_buckets[slot_key]["tokens"] += tok_val
+
+    h24_labels, h24_succ, h24_fail, h24_jobs, h24_toks = [], [], [], [], []
+    h24_tot_s = h24_tot_f = h24_tot_tok = h24_tot_jobs = h24_peak_v = h24_peak_tok_v = 0
+    h24_peak_l = h24_peak_tok_l = "—"
+    for slot_dt in sorted(h24_buckets.keys()):
+        b = h24_buckets[slot_dt]
+        lbl = slot_dt.strftime("%H:%M")
+        h24_labels.append(lbl)
+        h24_succ.append(b["sent"])
+        h24_fail.append(b["failed"])
+        h24_jobs.append(b["jobs"])
+        h24_toks.append(b["tokens"])
+        h24_tot_s += b["sent"]
+        h24_tot_f += b["failed"]
+        h24_tot_tok += b["tokens"]
+        h24_tot_jobs += b["jobs"]
+        if b["sent"] > h24_peak_v:
+            h24_peak_v = b["sent"]
+            h24_peak_l = lbl
+        if b["tokens"] > h24_peak_tok_v:
+            h24_peak_tok_v = b["tokens"]
+            h24_peak_tok_l = lbl
+
+    h24_tot_all = h24_tot_s + h24_tot_f
+    series_24h = {
+        "labels": h24_labels,
+        "success": h24_succ,
+        "failed": h24_fail,
+        "jobs": h24_jobs,
+        "tokens": h24_toks,
+        "total_sent": h24_tot_s,
+        "total_failed": h24_tot_f,
+        "success_rate": int(round((h24_tot_s / h24_tot_all) * 100)) if h24_tot_all > 0 else 100,
+        "peak_val": h24_peak_v,
+        "peak_label": h24_peak_l,
+        "total_tokens": h24_tot_tok,
+        "total_toman": h24_tot_tok * TOKEN_TOMAN_RATE,
+        "avg_tokens_per_job": int(round(h24_tot_tok / h24_tot_jobs)) if h24_tot_jobs > 0 else 0,
+        "peak_token_val": h24_peak_tok_v,
+        "peak_token_label": h24_peak_tok_l,
+    }
+    series_7d = _build_day_series(7)
+    series_14d = _build_day_series(14)
+    series_30d = _build_day_series(30)
+
+    chart_series_map = {
+        "24h": series_24h,
+        "7d": series_7d,
+        "14d": series_14d,
+        "30d": series_30d,
+    }
+
+    activity_labels = series_30d["labels"]
+    activity_success_data = series_30d["success"]
+    activity_failed_data = series_30d["failed"]
+    activity_jobs_data = series_30d["jobs"]
+    chart_total_sent = series_30d["total_sent"]
+    chart_total_failed = series_30d["total_failed"]
+    chart_success_rate = series_30d["success_rate"]
+    chart_peak_val = series_30d["peak_val"]
+    chart_peak_label = series_30d["peak_label"]
+    chart_today_sent = h24_tot_s
+
+    recent_jobs = list(recent_jobs)
+    recent_spend_map = _get_jobs_token_spend_map(request.user, [rj.pk for rj in recent_jobs])
+    for rj in recent_jobs:
+        seen_p = {}
+        for t in rj.targets.all():
+            p = t.channel.platform
+            if p.slug not in seen_p:
+                seen_p[p.slug] = p
+        rj.unique_platforms = list(seen_p.values())
+        rj.tokens_spent = recent_spend_map.get(rj.pk, 0)
+        rj.tokens_toman = rj.tokens_spent * TOKEN_TOMAN_RATE
+
+    user_hubs = list(
+        BroadcastHub.objects.filter(user=request.user)
+        .select_related("platform", "preset")
+        .prefetch_related("channels")
+        .order_by("-created_at")
+    )
 
     return render(
         request,
@@ -782,6 +1096,9 @@ def forward_dashboard(request):
             "recent_jobs": recent_jobs,
             "bale_connect_link": bale_connect_link,
             "telegram_connect_link": telegram_connect_link,
+            "token_balance": token_balance,
+            "total_tokens_spent": total_tokens_spent,
+            "can_claim_gift": can_claim_gift,
             "subscription_days_left": subscription_days_left,
             "active_plan_name": active_plan_name,
             "wallet_balance": wallet_balance,
@@ -789,6 +1106,15 @@ def forward_dashboard(request):
             "activity_labels_json": json.dumps(activity_labels, ensure_ascii=False),
             "activity_success_data_json": json.dumps(activity_success_data, ensure_ascii=False),
             "activity_failed_data_json": json.dumps(activity_failed_data, ensure_ascii=False),
+            "activity_jobs_data_json": json.dumps(activity_jobs_data, ensure_ascii=False),
+            "chart_series_json": json.dumps(chart_series_map, ensure_ascii=False),
+            "chart_total_sent": chart_total_sent,
+            "chart_total_failed": chart_total_failed,
+            "chart_success_rate": chart_success_rate,
+            "chart_peak_val": chart_peak_val,
+            "chart_peak_label": chart_peak_label,
+            "chart_today_sent": chart_today_sent,
+            "user_hubs": user_hubs,
         },
     )
 
@@ -798,9 +1124,7 @@ def bale_connect(request):
     """صفحه راهنما و دریافت لینک یک‌بارمصرف اتصال حساب بله به ربات وین فوروارد."""
     from product.forward.subscriptions.access import user_has_platform_access
 
-    if not user_has_platform_access(request.user, "bale"):
-        messages.warning(request, "🔒 برای اتصال و استفاده از بله ابتدا باید اشتراک فعال وین‌فوروارد داشته باشید.")
-        return redirect("forward_subscriptions:plans")
+    # در سیستم توکنی، اتصال حساب‌ها و کانال‌ها برای همه کاربران آزاد است
 
     from core.models import Platform
     from product.forward.messengers.models import BotUser
@@ -830,36 +1154,8 @@ def bale_connect(request):
 
 @login_required
 def bale_channels(request):
-    """صفحه لیست و مدیریت کانال‌های متصل‌شده کاربر در پیام‌رسان بله."""
-    from core.models import Platform
-    from product.forward.messengers.models import BotUser
-    from product.forward.subscriptions.access import get_user_platform_access_map
-
-    nav_platforms = _get_forward_platforms_map()
-    bale_platform = nav_platforms.get("bale") or Platform.objects.filter(slug="bale").first()
-    if not bale_platform:
-        messages.error(request, "پلتفرم بله در سیستم ثبت نشده است.")
-        return redirect("broadcast:dashboard")
-
-    bot_user = BotUser.objects.filter(user=request.user, platform=bale_platform).first()
-    channels = (
-        BroadcastChannel.objects.filter(user=request.user, platform=bale_platform, is_active=True)
-        .select_related("platform")
-        .order_by("-created_at")
-    )
-    access_map = get_user_platform_access_map(request.user)
-
-    return render(
-        request,
-        "product/forward/broadcast/bale/channels.html",
-        {
-            "bot_user": bot_user,
-            "channels": channels,
-            "platform": bale_platform,
-            "platform_access": access_map.get("bale"),
-            "nav_platforms": nav_platforms,
-        },
-    )
+    """هدایت به صفحه یکپارچه کانال‌های متصل با فیلتر پیش‌فرض bale."""
+    return redirect(f"{reverse('broadcast:connected_channels')}?platform=bale")
 
 
 @login_required
@@ -898,7 +1194,7 @@ def preset_list(request):
             preset.user = request.user
             preset.save()
             form.save_m2m()
-            messages.success(request, f"✅ پروفایل ارسال «{preset.name}» با موفقیت ذخیره شد.")
+            messages.success(request, f"✅ پکیج ارسال «{preset.name}» با موفقیت ذخیره شد.")
             return redirect("broadcast:preset_list")
     else:
         form = ChannelPresetForm(user=request.user)
@@ -928,7 +1224,7 @@ def preset_list(request):
 
 @login_required
 def preset_edit(request, preset_id):
-    """ویرایش نام یا کانال‌های عضو یک پروفایل ارسال."""
+    """ویرایش نام یا کانال‌های عضو یک پکیج ارسال."""
     from product.forward.broadcast.forms import ChannelPresetForm
 
     nav_platforms = _get_forward_platforms_map()
@@ -938,7 +1234,7 @@ def preset_edit(request, preset_id):
         form = ChannelPresetForm(request.POST, instance=preset, user=request.user)
         if form.is_valid():
             form.save()
-            messages.success(request, f"✅ تغییرات پروفایل «{preset.name}» ذخیره شد.")
+            messages.success(request, f"✅ تغییرات پکیج «{preset.name}» ذخیره شد.")
             return redirect("broadcast:preset_list")
     else:
         form = ChannelPresetForm(instance=preset, user=request.user)
@@ -963,13 +1259,13 @@ def preset_edit(request, preset_id):
 
 @login_required
 def preset_delete(request, preset_id):
-    """حذف یک پروفایل ارسال (POST only)."""
+    """حذف یک پکیج ارسال (POST only)."""
     if request.method != "POST":
         return redirect("broadcast:preset_list")
     preset = get_object_or_404(ChannelPreset, pk=preset_id, user=request.user)
     name = preset.name
     preset.delete()
-    messages.success(request, f"پروفایل ارسال «{name}» حذف شد.")
+    messages.success(request, f"پکیج ارسال «{name}» حذف شد.")
     return redirect("broadcast:preset_list")
 
 
@@ -1005,9 +1301,7 @@ def telegram_connect(request):
     """صفحه راهنما و دریافت لینک یک‌بارمصرف اتصال حساب تلگرام به ربات وین فوروارد."""
     from product.forward.subscriptions.access import user_has_platform_access
 
-    if not user_has_platform_access(request.user, "telegram"):
-        messages.warning(request, "🔒 برای اتصال و استفاده از تلگرام ابتدا باید اشتراک فعال پلتفرم تلگرام داشته باشید.")
-        return redirect("forward_subscriptions:plans")
+    # در سیستم توکنی، اتصال حساب‌ها و کانال‌ها برای همه کاربران آزاد است
 
     from core.models import Platform
     from product.forward.messengers.adapters.registry import get_adapter
@@ -1045,36 +1339,8 @@ def telegram_connect(request):
 
 @login_required
 def telegram_channels(request):
-    """صفحه لیست و مدیریت کانال‌های متصل‌شده کاربر در پیام‌رسان تلگرام."""
-    from core.models import Platform
-    from product.forward.messengers.models import BotUser
-    from product.forward.subscriptions.access import get_user_platform_access_map
-
-    nav_platforms = _get_forward_platforms_map()
-    telegram_platform = nav_platforms.get("telegram") or Platform.objects.filter(slug="telegram").first()
-    if not telegram_platform:
-        messages.error(request, "پلتفرم تلگرام در سیستم ثبت نشده است.")
-        return redirect("broadcast:dashboard")
-
-    bot_user = BotUser.objects.filter(user=request.user, platform=telegram_platform).first()
-    channels = (
-        BroadcastChannel.objects.filter(user=request.user, platform=telegram_platform, is_active=True)
-        .select_related("platform")
-        .order_by("-created_at")
-    )
-    access_map = get_user_platform_access_map(request.user)
-
-    return render(
-        request,
-        "product/forward/broadcast/telegram/channels.html",
-        {
-            "bot_user": bot_user,
-            "channels": channels,
-            "platform": telegram_platform,
-            "platform_access": access_map.get("telegram"),
-            "nav_platforms": nav_platforms,
-        },
-    )
+    """هدایت به صفحه یکپارچه کانال‌های متصل با فیلتر پیش‌فرض telegram."""
+    return redirect(f"{reverse('broadcast:connected_channels')}?platform=telegram")
 
 
 @login_required
@@ -1115,3 +1381,458 @@ def telegram_sync_avatars(request):
 
     messages.success(request, f"✅ عکس پروفایل {updated_count} کانال تلگرام بروزرسانی شد.")
     return redirect("broadcast:telegram_channels")
+
+
+# ============================================================
+# Broadcast Hub Views (مدیریت هاب‌های ارسال گروهی در پنل وب)
+# ============================================================
+
+
+@login_required
+def hub_list(request):
+    """صفحه مدیریت هاب‌های تیمی با فیلترهای پیشرفته، سوییچ نمای کارتی (پیش‌فرض) و جدولی و صفحه‌بندی."""
+    nav_platforms = _get_forward_platforms_map()
+    base_qs = (
+        BroadcastHub.objects.filter(user=request.user)
+        .select_related("platform", "preset")
+        .prefetch_related("channels__platform", "preset__channels")
+        .order_by("-created_at")
+    )
+
+    search_q = (request.GET.get("q") or "").strip()
+    plat_filter = (request.GET.get("platform") or "all").strip().lower()
+    mode_filter = (request.GET.get("mode") or "all").strip().lower()
+    status_filter = (request.GET.get("status") or "all").strip().lower()
+    view_mode = (request.GET.get("view") or "grid").strip().lower()
+    if view_mode not in ("grid", "table"):
+        view_mode = "grid"
+
+    filtered_qs = base_qs
+    if search_q:
+        filtered_qs = filtered_qs.filter(Q(title__icontains=search_q) | Q(group_chat_id__icontains=search_q))
+    if plat_filter in ("bale", "telegram"):
+        filtered_qs = filtered_qs.filter(platform__slug=plat_filter)
+    if mode_filter in ("all_msg", "hashtag"):
+        filtered_qs = filtered_qs.filter(publish_mode=("all" if mode_filter == "all_msg" else "hashtag"))
+    if status_filter == "active":
+        filtered_qs = filtered_qs.filter(is_active=True)
+    elif status_filter == "inactive":
+        filtered_qs = filtered_qs.filter(is_active=False)
+
+    paginator = Paginator(filtered_qs, 9)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "product/forward/broadcast/hubs.html",
+        {
+            "hubs": page_obj.object_list,
+            "page_obj": page_obj,
+            "is_paginated": page_obj.has_other_pages(),
+            "total_hubs_count": base_qs.count(),
+            "active_hubs_count": base_qs.filter(is_active=True).count(),
+            "search_q": search_q,
+            "platform_filter": plat_filter,
+            "mode_filter": mode_filter,
+            "status_filter": status_filter,
+            "view_mode": view_mode,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def hub_edit(request, hub_id):
+    """تنظیم پکیج ارسال، کانال‌های مقصد و شرط انتشار (#ارسال / همه پیام‌ها) برای یک هاب."""
+    from product.forward.broadcast.forms import BroadcastHubForm
+
+    nav_platforms = _get_forward_platforms_map()
+    hub = get_object_or_404(BroadcastHub, pk=hub_id, user=request.user)
+
+    if request.method == "POST":
+        form = BroadcastHubForm(request.POST, instance=hub, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ تنظیمات هاب «{hub.title}» با موفقیت ذخیره شد.")
+            return redirect("broadcast:hub_list")
+    else:
+        form = BroadcastHubForm(instance=hub, user=request.user)
+
+    available_presets = ChannelPreset.objects.filter(user=request.user, is_active=True).order_by("-created_at")
+    available_channels = (
+        BroadcastChannel.objects.filter(user=request.user, is_active=True, bot_is_admin=True)
+        .select_related("platform")
+        .order_by("platform__name", "title")
+    )
+
+    return render(
+        request,
+        "product/forward/broadcast/hub_edit.html",
+        {
+            "form": form,
+            "hub": hub,
+            "available_presets": available_presets,
+            "available_channels": available_channels,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def hub_delete(request, hub_id):
+    """حذف کامل یک هاب از پنل کاربر (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:hub_list")
+    hub = get_object_or_404(BroadcastHub, pk=hub_id, user=request.user)
+    title = hub.title
+    hub.delete()
+    messages.success(request, f"هاب «{title}» با موفقیت حذف شد.")
+    return redirect("broadcast:hub_list")
+
+
+# ============================================================
+# Unified Connected Channels Page (صفحه یکپارچه کانال‌های متصل)
+# ============================================================
+
+
+@login_required
+def connected_channels(request):
+    """صفحه یکپارچه مدیریت تمامی کانال‌های متصل کاربر با فیلتر، جستجو، نمای کارتی/جدولی و صفحه‌بندی."""
+    from product.forward.messengers.models import BotUser
+    from product.forward.subscriptions.access import get_user_platform_access_map
+
+    nav_platforms = _get_forward_platforms_map()
+    access_map = get_user_platform_access_map(request.user)
+
+    bot_users_qs = BotUser.objects.filter(user=request.user).select_related("platform")
+    bot_users = {bu.platform.slug: bu for bu in bot_users_qs if bu.platform}
+
+    base_qs = (
+        BroadcastChannel.objects.filter(user=request.user, is_active=True)
+        .select_related("platform")
+        .order_by("-created_at")
+    )
+
+    counts_by_platform = {
+        "all": base_qs.count(),
+        "bale": base_qs.filter(platform__slug="bale").count(),
+        "eitaa": base_qs.filter(platform__slug="eitaa").count(),
+        "rubika": base_qs.filter(platform__slug="rubika").count(),
+        "telegram": base_qs.filter(platform__slug="telegram").count(),
+        "soroush": base_qs.filter(platform__slug="soroush").count(),
+    }
+
+    selected_platform = (request.GET.get("platform") or "all").strip().lower()
+    if selected_platform not in ("all", "bale", "eitaa", "rubika", "telegram", "soroush"):
+        selected_platform = "all"
+
+    search_q = (request.GET.get("q") or "").strip()
+    status_filter = (request.GET.get("status") or "all").strip().lower()
+    view_mode = (request.GET.get("view") or "grid").strip().lower()
+    if view_mode not in ("grid", "table"):
+        view_mode = "grid"
+
+    filtered_qs = base_qs
+    if selected_platform != "all":
+        filtered_qs = filtered_qs.filter(platform__slug=selected_platform)
+    if search_q:
+        filtered_qs = filtered_qs.filter(
+            Q(title__icontains=search_q)
+            | Q(username__icontains=search_q)
+            | Q(chat_id__icontains=search_q)
+        )
+    if status_filter == "ready":
+        filtered_qs = filtered_qs.filter(bot_is_admin=True)
+    elif status_filter == "pending":
+        filtered_qs = filtered_qs.filter(bot_is_admin=False)
+
+    paginator = Paginator(filtered_qs, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    platform_tabs = [
+        {"slug": "all", "name": "همه پلتفرم‌ها", "count": counts_by_platform["all"], "obj": None},
+        {"slug": "bale", "name": "بله", "count": counts_by_platform["bale"], "obj": nav_platforms.get("bale")},
+        {"slug": "eitaa", "name": "ایتا", "count": counts_by_platform["eitaa"], "obj": nav_platforms.get("eitaa")},
+        {"slug": "rubika", "name": "روبیکا", "count": counts_by_platform["rubika"], "obj": nav_platforms.get("rubika")},
+        {"slug": "telegram", "name": "تلگرام", "count": counts_by_platform["telegram"],
+         "obj": nav_platforms.get("telegram")},
+        {"slug": "soroush", "name": "سروش‌پلاس", "count": counts_by_platform["soroush"],
+         "obj": nav_platforms.get("soroush")},
+    ]
+
+    return render(
+        request,
+        "product/forward/broadcast/channels.html",
+        {
+            "channels": page_obj.object_list,
+            "page_obj": page_obj,
+            "is_paginated": page_obj.has_other_pages(),
+            "nav_platforms": nav_platforms,
+            "platform_tabs": platform_tabs,
+            "selected_platform": selected_platform,
+            "search_q": search_q,
+            "status_filter": status_filter,
+            "view_mode": view_mode,
+            "counts_by_platform": counts_by_platform,
+            "bot_users": bot_users,
+            "access_map": access_map,
+        },
+    )
+
+
+# ============================================================
+# Soroush+ Web Panel Views
+# ============================================================
+
+
+@login_required
+def soroush_connect_phone(request):
+    """گام اول اتصال به سروش‌پلاس: دریافت شماره موبایل و ارسال کد تایید (OTP)."""
+    from core.models import Platform
+    from product.forward.broadcast.forms import SoroushPhoneForm
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    nav_platforms = _get_forward_platforms_map()
+    soroush_platform = nav_platforms.get("soroush") or Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:dashboard")
+
+    existing_bot_user = BotUser.objects.filter(user=request.user, platform=soroush_platform).first()
+
+    if request.method == "POST":
+        form = SoroushPhoneForm(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data["phone_number"]
+            adapter = SoroushAdapter()
+            try:
+                otp_res = adapter.send_code(phone_number=phone)
+            except (MessengerError, ValueError) as exc:
+                messages.error(request, f"خطا در ارسال کد تایید سروش‌پلاس: {exc}")
+            else:
+                request.session["soroush_otp_phone"] = otp_res["phone_number"]
+                request.session["soroush_otp_hash"] = otp_res["phone_code_hash"]
+                request.session["soroush_otp_tmp"] = otp_res["tmp_session"]
+                messages.info(request, "کد تایید به حساب سروش‌پلاس یا پیامک شماره موبایل شما ارسال شد.")
+                return redirect("broadcast:soroush_verify_code")
+    else:
+        form = SoroushPhoneForm()
+
+    return render(
+        request,
+        "product/forward/broadcast/soroush/connect_phone.html",
+        {
+            "form": form,
+            "existing_bot_user": existing_bot_user,
+            "platform": soroush_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def soroush_verify_code(request):
+    """گام دوم اتصال به سروش‌پلاس: تایید کد OTP (و رمز دو مرحله‌ای در صورت نیاز) و ذخیره StringSession."""
+    from core.models import Platform
+    from product.forward.broadcast.forms import SoroushVerifyCodeForm
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    phone = request.session.get("soroush_otp_phone")
+    phone_code_hash = request.session.get("soroush_otp_hash")
+    tmp_session = request.session.get("soroush_otp_tmp")
+
+    if not all([phone, phone_code_hash, tmp_session]):
+        messages.warning(request, "اطلاعات نشست موقت منقضی شده است؛ لطفاً دوباره شماره موبایل خود را وارد کنید.")
+        return redirect("broadcast:soroush_connect_phone")
+
+    nav_platforms = _get_forward_platforms_map()
+    soroush_platform = nav_platforms.get("soroush") or Platform.objects.filter(slug="soroush").first()
+    if not soroush_platform:
+        messages.error(request, "پلتفرم سروش‌پلاس در سیستم ثبت نشده است.")
+        return redirect("broadcast:dashboard")
+
+    if request.method == "POST":
+        form = SoroushVerifyCodeForm(request.POST)
+        if form.is_valid():
+            adapter = SoroushAdapter()
+            try:
+                creds = adapter.sign_in(
+                    phone_number=phone,
+                    phone_code=form.cleaned_data["phone_code"],
+                    phone_code_hash=phone_code_hash,
+                    tmp_session=tmp_session,
+                    password=form.cleaned_data.get("two_step_password", ""),
+                )
+            except (MessengerError, ValueError) as exc:
+                messages.error(request, f"خطا در تایید کد سروش‌پلاس: {exc}")
+            else:
+                user_info = creds.get("user") or {}
+                splus_uid = user_info.get("id") or f"soroush_user_{request.user.id}"
+                session_payload = {
+                    "string_session": creds["string_session"],
+                    "phone_number": phone,
+                    "user_id": splus_uid,
+                }
+
+                bot_user, created = BotUser.objects.get_or_create(
+                    user=request.user,
+                    platform=soroush_platform,
+                    defaults={
+                        "chat_id": splus_uid,
+                        "username": user_info.get("username", "") or "",
+                        "is_verified": True,
+                        "session_data": session_payload,
+                    },
+                )
+                if not created:
+                    bot_user.chat_id = splus_uid
+                    bot_user.username = user_info.get("username", "") or ""
+                    bot_user.is_verified = True
+                    bot_user.session_data = session_payload
+                    bot_user.last_seen_at = timezone.now()
+                    bot_user.save(update_fields=["chat_id", "username", "is_verified", "session_data", "last_seen_at"])
+
+                for key in ("soroush_otp_phone", "soroush_otp_hash", "soroush_otp_tmp"):
+                    request.session.pop(key, None)
+
+                messages.success(request,
+                                 "✅ حساب سروش‌پلاس شما با موفقیت متصل شد! حالا می‌توانید کانال‌هایتان را همگام‌سازی کنید.")
+                return redirect("broadcast:soroush_channels")
+    else:
+        form = SoroushVerifyCodeForm()
+
+    return render(
+        request,
+        "product/forward/broadcast/soroush/verify_code.html",
+        {
+            "form": form,
+            "phone": phone,
+            "platform": soroush_platform,
+            "nav_platforms": nav_platforms,
+        },
+    )
+
+
+@login_required
+def soroush_channels(request):
+    """هدایت به صفحه یکپارچه کانال‌های متصل با فیلتر پیش‌فرض soroush."""
+    return redirect(f"{reverse('broadcast:connected_channels')}?platform=soroush")
+
+
+@login_required
+def soroush_sync_channels(request):
+    """همگام‌سازی خودکار کانال‌ها و آواتارهای سروش‌پلاس که کاربر در آن‌ها دسترسی ارسال دارد (POST only)."""
+    from django.core.files.base import ContentFile
+    from core.models import Platform
+    from product.forward.messengers.adapters.base import MessengerError
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    if request.method != "POST":
+        return redirect("broadcast:soroush_channels")
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    bot_user = BotUser.objects.filter(user=request.user,
+                                      platform=soroush_platform).first() if soroush_platform else None
+
+    if not bot_user or not bot_user.has_soroush_session:
+        messages.warning(request, "ابتدا باید وارد حساب سروش‌پلاس خود شوید.")
+        return redirect("broadcast:soroush_connect_phone")
+
+    session_data = bot_user.session_data or {}
+    adapter = SoroushAdapter(string_session=session_data.get("string_session", ""))
+
+    try:
+        found_channels = adapter.get_user_channels(include_avatars=True)
+    except MessengerError as exc:
+        messages.error(request, f"خطا در همگام‌سازی کانال‌های سروش‌پلاس: {exc}")
+        return redirect("broadcast:soroush_channels")
+
+    synced_count = 0
+    channel_hashes = dict(session_data.get("channel_hashes") or {})
+    for ch in found_channels:
+        chat_id = ch["chat_id"]
+        obj, _ = BroadcastChannel.objects.update_or_create(
+            user=request.user,
+            platform=soroush_platform,
+            chat_id=chat_id,
+            defaults={
+                "title": ch["title"],
+                "username": ch.get("username") or "",
+                "bot_is_admin": True,
+                "bot_admin_checked_at": timezone.now(),
+                "is_active": True,
+            },
+        )
+        ahash = (ch.get("access_hash") or "").strip()
+        if ahash:
+            channel_hashes[str(chat_id)] = ahash
+            if ch.get("numeric_id"):
+                channel_hashes[str(ch["numeric_id"])] = ahash
+        avatar_bytes = ch.get("avatar_bytes")
+        if avatar_bytes:
+            try:
+                obj.avatar.save(f"soroush_{obj.pk}.jpg", ContentFile(avatar_bytes), save=True)
+            except Exception:
+                pass
+        synced_count += 1
+
+    if channel_hashes:
+        updated_session = dict(session_data)
+        updated_session["channel_hashes"] = channel_hashes
+        bot_user.session_data = updated_session
+        bot_user.save(update_fields=["session_data"])
+
+    if synced_count:
+        messages.success(request, f"✅ {synced_count} کانال سروش‌پلاس (همراه با آواتار) با موفقیت همگام‌سازی شد.")
+    else:
+        messages.info(request, "هیچ کانالی با دسترسی ادمین/ارسال در این حساب سروش‌پلاس یافت نشد.")
+    return redirect("broadcast:soroush_channels")
+
+
+@login_required
+def soroush_delete_channel(request, channel_id):
+    """غیرفعال‌سازی کانال سروش‌پلاس (POST only)."""
+    if request.method != "POST":
+        return redirect("broadcast:soroush_channels")
+
+    channel = get_object_or_404(
+        BroadcastChannel,
+        pk=channel_id,
+        user=request.user,
+        platform__slug="soroush",
+    )
+    channel.is_active = False
+    channel.save(update_fields=["is_active"])
+    messages.success(request, f"کانال «{channel.title}» غیرفعال شد.")
+    return redirect("broadcast:soroush_channels")
+
+
+@login_required
+def soroush_logout(request):
+    """خروج کامل از نشست سروش‌پلاس و پاک‌سازی امن StringSession (POST only)."""
+    from core.models import Platform
+    from product.forward.messengers.adapters.soroush import SoroushAdapter
+    from product.forward.messengers.models import BotUser
+
+    if request.method != "POST":
+        return redirect("broadcast:soroush_channels")
+
+    soroush_platform = Platform.objects.filter(slug="soroush").first()
+    bot_user = BotUser.objects.filter(user=request.user,
+                                      platform=soroush_platform).first() if soroush_platform else None
+    if bot_user and bot_user.has_soroush_session:
+        try:
+            adapter = SoroushAdapter(string_session=(bot_user.session_data or {}).get("string_session", ""))
+            adapter.logout()
+        except Exception:
+            pass
+        bot_user.session_data = {}
+        bot_user.is_verified = False
+        bot_user.save(update_fields=["session_data", "is_verified"])
+        messages.success(request, "✅ نشست سروش‌پلاس با موفقیت قطع و پاک‌سازی شد.")
+    return redirect("broadcast:dashboard")

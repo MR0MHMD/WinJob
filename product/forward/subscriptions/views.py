@@ -1,8 +1,10 @@
-"""ویوهای پنل خرید و مدیریت اشتراک وین فوروارد (همراه با لوگوهای پلتفرم از دیتابیس)."""
+"""ویوهای فروشگاه بسته‌های توکن، دریافت هدیه ۳۵۰ توکنی، تاریخچه تراکنش توکن و پرداخت."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -14,91 +16,61 @@ from payment.services.forward_subscription_payment import (
 )
 from payment.services.zarinpal_flow import prepare_gateway_bridge
 
-from .access import get_user_platform_access_map
-from .forms import ForwardSubscriptionCheckoutForm
+from .forms import ForwardTokenPackageCheckoutForm
 from .models import (
-    FORWARD_PLATFORMS,
     ForwardSubscriptionOrder,
     ForwardSubscriptionPlan,
+    ForwardTokenTransaction,
 )
 from .services import (
     account_for,
-    activate_trial_subscription,
-    create_forward_order_with_invoice,
+    cancel_pending_token_order,
+    claim_free_gift_tokens,
+    create_token_order_with_invoice,
+    get_pricing_config,
 )
 
 
 def _get_forward_platforms_map() -> dict:
-    """واکشی دیکشنری پلتفرم‌های وین‌فوروارد از دیتابیس برای نمایش لوگوها."""
-    qs = Platform.objects.filter(slug__in=["bale", "eitaa", "rubika"])
+    """واکشی دیکشنری هر ۴ پلتفرم وین‌فوروارد از دیتابیس."""
+    qs = Platform.objects.filter(slug__in=["bale", "eitaa", "rubika", "telegram", "soroush"])
     return {p.slug: p for p in qs}
 
 
 @login_required
 def plans_view(request):
-    """صفحه نمایش پلن‌های اشتراک وین فوروارد، وضعیت اشتراک فعلی و فرم انتخاب پلتفرم‌ها."""
+    """صفحه فروشگاه بسته‌های توکن، دکمه دریافت ۳۵۰ توکن رایگان، جدول شفاف نرخ‌ها و تاریخچه تراکنش‌ها."""
     nav_platforms = _get_forward_platforms_map()
     account = account_for(request.user)
-    access_map = get_user_platform_access_map(request.user)
-    plans = ForwardSubscriptionPlan.objects.filter(is_active=True).order_by("position", "duration_days")
+    pricing = get_pricing_config()
 
-    bale_access = access_map.get("bale")
-    has_active_paid_bale = bool(
-        bale_access and bale_access.is_valid and bale_access.plan and not bale_access.plan.is_trial
+    gift_plan = ForwardSubscriptionPlan.objects.filter(is_active=True, is_trial=True).first()
+    paid_packages = list(
+        ForwardSubscriptionPlan.objects.filter(is_active=True, is_trial=False, tokens_amount__gt=0)
+        .order_by("position", "tokens_amount")
     )
+    for pkg in paid_packages:
+        pkg.per_token_price = int(round(pkg.price_per_platform / max(1, pkg.tokens_amount)))
 
-    platform_items = []
-    missing_platform_items = []
-    for slug, label in FORWARD_PLATFORMS:
-        p_obj = nav_platforms.get(slug)
-        logo_url = p_obj.logo.url if (p_obj and p_obj.logo) else ""
-        acc = access_map.get(slug)
-        has_acc = bool(acc and acc.is_valid)
-        item = {
-            "slug": slug,
-            "label": label,
-            "platform_obj": p_obj,
-            "logo_url": logo_url,
-            "has_access": has_acc,
-            "access": acc,
-            "remaining_days": acc.remaining_days if has_acc else 0,
-        }
-        platform_items.append(item)
-        if not has_acc:
-            missing_platform_items.append(item)
+    tx_qs = ForwardTokenTransaction.objects.filter(user=request.user).order_by("-created_at", "-pk")
+    paginator = Paginator(tx_qs, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
 
-    missing_platforms = [(item["slug"], item["label"]) for item in missing_platform_items]
-    recent_orders = ForwardSubscriptionOrder.objects.filter(user=request.user).select_related("plan")[:10]
+    recent_orders = ForwardSubscriptionOrder.objects.filter(user=request.user).select_related("plan")[:8]
 
     return render(
         request,
         "product/forward/subscriptions/plans.html",
         {
             "account": account,
-            "plans": plans,
-            "access_map": access_map,
-            "all_platforms": FORWARD_PLATFORMS,
-            "platform_items": platform_items,
-            "missing_platform_items": missing_platform_items,
-            "nav_platforms": nav_platforms,
-            "has_active_paid_bale": has_active_paid_bale,
-            "bale_access": bale_access,
-            "prorated_unit": (
-                max(
-                    1000,
-                    int(
-                        round(
-                            (bale_access.plan.price_per_platform or 50000)
-                            * bale_access.remaining_days
-                            / max(1, bale_access.plan.duration_days or 30)
-                        )
-                    ),
-                )
-                if has_active_paid_bale
-                else 0
-            ),
-            "missing_platforms": missing_platforms,
+            "pricing": pricing,
+            "gift_plan": gift_plan,
+            "paid_packages": paid_packages,
+            "transactions": page_obj.object_list,
+            "page_obj": page_obj,
+            "is_paginated": page_obj.has_other_pages(),
             "recent_orders": recent_orders,
+            "nav_platforms": nav_platforms,
         },
     )
 
@@ -106,28 +78,23 @@ def plans_view(request):
 @login_required
 @require_POST
 def create_order_view(request):
-    """ثبت سفارش اشتراک (یا فعال‌سازی فوری دوره رایگان ۷ روزه) و هدایت به صفحه پرداخت."""
-    form = ForwardSubscriptionCheckoutForm(request.POST)
+    """دریافت هدیه ۳۵۰ توکنی یا ثبت سفارش خرید بسته توکن و هدایت به صفحه پرداخت."""
+    form = ForwardTokenPackageCheckoutForm(request.POST)
     if not form.is_valid():
-        messages.error(request, "اطلاعات انتخاب‌شده برای اشتراک معتبر نیست.")
+        messages.error(request, "بسته انتخاب‌شده معتبر نیست.")
         return redirect("forward_subscriptions:plans")
 
     plan = form.cleaned_data["plan_id"]
-    order_kind = form.cleaned_data.get("order_kind") or ForwardSubscriptionOrder.OrderKind.NEW
-    selected_platforms = form.cleaned_data.get("platforms") or []
-
     try:
         if plan.is_trial:
-            activate_trial_subscription(request.user, plan)
-            messages.success(request, "✅ اشتراک رایگان ۷ روزه برای تمام پلتفرم‌ها با موفقیت فعال شد.")
+            gift_amount = claim_free_gift_tokens(request.user, plan=plan)
+            messages.success(
+                request,
+                f"🎁 {gift_amount:,} توکن رایگان با موفقیت به کیف توکن شما اضافه شد! (بدون تاریخ انقضا)",
+            )
             return redirect("broadcast:dashboard")
 
-        order, _invoice = create_forward_order_with_invoice(
-            user=request.user,
-            plan=plan,
-            selected_platforms=selected_platforms,
-            order_kind=order_kind,
-        )
+        order, _invoice = create_token_order_with_invoice(request.user, plan)
         return redirect("forward_subscriptions:order_detail", order_id=order.pk)
     except ValidationError as exc:
         messages.error(request, exc.messages[0] if getattr(exc, "messages", None) else str(exc))
@@ -136,7 +103,7 @@ def create_order_view(request):
 
 @login_required
 def order_detail_view(request, order_id):
-    """نمایش جزئیات سفارش، فاکتور و گزینه‌های پرداخت با کیف پول یا درگاه زرین‌پال."""
+    """نمایش فاکتور خرید بسته توکن و پرداخت با کیف پول یا درگاه زرین‌پال."""
     nav_platforms = _get_forward_platforms_map()
     order = get_object_or_404(
         ForwardSubscriptionOrder.objects.select_related("plan"),
@@ -145,6 +112,7 @@ def order_detail_view(request, order_id):
     )
     invoice = Invoice.objects.filter(forward_subscription_order=order).first()
     wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    account = account_for(request.user)
     pending_gateway = (
         invoice.payments.filter(status="pending", authority__isnull=False)
         .exclude(authority="")
@@ -154,18 +122,20 @@ def order_detail_view(request, order_id):
         else None
     )
 
-    labels_dict = dict(FORWARD_PLATFORMS)
-    selected_platform_items = []
-    for slug in (order.platforms or []):
-        p_obj = nav_platforms.get(slug)
-        selected_platform_items.append(
-            {
-                "slug": slug,
-                "label": labels_dict.get(slug, slug),
-                "platform_obj": p_obj,
-                "logo_url": p_obj.logo.url if (p_obj and p_obj.logo) else "",
-            }
-        )
+    latest_payment = (
+        invoice.payments.order_by("-pk").first()
+        if invoice
+        else None
+    )
+    tokens_qty = int(order.tokens_amount or (order.plan.tokens_amount if order.plan else 0))
+    per_token_price = int(round(order.subtotal_amount / max(1, tokens_qty))) if tokens_qty else 0
+    new_token_balance = int(account.token_balance) + (tokens_qty if order.status == ForwardSubscriptionOrder.Status.PENDING else 0)
+    sandbox_mode = bool(
+        getattr(settings, "IRANIAN_PAYMENT", {})
+        .get("gateways", {})
+        .get("zarinpal", {})
+        .get("sandbox", False)
+    )
 
     return render(
         request,
@@ -174,9 +144,13 @@ def order_detail_view(request, order_id):
             "order": order,
             "invoice": invoice,
             "wallet": wallet,
+            "account": account,
             "can_pay_wallet": bool(invoice and wallet.balance >= invoice.payable_amount),
             "pending_gateway": pending_gateway,
-            "selected_platform_items": selected_platform_items,
+            "latest_payment": latest_payment,
+            "per_token_price": per_token_price,
+            "new_token_balance": new_token_balance,
+            "sandbox": sandbox_mode,
             "nav_platforms": nav_platforms,
         },
     )
@@ -185,11 +159,14 @@ def order_detail_view(request, order_id):
 @login_required
 @require_POST
 def pay_wallet_view(request, order_id):
-    """پرداخت آنی سفارش اشتراک وین فوروارد از موجودی کیف پول کاربر."""
+    """پرداخت آنی بسته توکن از کیف پول و شارژ فوری توکن‌ها."""
     order = get_object_or_404(ForwardSubscriptionOrder, pk=order_id, user=request.user)
     try:
         pay_forward_subscription_wallet(order, request.user)
-        messages.success(request, "✅ اشتراک وین فوروارد شما با موفقیت از کیف پول پرداخت و فعال شد.")
+        messages.success(
+            request,
+            f"✅ {order.tokens_amount:,} توکن با موفقیت به کیف توکن وین‌فوروارد شما اضافه شد!",
+        )
     except ValidationError as exc:
         messages.error(request, exc.messages[0] if getattr(exc, "messages", None) else str(exc))
     return redirect("forward_subscriptions:order_detail", order_id=order.pk)
@@ -198,7 +175,7 @@ def pay_wallet_view(request, order_id):
 @login_required
 @require_POST
 def pay_gateway_view(request, order_id):
-    """شروع پرداخت آنلاین سفارش اشتراک وین فوروارد از طریق درگاه زرین‌پال."""
+    """شروع پرداخت آنلاین بسته توکن از طریق درگاه زرین‌پال."""
     order = get_object_or_404(ForwardSubscriptionOrder, pk=order_id, user=request.user)
     try:
         gateway_url = start_forward_subscription_gateway(order, request.user)
@@ -209,3 +186,17 @@ def pay_gateway_view(request, order_id):
     except Exception:
         messages.error(request, "در حال حاضر اتصال به درگاه زرین‌پال برقرار نشد. لطفاً بعداً تلاش کنید.")
     return redirect("forward_subscriptions:order_detail", order_id=order.pk)
+
+
+@login_required
+@require_POST
+def cancel_order_view(request, order_id):
+    """لغو سفارش پرداخت‌نشده خرید بسته توکن و بازگشت به فروشگاه توکن."""
+    order = get_object_or_404(ForwardSubscriptionOrder, pk=order_id, user=request.user)
+    try:
+        cancel_pending_token_order(order, request.user)
+        messages.info(request, f"سفارش #{order.pk} با موفقیت لغو شد.")
+        return redirect("forward_subscriptions:plans")
+    except ValidationError as exc:
+        messages.error(request, exc.messages[0] if getattr(exc, "messages", None) else str(exc))
+        return redirect("forward_subscriptions:order_detail", order_id=order.pk)

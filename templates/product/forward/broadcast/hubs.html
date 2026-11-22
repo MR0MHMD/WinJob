@@ -1,0 +1,271 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}هاب‌های تیمی | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_channels.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">هاب‌های تیمی</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-channels-header wf-reveal">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-channels-header-logo" style="background:linear-gradient(135deg,rgba(56,189,248,0.22),rgba(7,201,139,0.2));border-color:rgba(56,189,248,0.4);">
+                <i class="bi bi-diagram-3-fill fs-2 text-info"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">هاب‌های ارسال گروهی (تیمی)</h1>
+                    <span class="wf-pill-tag is-emerald">{{ active_hubs_count }} فعال از {{ total_hubs_count }}</span>
+                </div>
+                <p class="text-muted fs-xs mb-0">
+                    مدیریت گروه‌های خصوصی تیمی در بله و تلگرام — انتشار خودکار پیام‌های گروه به پکیج و کانال‌های منتخب شما.
+                </p>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-purple py-2 px-3 fs-xs">
+                <i class="bi bi-box-seam-fill"></i> پکیج‌های ارسال
+            </a>
+            <a href="{% url 'broadcast:connected_channels' %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                <i class="bi bi-broadcast-pin"></i> کانال‌های متصل
+            </a>
+        </div>
+    </div>
+
+    <!-- راهنمای سریع ثبت خودکار -->
+    <div class="p-3 rounded-4 mb-4 wf-reveal wf-delay-1" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.24);">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-stars text-info fs-4 mt-1 flex-shrink-0"></i>
+            <div class="fs-xs text-muted" style="line-height:1.9;">
+                <strong class="text-white">ثبت خودکار هاب:</strong>
+                ربات وین‌فوروارد را در گروه خصوصی بله یا تلگرام اضافه کنید تا خودکار همین‌جا ثبت شود (یا دستور <code>/bindhub</code> بفرستید).
+                پس از هر ارسال، ربات روی پیام گروه ری‌اکشن ✅ می‌گذارد و گزارش تحویل را به پی‌وی فرستنده ارسال می‌کند.
+            </div>
+        </div>
+    </div>
+
+    <!-- نوار فیلتر قدرتمند + سوییچ کارتی (پیش‌فرض) و جدولی -->
+    <div class="wf-channels-toolbar wf-reveal wf-delay-1">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom border-light">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel-fill text-info"></i>
+                <span class="text-white fw-bold fs-xs">فیلتر و جستجوی هاب‌ها</span>
+            </div>
+            <div class="wf-view-toggle-group">
+                <a href="?view=grid&q={{ search_q|urlencode }}&platform={{ platform_filter }}&mode={{ mode_filter }}&status={{ status_filter }}"
+                   class="wf-view-toggle-btn {% if view_mode == 'grid' %}is-active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> کارتی
+                </a>
+                <a href="?view=table&q={{ search_q|urlencode }}&platform={{ platform_filter }}&mode={{ mode_filter }}&status={{ status_filter }}"
+                   class="wf-view-toggle-btn {% if view_mode == 'table' %}is-active{% endif %}">
+                    <i class="bi bi-table"></i> جدولی
+                </a>
+            </div>
+        </div>
+
+        <form method="get" class="row g-2 align-items-center">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="col-md-4 col-lg-3">
+                <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="جستجوی نام یا شناسه گروه...">
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <select name="platform" class="form-select">
+                    <option value="all" {% if platform_filter == 'all' %}selected{% endif %}>همه پلتفرم‌ها</option>
+                    <option value="bale" {% if platform_filter == 'bale' %}selected{% endif %}>بله</option>
+                    <option value="telegram" {% if platform_filter == 'telegram' %}selected{% endif %}>تلگرام</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <select name="mode" class="form-select">
+                    <option value="all" {% if mode_filter == 'all' %}selected{% endif %}>همه حالت‌ها</option>
+                    <option value="all_msg" {% if mode_filter == 'all_msg' %}selected{% endif %}>همه پیام‌ها</option>
+                    <option value="hashtag" {% if mode_filter == 'hashtag' %}selected{% endif %}>فقط #ارسال</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-6 col-lg-2">
+                <select name="status" class="form-select">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>همه وضعیت‌ها</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>فعال</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>غیرفعال</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-6 col-lg-3 d-flex gap-2 justify-content-lg-end">
+                <button type="submit" class="wf-btn wf-btn-emerald py-2 px-3 fs-xs flex-grow-1 flex-lg-grow-0">
+                    <i class="bi bi-search"></i> اعمال
+                </button>
+                {% if search_q or platform_filter != 'all' or mode_filter != 'all' or status_filter != 'all' %}
+                <a href="{% url 'broadcast:hub_list' %}?view={{ view_mode }}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">پاک</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {% if hubs %}
+        {% if view_mode == 'table' %}
+            <div class="wf-channels-table-wrap wf-reveal wf-delay-2">
+                <div class="table-responsive">
+                    <table class="table table-dark table-borderless wf-channels-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>نام هاب و گروه</th>
+                                <th>پکیج متصل</th>
+                                <th>حالت انتشار</th>
+                                <th>وضعیت</th>
+                                <th class="text-end">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hub in hubs %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="wf-avatar-with-badge">
+                                            <i class="bi bi-diagram-3-fill text-info"></i>
+                                            {% if hub.platform.logo %}
+                                                <img src="{{ hub.platform.logo.url }}" alt="{{ hub.platform.name }}" class="wf-av-plat">
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="text-white fw-bold fs-sm">{{ hub.title }}</div>
+                                            <div class="text-muted" style="font-size:0.72rem;" dir="ltr">{{ hub.group_chat_id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if hub.preset %}
+                                        <span class="wf-pill-tag is-purple">{{ hub.preset.name }}</span>
+                                    {% else %}
+                                        <span class="wf-pill-tag is-gold">{{ hub.channels.count }} کانال تکی</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="wf-pill-tag is-blue">{{ hub.get_publish_mode_display }}</span></td>
+                                <td>
+                                    {% if hub.is_active %}
+                                        <span class="wf-pill-tag is-emerald">فعال</span>
+                                    {% else %}
+                                        <span class="wf-pill-tag is-danger">غیرفعال</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <a href="{% url 'broadcast:hub_edit' hub.pk %}" class="wf-btn wf-btn-emerald py-1 px-3 fs-xs">
+                                            <i class="bi bi-sliders"></i> تنظیم
+                                        </a>
+                                        <form method="post" action="{% url 'broadcast:hub_delete' hub.pk %}"
+                                              data-wf-confirm="آیا از حذف هاب «{{ hub.title }}» اطمینان دارید؟"
+                                              data-wf-confirm-title="حذف هاب تیمی"
+                                              data-wf-confirm-btn="بله، حذف شود">
+                                            {% csrf_token %}
+                                            <button type="submit" class="wf-btn wf-btn-glass py-1 px-2 fs-xs text-danger">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="row g-4 wf-reveal wf-delay-2">
+                {% for hub in hubs %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="wf-connected-channel-card">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-3 overflow-hidden">
+                                <div class="wf-avatar-with-badge" style="width:48px;height:48px;">
+                                    <i class="bi bi-diagram-3-fill text-info fs-5"></i>
+                                    {% if hub.platform.logo %}
+                                        <img src="{{ hub.platform.logo.url }}" alt="{{ hub.platform.name }}" class="wf-av-plat">
+                                    {% endif %}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h5 class="text-white fw-bold fs-6 mb-1 text-truncate">{{ hub.title }}</h5>
+                                    <div class="text-muted fs-xs text-truncate" dir="ltr">{{ hub.group_chat_id }}</div>
+                                </div>
+                            </div>
+                            {% if hub.is_active %}
+                                <span class="wf-pill-tag is-emerald">فعال</span>
+                            {% else %}
+                                <span class="wf-pill-tag is-danger">غیرفعال</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="wf-channel-meta-grid">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">پلتفرم گروه:</span>
+                                <strong class="text-white">{{ hub.platform.name }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">پکیج متصل:</span>
+                                {% if hub.preset %}
+                                    <span class="wf-pill-tag is-purple">{{ hub.preset.name }}</span>
+                                {% else %}
+                                    <span class="text-muted fs-xs">انتخاب نشده</span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">کانال‌های اضافی:</span>
+                                <span class="text-white">{{ hub.channels.count }} کانال</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">شرط ارسال:</span>
+                                <span class="wf-pill-tag is-blue">{{ hub.get_publish_mode_display }}</span>
+                            </div>
+                        </div>
+
+                        {% if not hub.preset and hub.channels.count == 0 %}
+                        <div class="p-2 rounded-3 mb-2 fs-xs text-warning text-center" style="background:rgba(253,188,49,0.1);border:1px solid rgba(253,188,49,0.25);">
+                            ⚠️ هنوز پکیج یا کانال مقصدی برای این هاب تنظیم نشده است.
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-light">
+                            <a href="{% url 'broadcast:hub_edit' hub.pk %}" class="wf-btn wf-btn-emerald py-1 px-3 fs-xs">
+                                <i class="bi bi-sliders"></i> تنظیم پکیج و کانال‌ها
+                            </a>
+                            <form method="post" action="{% url 'broadcast:hub_delete' hub.pk %}"
+                                  data-wf-confirm="آیا از حذف هاب «{{ hub.title }}» اطمینان دارید؟"
+                                  data-wf-confirm-title="حذف هاب تیمی"
+                                  data-wf-confirm-btn="بله، حذف شود">
+                                {% csrf_token %}
+                                <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger">
+                                    <i class="bi bi-trash3"></i> حذف
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if is_paginated %}
+        <div class="mt-4">
+            {% include "partials/pagination.html" %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5 rounded-4 wf-reveal wf-delay-2" style="background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.12);">
+            <i class="bi bi-diagram-3 fs-1 text-info d-block mb-2"></i>
+            <h5 class="text-white fw-bold mb-2">هیچ هاب تیمی با این مشخصات یافت نشد</h5>
+            <p class="text-muted fs-xs mb-0">ربات وین‌فوروارد را به یک گروه در بله یا تلگرام اضافه کنید تا خودکار ثبت شود.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

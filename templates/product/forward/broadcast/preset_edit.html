@@ -1,7 +1,7 @@
 {% extends "parent/base.html" %}
 {% load static %}
 
-{% block title %}ویرایش پروفایل «{{ preset.name }}» | وین فوروارد{% endblock %}
+{% block title %}ویرایش پکیج «{{ preset.name }}» | وین فوروارد{% endblock %}
 
 {% block extra_style %}
 <link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
@@ -14,7 +14,7 @@
     <ol class="breadcrumb breadcrumb-light mb-3">
         <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
         <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'broadcast:preset_list' %}">پروفایل‌های ارسال</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:preset_list' %}">پکیج‌های ارسال</a></li>
         <li class="breadcrumb-item active">ویرایش {{ preset.name }}</li>
     </ol>
 
@@ -22,11 +22,11 @@
 
     <div class="wf-preset-hero wf-reveal">
         <div>
-            <h1 class="h4 text-white fw-bold mb-1">ویرایش پروفایل «{{ preset.name }}»</h1>
-            <p class="text-muted fs-xs mb-0">نام پروفایل یا کانال‌های عضو آن را تغییر دهید.</p>
+            <h1 class="h4 text-white fw-bold mb-1">ویرایش پکیج «{{ preset.name }}»</h1>
+            <p class="text-muted fs-xs mb-0">نام پکیج یا کانال‌های عضو آن را تغییر دهید.</p>
         </div>
         <a href="{% url 'broadcast:preset_list' %}" class="wf-btn wf-btn-glass">
-            <i class="bi bi-arrow-right"></i> بازگشت به پروفایل‌ها
+            <i class="bi bi-arrow-right"></i> بازگشت به پکیج‌ها
         </a>
     </div>
 
@@ -59,11 +59,16 @@
                                            value="{{ ch.pk }}"
                                            id="edit_ch_{{ ch.pk }}"
                                            {% if ch.pk|stringformat:"s" in selected_ids or ch.pk in selected_ids %}checked{% endif %}>
-                                    {% if ch.avatar %}
-                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" width="28" height="28" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
-                                    {% elif ch.platform.logo %}
-                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" width="26" height="26" class="rounded-circle flex-shrink-0">
-                                    {% endif %}
+                                    <div class="wf-avatar-with-badge" style="width:36px;height:36px;border-radius:10px;">
+                                        {% if ch.avatar %}
+                                            <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}" class="wf-av-img">
+                                        {% else %}
+                                            {{ ch.title|slice:":1" }}
+                                        {% endif %}
+                                        {% if ch.platform.logo %}
+                                            <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}" class="wf-av-plat" style="width:15px;height:15px;">
+                                        {% endif %}
+                                    </div>
                                     <div class="overflow-hidden">
                                         <div class="text-white fw-bold fs-xs text-truncate">{{ ch.title }}</div>
                                         <div class="text-muted" style="font-size: 0.7rem;">{{ ch.platform.name }}</div>

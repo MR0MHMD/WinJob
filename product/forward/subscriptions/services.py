@@ -1,42 +1,152 @@
-"""سرویس‌های منطق کسب‌وکار اشتراک وین فوروارد — محاسبه قیمت، صدور فاکتور، فعال‌سازی و تمدید."""
+"""سرویس‌های هسته سیستم توکنی وین فوروارد — محاسبه نرخ، کسر/شارژ اتمیک، هدیه و خرید بسته."""
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, Optional
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .access import get_user_platform_access_map
 from .models import (
-    FORWARD_PLATFORM_LABELS,
     FORWARD_PLATFORM_SLUGS,
-    ForwardPlatformAccess,
     ForwardSubscriptionAccount,
     ForwardSubscriptionOrder,
     ForwardSubscriptionPlan,
+    ForwardTokenPricing,
+    ForwardTokenTransaction,
 )
+
+MAX_FILE_SIZE_MB = 20
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 
 def account_for(user) -> ForwardSubscriptionAccount:
-    """دریافت یا ایجاد حساب اشتراک وین فوروارد برای کاربر مشخص.
-
-    :param user: نمونه کاربر سایت (CustomUser).
-    :return: آبجکت ForwardSubscriptionAccount مربوط به کاربر.
-    """
+    """دریافت یا ایجاد کیف توکن وین فوروارد برای کاربر مشخص."""
     account, _ = ForwardSubscriptionAccount.objects.get_or_create(user=user)
     return account
 
 
-def _calculate_vat(subtotal: int) -> int:
-    """محاسبه مالیات بر ارزش افزوده در صورت فعال بودن فلگ FORWARD_ENABLE_VAT در تنظیمات.
+def get_pricing_config() -> ForwardTokenPricing:
+    """دریافت تنظیمات فعال نرخ مصرف توکن از دیتابیس."""
+    return ForwardTokenPricing.get_active()
 
-    :param subtotal: مبلغ پایه پیش از مالیات (تومان).
-    :return: مبلغ مالیات به تومان (در حالت پیش‌فرض ۰).
+
+def get_max_file_size_bytes() -> int:
+    """سقف حجم مجاز فایل به بایت (پیش‌فرض ۲۰ مگابایت)."""
+    cfg = get_pricing_config()
+    return int(cfg.max_file_size_mb or MAX_FILE_SIZE_MB) * 1024 * 1024
+
+
+def calculate_delivery_token_cost(
+    content_type: str,
+    has_caption: bool = False,
+    file_size_bytes: int = 0,
+    is_hub: bool = False,
+    use_ai_watermark: bool = False,
+    pricing: Optional[ForwardTokenPricing] = None,
+) -> int:
+    """محاسبه دقیق توکن مصرفی برای هر تحویل موفق در یک کانال طبق تعرفه وین فوروارد.
+
+    - متن ساده: ۲ توکن
+    - عکس: ۲ توکن (+۲ با کپشن = ۴)
+    - استیکر و گیف: ۳ توکن
+    - صوت، ویس، فایل، ویدیو:
+        زیر ۵ مگ: ۵ (+۲ با کپشن = ۷)
+        ۵ تا ۱۰ مگ: ۷ (+۲ با کپشن = ۹)
+        ۱۰ تا ۲۰ مگ: ۱۰ (+۲ با کپشن = ۱۲)
+    - افزونه هاب تیمی: +۲ توکن
+    - افزونه حذف واترمارک هوش مصنوعی: +۵ توکن
     """
+    cfg = pricing or get_pricing_config()
+    ctype = (content_type or "text").lower()
+
+    if ctype == "text":
+        cost = int(cfg.text_cost)
+    elif ctype == "photo":
+        cost = int(cfg.photo_cost) + (int(cfg.caption_extra_cost) if has_caption else 0)
+    elif ctype in ("sticker", "animation"):
+        cost = int(cfg.sticker_gif_cost)
+    else:
+        mb = (file_size_bytes or 0) / (1024 * 1024)
+        if mb <= 5.0:
+            base = int(cfg.media_under_5mb_cost)
+        elif mb <= 10.0:
+            base = int(cfg.media_5_to_10mb_cost)
+        else:
+            base = int(cfg.media_10_to_20mb_cost)
+        cost = base + (int(cfg.caption_extra_cost) if has_caption else 0)
+
+    if is_hub:
+        cost += int(cfg.hub_extra_cost)
+    if use_ai_watermark:
+        cost += int(cfg.ai_watermark_extra_cost)
+    return max(1, cost)
+
+
+@transaction.atomic
+def credit_tokens_atomic(
+    user,
+    amount: int,
+    tx_type: str,
+    description: str = "",
+    broadcast_job_id: Optional[int] = None,
+) -> int:
+    """افزایش اتمیک توکن کاربر و ثبت سند در دفترکل تراکنش‌های توکن."""
+    amount = int(amount)
+    if amount <= 0:
+        return account_for(user).token_balance
+    acc_obj = account_for(user)
+    acc = ForwardSubscriptionAccount.objects.select_for_update().get(pk=acc_obj.pk)
+    acc.token_balance = int(acc.token_balance) + amount
+    acc.total_tokens_earned = int(acc.total_tokens_earned) + amount
+    acc.save(update_fields=["token_balance", "total_tokens_earned"])
+
+    ForwardTokenTransaction.objects.create(
+        user=user,
+        tx_type=tx_type,
+        amount=amount,
+        balance_after=acc.token_balance,
+        description=description[:255],
+        broadcast_job_id=broadcast_job_id,
+    )
+    return acc.token_balance
+
+
+@transaction.atomic
+def deduct_tokens_atomic(
+    user,
+    amount: int,
+    description: str = "",
+    broadcast_job_id: Optional[int] = None,
+) -> tuple[bool, int]:
+    """کسر اتمیک توکن از حساب کاربر در صورت کافی بودن موجودی؛ خروجی: (موفقیت، موجودی جدید)."""
+    amount = int(amount)
+    if amount <= 0:
+        return True, account_for(user).token_balance
+    acc_obj = account_for(user)
+    acc = ForwardSubscriptionAccount.objects.select_for_update().get(pk=acc_obj.pk)
+    if int(acc.token_balance) < amount:
+        return False, int(acc.token_balance)
+
+    acc.token_balance = int(acc.token_balance) - amount
+    acc.total_tokens_spent = int(acc.total_tokens_spent) + amount
+    acc.save(update_fields=["token_balance", "total_tokens_spent"])
+
+    ForwardTokenTransaction.objects.create(
+        user=user,
+        tx_type=ForwardTokenTransaction.TxType.SPEND,
+        amount=-amount,
+        balance_after=acc.token_balance,
+        description=description[:255],
+        broadcast_job_id=broadcast_job_id,
+    )
+    return True, acc.token_balance
+
+
+def _calculate_vat(subtotal: int) -> int:
+    """محاسبه مالیات بر ارزش افزوده در صورت فعال بودن FORWARD_ENABLE_VAT."""
     if not getattr(settings, "FORWARD_ENABLE_VAT", False) or subtotal <= 0:
         return 0
     try:
@@ -46,189 +156,77 @@ def _calculate_vat(subtotal: int) -> int:
         return int(round(subtotal * 0.10))
 
 
-def calculate_order_quote(
-    user,
-    plan: ForwardSubscriptionPlan,
-    selected_platforms: List[str],
-    order_kind: str = ForwardSubscriptionOrder.OrderKind.NEW,
-) -> Dict[str, Any]:
-    """محاسبه دقیق قیمت، مدت و اعتبارسنجی پلتفرم‌های انتخاب‌شده توسط کاربر.
+@transaction.atomic
+def claim_free_gift_tokens(user, plan: Optional[ForwardSubscriptionPlan] = None) -> int:
+    """اعطای یک‌بارمصرف هدیه ۳۵۰ توکن رایگان با کلیک کاربر."""
+    acc_obj = account_for(user)
+    acc = ForwardSubscriptionAccount.objects.select_for_update().get(pk=acc_obj.pk)
+    if not acc.can_use_trial:
+        raise ValidationError("شما قبلاً هدیه توکن رایگان اولیه خود را دریافت کرده‌اید.")
 
-    - در پلن رایگان ۷ روزه: تمام ۴ پلتفرم با قیمت ۰ تومان فعال می‌شوند (فقط یک‌بار برای هر کاربر).
-    - در خرید جدید یا تمدید: پلتفرم بله («bale») اجباری است.
-    - در افزودن پلتفرم در میانه دوره («add_platform»): قیمت بر اساس روزهای باقی‌مانده دوره فعلی بله محاسبه می‌شود.
+    cfg = get_pricing_config()
+    gift_tokens = int((plan.tokens_amount if plan and plan.tokens_amount else 0) or cfg.free_gift_tokens or 350)
+    now = timezone.now()
 
-    :param user: نمونه کاربر سایت.
-    :param plan: پلن انتخاب‌شده.
-    :param selected_platforms: لیست slug پلتفرم‌های انتخاب‌شده.
-    :param order_kind: نوع سفارش ('new'، 'renew' یا 'add_platform').
-    :return: دیکشنری کامل پیش‌فاکتور شامل مبالغ، مدت و لیست پلتفرم‌ها.
-    """
-    account = account_for(user)
-    clean_platforms = []
-    for slug in selected_platforms:
-        if slug in FORWARD_PLATFORM_SLUGS and slug not in clean_platforms:
-            clean_platforms.append(slug)
+    acc.token_balance = int(acc.token_balance) + gift_tokens
+    acc.total_tokens_earned = int(acc.total_tokens_earned) + gift_tokens
+    acc.trial_used_at = now
+    acc.save(update_fields=["token_balance", "total_tokens_earned", "trial_used_at"])
 
-    if plan.is_trial:
-        if not account.can_use_trial:
-            raise ValidationError("شما قبلاً از دوره رایگان ۷ روزه خود استفاده کرده‌اید.")
-        return {
-            "order_kind": ForwardSubscriptionOrder.OrderKind.NEW,
-            "platforms": list(FORWARD_PLATFORM_SLUGS),
-            "duration_days": plan.duration_days,
-            "price_per_platform": 0,
-            "subtotal_amount": 0,
-            "vat_amount": 0,
-            "total_amount": 0,
-        }
-
-    access_map = get_user_platform_access_map(user)
-    bale_access = access_map.get("bale")
-
-    if order_kind == ForwardSubscriptionOrder.OrderKind.ADD_PLATFORM:
-        if not bale_access or not bale_access.is_valid:
-            raise ValidationError("برای افزودن پلتفرم جدید در میانه دوره، ابتدا باید اشتراک فعال بله داشته باشید.")
-        new_platforms = [slug for slug in clean_platforms if slug not in access_map]
-        if not new_platforms:
-            raise ValidationError("لطفاً حداقل یک پلتفرم جدید که هنوز اشتراک فعال ندارد انتخاب کنید.")
-
-        remaining_days = bale_access.remaining_days
-        ref_plan = bale_access.plan or plan
-        base_days = max(1, ref_plan.duration_days or 30)
-        base_price = ref_plan.price_per_platform or plan.price_per_platform
-        prorated_unit = max(1000, int(round(base_price * remaining_days / base_days)))
-        subtotal = prorated_unit * len(new_platforms)
-        vat = _calculate_vat(subtotal)
-        return {
-            "order_kind": ForwardSubscriptionOrder.OrderKind.ADD_PLATFORM,
-            "platforms": new_platforms,
-            "duration_days": remaining_days,
-            "price_per_platform": prorated_unit,
-            "subtotal_amount": subtotal,
-            "vat_amount": vat,
-            "total_amount": subtotal + vat,
-        }
-
-    # خرید جدید یا تمدید: پلتفرم بله اجباری است
-    if "bale" not in clean_platforms:
-        clean_platforms.insert(0, "bale")
-
-    effective_kind = (
-        ForwardSubscriptionOrder.OrderKind.RENEW
-        if bale_access and bale_access.is_valid
-        else ForwardSubscriptionOrder.OrderKind.NEW
+    ForwardTokenTransaction.objects.create(
+        user=user,
+        tx_type=ForwardTokenTransaction.TxType.GIFT,
+        amount=gift_tokens,
+        balance_after=acc.token_balance,
+        description=f"دریافت هدیه شروع رایگان ({gift_tokens:,} توکن)",
     )
-    unit_price = int(plan.price_per_platform)
-    subtotal = unit_price * len(clean_platforms)
-    vat = _calculate_vat(subtotal)
-
-    return {
-        "order_kind": effective_kind,
-        "platforms": clean_platforms,
-        "duration_days": plan.duration_days,
-        "price_per_platform": unit_price,
-        "subtotal_amount": subtotal,
-        "vat_amount": vat,
-        "total_amount": subtotal + vat,
-    }
+    return gift_tokens
 
 
 @transaction.atomic
-def activate_trial_subscription(user, plan: ForwardSubscriptionPlan) -> ForwardSubscriptionOrder:
-    """فعال‌سازی فوری و اتمیک اشتراک رایگان ۷ روزه برای تمام ۴ پلتفرم.
+def create_token_order_with_invoice(user, plan: ForwardSubscriptionPlan):
+    """ثبت سفارش خرید بسته توکن و صدور فاکتور متناظر در اپ payment (سازگار با کیف پول و زرین‌پال)."""
+    from payment.models import Invoice
 
-    :param user: نمونه کاربر سایت.
-    :param plan: پلن رایگان ۷ روزه.
-    :return: آبجکت ForwardSubscriptionOrder ثبت‌شده با وضعیت پرداخت‌شده.
-    """
-    account = ForwardSubscriptionAccount.objects.select_for_update().get(pk=account_for(user).pk)
-    if not plan.is_trial:
-        raise ValidationError("این متد فقط برای پلن رایگان قابل استفاده است.")
-    if not account.can_use_trial:
-        raise ValidationError("شما قبلاً از دوره رایگان ۷ روزه خود استفاده کرده‌اید.")
+    if plan.is_trial or plan.price_per_platform <= 0 or plan.tokens_amount <= 0:
+        raise ValidationError("این بسته برای خرید پولی معتبر نیست.")
 
-    now = timezone.now()
-    expires_at = now + timedelta(days=plan.duration_days)
+    subtotal = int(plan.price_per_platform)
+    tokens_qty = int(plan.tokens_amount)
+    base_cost = max(subtotal, tokens_qty * 50) if int(plan.discount_percent or 0) > 0 else subtotal
+    plan_discount = max(0, base_cost - subtotal)
+    vat = _calculate_vat(subtotal)
+    total = subtotal + vat
 
     order = ForwardSubscriptionOrder.objects.create(
         user=user,
         plan=plan,
         order_kind=ForwardSubscriptionOrder.OrderKind.NEW,
         platforms=list(FORWARD_PLATFORM_SLUGS),
-        duration_days=plan.duration_days,
-        price_per_platform=0,
-        subtotal_amount=0,
-        vat_amount=0,
-        total_amount=0,
-        status=ForwardSubscriptionOrder.Status.PAID,
-        paid_at=now,
-    )
-
-    for slug in FORWARD_PLATFORM_SLUGS:
-        ForwardPlatformAccess.objects.update_or_create(
-            user=user,
-            platform_slug=slug,
-            defaults={
-                "plan": plan,
-                "started_at": now,
-                "expires_at": expires_at,
-                "is_active": True,
-            },
-        )
-
-    account.trial_used_at = now
-    account.save(update_fields=["trial_used_at"])
-    return order
-
-
-@transaction.atomic
-def create_forward_order_with_invoice(
-    user,
-    plan: ForwardSubscriptionPlan,
-    selected_platforms: List[str],
-    order_kind: str = ForwardSubscriptionOrder.OrderKind.NEW,
-):
-    """ایجاد سفارش اشتراک پولی وین فوروارد به همراه فاکتور متناظر در اپ payment.
-
-    :param user: نمونه کاربر سایت.
-    :param plan: پلن انتخاب‌شده.
-    :param selected_platforms: لیست slug پلتفرم‌ها.
-    :param order_kind: نوع سفارش ('new'، 'renew' یا 'add_platform').
-    :return: تاپل شامل (ForwardSubscriptionOrder, Invoice).
-    """
-    from payment.models import Invoice
-
-    quote = calculate_order_quote(user, plan, selected_platforms, order_kind=order_kind)
-    order = ForwardSubscriptionOrder.objects.create(
-        user=user,
-        plan=plan,
-        order_kind=quote["order_kind"],
-        platforms=quote["platforms"],
-        duration_days=quote["duration_days"],
-        price_per_platform=quote["price_per_platform"],
-        subtotal_amount=quote["subtotal_amount"],
-        vat_amount=quote["vat_amount"],
-        total_amount=quote["total_amount"],
+        duration_days=0,
+        tokens_amount=tokens_qty,
+        price_per_platform=subtotal,
+        subtotal_amount=subtotal,
+        vat_amount=vat,
+        total_amount=total,
         status=ForwardSubscriptionOrder.Status.PENDING,
     )
 
-    platform_names = "، ".join(FORWARD_PLATFORM_LABELS.get(s, s) for s in quote["platforms"])
     invoice = Invoice.objects.create(
         type=Invoice.Type.WINFORWARD,
         user=user,
         forward_subscription_order=order,
-        base_plan_cost=quote["subtotal_amount"],
-        plan_discount_amount=0,
-        plan_cost=quote["subtotal_amount"],
-        plan_vat=quote["vat_amount"],
-        discount_amount=0,
-        total_amount=quote["subtotal_amount"],
-        total_vat=quote["vat_amount"],
-        payable_amount=quote["total_amount"],
-        base_commission=quote["subtotal_amount"],
-        commission=quote["subtotal_amount"],
-        description=f"اشتراک وین فوروارد ({plan.name}) — پلتفرم‌ها: {platform_names}",
+        base_plan_cost=base_cost,
+        plan_discount_amount=plan_discount,
+        plan_cost=subtotal,
+        plan_vat=vat,
+        discount_amount=plan_discount,
+        total_amount=base_cost,
+        total_vat=vat,
+        payable_amount=total,
+        base_commission=subtotal,
+        commission=subtotal,
+        description=f"خرید {plan.name} وین فوروارد ({tokens_qty:,} توکن · بدون تاریخ انقضا)",
     )
     invoice.invoice_number = Invoice.generate_invoice_number(
         invoice.pk, invoice.created_at, Invoice.Type.WINFORWARD
@@ -239,63 +237,50 @@ def create_forward_order_with_invoice(
 
 @transaction.atomic
 def fulfil_forward_order(order: ForwardSubscriptionOrder) -> None:
-    """اعمال دسترسی پلتفرم‌ها پس از پرداخت موفق سفارش اشتراک وین فوروارد.
-
-    - در خرید جدید یا تمدید: مدت دوره به تاریخ انقضای فعلی (یا زمان حال) اضافه می‌شود.
-    - در افزودن پلتفرم در میانه دوره: تاریخ انقضای پلتفرم جدید دقیقاً با تاریخ انقضای بله همگام می‌شود.
-
-    :param order: سفارش پرداخت‌شده ForwardSubscriptionOrder.
-    """
+    """اعمال و شارژ توکن‌های خریداری‌شده بلافاصله پس از پرداخت موفق از کیف پول یا درگاه زرین‌پال."""
     if order.status == ForwardSubscriptionOrder.Status.PAID:
         return
 
     now = timezone.now()
-    account = ForwardSubscriptionAccount.objects.select_for_update().get(pk=account_for(order.user).pk)
+    tokens_to_add = int(order.tokens_amount or (order.plan.tokens_amount if order.plan else 0))
+    acc_obj = account_for(order.user)
+    acc = ForwardSubscriptionAccount.objects.select_for_update().get(pk=acc_obj.pk)
 
-    if order.order_kind == ForwardSubscriptionOrder.OrderKind.ADD_PLATFORM:
-        bale_access = ForwardPlatformAccess.objects.filter(
-            user=order.user, platform_slug="bale", is_active=True, expires_at__gt=now
-        ).first()
-        target_expiry = (
-            bale_access.expires_at if bale_access else now + timedelta(days=order.duration_days)
+    if tokens_to_add > 0:
+        acc.token_balance = int(acc.token_balance) + tokens_to_add
+        acc.total_tokens_earned = int(acc.total_tokens_earned) + tokens_to_add
+        if not acc.first_paid_at:
+            acc.first_paid_at = now
+        acc.save(update_fields=["token_balance", "total_tokens_earned", "first_paid_at"])
+
+        ForwardTokenTransaction.objects.create(
+            user=order.user,
+            tx_type=ForwardTokenTransaction.TxType.PURCHASE,
+            amount=tokens_to_add,
+            balance_after=acc.token_balance,
+            description=f"شارژ {tokens_to_add:,} توکن از {order.plan.name} (سفارش #{order.pk})",
         )
-        for slug in order.platforms:
-            ForwardPlatformAccess.objects.update_or_create(
-                user=order.user,
-                platform_slug=slug,
-                defaults={
-                    "plan": order.plan,
-                    "started_at": now,
-                    "expires_at": target_expiry,
-                    "is_active": True,
-                },
-            )
-    else:
-        for slug in order.platforms:
-            existing = ForwardPlatformAccess.objects.filter(
-                user=order.user, platform_slug=slug
-            ).first()
-            base_time = (
-                existing.expires_at
-                if (existing and existing.is_active and existing.expires_at > now)
-                else now
-            )
-            new_expiry = base_time + timedelta(days=order.duration_days)
-            ForwardPlatformAccess.objects.update_or_create(
-                user=order.user,
-                platform_slug=slug,
-                defaults={
-                    "plan": order.plan,
-                    "started_at": existing.started_at if (existing and existing.is_valid) else now,
-                    "expires_at": new_expiry,
-                    "is_active": True,
-                },
-            )
 
     order.status = ForwardSubscriptionOrder.Status.PAID
     order.paid_at = now
     order.save(update_fields=["status", "paid_at"])
 
-    if not account.first_paid_at:
-        account.first_paid_at = now
-        account.save(update_fields=["first_paid_at"])
+
+@transaction.atomic
+def cancel_pending_token_order(order: ForwardSubscriptionOrder, user) -> ForwardSubscriptionOrder:
+    """لغو سفارش پرداخت‌نشده خرید بسته توکن توسط مالک سفارش."""
+    from payment.models import Invoice, Payment
+
+    order = ForwardSubscriptionOrder.objects.select_for_update().get(pk=order.pk, user=user)
+    if order.status != ForwardSubscriptionOrder.Status.PENDING:
+        raise ValidationError("فقط سفارش‌های در انتظار پرداخت قابل لغو هستند.")
+
+    invoice = Invoice.objects.filter(forward_subscription_order=order).first()
+    if invoice and invoice.is_paid:
+        raise ValidationError("این فاکتور قبلاً پرداخت شده است و قابل لغو نیست.")
+    if invoice and invoice.payments.filter(status=Payment.Status.PENDING).exists():
+        invoice.payments.filter(status=Payment.Status.PENDING).update(status=Payment.Status.FAILED)
+
+    order.status = ForwardSubscriptionOrder.Status.CANCELED
+    order.save(update_fields=["status"])
+    return order

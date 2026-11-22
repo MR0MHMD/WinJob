@@ -13,6 +13,7 @@ FORWARD_PLATFORMS = (
     ("eitaa", "ایتا"),
     ("rubika", "روبیکا"),
     ("telegram", "تلگرام"),
+    ("soroush", "سروش‌پلاس"),
 )
 
 FORWARD_PLATFORM_SLUGS = tuple(slug for slug, _ in FORWARD_PLATFORMS)
@@ -27,9 +28,18 @@ class ForwardSubscriptionPlan(models.Model):
     description = models.TextField(_("توضیحات"), blank=True)
     duration_days = models.PositiveSmallIntegerField(_("مدت اعتبار (روز)"), default=30)
     price_per_platform = models.PositiveBigIntegerField(
-        _("قیمت هر پلتفرم (تومان)"),
+        _("قیمت بسته (تومان)"),
         default=0,
-        help_text=_("برای پلن رایگان ۷ روزه مقدار ۰ و برای پلن‌های پولی قیمت هر پلتفرم به تومان ثبت شود."),
+        help_text=_("قیمت نهایی بسته توکن به تومان (برای هدیه رایگان مقدار ۰ ثبت شود)."),
+    )
+    tokens_amount = models.PositiveIntegerField(
+        _("تعداد توکن بسته"),
+        default=0,
+        help_text=_("تعداد توکنی که پس از خرید این بسته به کیف توکن کاربر اضافه می‌شود."),
+    )
+    discount_percent = models.PositiveSmallIntegerField(
+        _("درصد تخفیف نمایشی"),
+        default=0,
     )
     is_trial = models.BooleanField(_("دوره رایگان یک‌بارمصرف"), default=False)
     is_active = models.BooleanField(_("فعال برای فروش"), default=True)
@@ -45,6 +55,8 @@ class ForwardSubscriptionPlan(models.Model):
 
     def __str__(self) -> str:
         """نمایش خوانای نام و مدت پلن در ادمین و قالب‌ها."""
+        if self.tokens_amount:
+            return f"{self.name} ({self.tokens_amount:,} توکن)"
         return f"{self.name} ({self.duration_days} روز)"
 
     def clean(self) -> None:
@@ -65,8 +77,15 @@ class ForwardSubscriptionAccount(models.Model):
         related_name="forward_subscription_account",
         verbose_name=_("کاربر"),
     )
-    trial_used_at = jmodels.jDateTimeField(_("زمان فعال‌سازی دوره رایگان"), null=True, blank=True)
-    first_paid_at = jmodels.jDateTimeField(_("زمان اولین خرید پولی"), null=True, blank=True)
+    token_balance = models.PositiveBigIntegerField(
+        _("موجودی توکن فعلی"),
+        default=0,
+        help_text=_("موجودی قابل ویرایش توکن کاربر (بدون تاریخ انقضا؛ تغییر مستقیم از ادمین در تاریخچه ثبت می‌شود)."),
+    )
+    total_tokens_earned = models.PositiveBigIntegerField(_("مجموع توکن‌های دریافتی"), default=0)
+    total_tokens_spent = models.PositiveBigIntegerField(_("مجموع توکن‌های مصرف‌شده"), default=0)
+    trial_used_at = jmodels.jDateTimeField(_("زمان دریافت هدیه رایگان اولیه"), null=True, blank=True)
+    first_paid_at = jmodels.jDateTimeField(_("زمان اولین خرید بسته توکن"), null=True, blank=True)
     created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True)
 
     class Meta:
@@ -174,7 +193,8 @@ class ForwardSubscriptionOrder(models.Model):
         default=list,
         help_text=_("لیست slug پلتفرم‌های انتخاب‌شده (مثلاً ['bale', 'eitaa'])."),
     )
-    duration_days = models.PositiveSmallIntegerField(_("مدت اعمال‌شده (روز)"), default=30)
+    duration_days = models.PositiveSmallIntegerField(_("مدت اعمال‌شده (روز)"), default=0)
+    tokens_amount = models.PositiveIntegerField(_("تعداد توکن سفارش"), default=0)
     price_per_platform = models.PositiveBigIntegerField(_("مبلغ واحد هر پلتفرم (تومان)"), default=0)
     subtotal_amount = models.PositiveBigIntegerField(_("جمع پایه (تومان)"), default=0)
     vat_amount = models.PositiveBigIntegerField(_("مالیات (تومان)"), default=0)
@@ -217,3 +237,67 @@ class ForwardSubscriptionOrder(models.Model):
     def platform_labels(self) -> list[str]:
         """تبدیل لیست slugهای پلتفرم به نام فارسی خوانا."""
         return [FORWARD_PLATFORM_LABELS.get(slug, slug) for slug in (self.platforms or [])]
+
+
+class ForwardTokenPricing(models.Model):
+    """جدول تنظیمات قابل ویرایش نرخ مصرف توکن‌ها و سقف حجم فایل در وین فوروارد."""
+
+    text_cost = models.PositiveSmallIntegerField(_("متن ساده (توکن)"), default=2)
+    photo_cost = models.PositiveSmallIntegerField(_("عکس بدون کپشن (توکن)"), default=2)
+    caption_extra_cost = models.PositiveSmallIntegerField(_("افزودن کپشن به رسانه (توکن)"), default=2)
+    sticker_gif_cost = models.PositiveSmallIntegerField(_("استیکر و گیف (توکن)"), default=3)
+    media_under_5mb_cost = models.PositiveSmallIntegerField(_("صوت/ویس/فایل/ویدیو زیر ۵ مگ (توکن)"), default=5)
+    media_5_to_10mb_cost = models.PositiveSmallIntegerField(_("فایل/ویدیو ۵ تا ۱۰ مگ (توکن)"), default=7)
+    media_10_to_20mb_cost = models.PositiveSmallIntegerField(_("فایل/ویدیو ۱۰ تا ۲۰ مگ (توکن)"), default=10)
+    max_file_size_mb = models.PositiveSmallIntegerField(_("حداکثر حجم مجاز فایل (مگابایت)"), default=20)
+    hub_extra_cost = models.PositiveSmallIntegerField(_("افزونه ارسال از هاب تیمی (توکن)"), default=2)
+    ai_watermark_extra_cost = models.PositiveSmallIntegerField(_("افزونه حذف واترمارک هوش مصنوعی (توکن)"), default=5)
+    free_gift_tokens = models.PositiveIntegerField(_("هدیه رایگان اولیه (توکن)"), default=350)
+    updated_at = jmodels.jDateTimeField(_("آخرین ویرایش"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("تنظیمات نرخ مصرف توکن")
+        verbose_name_plural = _("تنظیمات نرخ مصرف توکن")
+
+    def __str__(self) -> str:
+        return f"نرخ‌های توکن (پایه: {self.text_cost} | سقف: {self.max_file_size_mb}MB | هدیه: {self.free_gift_tokens})"
+
+    @classmethod
+    def get_active(cls) -> "ForwardTokenPricing":
+        obj = cls.objects.order_by("pk").first()
+        if not obj:
+            obj = cls.objects.create()
+        return obj
+
+
+class ForwardTokenTransaction(models.Model):
+    """دفترکل تراکنش‌های افزایش، هدیه، مصرف ارسال و ویرایش دستی ادمین روی توکن‌های کاربر."""
+
+    class TxType(models.TextChoices):
+        GIFT = "gift", _("هدیه رایگان اولیه")
+        PURCHASE = "purchase", _("خرید بسته توکن")
+        SPEND = "spend", _("مصرف ارسال پیام")
+        ADMIN_ADJUST = "admin_adjust", _("ویرایش دستی ادمین")
+        REFUND = "refund", _("بازگشت توکن")
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="forward_token_transactions",
+        verbose_name=_("کاربر"),
+    )
+    tx_type = models.CharField(_("نوع تراکنش"), max_length=20, choices=TxType.choices, db_index=True)
+    amount = models.BigIntegerField(_("مقدار تغییر (مثبت/منفی)"))
+    balance_after = models.PositiveBigIntegerField(_("موجودی پس از تراکنش"), default=0)
+    description = models.CharField(_("شرح تراکنش"), max_length=255, blank=True)
+    broadcast_job_id = models.PositiveIntegerField(_("شناسه ارسال مرتبط"), null=True, blank=True, db_index=True)
+    created_at = jmodels.jDateTimeField(_("زمان ثبت"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("تراکنش توکن وین فوروارد")
+        verbose_name_plural = _("تراکنش‌های توکن وین فوروارد")
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self) -> str:
+        sign = "+" if self.amount >= 0 else ""
+        return f"{self.user} | {sign}{self.amount} توکن ({self.get_tx_type_display()})"

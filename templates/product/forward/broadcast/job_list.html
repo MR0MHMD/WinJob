@@ -6,6 +6,7 @@
 {% block extra_style %}
 <link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
 <link rel="stylesheet" href="{% static 'forward/css/pages/job_list.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_channels.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -21,132 +22,297 @@
 
     <div class="wf-history-header wf-reveal">
         <div class="d-flex align-items-center gap-3">
-            <div style="width:58px;height:58px;border-radius:1.15rem;background:linear-gradient(135deg,#3c76f2,#5d3cf2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;">
+            <div style="width:58px;height:58px;border-radius:1.2rem;background:linear-gradient(135deg,#3c76f2,#5d3cf2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;flex-shrink:0;">
                 <i class="bi bi-clock-history"></i>
             </div>
             <div>
-                <h1 class="h4 text-white fw-bold mb-1">تاریخچه و گزارش ارسال‌های همگانی</h1>
+                <h1 class="h4 text-white fw-bold mb-1">تاریخچه و گزارش ارسال‌ها</h1>
                 <p class="text-muted fs-xs mb-0">
-                    مشاهده تمامی پیام‌های ارسال‌شده از پنل وب و ربات بله به همراه وضعیت تحویل در هر کانال.
+                    پایش دقیق تمام ارسال‌های استدیو وب، ربات‌های بله و تلگرام و هاب‌های تیمی با نرخ موفقیت و فیلتر پیشرفته.
                 </p>
             </div>
         </div>
         <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
-            <i class="bi bi-rocket-takeoff-fill"></i> ارسال پیام جدید
+            <i class="bi bi-rocket-takeoff-fill"></i> استدیو ارسال
         </a>
     </div>
 
-    <!-- ۳ کارت آماری خلاصه تاریخچه -->
+    <!-- ۴ کارت آماری -->
     <div class="row g-3 mb-4 wf-reveal wf-delay-1">
-        <div class="col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="wf-history-mini-stat">
-                <div class="wf-stat-icon blue" style="width:48px;height:48px;border-radius:0.95rem;background:rgba(60,118,242,0.16);color:#6391f5;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(60,118,242,0.16);color:#6391f5;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
                     <i class="bi bi-layers-fill"></i>
                 </div>
                 <div>
                     <div class="text-white fw-bold fs-4">{{ total_jobs_count|intcomma }}</div>
-                    <div class="text-muted fs-xs">کل عملیات‌های ارسال</div>
+                    <div class="text-muted fs-xs">کل عملیات‌ها</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="wf-history-mini-stat">
-                <div class="wf-stat-icon emerald" style="width:48px;height:48px;border-radius:0.95rem;background:rgba(7,201,139,0.16);color:#07c98b;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(7,201,139,0.16);color:#07c98b;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
                     <i class="bi bi-check2-all"></i>
                 </div>
                 <div>
                     <div class="text-success fw-bold fs-4">{{ total_sent_count|intcomma }}</div>
-                    <div class="text-muted fs-xs">تحویل موفق در کانال‌ها</div>
+                    <div class="text-muted fs-xs">تحویل موفق</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="wf-history-mini-stat">
-                <div class="wf-stat-icon orange" style="width:48px;height:48px;border-radius:0.95rem;background:rgba(253,86,49,0.16);color:#fd5631;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(242,60,73,0.16);color:#ff6b78;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
                 <div>
                     <div class="text-danger fw-bold fs-4">{{ total_failed_count|intcomma }}</div>
-                    <div class="text-muted fs-xs">ارسال ناموفق</div>
+                    <div class="text-muted fs-xs">ناموفق</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="wf-history-mini-stat">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(139,92,246,0.18);color:#c4b5fd;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <div>
+                    <div class="text-info fw-bold fs-4">{{ overall_success_rate }}٪</div>
+                    <div class="text-muted fs-xs">نرخ موفقیت کل</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="wf-history-card wf-reveal wf-delay-2">
-        {% if jobs %}
-            {% for job in jobs %}
-            <div class="wf-job-item-row">
-                <div class="d-flex align-items-center gap-3 overflow-hidden">
-                    <div class="wf-job-platform-avatars">
-                        {% for t in job.targets.all|slice:":4" %}
-                            {% if t.channel.platform.logo %}
-                                <img src="{{ t.channel.platform.logo.url }}" alt="{{ t.channel.platform.name }}" title="{{ t.channel.title }}">
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    <div class="overflow-hidden">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <strong class="text-white fs-sm">ارسال #{{ job.pk }}</strong>
-                            <span class="badge bg-dark border border-secondary text-light rounded-pill px-2 py-1">
-                                {{ job.message.get_content_type_display }}
-                            </span>
-                        </div>
-                        <div class="text-muted fs-xs text-truncate" style="max-width: 380px;">
-                            {{ job.message.text|truncatechars:70|default:"(فایل رسانه بدون متن کپشن)" }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <div class="text-end">
-                        <div class="fs-xs">
-                            <span class="text-success fw-bold">{{ job.success_count }} موفق</span>
-                            <span class="text-muted mx-1">/</span>
-                            <span class="text-danger fw-bold">{{ job.failed_count }} خطا</span>
-                        </div>
-                        <div class="text-muted" style="font-size:0.72rem;">{{ job.created_at|date:"Y/m/d H:i" }}</div>
-                    </div>
-
-                    {% if job.status == 'done' %}
-                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> کامل موفق</span>
-                    {% elif job.status == 'partial' %}
-                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> نیمه‌موفق</span>
-                    {% elif job.status == 'running' or job.status == 'pending' %}
-                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> در حال ارسال...</span>
-                    {% else %}
-                        <span class="wf-badge-status is-danger"><span class="wf-pulse-dot"></span> ناموفق</span>
-                    {% endif %}
-
-                    <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
-                        <i class="bi bi-eye"></i> جزئیات تحویل
-                    </a>
-                </div>
+    <!-- نوار فیلترهای پیشرفته + تغییر نمای جدولی (پیش‌فرض) و کارتی -->
+    <div class="wf-channels-toolbar wf-reveal wf-delay-1">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom border-light">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-funnel-fill text-primary"></i>
+                <span class="text-white fw-bold fs-xs">فیلتر و جستجوی تاریخچه</span>
             </div>
-            {% endfor %}
-
-            {% if is_paginated %}
-            <div class="p-3 border-top border-light d-flex justify-content-center gap-2">
-                {% if page_obj.has_previous %}
-                    <a class="wf-btn wf-btn-glass py-1 px-3 fs-xs" href="?page={{ page_obj.previous_page_number }}">قبلی</a>
-                {% endif %}
-                <span class="wf-btn wf-btn-orange py-1 px-3 fs-xs">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
-                {% if page_obj.has_next %}
-                    <a class="wf-btn wf-btn-glass py-1 px-3 fs-xs" href="?page={{ page_obj.next_page_number }}">بعدی</a>
-                {% endif %}
-            </div>
-            {% endif %}
-        {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
-                <h5 class="text-white fw-bold mb-2">هنوز هیچ پیامی ارسال نکرده‌اید</h5>
-                <p class="text-muted fs-xs mb-4">اولین پیام همگانی خود را در استودیو ارسال تنظیم و منتشر کنید.</p>
-                <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
-                    <i class="bi bi-rocket-takeoff-fill"></i> ارسال اولین پیام
+            <div class="wf-view-toggle-group">
+                <a href="?view=table&q={{ search_q|urlencode }}&status={{ status_filter }}&content_type={{ content_type_filter }}&platform={{ platform_filter }}"
+                   class="wf-view-toggle-btn {% if view_mode == 'table' %}is-active{% endif %}">
+                    <i class="bi bi-table"></i> جدولی
+                </a>
+                <a href="?view=grid&q={{ search_q|urlencode }}&status={{ status_filter }}&content_type={{ content_type_filter }}&platform={{ platform_filter }}"
+                   class="wf-view-toggle-btn {% if view_mode == 'grid' %}is-active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> کارتی
                 </a>
             </div>
-        {% endif %}
+        </div>
+
+        <form method="get" class="row g-2 align-items-center">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="col-md-4 col-lg-3">
+                <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="جستجوی متن یا شماره #...">
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <select name="status" class="form-select">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>همه وضعیت‌ها</option>
+                    <option value="done" {% if status_filter == 'done' %}selected{% endif %}>کامل موفق</option>
+                    <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>نیمه‌موفق</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>ناموفق</option>
+                    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>در حال ارسال</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <select name="content_type" class="form-select">
+                    <option value="all" {% if content_type_filter == 'all' %}selected{% endif %}>همه محتواها</option>
+                    <option value="text" {% if content_type_filter == 'text' %}selected{% endif %}>متن</option>
+                    <option value="photo" {% if content_type_filter == 'photo' %}selected{% endif %}>تصویر</option>
+                    <option value="video" {% if content_type_filter == 'video' %}selected{% endif %}>ویدیو</option>
+                    <option value="audio" {% if content_type_filter == 'audio' %}selected{% endif %}>صوت</option>
+                    <option value="document" {% if content_type_filter == 'document' %}selected{% endif %}>سند / فایل</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-6 col-lg-2">
+                <select name="platform" class="form-select">
+                    <option value="all" {% if platform_filter == 'all' %}selected{% endif %}>همه پلتفرم‌ها</option>
+                    <option value="bale" {% if platform_filter == 'bale' %}selected{% endif %}>بله</option>
+                    <option value="eitaa" {% if platform_filter == 'eitaa' %}selected{% endif %}>ایتا</option>
+                    <option value="rubika" {% if platform_filter == 'rubika' %}selected{% endif %}>روبیکا</option>
+                    <option value="telegram" {% if platform_filter == 'telegram' %}selected{% endif %}>تلگرام</option>
+                    <option value="soroush" {% if platform_filter == 'soroush' %}selected{% endif %}>سروش‌پلاس</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-6 col-lg-3 d-flex gap-2 justify-content-lg-end">
+                <button type="submit" class="wf-btn wf-btn-emerald py-2 px-3 fs-xs flex-grow-1 flex-lg-grow-0">
+                    <i class="bi bi-search"></i> اعمال
+                </button>
+                {% if search_q or status_filter != 'all' or content_type_filter != 'all' or platform_filter != 'all' %}
+                <a href="{% url 'broadcast:job_list' %}?view={{ view_mode }}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">پاک</a>
+                {% endif %}
+            </div>
+        </form>
     </div>
+
+    {% if jobs %}
+        {% if view_mode == 'grid' %}
+            <!-- نمای کارتی تاریخچه -->
+            <div class="row g-4 wf-reveal wf-delay-2">
+                {% for job in jobs %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="wf-connected-channel-card">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="wf-pill-tag is-purple">#{{ job.pk }}</span>
+                                <span class="wf-pill-tag is-blue">{{ job.message.get_content_type_display }}</span>
+                            </div>
+                            {% if job.status == 'done' %}
+                                <span class="wf-pill-tag is-emerald">کامل موفق</span>
+                            {% elif job.status == 'partial' %}
+                                <span class="wf-pill-tag is-gold">نیمه‌موفق</span>
+                            {% elif job.status == 'running' or job.status == 'pending' %}
+                                <span class="wf-pill-tag is-blue">در حال ارسال</span>
+                            {% else %}
+                                <span class="wf-pill-tag is-danger">ناموفق</span>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-white fs-xs mb-3" style="line-height:1.8;min-height:42px;">
+                            {{ job.message.text|truncatechars:90|default:"(پیام رسانه‌ای بدون متن کپشن)" }}
+                        </p>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between fs-xs mb-1">
+                                <span class="text-muted">نرخ موفقیت تحویل</span>
+                                <strong class="text-white">{{ job.success_rate }}٪ ({{ job.success_count }}/{{ job.total_targets }})</strong>
+                            </div>
+                            <div class="wf-progress-track">
+                                <div class="wf-progress-fill {% if job.success_rate >= 80 %}is-high{% elif job.success_rate >= 40 %}is-mid{% else %}is-low{% endif %}"
+                                     style="width:{{ job.success_rate }}%;"></div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-light">
+                                <span class="text-muted" style="font-size:0.72rem;">توکن مصرفی</span>
+                                <span class="wf-pill-tag is-gold" style="font-size:0.72rem;">
+                                    <i class="bi bi-coin"></i> {{ job.tokens_spent|intcomma }} توکن
+                                    <span class="opacity-75 ms-1">({{ job.tokens_toman|intcomma }} ت)</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mt-auto pt-2 border-top border-light">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="d-inline-flex" style="direction:ltr;">
+                                    {% for pl in job.unique_platforms %}
+                                        {% if pl.logo %}
+                                            <img src="{{ pl.logo.url }}" alt="{{ pl.name }}" title="{{ pl.name }}"
+                                                 style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:2px solid #181526;margin-left:-5px;">
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="text-muted" style="font-size:0.7rem;">{{ job.created_at|date:"Y/m/d H:i" }}</span>
+                            </div>
+                            <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                                <i class="bi bi-bar-chart-fill text-info"></i> گزارش
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- نمای جدولی پیش‌فرض با نوار پیشرفت نرخ موفقیت -->
+            <div class="wf-channels-table-wrap wf-reveal wf-delay-2">
+                <div class="table-responsive">
+                    <table class="table table-dark table-borderless wf-channels-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>شناسه و نوع</th>
+                                <th>خلاصه پیام</th>
+                                <th>پلتفرم‌ها</th>
+                                <th style="min-width:170px;">نرخ موفقیت</th>
+                                <th>توکن مصرفی</th>
+                                <th>وضعیت</th>
+                                <th>زمان ثبت</th>
+                                <th class="text-end">گزارش</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="wf-pill-tag is-purple">#{{ job.pk }}</span>
+                                        <span class="wf-pill-tag is-blue">{{ job.message.get_content_type_display }}</span>
+                                    </div>
+                                </td>
+                                <td style="max-width:260px;">
+                                    <div class="text-white fs-xs text-truncate">
+                                        {{ job.message.text|truncatechars:65|default:"(پیام رسانه‌ای بدون متن کپشن)" }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center" style="direction:ltr;">
+                                        {% for pl in job.unique_platforms %}
+                                            {% if pl.logo %}
+                                                <img src="{{ pl.logo.url }}" alt="{{ pl.name }}" title="{{ pl.name }}"
+                                                     style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid #181526;margin-left:-6px;">
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-between fs-xs mb-1">
+                                        <span class="text-success fw-bold">{{ job.success_rate }}٪</span>
+                                        <span class="text-muted">{{ job.success_count }} موفق / {{ job.failed_count }} خطا</span>
+                                    </div>
+                                    <div class="wf-progress-track">
+                                        <div class="wf-progress-fill {% if job.success_rate >= 80 %}is-high{% elif job.success_rate >= 40 %}is-mid{% else %}is-low{% endif %}"
+                                             style="width:{{ job.success_rate }}%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-nowrap">
+                                    <span class="wf-pill-tag is-gold">
+                                        <i class="bi bi-coin"></i> {{ job.tokens_spent|intcomma }} توکن
+                                    </span>
+                                    <div class="text-muted mt-1" style="font-size:0.68rem;">
+                                        معادل {{ job.tokens_toman|intcomma }} تومان
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if job.status == 'done' %}
+                                        <span class="wf-pill-tag is-emerald">کامل موفق</span>
+                                    {% elif job.status == 'partial' %}
+                                        <span class="wf-pill-tag is-gold">نیمه‌موفق</span>
+                                    {% elif job.status == 'running' or job.status == 'pending' %}
+                                        <span class="wf-pill-tag is-blue">در حال ارسال</span>
+                                    {% else %}
+                                        <span class="wf-pill-tag is-danger">ناموفق</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted fs-xs text-nowrap">{{ job.created_at|date:"Y/m/d H:i" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'broadcast:job_detail' job.pk %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
+                                        <i class="bi bi-eye"></i> جزئیات
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if is_paginated %}
+        <div class="mt-4">
+            {% include "partials/pagination.html" %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5 rounded-4 wf-reveal wf-delay-2" style="background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.12);">
+            <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+            <h5 class="text-white fw-bold mb-2">هیچ ارسالی با این فیلتر پیدا نشد</h5>
+            <p class="text-muted fs-xs mb-4">می‌توانید فیلترها را پاک کنید یا از استدیو ارسال، اولین پیام خود را منتشر کنید.</p>
+            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
+                <i class="bi bi-rocket-takeoff-fill"></i> ورود به استدیو ارسال
+            </a>
+        </div>
+    {% endif %}
 
 </div>
 {% endblock %}

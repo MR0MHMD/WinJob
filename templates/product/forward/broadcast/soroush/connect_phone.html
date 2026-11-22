@@ -1,0 +1,110 @@
+{% extends "parent/base.html" %}
+{% load static %}
+
+{% block title %}اتصال حساب سروش‌پلاس | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/messenger_connect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item active">اتصال سروش‌پلاس</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <div class="wf-auth-wizard wf-reveal">
+        <span class="wf-wizard-node is-active">
+            <span class="wf-wizard-circle">۱</span>
+            <span>گام اول: ثبت شماره موبایل سروش‌پلاس</span>
+        </span>
+        <i class="bi bi-chevron-left text-muted"></i>
+        <span class="wf-wizard-node">
+            <span class="wf-wizard-circle">۲</span>
+            <span>گام دوم: تایید کد یک‌بارمصرف (OTP)</span>
+        </span>
+    </div>
+
+    <div class="wf-connect-hero {% if existing_bot_user and existing_bot_user.has_soroush_session %}is-connected{% endif %} wf-reveal wf-delay-1">
+        <div class="d-flex align-items-center gap-3">
+            <div class="wf-connect-hero-logo">
+                {% if platform and platform.logo %}
+                    <img src="{{ platform.logo.url }}" alt="{{ platform.name }}">
+                {% else %}
+                    <i class="bi bi-chat-dots-fill fs-2 text-white"></i>
+                {% endif %}
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">اتصال مستقیم حساب سروش‌پلاس</h1>
+                    {% if existing_bot_user and existing_bot_user.has_soroush_session %}
+                        <span class="wf-badge-status is-connected"><span class="wf-pulse-dot"></span> نشست سروش‌پلاس فعال است</span>
+                    {% else %}
+                        <span class="wf-badge-status is-ready"><span class="wf-pulse-dot"></span> آماده احراز هویت</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted fs-xs mb-0">شماره موبایل اکانت سروش‌پلاسی که در کانال‌هایتان ادمین یا سازنده است را وارد کنید.</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'broadcast:soroush_channels' %}" class="wf-btn wf-btn-glass">
+                <i class="bi bi-list-ul"></i> کانال‌های سروش‌پلاس
+            </a>
+            {% if existing_bot_user and existing_bot_user.has_soroush_session %}
+                <form method="post" action="{% url 'broadcast:soroush_logout' %}"
+                      data-wf-confirm="آیا از قطع اتصال و خروج کامل نشست سروش‌پلاس اطمینان دارید؟">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-glass text-danger">
+                        <i class="bi bi-box-arrow-right"></i> خروج از نشست
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row justify-content-center wf-reveal wf-delay-2">
+        <div class="col-lg-7">
+            <div class="wf-connect-card">
+                <div class="wf-connect-card-header">
+                    <h5 class="text-white fw-bold mb-0 fs-6">
+                        <i class="bi bi-shield-lock-fill text-primary me-1"></i> ورود امن با پروتکل رمزنگاری‌شده MTProto
+                    </h5>
+                </div>
+                <div class="wf-connect-card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="{{ form.phone_number.id_for_label }}" class="text-white fw-bold fs-xs mb-2 d-block">
+                                <i class="bi bi-telephone text-primary me-1"></i> {{ form.phone_number.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.help_text %}
+                                <div class="form-text text-muted fs-xs mt-2">{{ form.phone_number.help_text }}</div>
+                            {% endif %}
+                            {% if form.phone_number.errors %}
+                                <div class="text-danger fs-xs mt-2">
+                                    {% for error in form.phone_number.errors %}{{ error }}<br>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-light">
+                            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass">انصراف</a>
+                            <button type="submit" class="wf-btn wf-btn-orange px-4">
+                                ارسال کد تایید به سروش‌پلاس <i class="bi bi-arrow-left ms-1"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
