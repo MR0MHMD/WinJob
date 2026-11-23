@@ -1,0 +1,85 @@
+{% extends 'parent/support_base.html' %}
+{% load static %}
+
+{% block title %}کانال‌های وین‌فوروارد{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h4 class="text-white fw-bold mb-0"><i class="bi bi-megaphone-fill text-warning me-1"></i> مانیتورینگ کانال‌های وین‌فوروارد</h4>
+        <a href="{% url 'support:forward_dashboard' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">بازگشت به داشبورد</a>
+    </div>
+
+    <div class="stat-card mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4"><input type="text" name="q" value="{{ q }}" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="نام کانال، یوزرنیم یا موبایل کاربر..."></div>
+            <div class="col-md-3">
+                <select name="platform" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه پلتفرم‌ها</option>
+                    <option value="bale" {% if plat_filter == 'bale' %}selected{% endif %}>بله</option>
+                    <option value="telegram" {% if plat_filter == 'telegram' %}selected{% endif %}>تلگرام</option>
+                    <option value="eitaa" {% if plat_filter == 'eitaa' %}selected{% endif %}>ایتا</option>
+                    <option value="rubika" {% if plat_filter == 'rubika' %}selected{% endif %}>روبیکا</option>
+                    <option value="soroush" {% if plat_filter == 'soroush' %}selected{% endif %}>سروش‌پلاس</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="watermark_mode" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه حالت‌های امضای AI</option>
+                    {% for val, lbl in wm_choices %}<option value="{{ val }}" {% if wm_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">فیلتر</button>
+                <a href="{% url 'support:forward_channels' %}" class="btn btn-outline-secondary btn-sm">پاک</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="stat-card">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                <thead>
+                    <tr class="text-muted">
+                        <th>#</th>
+                        <th>کانال</th>
+                        <th>پلتفرم</th>
+                        <th>کاربر</th>
+                        <th>امضای AI</th>
+                        <th>وضعیت</th>
+                        <th>تاریخ ثبت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ch in channels %}
+                    <tr>
+                        <td>#{{ ch.pk }}</td>
+                        <td class="fw-bold text-white">{{ ch.title }} <small class="text-muted d-block" dir="ltr">{% if ch.username %}@{{ ch.username }}{% else %}{{ ch.chat_id }}{% endif %}</small></td>
+                        <td><span class="badge bg-primary bg-opacity-25 text-info">{{ ch.platform.name }}</span></td>
+                        <td>{{ ch.user.nickname|default:ch.user.phone_number }}</td>
+                        <td>
+                            {% if ch.watermark_mode != 'off' %}
+                                <span class="badge bg-warning text-dark">✨ {{ ch.get_watermark_mode_display }}</span>
+                            {% else %}
+                                <span class="text-muted">غیرفعال</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ch.is_active and ch.bot_is_admin %}<span class="badge bg-success">آماده</span>
+                            {% elif ch.is_active %}<span class="badge bg-warning text-dark">بدون ادمین</span>
+                            {% else %}<span class="badge bg-secondary">غیرفعال</span>{% endif %}
+                        </td>
+                        <td class="text-muted">{{ ch.created_at|date:"Y/m/d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">کانالی یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if is_paginated %}<div class="mt-3">{% include "partials/pagination.html" %}</div>{% endif %}
+    </div>
+{% endblock %}

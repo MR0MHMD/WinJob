@@ -1,0 +1,70 @@
+{% extends 'parent/support_base.html' %}
+{% load static humanize %}
+
+{% block title %}دفترکل توکن‌های وین‌فوروارد{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h4 class="text-white fw-bold mb-0"><i class="bi bi-coin text-warning me-1"></i> دفترکل تراکنش‌های توکن وین‌فوروارد</h4>
+        <div class="d-flex gap-2">
+            <a href="{% url 'support:forward_finance' %}" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">مدیریت مالی وین‌فوروارد</a>
+            <a href="{% url 'support:forward_dashboard' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">بازگشت</a>
+        </div>
+    </div>
+
+    <div class="stat-card mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-6"><input type="text" name="q" value="{{ q }}" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="جستجو بر اساس کاربر یا شرح تراکنش..."></div>
+            <div class="col-md-4">
+                <select name="tx_type" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه انواع تراکنش</option>
+                    {% for val, lbl in tx_choices %}<option value="{{ val }}" {% if tx_type_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">فیلتر</button>
+                <a href="{% url 'support:forward_tokens' %}" class="btn btn-outline-secondary btn-sm">پاک</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="stat-card">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                <thead>
+                    <tr class="text-muted">
+                        <th>#</th>
+                        <th>کاربر</th>
+                        <th>نوع</th>
+                        <th>تغییر توکن</th>
+                        <th>مانده بعد</th>
+                        <th>شرح</th>
+                        <th>تاریخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td>#{{ tx.pk }}</td>
+                        <td>{{ tx.user.nickname|default:tx.user.phone_number }}</td>
+                        <td><span class="badge bg-secondary">{{ tx.get_tx_type_display }}</span></td>
+                        <td class="{% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %} fw-bold" dir="ltr">
+                            {% if tx.amount > 0 %}+{% endif %}{{ tx.amount|intcomma }}
+                        </td>
+                        <td class="text-warning">{{ tx.balance_after|intcomma }}</td>
+                        <td style="max-width:280px;" class="text-truncate">{{ tx.description }}</td>
+                        <td class="text-muted">{{ tx.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">تراکنشی ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if is_paginated %}<div class="mt-3">{% include "partials/pagination.html" %}</div>{% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends 'parent/support_base.html' %}
+{% load static humanize %}
+
+{% block title %}مدیریت مالی وین‌فوروارد{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/finance/finance.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="support-page-header">
+        <div>
+            <span class="page-subtitle">
+                <i class="bi bi-coin text-warning"></i>
+                مدیریت مالی اختصاصی وین‌فوروارد
+                <span class="text-warning">• {{ jalali_weekday }} {{ jalali_date }}</span>
+            </span>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'support:forward_dashboard' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                <i class="bi bi-rocket-takeoff me-1"></i> داشبورد وین‌فوروارد
+            </a>
+            <a href="{% url 'support:finance_dashboard' %}" class="btn btn-outline-info btn-sm rounded-pill px-3">
+                <i class="bi bi-wallet2 me-1"></i> مالی کل سامانه
+            </a>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stats-card border-teal h-100">
+                <div class="stat-label mb-2">کل درآمد فروش توکن</div>
+                <div class="stat-value" style="color:#14b8a6;">{{ total_revenue|intcomma }} <small class="fs-xs text-muted">تومان</small></div>
+                <div class="text-muted fs-xs mt-1">{{ paid_orders_count|intcomma }} سفارش موفق · {{ pending_orders_count }} در انتظار</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stats-card border-primary h-100">
+                <div class="stat-label mb-2">فروش ۳۰ روز اخیر</div>
+                <div class="stat-value text-info">{{ month_revenue|intcomma }} <small class="fs-xs text-muted">تومان</small></div>
+                <div class="text-muted fs-xs mt-1">امروز: {{ today_revenue|intcomma }} تومان ({{ today_orders_count }} سفارش)</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stats-card border-warning h-100">
+                <div class="stat-label mb-2">توکن فروخته‌شده / هدیه</div>
+                <div class="stat-value text-warning">{{ total_tokens_sold|intcomma }}</div>
+                <div class="text-muted fs-xs mt-1">هدیه اولیه داده‌شده: {{ total_gift_tokens|intcomma }} توکن</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stats-card border-success h-100">
+                <div class="stat-label mb-2">مصرف کل / در گردش</div>
+                <div class="stat-value text-success">{{ total_tokens_spent|intcomma }}</div>
+                <div class="text-muted fs-xs mt-1">باقی‌مانده در کیف کاربران: {{ circulating_tokens|intcomma }} توکن</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نمودار درآمد ۱۴ روز + فروش به تفکیک بسته -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="stats-card h-100">
+                <h6 class="text-white fw-bold mb-3"><i class="bi bi-bar-chart-line text-warning me-1"></i> روند فروش ۱۴ روز اخیر (تومان)</h6>
+                <div style="height:250px;position:relative;">
+                    <canvas id="wfFinanceChart" data-chart='{{ revenue_chart_json|safe }}'></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stats-card h-100">
+                <h6 class="text-white fw-bold mb-3"><i class="bi bi-gem text-info me-1"></i> فروش به تفکیک بسته توکن</h6>
+                <div class="d-flex flex-column gap-2">
+                    {% for row in plan_breakdown %}
+                    <div class="p-2 px-3 rounded-3 d-flex justify-content-between align-items-center" style="background:rgba(255,255,255,0.04);">
+                        <div>
+                            <div class="text-white fw-bold fs-xs">{{ row.plan__name }}</div>
+                            <div class="text-muted" style="font-size:0.7rem;">{{ row.orders }} سفارش</div>
+                        </div>
+                        <span class="text-warning fw-bold fs-xs">{{ row.rev|intcomma }} ت</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted fs-xs">هنوز سفارشی پرداخت نشده است.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- آخرین سفارش‌های خرید بسته توکن -->
+    <div class="stats-card">
+        <h6 class="text-white fw-bold mb-3"><i class="bi bi-receipt-cutoff text-success me-1"></i> آخرین سفارش‌های بسته توکن</h6>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                <thead>
+                    <tr class="text-muted">
+                        <th>#</th>
+                        <th>کاربر</th>
+                        <th>بسته</th>
+                        <th>توکن</th>
+                        <th>مبلغ کل (تومان)</th>
+                        <th>وضعیت</th>
+                        <th>تاریخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in recent_orders %}
+                    <tr>
+                        <td>#{{ o.pk }}</td>
+                        <td>{{ o.user.nickname|default:o.user.phone_number }}</td>
+                        <td>{{ o.plan.name }}</td>
+                        <td class="text-warning fw-bold">{{ o.tokens_amount|intcomma }}</td>
+                        <td>{{ o.total_amount|intcomma }}</td>
+                        <td>
+                            {% if o.status == 'paid' %}
+                                <span class="badge bg-success">پرداخت‌شده</span>
+                            {% elif o.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">در انتظار</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ o.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ o.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-3">سفارشی ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const cv = document.getElementById("wfFinanceChart");
+    if (!cv || !window.Chart) return;
+    const d = JSON.parse(cv.dataset.chart || "{}");
+    new Chart(cv.getContext("2d"), {
+        type: "bar",
+        data: {
+            labels: d.labels || [],
+            datasets: [{ label: "فروش (تومان)", data: d.revenue || [], backgroundColor: "rgba(253,188,49,0.75)", borderRadius: 6 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#d5d2e0" } } },
+            scales: {
+                x: { ticks: { color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                y: { beginAtZero: true, ticks: { color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.06)" } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

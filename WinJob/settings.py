@@ -128,6 +128,21 @@ DAISY_SETTINGS = {
             'name': 'وین دایرکت | اشتراک ها',
             'hide': None,
         },
+        'broadcast': {
+            'icon': 'bi bi-rocket-takeoff-fill',
+            'name': 'وین فوروارد | انتشار و کانال‌ها',
+            'hide': None,
+        },
+        'messengers': {
+            'icon': 'bi bi-robot',
+            'name': 'وین فوروارد | پیام‌رسان‌ها و ربات‌ها',
+            'hide': None,
+        },
+        'forward_subscriptions': {
+            'icon': 'bi bi-coin',
+            'name': 'وین فوروارد | کیف توکن و بسته‌ها',
+            'hide': None,
+        },
         'blog': {
             'icon': 'bi bi-journal-text',
             'name': 'بلاگ',
@@ -305,11 +320,6 @@ N8N_API_TOKEN = ""
 # AI (Blog)
 CHABOKAN_API_KEY = os.environ.get('CHABOKAN_API_KEY', '').strip()
 
-# AI (WinForward Watermark Cleaner & Rebrander — مستقل از کلید بلاگ)
-WINFORWARD_AI_API_KEY = os.environ.get('WINFORWARD_AI_API_KEY', 'sk-chbk-520ARfsVEtpf-IHhQLR4J1s8qBbsSjEzt4qdde4SaZVx4').strip()
-WINFORWARD_AI_ENDPOINT = 'https://ai.chabokan.net/v1/chat/completions'
-WINFORWARD_AI_MODEL = 'deepseek/deepseek-v3.2'
-
 # ==================== BoxAPI ====================
 BOXAPI_API_KEY = os.environ.get("BOXAPI_API_KEY", "")
 BOXAPI_BASE_URL = "https://api.sendbox.chat/api/v1"
@@ -384,10 +394,11 @@ else:
         },
     }
 
-FORWARD_BALE_TOKEN = "2100857527:2oDqXkcXJCWpkrpoDYhwvbD6CtTFuJEYEkc"
-FORWARD_TELEGRAM_TOKEN = os.environ.get("FORWARD_TELEGRAM_TOKEN", "9146862431:AAG7B9c9J-Im7Dy9X2uZmIjnJTeIpjxrcqo")
-
+FORWARD_BALE_TOKEN = os.environ.get("FORWARD_BALE_TOKEN")
+FORWARD_TELEGRAM_TOKEN = os.environ.get("FORWARD_TELEGRAM_TOKEN")
+FORWARD_AI_API_KEY = os.environ.get('FORWARD_AI_API_KEY')
+FORWARD_AI_ENDPOINT = 'https://ai.chabokan.net/v1/chat/completions'
+FORWARD_AI_MODEL = 'deepseek/deepseek-v3.2'
 FORWARD_ENABLE_VAT = False
 FORWARD_ENABLE_COMMISSION_SPLIT = False
-
-TELEGRAM_PROXY_URL = os.environ.get("TELEGRAM_PROXY_URL", "http://127.0.0.1:10808")
+TELEGRAM_PROXY_URL = "http://127.0.0.1:10808"

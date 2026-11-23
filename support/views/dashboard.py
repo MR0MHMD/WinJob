@@ -7,7 +7,7 @@
 
 from support.utils import scope_support_queryset
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Sum, Q
+from django.db.models import Avg, Count, Sum, Q
 from django.utils import timezone
 from django.views.generic import TemplateView
 from datetime import timedelta
@@ -631,6 +631,40 @@ class FinanceDashboardView(TopManagerRequiredMixin, TemplateView):
             'jalali_date': jalali_date_str,
             'jalali_weekday': jalali_weekday,
         })
+
+        # ============================================================ #
+        #            ۹. آمار مالی اختصاصی وین‌فوروارد                  #
+        # ============================================================ #
+        try:
+            from product.forward.subscriptions.models import (
+                ForwardSubscriptionAccount,
+                ForwardSubscriptionOrder,
+            )
+
+            wf_paid = ForwardSubscriptionOrder.objects.filter(status=ForwardSubscriptionOrder.Status.PAID)
+            wf_tot = wf_paid.aggregate(rev=Sum("total_amount"), tokens=Sum("tokens_amount"), cnt=Count("id"))
+            wf_month = wf_paid.filter(
+                paid_at__range=(current_month["start"], current_month["end"])
+            ).aggregate(rev=Sum("total_amount"), cnt=Count("id"))
+            wf_spent = ForwardSubscriptionAccount.objects.aggregate(s=Sum("total_tokens_spent"))["s"] or 0
+
+            context.update({
+                "wf_total_revenue": int(wf_tot["rev"] or 0),
+                "wf_total_orders_count": int(wf_tot["cnt"] or 0),
+                "wf_total_tokens_sold": int(wf_tot["tokens"] or 0),
+                "wf_month_revenue": int(wf_month["rev"] or 0),
+                "wf_month_orders_count": int(wf_month["cnt"] or 0),
+                "wf_total_tokens_spent": int(wf_spent),
+            })
+        except Exception:
+            context.update({
+                "wf_total_revenue": 0,
+                "wf_total_orders_count": 0,
+                "wf_total_tokens_sold": 0,
+                "wf_month_revenue": 0,
+                "wf_month_orders_count": 0,
+                "wf_total_tokens_spent": 0,
+            })
 
         return context
 

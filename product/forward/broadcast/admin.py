@@ -29,10 +29,10 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
     """مدیریت کانال‌های ثبت‌شده در وین فوروارد."""
 
     list_display = (
-    "id_badge", "avatar_preview", "title_link", "user_link", "platform_badge", "chat_id_display", "bot_admin_badge", "active_badge",
+    "id", "avatar_preview", "title_link", "user_link", "platform_badge", "chat_id_display", "watermark_mode", "bot_admin_badge", "active_badge",
     "last_broadcast_display")
-    list_display_links = ("id_badge", "title_link")
-    list_filter = ("platform", "bot_is_admin", "is_active", ("created_at", admin.DateFieldListFilter))
+    list_display_links = ("id", "title_link")
+    list_filter = ("platform", "watermark_mode", "bot_is_admin", "is_active", ("created_at", admin.DateFieldListFilter))
     search_fields = ("title", "chat_id", "username", "user__phone_number", "user__nickname")
     autocomplete_fields = ("user", "platform")
     readonly_fields = (
@@ -48,6 +48,7 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
         (_("مالکیت"), {"fields": ("user", "platform")}),
         (_("اطلاعات کانال"), {"fields": ("title", "username", "chat_id", "avatar")}),
         (_("وضعیت ربات"), {"fields": ("bot_is_admin", "bot_admin_checked_at", "last_broadcast_at")}),
+        (_("امضای هوشمند هوش مصنوعی"), {"fields": ("watermark_mode", "custom_signature", "watermark_display_id")}),
         (_("تأیید مالکیت (Deep Link)"), {"fields": (
         "verification_token", "token_status_display", "verification_token_created_at", "verification_token_used_at"),
                                          "classes": ("collapse",)}),
@@ -175,8 +176,8 @@ class BroadcastChannelAdmin(admin.ModelAdmin):
 class BroadcastMessageAdmin(admin.ModelAdmin):
     """مدیریت پیام‌های ارسالی وین فوروارد."""
 
-    list_display = ("id_badge", "user_link", "content_type_badge", "text_preview", "file_badge", "created_at")
-    list_display_links = ("id_badge",)
+    list_display = ("id", "user_link", "content_type_badge", "text_preview", "file_badge", "created_at")
+    list_display_links = ("id",)
     list_filter = ("content_type", ("created_at", admin.DateFieldListFilter))
     search_fields = ("text", "user__phone_number", "user__nickname")
     autocomplete_fields = ("user",)
@@ -256,8 +257,8 @@ class BroadcastJobAdmin(admin.ModelAdmin):
     """مدیریت جاب‌های ارسال گروهی."""
 
     list_display = (
-    "id_badge", "message_preview", "status_badge", "progress_bar", "success_badge", "failed_badge", "created_at")
-    list_display_links = ("id_badge",)
+    "id", "message_preview", "status_badge", "progress_bar", "success_badge", "failed_badge", "created_at")
+    list_display_links = ("id",)
     list_filter = ("status", ("created_at", admin.DateFieldListFilter))
     search_fields = ("message__text", "message__user__phone_number")
     autocomplete_fields = ("message",)
@@ -351,8 +352,8 @@ class BroadcastJobAdmin(admin.ModelAdmin):
 class BroadcastTargetAdmin(admin.ModelAdmin):
     """مدیریت مستقل مقاصد ارسال — برای عیب‌یابی."""
 
-    list_display = ("id_badge", "job_link", "channel_link", "status_badge", "retry_count", "sent_at")
-    list_display_links = ("id_badge",)
+    list_display = ("id", "job_link", "channel_link", "status_badge", "retry_count", "sent_at")
+    list_display_links = ("id",)
     list_filter = ("status", ("created_at", admin.DateFieldListFilter))
     search_fields = ("channel__title", "channel__chat_id", "error_message", "job__message__text")
     autocomplete_fields = ("job", "channel")
@@ -397,7 +398,7 @@ class ChannelPresetAdmin(admin.ModelAdmin):
     """مدیریت پروفایل‌های ارسال (گروه‌بندی کانال‌ها) در پنل ادمین."""
 
     list_display = (
-        "id_badge",
+        "id",
         "name_link",
         "user_link",
         "channels_count_badge",
@@ -405,7 +406,7 @@ class ChannelPresetAdmin(admin.ModelAdmin):
         "active_badge",
         "created_at",
     )
-    list_display_links = ("id_badge", "name_link")
+    list_display_links = ("id", "name_link")
     list_filter = ("is_active", ("created_at", admin.DateFieldListFilter))
     search_fields = ("name", "user__phone_number", "user__nickname", "channels__title")
     autocomplete_fields = ("user",)

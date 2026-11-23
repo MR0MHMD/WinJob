@@ -1,0 +1,88 @@
+{% extends 'parent/support_base.html' %}
+{% load static humanize %}
+
+{% block title %}ارسال‌های وین‌فوروارد{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h4 class="text-white fw-bold mb-0"><i class="bi bi-send-check-fill text-info me-1"></i> مانیتورینگ ارسال‌های وین‌فوروارد</h4>
+        <a href="{% url 'support:forward_dashboard' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">بازگشت به داشبورد</a>
+    </div>
+
+    <div class="stat-card mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4"><input type="text" name="q" value="{{ q }}" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="جستجو بر اساس شناسه، موبایل یا متن..."></div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه وضعیت‌ها</option>
+                    {% for val, lbl in status_choices %}<option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="content_type" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه محتواها</option>
+                    {% for val, lbl in ctype_choices %}<option value="{{ val }}" {% if ctype_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="platform" class="form-select form-select-sm bg-dark text-white border-secondary">
+                    <option value="">همه پلتفرم‌ها</option>
+                    <option value="bale" {% if plat_filter == 'bale' %}selected{% endif %}>بله</option>
+                    <option value="telegram" {% if plat_filter == 'telegram' %}selected{% endif %}>تلگرام</option>
+                    <option value="eitaa" {% if plat_filter == 'eitaa' %}selected{% endif %}>ایتا</option>
+                    <option value="rubika" {% if plat_filter == 'rubika' %}selected{% endif %}>روبیکا</option>
+                    <option value="soroush" {% if plat_filter == 'soroush' %}selected{% endif %}>سروش‌پلاس</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">فیلتر</button>
+                <a href="{% url 'support:forward_jobs' %}" class="btn btn-outline-secondary btn-sm">پاک</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="stat-card">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                <thead>
+                    <tr class="text-muted">
+                        <th>#</th>
+                        <th>کاربر</th>
+                        <th>نوع</th>
+                        <th>متن</th>
+                        <th>موفق/کل</th>
+                        <th>وضعیت</th>
+                        <th>تاریخ</th>
+                        <th>گزارش</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>#{{ job.pk }}</td>
+                        <td>{{ job.message.user.nickname|default:job.message.user.phone_number }}</td>
+                        <td><span class="badge bg-info bg-opacity-25 text-info">{{ job.message.get_content_type_display }}</span></td>
+                        <td style="max-width:240px;" class="text-truncate">{{ job.message.text|default:"(رسانه)"|truncatechars:60 }}</td>
+                        <td>{{ job.success_count }}/{{ job.total_targets }}</td>
+                        <td>
+                            {% if job.status == 'done' %}<span class="badge bg-success">موفق</span>
+                            {% elif job.status == 'partial' %}<span class="badge bg-warning text-dark">نیمه‌موفق</span>
+                            {% elif job.status == 'failed' %}<span class="badge bg-danger">ناموفق</span>
+                            {% else %}<span class="badge bg-secondary">{{ job.get_status_display }}</span>{% endif %}
+                        </td>
+                        <td class="text-muted">{{ job.created_at|date:"Y/m/d H:i" }}</td>
+                        <td><a href="{{ job.get_public_report_url }}" target="_blank" class="btn btn-outline-info btn-sm py-0 px-2">گزارش</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">ارسالی یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if is_paginated %}<div class="mt-3">{% include "partials/pagination.html" %}</div>{% endif %}
+    </div>
+{% endblock %}

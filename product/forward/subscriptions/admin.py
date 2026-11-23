@@ -16,7 +16,7 @@ from .services import credit_tokens_atomic
 class ForwardSubscriptionPlanAdmin(admin.ModelAdmin):
     """مدیریت بسته‌های فروش توکن در پنل ادمین."""
 
-    list_display = ("name", "code", "tokens_amount", "price_per_platform", "discount_percent", "is_trial", "is_featured", "is_active", "position")
+    list_display = ("id", "name", "code", "tokens_amount", "price_per_platform", "discount_percent", "is_trial", "is_featured", "is_active", "position")
     list_editable = ("tokens_amount", "price_per_platform", "discount_percent", "is_featured", "is_active", "position")
     list_filter = ("is_trial", "is_active", "is_featured")
     search_fields = ("name", "code")
@@ -27,7 +27,7 @@ class ForwardSubscriptionPlanAdmin(admin.ModelAdmin):
 class ForwardSubscriptionAccountAdmin(admin.ModelAdmin):
     """مدیریت کیف توکن کاربران — امکان افزایش یا کاهش مستقیم توکن هر کاربر با ثبت خودکار سند."""
 
-    list_display = ("user", "token_balance", "total_tokens_earned", "total_tokens_spent", "trial_used_at", "first_paid_at")
+    list_display = ("id", "user", "token_balance", "total_tokens_earned", "total_tokens_spent", "trial_used_at", "first_paid_at")
     search_fields = ("user__phone_number", "user__nickname", "user__username")
     autocomplete_fields = ("user",)
     readonly_fields = ("created_at",)

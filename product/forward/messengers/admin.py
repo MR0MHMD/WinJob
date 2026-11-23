@@ -22,10 +22,10 @@ class BotUserAdmin(admin.ModelAdmin):
 
     # 🔑 اضافه شدن ستون توکن به لیست
     list_display = (
-        "id_badge", "user_link", "platform_badge", "chat_id_display",
+        "id", "user_link", "platform_badge", "chat_id_display",
         "api_token_status_badge", "verification_badge", "linked_at_display"
     )
-    list_display_links = ("id_badge", "user_link")
+    list_display_links = ("id", "user_link")
     list_filter = ("is_verified", "platform", ("linked_at", admin.DateFieldListFilter))
     search_fields = ("user__phone_number", "user__nickname", "chat_id", "username")
     autocomplete_fields = ("user", "platform")
@@ -125,7 +125,7 @@ class BotUserAdmin(admin.ModelAdmin):
 class ConnectTokenAdmin(admin.ModelAdmin):
     """مدیریت توکن‌های اتصال (Deep Link)."""
 
-    list_display = ("id_badge", "user_link", "platform_badge", "token_display", "status_badge", "created_at")
+    list_display = ("id", "user_link", "platform_badge", "token_display", "status_badge", "created_at")
     list_filter = ("platform", ("created_at", admin.DateFieldListFilter))
     search_fields = ("user__phone_number", "user__nickname", "token")
     readonly_fields = ("token", "created_at", "used_at")

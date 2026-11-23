@@ -1,0 +1,235 @@
+{% extends 'parent/support_base.html' %}
+{% load static humanize %}
+
+{% block title %}مانیتورینگ وین‌فوروارد{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'support/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h4 class="text-white fw-bold mb-1">
+                <i class="bi bi-rocket-takeoff-fill text-primary me-1"></i> مانیتورینگ جامع وین‌فوروارد
+            </h4>
+            <div class="text-muted fs-sm">
+                <i class="bi bi-calendar3 me-1"></i> {{ jalali_weekday }} {{ jalali_date }} · گزارش زنده (فقط مشاهده)
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'support:forward_finance' %}" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">
+                <i class="bi bi-coin me-1"></i> مدیریت مالی وین‌فوروارد
+            </a>
+            <a href="{% url 'support:forward_jobs' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                <i class="bi bi-send-check me-1"></i> ارسال‌ها
+            </a>
+            <a href="{% url 'support:forward_channels' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                <i class="bi bi-megaphone me-1"></i> کانال‌ها
+            </a>
+            <a href="{% url 'support:forward_tokens' %}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                <i class="bi bi-receipt me-1"></i> دفترکل توکن
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <div class="stat-card h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-wrapper" style="background:rgba(60,118,242,0.14);">
+                        <i class="bi bi-people-fill" style="color:#3c76f2;font-size:1.45rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-xs">کاربران وین‌فوروارد</div>
+                        <div class="text-white fw-bold fs-4">{{ total_forward_users|intcomma }}</div>
+                        <div class="text-info fs-xs">{{ total_channels|intcomma }} کانال فعال · {{ ai_enabled_channels }} با AI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="stat-card h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-wrapper" style="background:rgba(7,201,139,0.14);">
+                        <i class="bi bi-send-check-fill" style="color:#07c98b;font-size:1.45rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-xs">تحویل موفق کل</div>
+                        <div class="text-success fw-bold fs-4">{{ total_success|intcomma }}</div>
+                        <div class="text-muted fs-xs">نرخ موفقیت: {{ overall_success_rate }}٪ · امروز: {{ today_success_count|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="stat-card h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-wrapper" style="background:rgba(253,188,49,0.14);">
+                        <i class="bi bi-coin" style="color:#fdbc31;font-size:1.45rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-xs">کل توکن مصرف‌شده</div>
+                        <div class="text-warning fw-bold fs-4">{{ total_tokens_spent|intcomma }}</div>
+                        <div class="text-muted fs-xs">موجودی در گردش: {{ total_tokens_balance|intcomma }} توکن</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="stat-card h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-wrapper" style="background:rgba(253,86,49,0.14);">
+                        <i class="bi bi-cash-coin" style="color:#fd5631;font-size:1.45rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-xs">درآمد فروش بسته‌ها</div>
+                        <div class="text-white fw-bold fs-4">{{ total_revenue|intcomma }} <small class="fs-xs text-muted">ت</small></div>
+                        <div class="text-success fs-xs">{{ paid_orders_count|intcomma }} سفارش پرداخت‌شده</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نمودار ۱۴ روز اخیر + تفکیک پلتفرم‌ها -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-white fw-bold mb-0"><i class="bi bi-graph-up-arrow text-info me-1"></i> روند ارسال‌های ۱۴ روز اخیر</h6>
+                    <span class="badge bg-primary bg-opacity-25 text-info rounded-pill">کل جاب‌ها: {{ total_jobs|intcomma }}</span>
+                </div>
+                <div style="height:260px;position:relative;">
+                    <canvas id="wfSupportTrendChart" data-chart='{{ trend_chart_json|safe }}'></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card h-100">
+                <h6 class="text-white fw-bold mb-3"><i class="bi bi-broadcast-pin text-warning me-1"></i> تفکیک کانال‌ها به تفکیک پلتفرم</h6>
+                <div class="d-flex flex-column gap-2 mb-3">
+                    {% for row in platform_breakdown %}
+                    <div class="d-flex justify-content-between align-items-center p-2 px-3 rounded-3" style="background:rgba(255,255,255,0.04);">
+                        <span class="text-light fs-sm">{{ row.platform__name }}</span>
+                        <span class="badge bg-info bg-opacity-25 text-info rounded-pill px-3">{{ row.cnt|intcomma }} کانال</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted fs-xs">هنوز کانالی ثبت نشده است.</p>
+                    {% endfor %}
+                </div>
+                <div class="pt-3 border-top border-secondary d-flex justify-content-between fs-xs text-muted">
+                    <span>پکیج‌های فعال: <strong class="text-white">{{ total_presets|intcomma }}</strong></span>
+                    <span>هاب‌های تیمی: <strong class="text-white">{{ total_hubs|intcomma }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- رصد خطاها و کاربران پرمصرف -->
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-white fw-bold mb-0"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> آخرین ارسال‌های ناموفق / نیمه‌موفق</h6>
+                    <a href="{% url 'support:forward_jobs' %}?status=failed" class="text-info fs-xs text-decoration-none">مشاهده همه</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                        <thead>
+                            <tr class="text-muted">
+                                <th>#</th>
+                                <th>کاربر</th>
+                                <th>وضعیت</th>
+                                <th>نتیجه</th>
+                                <th>گزارش</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in problem_jobs %}
+                            <tr>
+                                <td>#{{ job.pk }}</td>
+                                <td>{{ job.message.user.nickname|default:job.message.user.phone_number }}</td>
+                                <td>
+                                    {% if job.status == 'partial' %}
+                                        <span class="badge bg-warning text-dark">نیمه‌موفق</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">ناموفق</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ job.success_count }}/{{ job.total_targets }}</td>
+                                <td>
+                                    <a href="{{ job.get_public_report_url }}" target="_blank" class="btn btn-outline-info btn-sm py-0 px-2">مشاهده</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">خوشبختانه مورد ناموفقی ثبت نشده است.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-white fw-bold mb-0"><i class="bi bi-trophy-fill text-warning me-1"></i> کاربران پرمصرف توکن</h6>
+                    <a href="{% url 'support:forward_tokens' %}" class="text-info fs-xs text-decoration-none">دفترکل</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0 fs-xs">
+                        <thead>
+                            <tr class="text-muted">
+                                <th>کاربر</th>
+                                <th>مصرف کل</th>
+                                <th>موجودی</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for acc in top_spenders %}
+                            <tr>
+                                <td>{{ acc.user.nickname|default:acc.user.phone_number }}</td>
+                                <td class="text-warning fw-bold">{{ acc.total_tokens_spent|intcomma }}</td>
+                                <td class="text-success">{{ acc.token_balance|intcomma }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">هنوز مصرفی ثبت نشده است.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const cv = document.getElementById("wfSupportTrendChart");
+    if (!cv || !window.Chart) return;
+    const d = JSON.parse(cv.dataset.chart || "{}");
+    new Chart(cv.getContext("2d"), {
+        type: "line",
+        data: {
+            labels: d.labels || [],
+            datasets: [
+                { label: "تحویل موفق", data: d.success || [], borderColor: "#07c98b", backgroundColor: "rgba(7,201,139,0.18)", fill: true, tension: 0.35 },
+                { label: "ناموفق", data: d.failed || [], borderColor: "#f23c49", backgroundColor: "rgba(242,60,73,0.1)", fill: false, tension: 0.35 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#d5d2e0" } } },
+            scales: {
+                x: { ticks: { color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                y: { beginAtZero: true, ticks: { precision: 0, color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.06)" } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
