@@ -117,14 +117,14 @@
             </div>
 
             <div class="wf-view-toggle-group" role="group" aria-label="تغییر نمای نمایش کانال‌ها">
-                <a href="?platform={{ selected_platform }}&q={{ search_q|urlencode }}&status={{ status_filter }}&view=grid"
-                   class="wf-view-toggle-btn {% if view_mode == 'grid' %}is-active{% endif %}">
+                <button type="button" data-view-mode="grid"
+                        class="wf-view-toggle-btn wf-instant-view-btn border-0 {% if view_mode == 'grid' %}is-active{% endif %}">
                     <i class="bi bi-grid-3x3-gap-fill"></i> کارتی
-                </a>
-                <a href="?platform={{ selected_platform }}&q={{ search_q|urlencode }}&status={{ status_filter }}&view=table"
-                   class="wf-view-toggle-btn {% if view_mode == 'table' %}is-active{% endif %}">
+                </button>
+                <button type="button" data-view-mode="table"
+                        class="wf-view-toggle-btn wf-instant-view-btn border-0 {% if view_mode == 'table' %}is-active{% endif %}">
                     <i class="bi bi-table"></i> جدولی
-                </a>
+                </button>
             </div>
         </div>
 
@@ -160,8 +160,8 @@
     </div>
 
     {% if channels %}
-        {% if view_mode == 'table' %}
-            <!-- نمای جدولی ریسپانسیو -->
+        <!-- نمای جدولی ریسپانسیو (سوییچ آنی بدون ریلود) -->
+        <div id="wfViewPaneTable" class="{% if view_mode != 'table' %}d-none{% endif %}">
             <div class="wf-channels-table-wrap wf-reveal wf-delay-2">
                 <div class="table-responsive">
                     <table class="table table-dark table-borderless wf-channels-table align-middle">
@@ -191,7 +191,12 @@
                                             {% endif %}
                                         </div>
                                         <div>
-                                            <div class="text-white fw-bold fs-sm">{{ ch.title }}</div>
+                                            <a href="{% url 'broadcast:channel_detail' ch.pk %}" class="text-white fw-bold fs-sm text-decoration-none d-inline-flex align-items-center gap-1">
+                                                {{ ch.title }}
+                                                {% if ch.watermark_mode != 'off' %}
+                                                    <span class="badge rounded-pill" style="background:rgba(139,92,246,0.22);color:#c4b5fd;font-size:0.62rem;">✨ AI</span>
+                                                {% endif %}
+                                            </a>
                                             <div class="text-muted" style="font-size:0.72rem;">ثبت: {{ ch.created_at|date:"Y/m/d" }}</div>
                                         </div>
                                     </div>
@@ -218,19 +223,9 @@
                                     {{ ch.last_broadcast_at|date:"Y/m/d H:i"|default:"آماده اولین ارسال" }}
                                 </td>
                                 <td class="text-end">
-                                    <div class="d-inline-flex gap-2">
-                                        <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-glass py-1 px-2 fs-xs" title="ارسال پیام">
-                                            <i class="bi bi-send-fill text-success"></i>
-                                        </a>
-                                        <form method="post"
-                                              action="{% if ch.platform.slug == 'bale' %}{% url 'broadcast:bale_delete_channel' ch.pk %}{% elif ch.platform.slug == 'eitaa' %}{% url 'broadcast:eitaa_delete_channel' ch.pk %}{% elif ch.platform.slug == 'rubika' %}{% url 'broadcast:rubika_delete_channel' ch.pk %}{% elif ch.platform.slug == 'soroush' %}{% url 'broadcast:soroush_delete_channel' ch.pk %}{% else %}{% url 'broadcast:telegram_delete_channel' ch.pk %}{% endif %}"
-                                              data-wf-confirm="آیا از غیرفعال‌سازی کانال «{{ ch.title }}» اطمینان دارید؟" data-wf-confirm-title="تایید عملیات" data-wf-confirm-btn="بله، انجام شود">
-                                            {% csrf_token %}
-                                            <button type="submit" class="wf-btn wf-btn-glass py-1 px-2 fs-xs text-danger" title="حذف">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <a href="{% url 'broadcast:channel_detail' ch.pk %}" class="wf-btn wf-btn-purple py-1 px-3 fs-xs">
+                                        <i class="bi bi-bar-chart-line-fill"></i> مشاهده جزئیات
+                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -238,8 +233,9 @@
                     </table>
                 </div>
             </div>
-        {% else %}
-            <!-- نمای کارتی پیش‌فرض (با عکس پروفایل و لوگوی پلتفرم در گوشه پایین) -->
+        </div>
+        <!-- نمای کارتی پیش‌فرض (سوییچ آنی بدون ریلود) -->
+        <div id="wfViewPaneGrid" class="{% if view_mode == 'table' %}d-none{% endif %}">
             <div class="row g-4 wf-reveal wf-delay-2">
                 {% for ch in channels %}
                 <div class="col-md-6 col-lg-4">
@@ -257,7 +253,14 @@
                                     {% endif %}
                                 </div>
                                 <div class="overflow-hidden">
-                                    <h5 class="text-white fw-bold fs-6 mb-1 text-truncate">{{ ch.title }}</h5>
+                                    <a href="{% url 'broadcast:channel_detail' ch.pk %}" class="text-decoration-none">
+                                        <h5 class="text-white fw-bold fs-6 mb-1 text-truncate d-flex align-items-center gap-1">
+                                            <span class="text-truncate">{{ ch.title }}</span>
+                                            {% if ch.watermark_mode != 'off' %}
+                                                <span class="badge rounded-pill flex-shrink-0" style="background:rgba(139,92,246,0.22);color:#c4b5fd;font-size:0.62rem;">✨ AI</span>
+                                            {% endif %}
+                                        </h5>
+                                    </a>
                                     <div class="text-muted fs-xs text-truncate" dir="ltr">
                                         {% if ch.username %}@{{ ch.username }}{% else %}{{ ch.chat_id }}{% endif %}
                                     </div>
@@ -285,24 +288,16 @@
                             </div>
                         </div>
 
-                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-light">
-                            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
-                                <i class="bi bi-send-fill text-success"></i> ارسال پیام
+                        <div class="mt-auto pt-3 border-top border-light">
+                            <a href="{% url 'broadcast:channel_detail' ch.pk %}" class="wf-btn wf-btn-purple w-100 justify-content-center py-2 fs-xs">
+                                <i class="bi bi-bar-chart-line-fill"></i> مشاهده جزئیات کانال
                             </a>
-                            <form method="post"
-                                  action="{% if ch.platform.slug == 'bale' %}{% url 'broadcast:bale_delete_channel' ch.pk %}{% elif ch.platform.slug == 'eitaa' %}{% url 'broadcast:eitaa_delete_channel' ch.pk %}{% elif ch.platform.slug == 'rubika' %}{% url 'broadcast:rubika_delete_channel' ch.pk %}{% elif ch.platform.slug == 'soroush' %}{% url 'broadcast:soroush_delete_channel' ch.pk %}{% else %}{% url 'broadcast:telegram_delete_channel' ch.pk %}{% endif %}"
-                                  data-wf-confirm="آیا از غیرفعال‌سازی کانال «{{ ch.title }}» اطمینان دارید؟" data-wf-confirm-title="تایید عملیات" data-wf-confirm-btn="بله، انجام شود">
-                                {% csrf_token %}
-                                <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger">
-                                    <i class="bi bi-trash"></i> حذف
-                                </button>
-                            </form>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-        {% endif %}
+        </div>
 
         {% if is_paginated %}
         <div class="mt-4">
@@ -321,4 +316,36 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtns = document.querySelectorAll(".wf-instant-view-btn");
+    const gridPane = document.getElementById("wfViewPaneGrid");
+    const tablePane = document.getElementById("wfViewPaneTable");
+    const hiddenViewInput = document.querySelector('input[name="view"]');
+
+    function applyView(mode) {
+        if (gridPane) gridPane.classList.toggle("d-none", mode !== "grid");
+        if (tablePane) tablePane.classList.toggle("d-none", mode !== "table");
+        toggleBtns.forEach(function (b) {
+            b.classList.toggle("is-active", b.dataset.viewMode === mode);
+        });
+        if (hiddenViewInput) hiddenViewInput.value = mode;
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set("view", mode);
+            window.history.replaceState({}, "", url.toString());
+        } catch (e) {}
+    }
+
+    toggleBtns.forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            applyView(btn.dataset.viewMode);
+        });
+    });
+});
+</script>
 {% endblock %}

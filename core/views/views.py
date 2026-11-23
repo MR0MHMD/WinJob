@@ -165,6 +165,44 @@ def windirect_landing(request):
     return render(request, 'core/pages/windirect_landing.html')
 
 
+def winforward_landing(request):
+    """لندینگ‌پیج اختصاصی معرفی محصول وین‌فوروارد (خدمت جدید وینجاب)."""
+    from product.forward.constants import PRICING_CONFIG
+
+    plat_objs = {
+        p.slug: p
+        for p in Platform.objects.filter(slug__in=["telegram", "bale", "eitaa", "rubika", "soroush"])
+    }
+    specs = [
+        ("telegram", "تلگرام", "bi-telegram", "اتصال آنی با ربات رسمی + ارسال مستقیم از پی‌وی و هاب تیمی"),
+        ("bale", "بله", "bi-send-check-fill", "اتصال سریع با ربات رسمی بله + کش هوشمند فایل و هاب گروهی"),
+        ("rubika", "روبیکا", "bi-phone-vibrate-fill", "ورود امن با کد تایید (OTP) و همگام‌سازی خودکار کانال‌ها"),
+        ("eitaa", "ایتا", "bi-broadcast-pin", "اتصال مستقیم با توکن ایتایار و انتشار سریع رسانه و متن"),
+        ("soroush", "سروش‌پلاس", "bi-chat-dots-fill", "ورود امن با OTP، همگام‌سازی خودکار و ارسال فوری متن و کپشن"),
+    ]
+    forward_platforms = []
+    for slug, name, icon, desc in specs:
+        p_obj = plat_objs.get(slug)
+        forward_platforms.append(
+            {
+                "slug": slug,
+                "name": p_obj.name if p_obj else name,
+                "icon": icon,
+                "desc": desc,
+                "logo_url": p_obj.logo.url if (p_obj and p_obj.logo) else "",
+            }
+        )
+
+    return render(
+        request,
+        "core/pages/winforward_landing.html",
+        {
+            "forward_platforms": forward_platforms,
+            "pricing": PRICING_CONFIG,
+        },
+    )
+
+
 class AboutView(TemplateView):
     template_name = "core/pages/about.html"
 

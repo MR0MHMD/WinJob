@@ -239,37 +239,6 @@ class ForwardSubscriptionOrder(models.Model):
         return [FORWARD_PLATFORM_LABELS.get(slug, slug) for slug in (self.platforms or [])]
 
 
-class ForwardTokenPricing(models.Model):
-    """جدول تنظیمات قابل ویرایش نرخ مصرف توکن‌ها و سقف حجم فایل در وین فوروارد."""
-
-    text_cost = models.PositiveSmallIntegerField(_("متن ساده (توکن)"), default=2)
-    photo_cost = models.PositiveSmallIntegerField(_("عکس بدون کپشن (توکن)"), default=2)
-    caption_extra_cost = models.PositiveSmallIntegerField(_("افزودن کپشن به رسانه (توکن)"), default=2)
-    sticker_gif_cost = models.PositiveSmallIntegerField(_("استیکر و گیف (توکن)"), default=3)
-    media_under_5mb_cost = models.PositiveSmallIntegerField(_("صوت/ویس/فایل/ویدیو زیر ۵ مگ (توکن)"), default=5)
-    media_5_to_10mb_cost = models.PositiveSmallIntegerField(_("فایل/ویدیو ۵ تا ۱۰ مگ (توکن)"), default=7)
-    media_10_to_20mb_cost = models.PositiveSmallIntegerField(_("فایل/ویدیو ۱۰ تا ۲۰ مگ (توکن)"), default=10)
-    max_file_size_mb = models.PositiveSmallIntegerField(_("حداکثر حجم مجاز فایل (مگابایت)"), default=20)
-    hub_extra_cost = models.PositiveSmallIntegerField(_("افزونه ارسال از هاب تیمی (توکن)"), default=2)
-    ai_watermark_extra_cost = models.PositiveSmallIntegerField(_("افزونه حذف واترمارک هوش مصنوعی (توکن)"), default=5)
-    free_gift_tokens = models.PositiveIntegerField(_("هدیه رایگان اولیه (توکن)"), default=350)
-    updated_at = jmodels.jDateTimeField(_("آخرین ویرایش"), auto_now=True)
-
-    class Meta:
-        verbose_name = _("تنظیمات نرخ مصرف توکن")
-        verbose_name_plural = _("تنظیمات نرخ مصرف توکن")
-
-    def __str__(self) -> str:
-        return f"نرخ‌های توکن (پایه: {self.text_cost} | سقف: {self.max_file_size_mb}MB | هدیه: {self.free_gift_tokens})"
-
-    @classmethod
-    def get_active(cls) -> "ForwardTokenPricing":
-        obj = cls.objects.order_by("pk").first()
-        if not obj:
-            obj = cls.objects.create()
-        return obj
-
-
 class ForwardTokenTransaction(models.Model):
     """دفترکل تراکنش‌های افزایش، هدیه، مصرف ارسال و ویرایش دستی ادمین روی توکن‌های کاربر."""
 

@@ -117,10 +117,10 @@
                     <div class="wf-stat-icon emerald"><i class="bi bi-hdd-network-fill"></i></div>
                     <span class="badge bg-success bg-opacity-25 text-success px-3 py-1 rounded-pill">اتصال</span>
                 </div>
-                <div class="wf-stat-value">{{ connected_platforms_count }} <span class="fs-6 fw-normal text-muted">از ۴</span></div>
+                <div class="wf-stat-value">{{ connected_platforms_count }} <span class="fs-6 fw-normal text-muted">از ۵</span></div>
                 <div class="wf-stat-label">پیام‌رسان متصل‌شده</div>
                 <div class="mt-3 pt-2 border-top border-light small text-muted d-flex justify-content-between">
-                    <span class="text-success">✓ هر ۴ پلتفرم آزاد</span>
+                    <span class="text-success">✓ هر ۵ پلتفرم آزاد</span>
                     <span class="text-info">✓ {{ total_channels_count }} کانال فعال</span>
                 </div>
             </div>
@@ -268,7 +268,7 @@
 
     <div class="row g-4 mb-5 wf-reveal wf-delay-2">
         {% for p in platform_cards %}
-        <div class="col-lg-6">
+        <div class="{% if p.slug == 'bale' or p.slug == 'telegram' %}col-lg-6{% else %}col-md-6 col-lg-4{% endif %}">
             <div class="wf-platform-hub-card {% if p.is_connected %}is-connected{% elif p.has_subscription %}is-subscribed-pending{% else %}is-locked{% endif %}">
 
                 <!-- هدر کارت پلتفرم با لوگوی واقعی دیتابیس -->
@@ -411,7 +411,7 @@
             </a>
         </div>
         <div class="p-4">
-            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
                 <div class="col">
                     <a href="{% url 'broadcast:send' %}" class="wf-dock-tile">
                         <div class="wf-dock-tile-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
@@ -419,43 +419,21 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:connected_channels' %}?platform=bale" class="wf-dock-tile">
-                        {% if nav_platforms.bale and nav_platforms.bale.logo %}
-                            <img src="{{ nav_platforms.bale.logo.url }}" alt="بله" class="wf-dock-tile-logo">
-                        {% else %}
-                            <div class="wf-dock-tile-icon"><i class="bi bi-send-check-fill"></i></div>
-                        {% endif %}
-                        <span class="fw-bold fs-xs">کانال‌های بله</span>
+                    <a href="{% url 'broadcast:connected_channels' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon" style="color:#38bdf8;"><i class="bi bi-megaphone-fill"></i></div>
+                        <span class="fw-bold fs-xs">لیست کانال‌ها</span>
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:connected_channels' %}?platform=eitaa" class="wf-dock-tile">
-                        {% if nav_platforms.eitaa and nav_platforms.eitaa.logo %}
-                            <img src="{{ nav_platforms.eitaa.logo.url }}" alt="ایتا" class="wf-dock-tile-logo">
-                        {% else %}
-                            <div class="wf-dock-tile-icon"><i class="bi bi-broadcast-pin"></i></div>
-                        {% endif %}
-                        <span class="fw-bold fs-xs">کانال‌های ایتا</span>
+                    <a href="{% url 'broadcast:hub_list' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon" style="color:#07c98b;"><i class="bi bi-diagram-3-fill"></i></div>
+                        <span class="fw-bold fs-xs">هاب‌های تیمی</span>
                     </a>
                 </div>
                 <div class="col">
-                    <a href="{% url 'broadcast:connected_channels' %}?platform=rubika" class="wf-dock-tile">
-                        {% if nav_platforms.rubika and nav_platforms.rubika.logo %}
-                            <img src="{{ nav_platforms.rubika.logo.url }}" alt="روبیکا" class="wf-dock-tile-logo">
-                        {% else %}
-                            <div class="wf-dock-tile-icon"><i class="bi bi-phone-vibrate-fill"></i></div>
-                        {% endif %}
-                        <span class="fw-bold fs-xs">کانال‌های روبیکا</span>
-                    </a>
-                </div>
-                <div class="col">
-                    <a href="{% url 'broadcast:connected_channels' %}?platform=telegram" class="wf-dock-tile">
-                        {% if nav_platforms.telegram and nav_platforms.telegram.logo %}
-                            <img src="{{ nav_platforms.telegram.logo.url }}" alt="تلگرام" class="wf-dock-tile-logo">
-                        {% else %}
-                            <div class="wf-dock-tile-icon text-info"><i class="bi bi-telegram"></i></div>
-                        {% endif %}
-                        <span class="fw-bold fs-xs">کانال‌های تلگرام</span>
+                    <a href="{% url 'broadcast:preset_list' %}" class="wf-dock-tile">
+                        <div class="wf-dock-tile-icon" style="color:#a78bfa;"><i class="bi bi-collection-fill"></i></div>
+                        <span class="fw-bold fs-xs">پکیج‌های ارسال</span>
                     </a>
                 </div>
                 <div class="col">

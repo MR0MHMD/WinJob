@@ -6,6 +6,29 @@
 {% block extra_style %}
 <link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
 <link rel="stylesheet" href="{% static 'forward/css/pages/presets.css' %}">
+<style>
+.wf-preset-item-card {
+    background: linear-gradient(155deg, rgba(38, 33, 58, 0.88), rgba(20, 17, 32, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.2rem;
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    height: 100%;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.wf-preset-item-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(139, 92, 246, 0.45);
+    box-shadow: 0 12px 28px -12px rgba(93, 60, 242, 0.55);
+}
+.wf-preset-scroll-box {
+    max-height: 340px;
+    overflow-y: auto;
+    padding-left: 4px;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -19,35 +42,44 @@
 
     {% include "product/forward/partials/nav.html" %}
 
+    <!-- هدر هیرو مدرن -->
     <div class="wf-preset-hero wf-reveal">
         <div class="d-flex align-items-center gap-3">
-            <div style="width:58px;height:58px;border-radius:1.15rem;background:linear-gradient(135deg,#5d3cf2,#07c98b);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;">
+            <div style="width:58px;height:58px;border-radius:1.2rem;background:linear-gradient(135deg,#5d3cf2,#07c98b);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;flex-shrink:0;box-shadow:0 10px 24px -8px rgba(93,60,242,0.6);">
                 <i class="bi bi-collection-fill"></i>
             </div>
             <div>
-                <h1 class="h4 text-white fw-bold mb-1">پکیج‌های ارسال (دسته‌بندی کانال‌ها)</h1>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h1 class="h4 text-white fw-bold mb-0">مدیریت پکیج‌های ارسال هوشمند</h1>
+                    <span class="wf-pill-tag is-purple">{{ presets|length }} پکیج فعال</span>
+                    <span class="wf-pill-tag is-emerald">{{ available_channels|length }} کانال آماده</span>
+                </div>
                 <p class="text-muted fs-xs mb-0">
-                    کانال‌های خود را در گروه‌های دلخواه (مثل «فروش» یا «اخبار») دسته‌بندی کنید. پس از ساخت حتی یک پکیج، در ربات‌های بله و تلگرام به‌جای لیست طولانی کانال‌ها، همین پکیج‌ها و گزینه «انتخاب همه» نمایش داده می‌شوند.
+                    کانال‌هایتان را در دسته‌های موضوعی (مثل «فروش»، «اخبار» یا «VIP») گروه‌بندی کنید تا در استدیو وب و ربات‌ها با یک کلیک منتشر شوند.
                 </p>
             </div>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass">
-                <i class="bi bi-arrow-right"></i> بازگشت به داشبورد
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'broadcast:dashboard' %}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                <i class="bi bi-arrow-right"></i> داشبورد
             </a>
-            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange">
+            <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange py-2 px-3 fs-xs">
                 <i class="bi bi-rocket-takeoff-fill"></i> استدیو ارسال
             </a>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- ستون ساخت پکیج جدید -->
-        <div class="col-lg-5 wf-reveal wf-delay-1">
-            <div class="wf-preset-card h-100">
-                <h5 class="text-white fw-bold mb-3 fs-6">
-                    <i class="bi bi-plus-circle-fill text-success me-1"></i> ساخت پکیج ارسال جدید
-                </h5>
+    <div class="row g-4 align-items-start">
+        <!-- ستون ساخت پکیج جدید (Sticky) -->
+        <div class="col-lg-4 wf-reveal wf-delay-1">
+            <div class="wf-preset-card position-sticky" style="top:90px;">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom border-light">
+                    <h5 class="text-white fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-circle-fill text-success"></i> ساخت پکیج جدید
+                    </h5>
+                    <span class="wf-pill-tag is-blue" id="wfPresetSelectedCounter">۰ انتخاب</span>
+                </div>
+
                 <form method="post" action="{% url 'broadcast:preset_list' %}">
                     {% csrf_token %}
 
@@ -63,9 +95,7 @@
 
                     <div class="mb-3">
                         <div class="d-flex align-items-center justify-content-between mb-2">
-                            <label class="form-label text-light fs-xs fw-bold mb-0">
-                                انتخاب کانال‌های عضو:
-                            </label>
+                            <label class="form-label text-light fs-xs fw-bold mb-0">انتخاب کانال‌های عضو:</label>
                             {% if available_channels %}
                             <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-2 py-0 fs-xs" id="wfPresetToggleAll">
                                 انتخاب همه
@@ -74,9 +104,14 @@
                         </div>
 
                         {% if available_channels %}
-                        <div class="d-flex flex-column gap-2" style="max-height: 360px; overflow-y: auto; padding-left: 4px;">
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" id="wfPresetChannelSearch" class="form-control form-control-light" placeholder="جستجوی سریع کانال...">
+                        </div>
+
+                        <div class="d-flex flex-column gap-2 wf-preset-scroll-box">
                             {% for ch in available_channels %}
-                            <label class="wf-preset-select-tile" for="preset_ch_{{ ch.pk }}">
+                            <label class="wf-preset-select-tile wf-preset-ch-item" data-search="{{ ch.title|lower }} {{ ch.platform.name|lower }}" for="preset_ch_{{ ch.pk }}">
                                 <div class="d-flex align-items-center gap-2 overflow-hidden">
                                     <input class="form-check-input wf-preset-ch-cb mt-0 flex-shrink-0"
                                            type="checkbox"
@@ -112,63 +147,70 @@
                         {% endif %}
                     </div>
 
-                    <button type="submit" class="wf-btn wf-btn-purple w-100" {% if not available_channels %}disabled{% endif %}>
+                    <button type="submit" class="wf-btn wf-btn-purple w-100 justify-content-center py-2" {% if not available_channels %}disabled{% endif %}>
                         <i class="bi bi-check2-circle"></i> ذخیره پکیج ارسال
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- ستون لیست پکیج‌های ذخیره‌شده -->
-        <div class="col-lg-7 wf-reveal wf-delay-2">
-            <div class="wf-preset-card h-100">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="text-white fw-bold mb-0 fs-6">
-                        <i class="bi bi-layers-fill text-primary me-1"></i> پکیج‌های فعال شما ({{ presets|length }})
+        <!-- ستون گرید کارتی پکیج‌های ذخیره‌شده -->
+        <div class="col-lg-8 wf-reveal wf-delay-2">
+            <div class="wf-preset-card">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom border-light">
+                    <h5 class="text-white fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
+                        <i class="bi bi-layers-fill text-primary"></i> پکیج‌های فعال شما ({{ presets|length }})
                     </h5>
                     <span class="wf-pill-tag is-emerald">
-                        همگام‌سازی خودکار با ربات‌های بله و تلگرام
+                        <i class="bi bi-arrow-repeat"></i> همگام با ربات‌ها و استدیو وب
                     </span>
                 </div>
 
                 {% if presets %}
-                <div class="d-flex flex-column gap-3">
+                <div class="row g-3">
                     {% for preset in presets %}
-                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="wf-pill-tag is-purple">
-                                    <i class="bi bi-box-seam-fill me-1"></i> {{ preset.name }}
-                                </span>
-                                <span class="text-muted fs-xs">{{ preset.channels.count }} کانال</span>
+                    <div class="col-md-6">
+                        <div class="wf-preset-item-card">
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                    <div style="width:40px;height:40px;border-radius:0.85rem;background:linear-gradient(135deg,rgba(93,60,242,0.3),rgba(7,201,139,0.22));border:1px solid rgba(139,92,246,0.35);display:flex;align-items:center;justify-content:center;color:#c4b5fd;flex-shrink:0;">
+                                        <i class="bi bi-box-seam-fill"></i>
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <h6 class="text-white fw-bold mb-0 fs-sm text-truncate">{{ preset.name }}</h6>
+                                        <span class="text-muted" style="font-size:0.72rem;">{{ preset.channels.count }} کانال عضو</span>
+                                    </div>
+                                </div>
+                                <span class="wf-pill-tag is-purple flex-shrink-0">{{ preset.channels.count }} کانال</span>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <a href="{% url 'broadcast:preset_edit' preset.pk %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs">
-                                    <i class="bi bi-pencil-square"></i> ویرایش
+
+                            <div class="d-flex flex-wrap gap-2 flex-grow-1 align-content-start">
+                                {% for ch in preset.channels.all %}
+                                    <a href="{% url 'broadcast:channel_detail' ch.pk %}" class="wf-preset-channel-chip text-decoration-none">
+                                        {% if ch.avatar %}
+                                            <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}">
+                                        {% elif ch.platform.logo %}
+                                            <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}">
+                                        {% endif %}
+                                        <span>{{ ch.title }}</span>
+                                    </a>
+                                {% empty %}
+                                    <span class="text-muted fs-xs">بدون کانال</span>
+                                {% endfor %}
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between gap-2 pt-3 border-top border-light mt-auto">
+                                <a href="{% url 'broadcast:preset_edit' preset.pk %}" class="wf-btn wf-btn-glass py-1 px-3 fs-xs flex-grow-1 justify-content-center">
+                                    <i class="bi bi-pencil-square text-info"></i> ویرایش پکیج
                                 </a>
                                 <form method="post" action="{% url 'broadcast:preset_delete' preset.pk %}" class="d-inline"
                                       data-wf-confirm="آیا از حذف پکیج «{{ preset.name }}» اطمینان دارید؟" data-wf-confirm-title="حذف پکیج ارسال" data-wf-confirm-btn="بله، حذف شود">
                                     {% csrf_token %}
-                                    <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger">
-                                        <i class="bi bi-trash3"></i> حذف
+                                    <button type="submit" class="wf-btn wf-btn-glass py-1 px-3 fs-xs text-danger" title="حذف پکیج">
+                                        <i class="bi bi-trash3"></i>
                                     </button>
                                 </form>
                             </div>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for ch in preset.channels.all %}
-                                <span class="wf-preset-channel-chip">
-                                    {% if ch.avatar %}
-                                        <img src="{{ ch.avatar.url }}" alt="{{ ch.title }}">
-                                    {% elif ch.platform.logo %}
-                                        <img src="{{ ch.platform.logo.url }}" alt="{{ ch.platform.name }}">
-                                    {% endif %}
-                                    <span>{{ ch.title }}</span>
-                                </span>
-                            {% empty %}
-                                <span class="text-muted fs-xs">بدون کانال</span>
-                            {% endfor %}
                         </div>
                     </div>
                     {% endfor %}
@@ -178,7 +220,7 @@
                     <i class="bi bi-folder2-open fs-1 text-muted d-block mb-2"></i>
                     <h6 class="text-white fw-bold mb-1">هنوز پکیجی نساخته‌اید</h6>
                     <p class="text-muted fs-xs mb-0">
-                        تا زمانی که پکیجی نسازید، ربات‌های بله و تلگرام تمام کانال‌های شما را به‌صورت تکی نمایش می‌دهد. با ساخت اولین پکیج، لیست ربات هوشمند و خلاصه می‌شود.
+                        با ساخت اولین پکیج از فرم سمت راست، هنگام ارسال پیام در وب و ربات‌ها با یک کلیک کل کانال‌های آن گروه انتخاب می‌شوند.
                     </p>
                 </div>
                 {% endif %}
@@ -193,10 +235,19 @@
 document.addEventListener("DOMContentLoaded", function () {
     const checkboxes = document.querySelectorAll(".wf-preset-ch-cb");
     const toggleBtn = document.getElementById("wfPresetToggleAll");
+    const counterEl = document.getElementById("wfPresetSelectedCounter");
+    const searchInput = document.getElementById("wfPresetChannelSearch");
+
+    function updateCounter() {
+        if (!counterEl) return;
+        const cnt = document.querySelectorAll(".wf-preset-ch-cb:checked").length;
+        counterEl.textContent = cnt.toLocaleString("fa-IR") + " انتخاب";
+    }
 
     function syncTileState(cb) {
         const tile = cb.closest(".wf-preset-select-tile");
         if (tile) tile.classList.toggle("is-checked", cb.checked);
+        updateCounter();
     }
 
     checkboxes.forEach(function (cb) {
@@ -206,12 +257,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (toggleBtn) {
         toggleBtn.addEventListener("click", function () {
-            const allChecked = Array.from(checkboxes).every(function (cb) { return cb.checked; });
-            checkboxes.forEach(function (cb) {
+            const visibleCbs = Array.from(checkboxes).filter(function (cb) {
+                const item = cb.closest(".wf-preset-ch-item");
+                return !item || item.style.display !== "none";
+            });
+            const allChecked = visibleCbs.length > 0 && visibleCbs.every(function (cb) { return cb.checked; });
+            visibleCbs.forEach(function (cb) {
                 cb.checked = !allChecked;
                 syncTileState(cb);
             });
             toggleBtn.textContent = allChecked ? "انتخاب همه" : "لغو همه";
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener("input", function () {
+            const q = (searchInput.value || "").trim().toLowerCase();
+            document.querySelectorAll(".wf-preset-ch-item").forEach(function (item) {
+                const hay = (item.dataset.search || "");
+                item.style.display = (!q || hay.includes(q)) ? "" : "none";
+            });
         });
     }
 });

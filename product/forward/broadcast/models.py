@@ -19,6 +19,11 @@ from django_jalali.db import models as jmodels
 class BroadcastChannel(models.Model):
     """کانال ثبت‌شده در وین فوروارد — مستقل از influencers.Channel."""
 
+    class WatermarkMode(models.TextChoices):
+        OFF = "off", _("غیرفعال (ارسال بدون تغییر)")
+        REMOVE_APPEND = "remove_append", _("حذف واترمارک مبدا + افزودن امضای اختصاصی")
+        REWRITE = "rewrite", _("بازسازی هوشمند واترمارک با اطلاعات این کانال")
+
     user = models.ForeignKey("accounts.CustomUser", on_delete=models.CASCADE, related_name="broadcast_channels", verbose_name=_("کاربر"),)
     platform = models.ForeignKey("core.Platform", on_delete=models.PROTECT, related_name="broadcast_channels", verbose_name=_("پلتفرم"),)
     chat_id = models.CharField(_("شناسه کانال"), max_length=64, help_text=_("شناسه یکتای کانال در پلتفرم (مثلاً @my_channel یا -100123456789)"),)
@@ -31,6 +36,27 @@ class BroadcastChannel(models.Model):
     verification_token_created_at = jmodels.jDateTimeField(_("زمان ایجاد توکن"), null=True, blank=True,)
     verification_token_used_at = jmodels.jDateTimeField(_("زمان استفاده از توکن"), null=True, blank=True,)
     is_active = models.BooleanField(_("فعال"), default=True, help_text=_("آیا ارسال به این کانال مجاز است؟"),)
+    watermark_mode = models.CharField(
+        _("حالت پردازش واترمارک هوش مصنوعی"),
+        max_length=20,
+        choices=WatermarkMode.choices,
+        default=WatermarkMode.OFF,
+        db_index=True,
+    )
+    custom_signature = models.TextField(
+        _("امضای اختصاصی کانال"),
+        max_length=1500,
+        blank=True,
+        default="",
+        help_text=_("متن امضا/واترمارک اختصاصی این کانال (در حالت حذف + امضای اختصاصی زیر پیام اضافه می‌شود)"),
+    )
+    watermark_display_id = models.CharField(
+        _("آیدی یا لینک نمایشی در واترمارک"),
+        max_length=160,
+        blank=True,
+        default="",
+        help_text=_("اختیاری: آیدی یا لینک دلخواه برای جایگزینی در حالت بازسازی هوشمند (به‌ویژه برای کانال‌های خصوصی)"),
+    )
     last_broadcast_at = jmodels.jDateTimeField(_("آخرین ارسال"), null=True, blank=True,)
     created_at = jmodels.jDateTimeField(_("تاریخ ایجاد"), auto_now_add=True,)
     updated_at = jmodels.jDateTimeField(_("تاریخ ویرایش"), auto_now=True,)

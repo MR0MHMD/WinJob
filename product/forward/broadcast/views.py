@@ -6,6 +6,33 @@ from django.core.paginator import Paginator
 from django.urls import reverse
 import json
 import jdatetime
+
+_PERSIAN_WEEKDAYS = ("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه")
+
+
+def _to_gregorian_dt(dt_val, tz):
+    """تبدیل ایمن datetime یا jdatetime.datetime (از django_jalali) به datetime میلادی با timezone تهران."""
+    if dt_val is None:
+        return None
+    if isinstance(dt_val, jdatetime.datetime):
+        dt_val = dt_val.togregorian()
+    elif isinstance(dt_val, jdatetime.date) and not hasattr(dt_val, "hour"):
+        g = dt_val.togregorian()
+        from datetime import datetime as _dt
+        dt_val = _dt(g.year, g.month, g.day)
+    if timezone.is_naive(dt_val):
+        dt_val = timezone.make_aware(dt_val, tz)
+    return dt_val.astimezone(tz)
+
+
+def _jalali_label(g_date, weekday_only: bool = False) -> str:
+    """تبدیل ایمن تاریخ به برچسب شمسی (MM/DD) یا نام روز هفته فارسی."""
+    jd = g_date if isinstance(g_date, jdatetime.date) else jdatetime.date.fromgregorian(date=g_date)
+    if weekday_only:
+        return _PERSIAN_WEEKDAYS[jd.weekday()]
+    return jd.strftime("%m/%d")
+
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
@@ -225,36 +252,68 @@ def _render_job_report(request, job: BroadcastJob, is_public_view: bool = False)
         if (job.success_count > 0 and job_tokens_spent > 0)
         else 0
     )
+    from product.forward.subscriptions.models import ForwardTokenTransaction
+
     meta = job.message.platform_file_ids or {}
     is_hub_msg = bool(meta.get("hub_id"))
-    soroush_text_cost = calculate_delivery_token_cost(
-        content_type="text",
-        has_caption=False,
-        file_size_bytes=0,
-        is_hub=is_hub_msg,
-    )
+    has_msg_text = bool((job.message.text or "").strip())
     file_size_bytes = int(meta.get("file_size") or 0)
     if job.message.file:
         try:
             file_size_bytes = int(job.message.file.size or file_size_bytes)
         except Exception:
             pass
-    normal_cost = calculate_delivery_token_cost(
-        content_type=job.message.content_type,
-        has_caption=bool((job.message.text or "").strip()),
-        file_size_bytes=file_size_bytes,
-        is_hub=is_hub_msg,
-        use_ai_watermark=bool(meta.get("use_ai_watermark")),
+
+    # خواندن تراکنش‌های واقعی دفترکل برای این جاب جهت تطابق ۱۰۰٪ هر کانال (از جمله +۲ توکن امضای AI)
+    job_tx_rows = list(
+        ForwardTokenTransaction.objects.filter(
+            user=job.message.user,
+            tx_type=ForwardTokenTransaction.TxType.SPEND,
+            broadcast_job_id=job.pk,
+        ).values("amount", "description")
     )
+    used_tx_indices = set()
     for t in targets:
-        if t.status == BroadcastTarget.Status.SUCCESS:
-            t_cost = soroush_text_cost if t.channel.platform.slug == "soroush" else (
-                normal_cost if job_tokens_spent > 0 else unit_token_cost)
-            t.tokens_spent = t_cost
-            t.tokens_toman = t_cost * TOKEN_TOMAN_RATE
-        else:
+        if t.status != BroadcastTarget.Status.SUCCESS:
             t.tokens_spent = 0
             t.tokens_toman = 0
+            continue
+
+        matched_cost = None
+        ch_needle = f"«{t.channel.title}»"
+        for idx, tx in enumerate(job_tx_rows):
+            if idx in used_tx_indices:
+                continue
+            if ch_needle in (tx.get("description") or ""):
+                matched_cost = abs(int(tx["amount"]))
+                used_tx_indices.add(idx)
+                break
+
+        if matched_cost is None:
+            ch_ai = (
+                    (getattr(t.channel, "watermark_mode", "off") or "off") != "off"
+                    and has_msg_text
+                    and job.message.content_type != "sticker"
+            )
+            if t.channel.platform.slug == "soroush":
+                matched_cost = calculate_delivery_token_cost(
+                    content_type="text",
+                    has_caption=False,
+                    file_size_bytes=0,
+                    is_hub=is_hub_msg,
+                    use_ai_watermark=ch_ai,
+                )
+            else:
+                matched_cost = calculate_delivery_token_cost(
+                    content_type=job.message.content_type,
+                    has_caption=has_msg_text,
+                    file_size_bytes=file_size_bytes,
+                    is_hub=is_hub_msg,
+                    use_ai_watermark=ch_ai,
+                )
+
+        t.tokens_spent = matched_cost
+        t.tokens_toman = matched_cost * TOKEN_TOMAN_RATE
 
     return render(
         request,
@@ -845,9 +904,12 @@ def forward_dashboard(request):
                 if bot_users.get("soroush")
                 else ""
             ),
-            "summary": "ورود امن با شماره و کد تایید (OTP)، همگام‌سازی خودکار کانال‌ها و ارسال پرسرعت رسانه به سروش‌پلاس",
+            "summary": "ورود امن با شماره و کد تایید (OTP)، همگام‌سازی خودکار کانال‌ها و ارسال سریع متن و کپشن به سروش‌پلاس",
         },
     ]
+
+    _order_map = {"bale": 0, "telegram": 1, "rubika": 2, "eitaa": 3, "soroush": 4}
+    platform_definitions.sort(key=lambda item: _order_map.get(item["slug"], 99))
 
     platform_cards = []
     connected_platforms_count = 0
@@ -907,12 +969,9 @@ def forward_dashboard(request):
         min_day = today_tehran - timedelta(days=days_count - 1)
         buckets = {}
         for row in recent_30_jobs:
-            dt_val = row["created_at"]
-            if not dt_val:
+            local_dt = _to_gregorian_dt(row["created_at"], tehran_tz)
+            if not local_dt:
                 continue
-            if timezone.is_naive(dt_val):
-                dt_val = timezone.make_aware(dt_val, tehran_tz)
-            local_dt = dt_val.astimezone(tehran_tz)
             d = local_dt.date()
             if d < min_day or d > today_tehran:
                 continue
@@ -934,7 +993,7 @@ def forward_dashboard(request):
         peak_l = peak_tok_l = "—"
         for d in sorted_days:
             b = buckets[d]
-            lbl = jdatetime.date.fromgregorian(date=d).strftime("%m/%d")
+            lbl = _jalali_label(d, weekday_only=(days_count == 7))
             labels.append(lbl)
             succ.append(b["sent"])
             fail.append(b["failed"])
@@ -972,13 +1031,8 @@ def forward_dashboard(request):
     # سری ۲۴ ساعت گذشته: دقیقاً بر اساس ساعت:دقیقه (HH:MM) فقط زمان‌هایی که ارسال انجام شده
     h24_buckets = {}
     for row in recent_30_jobs:
-        dt_val = row["created_at"]
-        if not dt_val:
-            continue
-        if timezone.is_naive(dt_val):
-            dt_val = timezone.make_aware(dt_val, tehran_tz)
-        local_dt = dt_val.astimezone(tehran_tz)
-        if local_dt < cutoff_24h:
+        local_dt = _to_gregorian_dt(row["created_at"], tehran_tz)
+        if not local_dt or local_dt < cutoff_24h:
             continue
         s_val = int(row["success_count"] or 0)
         f_val = int(row["failed_count"] or 0)
@@ -1836,3 +1890,234 @@ def soroush_logout(request):
         bot_user.save(update_fields=["session_data", "is_verified"])
         messages.success(request, "✅ نشست سروش‌پلاس با موفقیت قطع و پاک‌سازی شد.")
     return redirect("broadcast:dashboard")
+
+
+@login_required
+def channel_detail(request, channel_id):
+    """صفحه جزئیات کامل کانال: آمار KPI، نمودارهای تحلیلی، تاریخچه و تنظیمات واترمارک هوش مصنوعی."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+
+    from django.db.models import Count, Q
+    from product.forward.broadcast.models import BroadcastMessage
+    from product.forward.constants import TOKEN_COST_AI_WATERMARK, TOKEN_TOMAN_RATE
+    from product.forward.subscriptions.models import ForwardTokenTransaction
+
+    channel = get_object_or_404(
+        BroadcastChannel.objects.select_related("platform"),
+        pk=channel_id,
+        user=request.user,
+    )
+
+    if request.method == "POST":
+        wm_mode = (request.POST.get("watermark_mode") or BroadcastChannel.WatermarkMode.OFF).strip()
+        valid_modes = {c[0] for c in BroadcastChannel.WatermarkMode.choices}
+        if wm_mode not in valid_modes:
+            wm_mode = BroadcastChannel.WatermarkMode.OFF
+
+        custom_sig = (request.POST.get("custom_signature") or "").strip()[:1500]
+        display_id = (request.POST.get("watermark_display_id") or "").strip()[:160]
+
+        channel.watermark_mode = wm_mode
+        channel.custom_signature = custom_sig
+        channel.watermark_display_id = display_id
+        channel.save(update_fields=["watermark_mode", "custom_signature", "watermark_display_id"])
+        messages.success(request, f"✅ تنظیمات امضای هوشمند برای کانال «{channel.title}» ذخیره شد.")
+        return redirect("broadcast:channel_detail", channel_id=channel.pk)
+
+    targets_qs = BroadcastTarget.objects.filter(channel=channel).select_related("job", "job__message")
+    agg = targets_qs.aggregate(
+        total=Count("id"),
+        success=Count("id", filter=Q(status=BroadcastTarget.Status.SUCCESS)),
+        failed=Count("id", filter=Q(status=BroadcastTarget.Status.FAILED)),
+        skipped=Count("id", filter=Q(status=BroadcastTarget.Status.SKIPPED)),
+    )
+    total_deliveries = agg["total"] or 0
+    success_count = agg["success"] or 0
+    failed_count = agg["failed"] or 0
+    skipped_count = agg["skipped"] or 0
+    success_rate = int(round((success_count / total_deliveries) * 100)) if total_deliveries > 0 else 0
+
+    last_target = targets_qs.filter(sent_at__isnull=False).order_by("-sent_at").first()
+    last_sent_at = last_target.sent_at if last_target else channel.last_broadcast_at
+
+    # محاسبه کل توکن مصرفی این کانال و نگاشت توکن هر جاب از دفترکل تراکنش‌ها
+    channel_tx_rows = list(
+        ForwardTokenTransaction.objects.filter(
+            user=request.user,
+            tx_type=ForwardTokenTransaction.TxType.SPEND,
+            description__icontains=f"«{channel.title}»",
+        ).values("broadcast_job_id", "amount", "created_at")
+    )
+    channel_tokens_spent = sum(abs(int(x["amount"])) for x in channel_tx_rows)
+    channel_tokens_toman = channel_tokens_spent * TOKEN_TOMAN_RATE
+    tx_by_job = {}
+    for tx in channel_tx_rows:
+        jid = tx.get("broadcast_job_id")
+        if jid:
+            tx_by_job[jid] = tx_by_job.get(jid, 0) + abs(int(tx["amount"]))
+
+    # ساخت سری‌های زنده نمودار خطی کانال (۲۴ ساعت / ۷ روز با نام روز هفته / ۱۴ روز / ۳۰ روز شمسی) + تب توکن
+    tehran_tz = ZoneInfo("Asia/Tehran")
+    now_local = timezone.now().astimezone(tehran_tz)
+    today_tehran = now_local.date()
+    cutoff_30d = now_local - timedelta(days=30)
+    cutoff_24h = now_local - timedelta(hours=24)
+
+    recent_30_targets = list(
+        targets_qs.filter(created_at__gte=cutoff_30d).values("job_id", "status", "created_at")
+    )
+
+    def _build_ch_day_series(days_n: int) -> dict:
+        min_d = today_tehran - timedelta(days=days_n - 1)
+        bmap = {}
+        for row in recent_30_targets:
+            ldt = _to_gregorian_dt(row["created_at"], tehran_tz)
+            if not ldt:
+                continue
+            d = ldt.date()
+            if d < min_d or d > today_tehran:
+                continue
+            if d not in bmap:
+                bmap[d] = {"success": 0, "failed": 0, "tokens": 0}
+            st = row["status"]
+            if st == BroadcastTarget.Status.SUCCESS:
+                bmap[d]["success"] += 1
+                bmap[d]["tokens"] += int(tx_by_job.get(row["job_id"], 0))
+            elif st in (BroadcastTarget.Status.FAILED, BroadcastTarget.Status.SKIPPED):
+                bmap[d]["failed"] += 1
+        sdays = sorted(bmap.keys())
+        return {
+            "labels": [_jalali_label(d, weekday_only=(days_n == 7)) for d in sdays],
+            "success": [bmap[d]["success"] for d in sdays],
+            "failed": [bmap[d]["failed"] for d in sdays],
+            "tokens": [bmap[d]["tokens"] for d in sdays],
+        }
+
+    h24_map = {}
+    for row in recent_30_targets:
+        ldt = _to_gregorian_dt(row["created_at"], tehran_tz)
+        if not ldt or ldt < cutoff_24h:
+            continue
+        slot = ldt.replace(second=0, microsecond=0)
+        if slot not in h24_map:
+            h24_map[slot] = {"success": 0, "failed": 0, "tokens": 0}
+        st = row["status"]
+        if st == BroadcastTarget.Status.SUCCESS:
+            h24_map[slot]["success"] += 1
+            h24_map[slot]["tokens"] += int(tx_by_job.get(row["job_id"], 0))
+        elif st in (BroadcastTarget.Status.FAILED, BroadcastTarget.Status.SKIPPED):
+            h24_map[slot]["failed"] += 1
+
+    sslots = sorted(h24_map.keys())
+    channel_chart_series = {
+        "24h": {
+            "labels": [s.strftime("%H:%M") for s in sslots],
+            "success": [h24_map[s]["success"] for s in sslots],
+            "failed": [h24_map[s]["failed"] for s in sslots],
+            "tokens": [h24_map[s]["tokens"] for s in sslots],
+        },
+        "7d": _build_ch_day_series(7),
+        "14d": _build_ch_day_series(14),
+        "30d": _build_ch_day_series(30),
+    }
+
+    # نمودار دونات تفکیک نوع محتوا
+    ctype_labels_map = dict(BroadcastMessage.ContentType.choices)
+    type_counts = targets_qs.values("job__message__content_type").annotate(cnt=Count("id")).order_by("-cnt")
+    type_chart = {
+        "labels": [str(ctype_labels_map.get(r["job__message__content_type"], r["job__message__content_type"])) for r in
+                   type_counts],
+        "values": [int(r["cnt"]) for r in type_counts],
+    }
+
+    connected_presets = list(
+        ChannelPreset.objects.filter(user=request.user, is_active=True, channels=channel).order_by("-created_at")
+    )
+    connected_hubs = list(
+        BroadcastHub.objects.filter(
+            user=request.user,
+            is_active=True,
+        ).filter(
+            Q(channels=channel) | Q(preset__channels=channel)
+        ).select_related("platform").distinct()
+    )
+    recent_targets = list(targets_qs.order_by("-created_at")[:10])
+    show_eitaa_username_field = (channel.platform.slug == "eitaa") and not (channel.username or "").strip()
+
+    return render(
+        request,
+        "product/forward/broadcast/channel_detail.html",
+        {
+            "channel": channel,
+            "nav_platforms": _get_forward_platforms_map(),
+            "ai_extra_cost": TOKEN_COST_AI_WATERMARK,
+            "total_deliveries": total_deliveries,
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "skipped_count": skipped_count,
+            "success_rate": success_rate,
+            "last_sent_at": last_sent_at,
+            "channel_tokens_spent": channel_tokens_spent,
+            "channel_tokens_toman": channel_tokens_toman,
+            "channel_chart_series_json": json.dumps(channel_chart_series, ensure_ascii=False),
+            "type_chart_json": json.dumps(type_chart, ensure_ascii=False),
+            "connected_presets": connected_presets,
+            "connected_hubs": connected_hubs,
+            "recent_targets": recent_targets,
+            "show_eitaa_username_field": show_eitaa_username_field,
+        },
+    )
+
+
+@login_required
+def channel_test_watermark(request, channel_id):
+    """اندپوینت AJAX برای تست زنده حذف/بازسازی واترمارک با AI روی متن نمونه در صفحه جزئیات کانال."""
+    from types import SimpleNamespace
+    from django.http import JsonResponse
+    from product.forward.broadcast.services.ai_watermark import (
+        analyze_text_watermark,
+        apply_channel_watermark,
+    )
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    channel = get_object_or_404(BroadcastChannel.objects.select_related("platform"), pk=channel_id, user=request.user)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "درخواست JSON نامعتبر است."}, status=400)
+
+    sample_text = (payload.get("sample_text") or "").strip()
+    if not sample_text:
+        return JsonResponse({"ok": False, "error": "متن نمونه خالی است."})
+
+    wm_mode = (payload.get("watermark_mode") or channel.watermark_mode or "off").strip()
+    if wm_mode == "off":
+        return JsonResponse({
+            "ok": True,
+            "watermark_found": False,
+            "output_text": sample_text,
+            "note": "حالت واترمارک روی غیرفعال است؛ متن بدون تغییر نمایش داده شد.",
+        })
+
+    ai_res = analyze_text_watermark(sample_text)
+    if not ai_res.get("ok"):
+        return JsonResponse({"ok": False, "error": ai_res.get("error") or "خطا در پردازش هوش مصنوعی"})
+
+    preview_channel = SimpleNamespace(
+        title=channel.title,
+        username=channel.username,
+        platform=channel.platform,
+        watermark_mode=wm_mode,
+        custom_signature=(payload.get("custom_signature") or "").strip()[:1500],
+        watermark_display_id=(payload.get("watermark_display_id") or "").strip()[:160],
+    )
+    output_text = apply_channel_watermark(sample_text, preview_channel, ai_res)
+    return JsonResponse({
+        "ok": True,
+        "watermark_found": bool(ai_res.get("watermark_found")),
+        "output_text": output_text,
+        "model": ai_res.get("model", ""),
+    })

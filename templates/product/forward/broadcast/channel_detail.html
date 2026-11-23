@@ -1,0 +1,728 @@
+{% extends "parent/base.html" %}
+{% load static humanize %}
+
+{% block title %}جزئیات کانال {{ channel.title }} | وین فوروارد{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% static 'forward/css/forward.css' %}">
+<link rel="stylesheet" href="{% static 'forward/css/pages/job_detail.css' %}">
+<style>
+.wf-ch-hero {
+    background: linear-gradient(145deg, rgba(93, 60, 242, 0.14), rgba(20, 17, 34, 0.94));
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 1.4rem;
+    padding: 1.4rem 1.5rem;
+}
+.wf-ch-card {
+    background: linear-gradient(155deg, rgba(35, 30, 52, 0.86), rgba(20, 17, 32, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+}
+.wf-wm-option {
+    display: block;
+    cursor: pointer;
+    border-radius: 1rem;
+    padding: 0.95rem 1.05rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    transition: all 0.2s ease;
+}
+.wf-wm-option:hover {
+    border-color: rgba(139, 92, 246, 0.45);
+    background: rgba(139, 92, 246, 0.07);
+}
+.wf-wm-option.is-active {
+    border-color: rgba(139, 92, 246, 0.85);
+    background: linear-gradient(135deg, rgba(93, 60, 242, 0.18), rgba(20, 17, 34, 0.92));
+    box-shadow: 0 8px 24px -10px rgba(93, 60, 242, 0.65);
+}
+.wf-sandbox-output {
+    background: rgba(12, 10, 22, 0.88);
+    border: 1px solid rgba(7, 201, 139, 0.3);
+    border-radius: 0.95rem;
+    padding: 1rem;
+    white-space: pre-wrap;
+    min-height: 108px;
+    color: #f3f2f7;
+    font-size: 0.88rem;
+    line-height: 1.75;
+}
+.wf-recent-scroll {
+    max-height: 360px;
+    overflow-y: auto;
+}
+.wf-chart-range-tabs {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 50rem;
+    padding: 3px;
+    gap: 3px;
+}
+.wf-chart-range-btn {
+    border: 0;
+    background: transparent;
+    color: #a39eb5;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.32rem 0.8rem;
+    border-radius: 50rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.wf-chart-range-btn:hover:not(.is-active) {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+}
+.wf-chart-range-btn.is-active {
+    background: linear-gradient(135deg, #fd5631, #5d3cf2);
+    color: #fff;
+    box-shadow: 0 4px 14px -4px rgba(253, 86, 49, 0.55);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 wf-shell">
+
+    <ol class="breadcrumb breadcrumb-light mb-3">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">خانه</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:dashboard' %}">وین فوروارد</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'broadcast:connected_channels' %}">کانال‌های متصل</a></li>
+        <li class="breadcrumb-item active">{{ channel.title }}</li>
+    </ol>
+
+    {% include "product/forward/partials/nav.html" %}
+
+    <!-- هدر کانال -->
+    <div class="wf-ch-hero mb-4 wf-reveal">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="wf-avatar-with-badge" style="width:68px;height:68px;border-radius:1.25rem;font-size:1.5rem;">
+                    {% if channel.avatar %}
+                        <img src="{{ channel.avatar.url }}" alt="{{ channel.title }}" class="wf-av-img">
+                    {% else %}
+                        {{ channel.title|slice:":1" }}
+                    {% endif %}
+                    {% if channel.platform.logo %}
+                        <img src="{{ channel.platform.logo.url }}" alt="{{ channel.platform.name }}" class="wf-av-plat" style="width:24px;height:24px;">
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <h1 class="h4 text-white fw-bold mb-0">{{ channel.title }}</h1>
+                        <span class="wf-pill-tag is-blue">{{ channel.platform.name }}</span>
+                        {% if channel.bot_is_admin %}
+                            <span class="wf-pill-tag is-emerald"><i class="bi bi-shield-check"></i> آماده ارسال</span>
+                        {% else %}
+                            <span class="wf-pill-tag is-danger"><i class="bi bi-exclamation-triangle"></i> بدون دسترسی ادمین</span>
+                        {% endif %}
+                        {% if channel.watermark_mode != 'off' %}
+                            <span class="wf-pill-tag is-purple"><i class="bi bi-stars"></i> امضای هوشمند AI فعال (+{{ ai_extra_cost }} توکن)</span>
+                        {% else %}
+                            <span class="wf-pill-tag" style="background:rgba(255,255,255,0.06);color:#b0abc0;">امضای هوشمند غیرفعال</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted fs-xs d-flex flex-wrap align-items-center gap-3">
+                        <span dir="ltr">{% if channel.username %}@{{ channel.username }} · {% endif %}{{ channel.chat_id }}</span>
+                        <span>·</span>
+                        <span>تاریخ ثبت: {{ channel.created_at|date:"Y/m/d" }}</span>
+                        <span>·</span>
+                        <span>آخرین ارسال: {{ last_sent_at|date:"Y/m/d ساعت H:i"|default:"هنوز ارسالی ثبت نشده" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="{% url 'broadcast:send' %}" class="wf-btn wf-btn-orange py-2 px-3 fs-xs">
+                    <i class="bi bi-rocket-takeoff-fill"></i> ارسال پیام جدید
+                </a>
+                <form method="post"
+                      action="{% if channel.platform.slug == 'bale' %}{% url 'broadcast:bale_delete_channel' channel.pk %}{% elif channel.platform.slug == 'eitaa' %}{% url 'broadcast:eitaa_delete_channel' channel.pk %}{% elif channel.platform.slug == 'rubika' %}{% url 'broadcast:rubika_delete_channel' channel.pk %}{% elif channel.platform.slug == 'soroush' %}{% url 'broadcast:soroush_delete_channel' channel.pk %}{% else %}{% url 'broadcast:telegram_delete_channel' channel.pk %}{% endif %}"
+                      data-wf-confirm="آیا از حذف و غیرفعال‌سازی کانال «{{ channel.title }}» اطمینان دارید؟"
+                      data-wf-confirm-title="حذف کانال"
+                      data-wf-confirm-btn="بله، حذف شود">
+                    {% csrf_token %}
+                    <button type="submit" class="wf-btn wf-btn-glass py-2 px-3 fs-xs text-danger">
+                        <i class="bi bi-trash3"></i> حذف کانال
+                    </button>
+                </form>
+                <a href="{% url 'broadcast:connected_channels' %}?platform={{ channel.platform.slug }}" class="wf-btn wf-btn-glass py-2 px-3 fs-xs">
+                    <i class="bi bi-arrow-right"></i> بازگشت
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ۴ کارت KPI اصلی -->
+    <div class="row g-3 mb-4 wf-reveal wf-delay-1">
+        <div class="col-6 col-lg-3">
+            <div class="wf-report-kpi h-100">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(93,60,242,0.18);color:#c4b5fd;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
+                    <i class="bi bi-send-check-fill"></i>
+                </div>
+                <div>
+                    <div class="text-white fw-bold fs-4">{{ total_deliveries|intcomma }}</div>
+                    <div class="text-muted fs-xs">کل ارسال‌ها</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="wf-report-kpi h-100">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(7,201,139,0.18);color:#07c98b;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <div>
+                    <div class="text-success fw-bold fs-4">{{ success_count|intcomma }}</div>
+                    <div class="text-muted fs-xs">ارسال‌های موفق</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="wf-report-kpi h-100">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(56,189,248,0.18);color:#7dd3fc;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div>
+                    <div class="text-info fw-bold fs-4">{{ success_rate }}٪</div>
+                    <div class="text-muted fs-xs">نرخ موفقیت</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="wf-report-kpi h-100">
+                <div style="width:46px;height:46px;border-radius:0.95rem;background:rgba(253,188,49,0.18);color:#fdbc31;display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;">
+                    <i class="bi bi-coin"></i>
+                </div>
+                <div>
+                    <div class="text-warning fw-bold fs-4">{{ channel_tokens_spent|intcomma }}</div>
+                    <div class="text-muted fs-xs">توکن مصرف‌شده ({{ channel_tokens_toman|intcomma }} ت)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ۲ نمودار تحلیلی: نمودار خطی زنده (بدون رفرش، ۲۴ساعت/۷/۱۴/۳۰ + تب ارسال/توکن) + دونات نوع محتوا -->
+    <div class="row g-4 mb-4 wf-reveal wf-delay-1">
+        <div class="col-lg-8">
+            <div class="wf-ch-card p-4 h-100">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h6 class="text-white fw-bold mb-0 fs-sm d-flex align-items-center gap-2">
+                            <i class="bi bi-graph-up text-info"></i> نمودار عملکرد کانال
+                        </h6>
+                        <div class="wf-chart-range-tabs ms-1" style="background:rgba(255,255,255,0.05);padding:3px;border-radius:999px;">
+                            <button type="button" class="wf-chart-range-btn wf-ch-mode-btn is-active" data-mode="deliveries">
+                                <i class="bi bi-send-check me-1"></i>ارسال‌ها
+                            </button>
+                            <button type="button" class="wf-chart-range-btn wf-ch-mode-btn" data-mode="tokens">
+                                <i class="bi bi-coin text-warning me-1"></i>مصرف توکن
+                            </button>
+                        </div>
+                    </div>
+                    <div class="wf-chart-range-tabs">
+                        <button type="button" class="wf-chart-range-btn wf-ch-range-btn is-active" data-range="24h">۲۴ ساعت</button>
+                        <button type="button" class="wf-chart-range-btn wf-ch-range-btn" data-range="7d">۷ روز</button>
+                        <button type="button" class="wf-chart-range-btn wf-ch-range-btn" data-range="14d">۱۴ روز</button>
+                        <button type="button" class="wf-chart-range-btn wf-ch-range-btn" data-range="30d">۳۰ روز</button>
+                    </div>
+                </div>
+                <div style="height:255px;position:relative;">
+                    <canvas id="wfChannelLineChart" data-series='{{ channel_chart_series_json|safe }}'></canvas>
+                    <div id="wfChannelChartEmpty" class="position-absolute top-50 start-50 translate-middle text-center w-100 px-3" style="display:none;">
+                        <i class="bi bi-graph-up fs-1 text-muted d-block mb-2"></i>
+                        <div class="text-muted fs-xs">در این بازه زمانی هنوز ارسالی برای این کانال ثبت نشده است.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="wf-ch-card p-4 h-100">
+                <h6 class="text-white fw-bold mb-3 fs-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-pie-chart-fill text-warning"></i> تفکیک نوع محتوای ارسال‌شده
+                </h6>
+                <div style="height:255px;position:relative;">
+                    <canvas id="wfChannelTypeChart" data-chart='{{ type_chart_json|safe }}'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تنظیمات هوش مصنوعی و امضای اختصاصی کانال + آزمایشگاه تست زنده -->
+    <div class="row g-4 mb-4 wf-reveal wf-delay-2">
+        <div class="col-lg-7">
+            <div class="wf-ch-card p-4 h-100">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-3 border-bottom border-light">
+                    <div>
+                        <h5 class="text-white fw-bold mb-1 fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-stars text-warning"></i> تنظیمات هوش مصنوعی و امضای اختصاصی کانال
+                        </h5>
+                        <p class="text-muted fs-xs mb-0">
+                            تنظیمات این بخش به صورت خودکار روی همه ارسال‌های این کانال (وب، ربات و هاب) اعمال می‌شود.
+                        </p>
+                    </div>
+                    <span class="wf-pill-tag is-gold">+{{ ai_extra_cost }} توکن در هر ارسال</span>
+                </div>
+
+                <form method="post" id="wfWatermarkForm" data-show-eitaa-id="{% if show_eitaa_username_field %}1{% else %}0{% endif %}">
+                    {% csrf_token %}
+                    <label class="text-white fw-bold fs-xs mb-2 d-block">حالت پردازش امضای متنی / کپشن:</label>
+                    <div class="d-flex flex-column gap-2 mb-4">
+                        <label class="wf-wm-option {% if channel.watermark_mode == 'off' %}is-active{% endif %}">
+                            <div class="d-flex align-items-start gap-2">
+                                <input class="form-check-input mt-1 wf-wm-radio" type="radio" name="watermark_mode" value="off"
+                                       {% if channel.watermark_mode == 'off' %}checked{% endif %}>
+                                <div>
+                                    <div class="text-white fw-bold fs-sm">غیرفعال (ارسال بدون تغییر)</div>
+                                    <div class="text-muted fs-xs">متن و کپشن پیام دقیقاً بدون دستکاری ارسال می‌شود و هزینه AI کسر نمی‌گردد.</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="wf-wm-option {% if channel.watermark_mode == 'remove_append' %}is-active{% endif %}">
+                            <div class="d-flex align-items-start gap-2">
+                                <input class="form-check-input mt-1 wf-wm-radio" type="radio" name="watermark_mode" value="remove_append"
+                                       {% if channel.watermark_mode == 'remove_append' %}checked{% endif %}>
+                                <div>
+                                    <div class="text-white fw-bold fs-sm">حذف امضای مبدا + افزودن امضای اختصاصی</div>
+                                    <div class="text-muted fs-xs">هوش مصنوعی آیدی، لینک و امضای کانال مبدا را پاک می‌کند و امضای اختصاصی شما را زیر پیام می‌گذارد.</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="wf-wm-option {% if channel.watermark_mode == 'rewrite' %}is-active{% endif %}">
+                            <div class="d-flex align-items-start gap-2">
+                                <input class="form-check-input mt-1 wf-wm-radio" type="radio" name="watermark_mode" value="rewrite"
+                                       {% if channel.watermark_mode == 'rewrite' %}checked{% endif %}>
+                                <div>
+                                    <div class="text-white fw-bold fs-sm">بازسازی هوشمند امضا با اطلاعات این کانال</div>
+                                    <div class="text-muted fs-xs">ساختار امضای کانال مبدا حفظ می‌شود ولی نام و آیدی مبدا با نام و آیدی «{{ channel.title }}» جایگزین می‌گردد.</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- فیلد امضای اختصاصی (فقط در حالت حذف امضای مبدا + امضای اختصاصی) -->
+                    <div class="mb-3 d-none" id="wfCustomSigGroup">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label for="id_custom_signature" class="text-white fw-bold fs-xs mb-0">
+                                <i class="bi bi-pen-fill text-primary me-1"></i> امضای اختصاصی کانال «{{ channel.title }}»:
+                            </label>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-light rounded-pill px-2 py-0 fs-xs wf-insert-token"
+                                        data-insert="{{ channel.title }}">+ نام کانال</button>
+                                {% if channel.username %}
+                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2 py-0 fs-xs wf-insert-token"
+                                        data-insert="@{{ channel.username }}">+ @{{ channel.username }}</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <textarea name="custom_signature" id="id_custom_signature" rows="4" maxlength="1500"
+                                  class="form-control form-control-light"
+                                  placeholder="مثلاً:&#10;📢 با ما در {{ channel.title }} همراه باشید&#10;🆔 {% if channel.username %}@{{ channel.username }}{% else %}@your_channel{% endif %}">{{ channel.custom_signature }}</textarea>
+                        <div class="text-muted fs-xs mt-1">
+                            اگر این کادر خالی باشد، فقط امضای کانال مبدا حذف می‌شود.
+                        </div>
+                    </div>
+
+                    <!-- فیلد یوزرنیم کانال ایتا (فقط زمانی که پلتفرم ایتا است و یوزرنیم از قبل ثبت نشده) -->
+                    {% if show_eitaa_username_field %}
+                    <div class="mb-4 d-none" id="wfDisplayIdGroup">
+                        <label for="id_watermark_display_id" class="text-white fw-bold fs-xs mb-2 d-block">
+                            <i class="bi bi-at text-info me-1"></i> یوزرنیم یا لینک کانال ایتا (برای درج در امضا):
+                        </label>
+                        <input type="text" name="watermark_display_id" id="id_watermark_display_id" maxlength="160"
+                               value="{{ channel.watermark_display_id }}"
+                               class="form-control form-control-light" dir="ltr"
+                               placeholder="مثلاً @my_eitaa_channel">
+                        <div class="text-muted fs-xs mt-1">
+                            چون کانال‌های ایتا به‌صورت پیش‌فرض یوزرنیم ندارند، آیدی کانال خود را اینجا وارد کنید تا در امضای هوشمند استفاده شود.
+                        </div>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="watermark_display_id" id="id_watermark_display_id" value="{{ channel.watermark_display_id }}">
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="wf-btn wf-btn-emerald px-4 py-2">
+                            <i class="bi bi-check2-circle"></i> ذخیره تنظیمات امضای کانال
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- آزمایشگاه تست زنده AI -->
+        <div class="col-lg-5">
+            <div class="wf-ch-card p-4 h-100 d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom border-light">
+                    <h5 class="text-white fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
+                        <i class="bi bi-magic text-info"></i> تست زنده امضای هوشمند
+                    </h5>
+                    <span class="wf-pill-tag is-blue">پیش‌نمایش واقعی</span>
+                </div>
+                <p class="text-muted fs-xs mb-3">
+                    یک پیام نمونه (دارای امضای کانال دیگر) وارد کن و همین‌جا بدون ذخیره یا ارسال واقعی، خروجی AI را برای تنظیمات فعلی ببین:
+                </p>
+
+                <textarea id="wfSampleWatermarkInput" rows="5" class="form-control form-control-light mb-3"
+                          placeholder="مثلاً:&#10;نکته مهم امروز برای رشد کسب‌وکارهای آنلاین...&#10;&#10;در کانال لذت دانایی با ما همراه باشید 👇&#10;@lezat_danaei"></textarea>
+
+                <button type="button" id="wfRunWatermarkTestBtn"
+                        data-url="{% url 'broadcast:channel_test_watermark' channel.pk %}"
+                        class="wf-btn wf-btn-orange w-100 justify-content-center py-2 mb-3">
+                    <i class="bi bi-sparkles"></i> اجرای تست پردازش امضا
+                </button>
+
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-white fw-bold fs-xs">خروجی نهایی برای «{{ channel.title }}»:</span>
+                    <span id="wfTestMetaBadge" class="fs-xs text-muted"></span>
+                </div>
+                <div id="wfSandboxOutput" class="wf-sandbox-output flex-grow-1">خروجی پردازش‌شده توسط هوش مصنوعی اینجا نمایش داده می‌شود...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- پکیج‌ها و هاب‌های متصل + لیست اسکرول‌پذیر ۱۰ ارسال اخیر کانال -->
+    <div class="row g-4 wf-reveal wf-delay-2">
+        <div class="col-lg-4">
+            <div class="wf-ch-card p-4 mb-4">
+                <h6 class="text-white fw-bold mb-3 fs-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-box-seam-fill text-primary"></i> پکیج‌های شامل این کانال
+                </h6>
+                {% if connected_presets %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for p in connected_presets %}
+                            <a href="{% url 'broadcast:preset_edit' p.pk %}" class="wf-pill-tag is-purple text-decoration-none">
+                                <i class="bi bi-collection-fill"></i> {{ p.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted fs-xs mb-0">این کانال هنوز عضو هیچ پکیج ارسالی نیست.</p>
+                {% endif %}
+            </div>
+
+            <div class="wf-ch-card p-4">
+                <h6 class="text-white fw-bold mb-3 fs-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-diagram-3-fill text-success"></i> هاب‌های تیمی متصل
+                </h6>
+                {% if connected_hubs %}
+                    <div class="d-flex flex-column gap-2">
+                        {% for h in connected_hubs %}
+                            <a href="{% url 'broadcast:hub_edit' h.pk %}" class="d-flex align-items-center justify-content-between p-2 rounded-3 text-decoration-none"
+                               style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                                <span class="text-white fs-xs fw-bold">{{ h.title }}</span>
+                                <span class="wf-pill-tag is-emerald">{{ h.platform.name }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted fs-xs mb-0">هنوز هیچ هاب تیمی به این کانال متصل نشده است.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="wf-ch-card overflow-hidden">
+                <div class="p-3 px-4 border-bottom border-light d-flex align-items-center justify-content-between">
+                    <h6 class="text-white fw-bold mb-0 fs-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-info"></i> ۱۰ ارسال اخیر این کانال
+                    </h6>
+                    <span class="wf-pill-tag is-purple">{{ recent_targets|length }} مورد اخیر</span>
+                </div>
+                {% if recent_targets %}
+                <div class="table-responsive wf-recent-scroll">
+                    <table class="table table-dark table-borderless align-middle mb-0">
+                        <thead style="position:sticky;top:0;background:#1c182c;z-index:2;">
+                            <tr class="text-muted fs-xs border-bottom border-light">
+                                <th class="ps-4">جاب</th>
+                                <th>محتوا</th>
+                                <th>وضعیت</th>
+                                <th>زمان</th>
+                                <th class="text-end pe-4">گزارش</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in recent_targets %}
+                            <tr class="border-bottom border-light" style="border-color:rgba(255,255,255,0.06)!important;">
+                                <td class="ps-4 fw-bold text-white fs-xs">#{{ t.job_id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="wf-pill-tag is-blue">{{ t.job.message.get_content_type_display }}</span>
+                                        <span class="text-light fs-xs text-truncate" style="max-width:250px;">
+                                            {{ t.job.message.text|default:"(رسانه بدون متن)"|truncatechars:58 }}
+                                        </span>
+                                    </div>
+                                    {% if t.error_message %}
+                                        <div class="text-danger mt-1" style="font-size:0.7rem;">{{ t.error_message|truncatechars:90 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.status == 'success' %}
+                                        <span class="wf-pill-tag is-emerald">موفق</span>
+                                    {% elif t.status == 'skipped' %}
+                                        <span class="wf-pill-tag is-gold">رد شده</span>
+                                    {% elif t.status == 'failed' %}
+                                        <span class="wf-pill-tag is-danger">ناموفق</span>
+                                    {% else %}
+                                        <span class="wf-pill-tag is-blue">{{ t.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted fs-xs">{{ t.created_at|date:"Y/m/d H:i" }}</td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'broadcast:job_detail' t.job_id %}" class="wf-btn wf-btn-glass py-1 px-2 fs-xs">
+                                        مشاهده <i class="bi bi-arrow-left-short"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted fs-xs">
+                    هنوز هیچ ارسالی برای این کانال ثبت نشده است.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // 1. کنترل هوشمند نمایش فیلدهای امضای AI بر اساس حالت انتخابی + شرط کانال ایتا
+    const formEl = document.getElementById("wfWatermarkForm");
+    const showEitaaId = formEl && formEl.dataset.showEitaaId === "1";
+    const radios = document.querySelectorAll(".wf-wm-radio");
+    const sigGroup = document.getElementById("wfCustomSigGroup");
+    const displayIdGroup = document.getElementById("wfDisplayIdGroup");
+
+    function syncWatermarkFields() {
+        let activeMode = "off";
+        radios.forEach(function (r) {
+            const card = r.closest(".wf-wm-option");
+            if (card) card.classList.toggle("is-active", r.checked);
+            if (r.checked) activeMode = r.value;
+        });
+
+        if (sigGroup) {
+            sigGroup.classList.toggle("d-none", activeMode !== "remove_append");
+        }
+        if (displayIdGroup) {
+            const shouldShowEitaa = showEitaaId && (activeMode === "remove_append" || activeMode === "rewrite");
+            displayIdGroup.classList.toggle("d-none", !shouldShowEitaa);
+        }
+    }
+    radios.forEach(function (r) { r.addEventListener("change", syncWatermarkFields); });
+    syncWatermarkFields();
+
+    // 2. دکمه‌های درج سریع در امضای اختصاصی
+    const sigInput = document.getElementById("id_custom_signature");
+    document.querySelectorAll(".wf-insert-token").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (!sigInput) return;
+            const snippet = btn.dataset.insert || "";
+            const start = sigInput.selectionStart || sigInput.value.length;
+            const end = sigInput.selectionEnd || sigInput.value.length;
+            sigInput.value = sigInput.value.slice(0, start) + snippet + sigInput.value.slice(end);
+            sigInput.focus();
+        });
+    });
+
+    // 3. تست زنده امضای هوشمند AI
+    const testBtn = document.getElementById("wfRunWatermarkTestBtn");
+    const sampleInput = document.getElementById("wfSampleWatermarkInput");
+    const outBox = document.getElementById("wfSandboxOutput");
+    const metaBadge = document.getElementById("wfTestMetaBadge");
+    const displayIdInput = document.getElementById("id_watermark_display_id");
+    const csrfToken = document.querySelector('#wfWatermarkForm input[name="csrfmiddlewaretoken"]')?.value || "";
+
+    if (testBtn && sampleInput && outBox) {
+        testBtn.addEventListener("click", async function () {
+            const text = (sampleInput.value || "").trim();
+            if (!text) {
+                outBox.textContent = "لطفاً ابتدا یک متن نمونه در کادر بالا وارد کنید.";
+                return;
+            }
+            const checkedMode = document.querySelector(".wf-wm-radio:checked")?.value || "off";
+            testBtn.disabled = true;
+            const oldHtml = testBtn.innerHTML;
+            testBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> در حال پردازش با هوش مصنوعی...';
+            outBox.textContent = "در حال ارتباط با هوش مصنوعی...";
+            if (metaBadge) metaBadge.textContent = "";
+
+            try {
+                const resp = await fetch(testBtn.dataset.url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                    },
+                    body: JSON.stringify({
+                        sample_text: text,
+                        watermark_mode: checkedMode,
+                        custom_signature: sigInput ? sigInput.value : "",
+                        watermark_display_id: displayIdInput ? displayIdInput.value : "",
+                    }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    outBox.textContent = data.output_text || "";
+                    if (metaBadge) {
+                        metaBadge.textContent = data.watermark_found
+                            ? "✅ امضا شناسایی و پردازش شد"
+                            : "ℹ️ امضایی در متن یافت نشد";
+                    }
+                } else {
+                    outBox.textContent = "❌ " + (data.error || "خطا در پردازش هوش مصنوعی");
+                }
+            } catch (err) {
+                outBox.textContent = "❌ خطا در ارتباط با سرور.";
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = oldHtml;
+            }
+        });
+    }
+
+    // 4. نمودار خطی زنده کانال (۲۴ ساعت / ۷ / ۱۴ / ۳۰ روز + سوییچ ارسال‌ها / مصرف توکن بدون رفرش)
+    const lineCanvas = document.getElementById("wfChannelLineChart");
+    const emptyEl = document.getElementById("wfChannelChartEmpty");
+    if (lineCanvas && window.Chart) {
+        const seriesMap = JSON.parse(lineCanvas.dataset.series || "{}");
+        let activeRange = "24h";
+        let activeMode = "deliveries";
+
+        const ctx = lineCanvas.getContext("2d");
+        const gradGreen = ctx.createLinearGradient(0, 0, 0, 240);
+        gradGreen.addColorStop(0, "rgba(7, 201, 139, 0.32)");
+        gradGreen.addColorStop(1, "rgba(7, 201, 139, 0.0)");
+
+        const gradGold = ctx.createLinearGradient(0, 0, 0, 240);
+        gradGold.addColorStop(0, "rgba(253, 188, 49, 0.35)");
+        gradGold.addColorStop(1, "rgba(253, 188, 49, 0.0)");
+
+        const chChart = new Chart(ctx, {
+            type: "line",
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { labels: { color: "#d5d2e0", usePointStyle: true } },
+                },
+                scales: {
+                    x: { ticks: { color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                    y: { beginAtZero: true, ticks: { precision: 0, color: "#9691a4" }, grid: { color: "rgba(255,255,255,0.06)" } },
+                },
+            },
+        });
+
+        function renderChannelChart() {
+            const s = seriesMap[activeRange] || { labels: [], success: [], failed: [], tokens: [] };
+            const hasPoints = (s.labels || []).length > 0;
+            if (emptyEl) emptyEl.style.display = hasPoints ? "none" : "block";
+            lineCanvas.style.opacity = hasPoints ? "1" : "0.15";
+
+            chChart.data.labels = s.labels || [];
+            if (activeMode === "tokens") {
+                chChart.data.datasets = [
+                    {
+                        label: "مصرف توکن",
+                        data: s.tokens || [],
+                        borderColor: "#fdbc31",
+                        backgroundColor: gradGold,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: "#fdbc31",
+                    },
+                ];
+            } else {
+                chChart.data.datasets = [
+                    {
+                        label: "ارسال موفق",
+                        data: s.success || [],
+                        borderColor: "#07c98b",
+                        backgroundColor: gradGreen,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: "#07c98b",
+                    },
+                    {
+                        label: "ناموفق / ردشده",
+                        data: s.failed || [],
+                        borderColor: "#f23c49",
+                        backgroundColor: "rgba(242, 60, 73, 0.12)",
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointBackgroundColor: "#f23c49",
+                    },
+                ];
+            }
+            chChart.update();
+        }
+
+        document.querySelectorAll(".wf-ch-range-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                activeRange = btn.dataset.range;
+                document.querySelectorAll(".wf-ch-range-btn").forEach(function (b) {
+                    b.classList.toggle("is-active", b === btn);
+                });
+                renderChannelChart();
+            });
+        });
+
+        document.querySelectorAll(".wf-ch-mode-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                activeMode = btn.dataset.mode;
+                document.querySelectorAll(".wf-ch-mode-btn").forEach(function (b) {
+                    b.classList.toggle("is-active", b === btn);
+                });
+                renderChannelChart();
+            });
+        });
+
+        renderChannelChart();
+    }
+
+    // 5. نمودار دونات تفکیک نوع محتوا
+    const typeCanvas = document.getElementById("wfChannelTypeChart");
+    if (typeCanvas && window.Chart) {
+        const cd = JSON.parse(typeCanvas.dataset.chart || "{}");
+        const hasData = (cd.values || []).some(function (v) { return v > 0; });
+        new Chart(typeCanvas.getContext("2d"), {
+            type: "doughnut",
+            data: {
+                labels: hasData ? cd.labels : ["بدون داده"],
+                datasets: [{
+                    data: hasData ? cd.values : [1],
+                    backgroundColor: hasData
+                        ? ["#5d3cf2", "#07c98b", "#fd5631", "#38bdf8", "#fdbc31", "#ec4899", "#a78bfa", "#14b8a6"]
+                        : ["rgba(255,255,255,0.08)"],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "62%",
+                plugins: { legend: { position: "bottom", labels: { color: "#d5d2e0", boxWidth: 12 } } },
+            },
+        });
+    }
+});
+</script>
+{% endblock %}

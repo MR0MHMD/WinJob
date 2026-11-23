@@ -1,0 +1,501 @@
+{% extends "parent/base.html" %}
+{% load static humanize %}
+
+{% block title %}وین‌فوروارد | انتشار هم‌زمان و هوشمند در ۵ پیام‌رسان با هوش مصنوعی{% endblock %}
+{% block description %}وین‌فوروارد، سرویس جدید وینجاب برای انتشار یک‌کلیکی پست‌ها در تلگرام، بله، ایتا، روبیکا و سروش‌پلاس با حذف و بازسازی امضا توسط هوش مصنوعی، هاب تیمی و ۳۵۰ توکن هدیه رایگان بدون انقضا.{% endblock %}
+{% block og_title %}وین‌فوروارد | یک بار بفرست، هم‌زمان در ۵ پیام‌رسان منتشر کن{% endblock %}
+{% block og_description %}آشنایی با وین‌فوروارد وینجاب؛ انتشار هم‌زمان از پنل وب و ربات، امضای هوشمند با هوش مصنوعی، پکیج کانال‌ها، هاب تیمی و سیستم توکن بدون تاریخ انقضا.{% endblock %}
+
+{% block extra_head %}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="وین‌فوروارد | انتشار هوشمند در ۵ پیام‌رسان">
+    <meta name="twitter:description" content="سرویس جدید وینجاب برای مدیریت و انتشار هم‌زمان کانال‌های تلگرام، بله، ایتا، روبیکا و سروش‌پلاس با هوش مصنوعی.">
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "وین‌فوروارد (WinForward)",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web, Telegram, Bale",
+          "description": "پلتفرم انتشار هم‌زمان پست و رسانه در ۵ پیام‌رسان تلگرام، بله، ایتا، روبیکا و سروش‌پلاس با امضای هوشمند هوش مصنوعی و هاب تیمی.",
+          "url": "https://winjob.ir/winforward/",
+          "inLanguage": "fa-IR",
+          "publisher": {"@type": "Organization", "name": "وینجاب", "url": "https://winjob.ir/"}
+        }
+    </script>
+{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="{% static 'core/css/pages/winforward_landing.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="wfl-shell">
+    <div class="wfl-grid-bg" aria-hidden="true"></div>
+    <div class="wfl-aurora wfl-aurora-1" aria-hidden="true"></div>
+    <div class="wfl-aurora wfl-aurora-2" aria-hidden="true"></div>
+    <div class="wfl-aurora wfl-aurora-3" aria-hidden="true"></div>
+
+    <!-- ══════════ ۱. هیرو سینمایی با شبکه فیبر نوری SVG ══════════ -->
+    <section class="wfl-hero">
+        <div class="container position-relative" style="z-index:2;">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6" data-wfl-reveal>
+                    <span class="wfl-kicker">
+                        <span class="wfl-live-dot"></span> سرویس جدید و فعال وینجاب · وین‌فوروارد
+                    </span>
+                    <h1 class="wfl-hero-title">
+                        یک بار بفرست، <br>
+                        <span class="wfl-gradient-text">هم‌زمان در ۵ پیام‌رسان</span> بدرخش!
+                    </h1>
+                    <p class="wfl-hero-lead">
+                        کپی‌پیست دستی بین تلگرام، بله، ایتا، روبیکا و سروش‌پلاس را برای همیشه کنار بگذار. از استودیو وب یا مستقیم داخل ربات پست بفرست تا <strong>هوش مصنوعی</strong> امضای هر کانال را اختصاصی بسازد و در چند ثانیه منتشر کند.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'broadcast:dashboard' %}" class="wfl-btn wfl-btn-primary">
+                            <i class="bi bi-gift-fill"></i> دریافت {{ pricing.free_gift_tokens }} توکن رایگان و شروع
+                        </a>
+                        <a href="#wf-interactive-demo" class="wfl-btn wfl-btn-ghost">
+                            <i class="bi bi-play-circle-fill text-info"></i> تست زنده در همین صفحه
+                        </a>
+                    </div>
+
+                    <div class="wfl-hero-stats">
+                        <div class="wfl-stat-box">
+                            <div class="wfl-stat-num" data-wfl-count="5" data-wfl-suffix=" پلتفرم">۵ پلتفرم</div>
+                            <div class="wfl-stat-lbl">انتشار هم‌زمان یک‌کلیکی</div>
+                        </div>
+                        <div class="wfl-stat-box">
+                            <div class="wfl-stat-num text-warning" data-wfl-count="{{ pricing.free_gift_tokens }}" data-wfl-suffix=" توکن">{{ pricing.free_gift_tokens }} توکن</div>
+                            <div class="wfl-stat-lbl">هدیه شروع بدون انقضا</div>
+                        </div>
+                        <div class="wfl-stat-box">
+                            <div class="wfl-stat-num text-success" data-wfl-count="100" data-wfl-suffix="٪">۱۰۰٪</div>
+                            <div class="wfl-stat-lbl">کسر فقط در تحویل موفق</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صحنه ۳بعدی شبکه نوری SVG -->
+                <div class="col-lg-6" data-wfl-reveal>
+                    <div class="wfl-hub-stage">
+                        <div class="wfl-hub-ring" aria-hidden="true"></div>
+                        <div class="wfl-float-pill pill-top">
+                            <i class="bi bi-stars text-warning"></i> اسکن و بازسازی امضا با AI
+                        </div>
+                        <div class="wfl-float-pill pill-bot">
+                            <i class="bi bi-shield-check text-success"></i> بدون نیاز به اشتراک ماهانه
+                        </div>
+
+                        <div class="wfl-stage-topbar">
+                            <span class="wfl-dots"><i></i><i></i><i></i></span>
+                            <span class="fw-bold text-white">WinForward · Live Neural Router</span>
+                            <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2">۵/۵ آنلاین</span>
+                        </div>
+
+                        <div class="wfl-source-card">
+                            <div class="wfl-laser-bar" aria-hidden="true"></div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="badge rounded-pill" style="background:rgba(253,86,49,0.2);color:#ff8a6b;font-size:0.7rem;">
+                                    <i class="bi bi-broadcast-pin me-1"></i> ورودی واحد (وب / ربات / هاب)
+                                </span>
+                                <span class="text-info" style="font-size:0.72rem;"><i class="bi bi-cpu-fill"></i> AI Active</span>
+                            </div>
+                            <p id="wflHeroLivePost" class="text-white mb-2" style="font-size:0.84rem;line-height:1.8;transition:opacity 0.25s ease;min-height:48px;">
+                                گزارش ویژه بازار دیجیتال امروز منتشر شد؛ برای بررسی جزئیات کامل همراه ما باشید...
+                            </p>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top border-light" style="font-size:0.72rem;">
+                                <span id="wflHeroOldSig" class="text-danger text-decoration-line-through opacity-75">@source_channel</span>
+                                <span id="wflHeroNewSig" class="text-success fw-bold">✨ جایگزین با امضای اختصاصی هر کانال</span>
+                            </div>
+                        </div>
+
+                        <!-- شبکه خمیده فیبر نوری SVG -->
+                        <svg class="wfl-fiber-svg" viewBox="0 0 500 68" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="wflBeamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="#fd5631"/>
+                                    <stop offset="50%" stop-color="#a78bfa"/>
+                                    <stop offset="100%" stop-color="#07c98b"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="wfl-fiber-base" d="M250,0 C250,36 50,24 50,68"/>
+                            <path class="wfl-fiber-base" d="M250,0 C250,36 150,24 150,68"/>
+                            <path class="wfl-fiber-base" d="M250,0 L250,68"/>
+                            <path class="wfl-fiber-base" d="M250,0 C250,36 350,24 350,68"/>
+                            <path class="wfl-fiber-base" d="M250,0 C250,36 450,24 450,68"/>
+
+                            <path class="wfl-fiber-pulse p1" stroke="url(#wflBeamGrad)" d="M250,0 C250,36 50,24 50,68"/>
+                            <path class="wfl-fiber-pulse p2" stroke="url(#wflBeamGrad)" d="M250,0 C250,36 150,24 150,68"/>
+                            <path class="wfl-fiber-pulse p3" stroke="url(#wflBeamGrad)" d="M250,0 L250,68"/>
+                            <path class="wfl-fiber-pulse p4" stroke="url(#wflBeamGrad)" d="M250,0 C250,36 350,24 350,68"/>
+                            <path class="wfl-fiber-pulse p5" stroke="url(#wflBeamGrad)" d="M250,0 C250,36 450,24 450,68"/>
+                        </svg>
+
+                        <div class="wfl-node-grid">
+                            {% for p in forward_platforms %}
+                            <div class="wfl-node-card">
+                                <span class="wfl-node-badge"><i class="bi bi-check-lg"></i></span>
+                                {% if p.logo_url %}
+                                    <img src="{{ p.logo_url }}" alt="{{ p.name }}">
+                                {% else %}
+                                    <i class="bi {{ p.icon }} fs-4 text-info"></i>
+                                {% endif %}
+                                <span>{{ p.name }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ نوار حرکت پیوسته قابلیت‌ها (Infinite Marquee) ══════════ -->
+    <div class="wfl-marquee" aria-hidden="true">
+        <div class="wfl-marquee-track">
+            <span class="wfl-marquee-chip"><i class="bi bi-telegram text-info"></i> تلگرام</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-send-check-fill text-success"></i> بله</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-broadcast-pin text-warning"></i> ایتا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-phone-vibrate-fill" style="color:#c4b5fd;"></i> روبیکا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-chat-dots-fill text-info"></i> سروش‌پلاس</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-stars text-warning"></i> امضای هوشمند AI</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-diagram-3-fill text-success"></i> هاب تیمی بدون ریسک ادمین</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-coin text-warning"></i> توکن بدون انقضا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-link-45deg text-info"></i> گزارش عمومی کارفرما</span>
+            <!-- تکرار برای حلقه بی‌وقفه -->
+            <span class="wfl-marquee-chip"><i class="bi bi-telegram text-info"></i> تلگرام</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-send-check-fill text-success"></i> بله</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-broadcast-pin text-warning"></i> ایتا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-phone-vibrate-fill" style="color:#c4b5fd;"></i> روبیکا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-chat-dots-fill text-info"></i> سروش‌پلاس</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-stars text-warning"></i> امضای هوشمند AI</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-diagram-3-fill text-success"></i> هاب تیمی بدون ریسک ادمین</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-coin text-warning"></i> توکن بدون انقضا</span>
+            <span class="wfl-marquee-chip"><i class="bi bi-link-45deg text-info"></i> گزارش عمومی کارفرما</span>
+        </div>
+    </div>
+
+    <!-- ══════════ ۲. Bento Grid سینمایی قابلیت‌ها (نامتقارن + Spotlight Hover) ══════════ -->
+    <section class="wfl-section">
+        <div class="container">
+            <div class="text-center mb-5" data-wfl-reveal>
+                <span class="wfl-eyebrow"><i class="bi bi-grid-1x2-fill"></i> معماری هوشمند وین‌فوروارد</span>
+                <h2 class="text-white fw-bold h2 mb-2">همه‌چیز برای مدیریت حرفه‌ای کانال‌ها در یک قاب</h2>
+                <p class="text-muted mx-auto" style="max-width:620px;font-size:0.92rem;">
+                    هر بخش طوری ساخته شده که کار روزانه ادمین‌ها و تیم‌های تولید محتوا را از ده‌ها دقیقه به چند ثانیه کاهش دهد.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <!-- کارت عریض ۱: امضای هوشمند AI -->
+                <div class="col-lg-7" data-wfl-reveal>
+                    <div class="wfl-spot-card">
+                        <div class="row align-items-center g-3 h-100">
+                            <div class="col-md-7">
+                                <div class="wfl-bento-icon" style="background:rgba(109,74,255,0.22);color:#c4b5fd;">
+                                    <i class="bi bi-stars"></i>
+                                </div>
+                                <h3 class="h4 text-white fw-bold mb-2">امضای هوشمند با هوش مصنوعی</h3>
+                                <p class="text-muted fs-xs mb-3" style="line-height:1.95;">
+                                    پست‌های فورواردشده را دیگر دستی ویرایش نکن! هوش مصنوعی امضا، آیدی و لینک کانال مبدا را دقیق تشخیص می‌دهد؛ یا آن را حذف کرده و امضای اختصاصی هر کانال را می‌چسباند، یا دقیقاً بر اساس پلتفرم مقصد (بله، ایتا، تلگرام و...) بازسازی می‌کند.
+                                </p>
+                                <span class="badge rounded-pill px-3 py-2" style="background:rgba(253,188,49,0.16);color:#fdbc31;font-size:0.74rem;">
+                                    فقط +{{ pricing.ai_watermark_extra_cost }} توکن در هر کانال فعال
+                                </span>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="p-3 rounded-4" style="background:rgba(10,8,18,0.85);border:1px solid rgba(139,92,246,0.3);font-size:0.75rem;line-height:1.8;">
+                                    <div class="text-danger text-decoration-line-through opacity-75 mb-2">
+                                        در کانال لذت دانایی همراه باشید<br>@lezat_danaei
+                                    </div>
+                                    <div class="text-center text-info my-1"><i class="bi bi-arrow-down-circle-fill"></i></div>
+                                    <div class="text-success fw-bold">
+                                        در کانال وین‌جاب همراه باشید<br>[کانال بله](ble.ir/winjob)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- کارت ۲: توکن بدون انقضا + سکه طلایی ۳۵۰ -->
+                <div class="col-lg-5" data-wfl-reveal>
+                    <div class="wfl-spot-card d-flex flex-column justify-content-between" style="border-color:rgba(253,188,49,0.28);">
+                        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                            <div>
+                                <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2 py-1 mb-2 fs-xs">خداحافظی با اشتراک ماهانه</span>
+                                <h3 class="h4 text-white fw-bold mb-0">کیف توکن بدون انقضا</h3>
+                            </div>
+                            <div class="wfl-gold-coin">
+                                <span style="font-size:1.35rem;line-height:1;">{{ pricing.free_gift_tokens }}</span>
+                                <span style="font-size:0.62rem;">توکن هدیه</span>
+                            </div>
+                        </div>
+                        <p class="text-muted fs-xs mb-3" style="line-height:1.95;">
+                            توکن‌هایت هیچ‌وقت منقضی نمی‌شوند، هر ۵ پلتفرم از روز اول باز است و فقط برای تحویل‌های <strong>موفق</strong> توکن کسر می‌شود.
+                        </p>
+                        <a href="{% url 'forward_subscriptions:plans' %}" class="text-warning fw-bold fs-xs text-decoration-none">
+                            مشاهده تعرفه و دریافت هدیه رایگان <i class="bi bi-arrow-left ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- کارت ۳: هاب تیمی -->
+                <div class="col-md-6 col-lg-4" data-wfl-reveal>
+                    <div class="wfl-spot-card">
+                        <div class="wfl-bento-icon" style="background:rgba(7,201,139,0.18);color:#07c98b;">
+                            <i class="bi bi-diagram-3-fill"></i>
+                        </div>
+                        <h3 class="h5 text-white fw-bold mb-2">هاب‌های تیمی بدون ریسک ادمین</h3>
+                        <p class="text-muted fs-xs mb-0" style="line-height:1.9;">
+                            گروه خصوصی تیمت در بله یا تلگرام را به وین‌فوروارد وصل کن؛ اعضا بدون اینکه ادمین کانال‌ها باشند پست می‌گذارند و خودکار با ری‌اکشن ✅ منتشر می‌شود.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- کارت ۴: پکیج‌های ارسال + پنل و ربات -->
+                <div class="col-md-6 col-lg-4" data-wfl-reveal>
+                    <div class="wfl-spot-card">
+                        <div class="wfl-bento-icon" style="background:rgba(253,86,49,0.18);color:#fd5631;">
+                            <i class="bi bi-collection-fill"></i>
+                        </div>
+                        <h3 class="h5 text-white fw-bold mb-2">پکیج یک‌کلیکی در وب و ربات</h3>
+                        <p class="text-muted fs-xs mb-0" style="line-height:1.9;">
+                            کانال‌هایت را در پکیج‌های «اخبار»، «فروش» یا «VIP» دسته‌بندی کن و هم از استودیو وب با پیش‌نمایش موبایل و هم مستقیم از ربات بله/تلگرام منتشر کن.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- کارت ۵: نمودار تحلیلی زنده + گزارش عمومی -->
+                <div class="col-lg-4" data-wfl-reveal>
+                    <div class="wfl-spot-card d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="wfl-bento-icon mb-0" style="background:rgba(56,189,248,0.18);color:#38bdf8;">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                </div>
+                                <svg class="wfl-mini-chart-svg" width="120" height="44" viewBox="0 0 120 44" aria-hidden="true">
+                                    <path class="line" d="M4,38 C22,34 30,22 48,26 C66,30 78,10 96,14 C106,16 112,6 118,4"/>
+                                </svg>
+                            </div>
+                            <h3 class="h5 text-white fw-bold mb-2">نمودار کانال و لینک گزارش کارفرما</h3>
+                            <p class="text-muted fs-xs mb-0" style="line-height:1.9;">
+                                نمودار خطی ۲۴ ساعته، هفتگی و ماهانه برای هر کانال + یک لینک گزارش عمومی تمیز و بدون نیاز به لاگین برای ارسال به کارفرما.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ ۳. مقایسه بصری: روش سنتی دستی vs وین‌فوروارد ══════════ -->
+    <section class="wfl-section pt-2">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-6" data-wfl-reveal>
+                    <div class="wfl-compare-bad">
+                        <span class="badge bg-danger bg-opacity-25 text-danger rounded-pill px-3 py-1 mb-2">روش قدیمی و دستی</span>
+                        <h3 class="h5 text-white fw-bold">کپی‌پیست طاقت‌فرسا در ۵ اپلیکیشن</h3>
+                        <ul class="wfl-compare-list text-muted">
+                            <li><i class="bi bi-x-circle-fill text-danger mt-1"></i> اتلاف روزانه ساعت‌ها وقت برای آپلود جداگانه یک فایل در بله، ایتا، روبیکا و تلگرام</li>
+                            <li><i class="bi bi-x-circle-fill text-danger mt-1"></i> فراموش کردن پاک کردن آیدی کانال مبدا و تبلیغ ناخواسته برای رقبا</li>
+                            <li><i class="bi bi-x-circle-fill text-danger mt-1"></i> ریسک امنیتی ادمین کردن کارمندان در کانال‌های اصلی برند</li>
+                            <li><i class="bi bi-x-circle-fill text-danger mt-1"></i> پرداخت اشتراک‌های ماهانه گران حتی در ماه‌هایی که ارسال کمی دارید</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-6" data-wfl-reveal>
+                    <div class="wfl-compare-good">
+                        <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-1 mb-2">روش مدرن با وین‌فوروارد</span>
+                        <h3 class="h5 text-white fw-bold">یک کلیک، ۵ پیام‌رسان، امضای اختصاصی با AI</h3>
+                        <ul class="wfl-compare-list text-light">
+                            <li><i class="bi bi-check-circle-fill text-success mt-1"></i> ارسال هم‌زمان به هر ۵ پیام‌رسان در چند ثانیه با نمایش وضعیت زنده در ربات</li>
+                            <li><i class="bi bi-check-circle-fill text-success mt-1"></i> حذف یا بازسازی خودکار امضا و لینک متناسب با هر پیام‌رسان توسط هوش مصنوعی</li>
+                            <li><i class="bi bi-check-circle-fill text-success mt-1"></i> هاب تیمی اختصاصی برای کارمندان بدون دسترسی مستقیم به کانال‌ها</li>
+                            <li><i class="bi bi-check-circle-fill text-success mt-1"></i> کیف توکن بدون انقضا + {{ pricing.free_gift_tokens }} توکن هدیه رایگان برای شروع</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ ۴. دموی تعاملی زنده ══════════ -->
+    <section class="wfl-section" id="wf-interactive-demo">
+        <div class="container">
+            <div class="text-center mb-5" data-wfl-reveal>
+                <span class="wfl-eyebrow"><i class="bi bi-lightning-charge-fill"></i> آزمایشگاه تعاملی</span>
+                <h2 class="text-white fw-bold h2 mb-2">همین‌جا زنده امتحانش کن</h2>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-7" data-wfl-reveal>
+                    <div class="wfl-spot-card">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <h3 class="h6 text-white fw-bold mb-0"><i class="bi bi-stars text-warning me-1"></i> شبیه‌ساز امضای هوشمند AI</h3>
+                            <div class="wfl-tab-bar">
+                                <button type="button" class="wfl-tab-btn is-active" data-wfl-ai-variant="custom">حذف + امضای اختصاصی</button>
+                                <button type="button" class="wfl-tab-btn" data-wfl-ai-variant="bale">بازسازی برای بله</button>
+                                <button type="button" class="wfl-tab-btn" data-wfl-ai-variant="eitaa">بازسازی برای ایتا</button>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="text-muted fs-xs mb-1">پیام فورواردشده (امضای کانال دیگر):</div>
+                                <div class="wfl-code-card text-muted">نکته طلایی امروز برای رشد کانال‌های محتوایی:
+انتشار منظم در ساعات اوج بازدید، نرخ تعامل را تا ۲ برابر بالا می‌برد.
+
+در کانال لذت دانایی با ما همراه باشید 👇
+🆔 [کانال بله](https://ble.ir/lezat) | [کانال ایتا](https://eitaa.com/lezat)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-success fs-xs fw-bold">خروجی هوشمند وین‌فوروارد:</span>
+                                    <span id="wflAiDemoBadge" class="badge bg-primary bg-opacity-25 text-info" style="font-size:0.65rem;">حذف امضای مبدا + امضای اختصاصی شما</span>
+                                </div>
+                                <div id="wflAiDemoOutput" class="wfl-code-card text-white" style="border-color:rgba(7,201,139,0.4);">نکته طلایی امروز برای رشد کانال‌های محتوایی:
+انتشار منظم در ساعات اوج بازدید، نرخ تعامل را تا ۲ برابر بالا می‌برد.
+
+✨ رسانه تخصصی وین‌جاب
+🆔 @winjob_official</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5" data-wfl-reveal>
+                    <div class="wfl-spot-card d-flex flex-column">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                            <h3 class="h6 text-white fw-bold mb-0"><i class="bi bi-robot text-info me-1"></i> تایم‌لاین زنده در ربات</h3>
+                            <button type="button" id="wflRunLiveSimBtn" class="wfl-btn wfl-btn-emerald py-1 px-3 fs-xs">
+                                <i class="bi bi-play-fill"></i> اجرای آزمایشی
+                            </button>
+                        </div>
+                        <div id="wflLiveSimBox" class="wfl-code-card text-white flex-grow-1" style="border-color:rgba(56,189,248,0.34);">روی دکمه «اجرای آزمایشی» کلیک کن تا ببینی ربات وین‌فوروارد هنگام انتشار یک پست چطور وضعیت هر ۵ پیام‌رسان را لحظه‌به‌لحظه آپدیت می‌کند!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ ۵. شفافیت تعرفه توکن ══════════ -->
+    <section class="wfl-section pt-2">
+        <div class="container">
+            <div class="wfl-spot-card p-4 p-md-5" data-wfl-reveal>
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-5">
+                        <span class="wfl-eyebrow"><i class="bi bi-coin text-warning"></i> تعرفه شفاف و بدون انقضا</span>
+                        <h2 class="text-white fw-bold h3 mb-3">فقط به اندازه تحویل موفق بپرداز!</h2>
+                        <p class="text-muted fs-xs mb-4" style="line-height:1.95;">
+                            با {{ pricing.free_gift_tokens }} توکن هدیه رایگان، همین الان می‌توانی بیش از ۱۷۰ ارسال متنی در کانال‌هایت را کاملاً رایگان تست کنی.
+                        </p>
+                        <a href="{% url 'forward_subscriptions:plans' %}" class="wfl-btn wfl-btn-primary">
+                            <i class="bi bi-gem"></i> مشاهده بسته‌های توکن
+                        </a>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill">
+                                    <span class="fs-xs text-light"><i class="bi bi-chat-text text-info me-1"></i> پیام متنی در هر کانال</span>
+                                    <strong class="text-warning">{{ pricing.text_cost }} توکن</strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill">
+                                    <span class="fs-xs text-light"><i class="bi bi-stars text-warning me-1"></i> امضای هوشمند با AI</span>
+                                    <strong class="text-warning">+{{ pricing.ai_watermark_extra_cost }} توکن</strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill">
+                                    <span class="fs-xs text-light"><i class="bi bi-image text-success me-1"></i> تصویر (بدون کپشن)</span>
+                                    <strong class="text-warning">{{ pricing.photo_cost }} توکن</strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill">
+                                    <span class="fs-xs text-light"><i class="bi bi-film text-primary me-1"></i> فایل و ویدیو تا {{ pricing.max_file_size_mb }} مگ</span>
+                                    <strong class="text-warning">۵ تا ۱۰ توکن</strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill">
+                                    <span class="fs-xs text-light"><i class="bi bi-diagram-3 text-info me-1"></i> ارسال خودکار از هاب تیمی</span>
+                                    <strong class="text-warning">+{{ pricing.hub_extra_cost }} توکن</strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="wfl-price-pill" style="border-color:rgba(7,201,139,0.45);background:rgba(7,201,139,0.1);">
+                                    <span class="fs-xs text-white fw-bold"><i class="bi bi-gift-fill text-success me-1"></i> هدیه رایگان شروع</span>
+                                    <strong class="text-success">{{ pricing.free_gift_tokens }} توکن</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ ۶. سؤالات متداول ══════════ -->
+    <section class="wfl-section pt-2">
+        <div class="container">
+            <div class="row g-4 align-items-start">
+                <div class="col-lg-4" data-wfl-reveal>
+                    <span class="wfl-eyebrow"><i class="bi bi-question-circle"></i> سؤالات پرتکرار</span>
+                    <h2 class="text-white fw-bold h3 mb-2">قبل از شروع چه بدانم؟</h2>
+                    <p class="text-muted fs-xs" style="line-height:1.9;">پاسخ شفاف به مهم‌ترین سؤال‌های مدیران کانال‌ها.</p>
+                </div>
+                <div class="col-lg-8" data-wfl-reveal>
+                    <details class="wfl-faq-item" open>
+                        <summary>آیا برای استفاده از وین‌فوروارد باید اشتراک ماهانه بخرم؟ <i class="bi bi-chevron-down"></i></summary>
+                        <p>خیر! سیستم وین‌فوروارد کاملاً توکنی و بدون تاریخ انقضاست. بلافاصله بعد از ورود می‌توانید {{ pricing.free_gift_tokens }} توکن هدیه رایگان دریافت کنید و هر ۵ پیام‌رسان برایتان باز است.</p>
+                    </details>
+                    <details class="wfl-faq-item">
+                        <summary>امضای هوشمند با هوش مصنوعی دقیقاً چه کاری انجام می‌دهد؟ <i class="bi bi-chevron-down"></i></summary>
+                        <p>در صفحه جزئیات هر کانال می‌توانید مشخص کنید که هنگام ارسال، امضا و آیدی کانال مبدا حذف و امضای اختصاصی خودتان اضافه شود، یا ساختار امضای مبدا دقیقاً با نام، آیدی و لینک رسمی همان پیام‌رسان بازسازی شود.</p>
+                    </details>
+                    <details class="wfl-faq-item">
+                        <summary>اگر ارسال به یک کانال به هر دلیلی ناموفق باشد، توکن کم می‌شود؟ <i class="bi bi-chevron-down"></i></summary>
+                        <p>خیر، کسر توکن در وین‌فوروارد به‌صورت اتمیک و فقط پس از تایید تحویل موفق در آن کانال انجام می‌شود.</p>
+                    </details>
+                    <details class="wfl-faq-item">
+                        <summary>اتصال کانال‌های تلگرام، بله، ایتا، روبیکا و سروش‌پلاس چطور انجام می‌شود؟ <i class="bi bi-chevron-down"></i></summary>
+                        <p>برای تلگرام و بله کافی است ربات رسمی وین‌فوروارد را در کانال ادمین کنید؛ برای ایتا توکن ایتایار خود را ثبت می‌کنید و برای روبیکا و سروش‌پلاس با کد تایید (OTP) امن وارد شده و کانال‌ها خودکار همگام‌سازی می‌شوند.</p>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ ۷. دعوت به اقدام پایانی ══════════ -->
+    <section class="wfl-section pt-2 pb-5">
+        <div class="container" data-wfl-reveal>
+            <div class="wfl-cta-box">
+                <span class="wfl-kicker"><span class="wfl-live-dot"></span> آماده انتشار حرفه‌ای هستی؟</span>
+                <h2 class="text-white fw-bold h2 mb-3">وقتت ارزشمندتر از کپی‌پیست کردن است!</h2>
+                <p class="text-muted mx-auto mb-4" style="max-width:560px;font-size:0.95rem;">
+                    همین الان وارد پنل وین‌فوروارد شو، {{ pricing.free_gift_tokens }} توکن هدیه رایگانت را فعال کن و اولین انتشار هم‌زمانت را در چند ثانیه تجربه کن.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'broadcast:dashboard' %}" class="wfl-btn wfl-btn-primary px-5">
+                        <i class="bi bi-rocket-takeoff-fill"></i> ورود به پنل وین‌فوروارد
+                    </a>
+                    <a href="{% url 'core:home' %}" class="wfl-btn wfl-btn-ghost">
+                        بازگشت به صفحه اصلی وینجاب
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'core/js/pages/winforward_landing.js' %}" defer></script>
+{% endblock %}

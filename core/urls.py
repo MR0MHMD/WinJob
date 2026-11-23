@@ -7,6 +7,7 @@ urlpatterns = [
     path('', home, name='home'),
     path("about/", AboutView.as_view(), name="about"),
     path("windirect/landding", windirect_landing, name="windirect_landing"),
+    path("winforward/", winforward_landing, name="winforward_landing"),
     path('content-production/', views.content_production_landing, name='content_production_landing'),
     path('landing/<slug:slug>/', platform_landing_page, name='landing_page'),
     path('pending', pending, name='pending'),

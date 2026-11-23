@@ -1,0 +1,730 @@
+/* =====================================================================
+   WinForward Visual Experience v2 — Linear / Stripe Grade Motion UI
+   ===================================================================== */
+
+.wfl-shell {
+    --wfl-bg: #0f0c1a;
+    --wfl-card-bg: rgba(24, 20, 40, 0.72);
+    --wfl-border: rgba(255, 255, 255, 0.09);
+    --wfl-orange: #fd5631;
+    --wfl-purple: #6d4aff;
+    --wfl-emerald: #07c98b;
+    --wfl-gold: #fdbc31;
+    --wfl-sky: #38bdf8;
+    color: #eeebf8;
+    position: relative;
+    overflow-x: clip;
+    background: var(--wfl-bg);
+}
+
+/* Matrix Dot Grid Background */
+.wfl-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 80% 65% at 50% 25%, #000 35%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 25%, #000 35%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Animated Mesh Aurora Orbs */
+.wfl-aurora {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.42;
+    animation: wflAuroraDrift 14s ease-in-out infinite alternate;
+}
+.wfl-aurora-1 {
+    width: 520px; height: 520px;
+    top: -140px; right: -100px;
+    background: radial-gradient(circle, #fd5631, transparent 70%);
+}
+.wfl-aurora-2 {
+    width: 560px; height: 560px;
+    top: 120px; left: -160px;
+    background: radial-gradient(circle, #6d4aff, transparent 70%);
+    animation-delay: -5s;
+}
+.wfl-aurora-3 {
+    width: 440px; height: 440px;
+    bottom: 8%; right: 20%;
+    background: radial-gradient(circle, #07c98b, transparent 72%);
+    opacity: 0.25;
+    animation-delay: -9s;
+}
+
+/* Scroll Reveal with stagger */
+[data-wfl-reveal] {
+    opacity: 0;
+    transform: translateY(32px) scale(0.985);
+    transition: opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1), transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-wfl-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Spotlight Glass Card (Mouse-tracking glow!) */
+.wfl-spot-card {
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+    background: linear-gradient(155deg, rgba(34, 28, 56, 0.78), rgba(16, 13, 28, 0.92));
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 1.45rem;
+    padding: 1.65rem;
+    height: 100%;
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+}
+.wfl-spot-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(380px circle at var(--mx) var(--my), rgba(139, 92, 246, 0.22), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.wfl-spot-card:hover::before {
+    opacity: 1;
+}
+.wfl-spot-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(167, 139, 250, 0.45);
+    box-shadow: 0 24px 55px -20px rgba(0, 0, 0, 0.85), 0 0 40px -18px rgba(109, 74, 255, 0.55);
+}
+
+/* Premium Badges & Typography */
+.wfl-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.42rem 1rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.22), rgba(109, 74, 255, 0.28));
+    border: 1px solid rgba(253, 86, 49, 0.48);
+    box-shadow: 0 0 24px -6px rgba(253, 86, 49, 0.55);
+    margin-bottom: 1.2rem;
+}
+.wfl-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #07c98b;
+    box-shadow: 0 0 0 0 rgba(7, 201, 139, 0.75);
+    animation: wflPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.wfl-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #c4b5fd;
+    background: rgba(109, 74, 255, 0.16);
+    border: 1px solid rgba(139, 92, 246, 0.38);
+    padding: 0.34rem 0.95rem;
+    border-radius: 999px;
+    margin-bottom: 0.9rem;
+}
+.wfl-gradient-text {
+    background: linear-gradient(120deg, #fd5631 0%, #fdbc31 38%, #c084fc 75%, #38bdf8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: wflShimmerText 6s linear infinite;
+}
+
+/* Shimmer & Glass Buttons */
+.wfl-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.88rem 1.7rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease, background 0.24s ease;
+}
+.wfl-btn-primary {
+    background: linear-gradient(135deg, #fd5631, #6d4aff);
+    color: #fff !important;
+    box-shadow: 0 14px 34px -10px rgba(253, 86, 49, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.wfl-btn-primary::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 70%;
+    height: 100%;
+    background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+    animation: wflBtnShine 3.6s ease-in-out infinite;
+}
+.wfl-btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 44px -10px rgba(109, 74, 255, 0.8);
+}
+.wfl-btn-ghost {
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #f4f2fc !important;
+    backdrop-filter: blur(10px);
+}
+.wfl-btn-ghost:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+.wfl-btn-emerald {
+    background: linear-gradient(135deg, #07c98b, #0ea5e9);
+    color: #071418 !important;
+    box-shadow: 0 12px 28px -10px rgba(7, 201, 139, 0.6);
+}
+.wfl-btn-emerald:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px -10px rgba(7, 201, 139, 0.78);
+}
+
+/* =====================================================================
+   HERO SECTION & 3D SVG FIBER-OPTIC NETWORK STAGE
+   ===================================================================== */
+.wfl-hero {
+    position: relative;
+    padding: 4.8rem 0 3.8rem;
+    z-index: 1;
+}
+.wfl-hero-title {
+    font-size: clamp(2.1rem, 4vw, 3.35rem);
+    font-weight: 900;
+    line-height: 1.28;
+    color: #fff;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+}
+.wfl-hero-lead {
+    color: #bcb7ce;
+    font-size: 1.02rem;
+    line-height: 2;
+    margin-bottom: 1.9rem;
+    max-width: 570px;
+}
+
+/* KPI Counters Row */
+.wfl-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wfl-stat-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 1rem;
+    padding: 0.75rem 0.9rem;
+}
+.wfl-stat-num {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+}
+.wfl-stat-lbl {
+    font-size: 0.72rem;
+    color: #9e98b4;
+    margin-top: 0.25rem;
+}
+
+/* Cinematic 3D Broadcast Hub Stage */
+.wfl-hub-stage {
+    position: relative;
+    border-radius: 1.9rem;
+    padding: 1.55rem;
+    background: linear-gradient(155deg, rgba(36, 30, 62, 0.92), rgba(14, 11, 24, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow:
+        0 35px 80px -24px rgba(0, 0, 0, 0.9),
+        0 0 80px -28px rgba(109, 74, 255, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.wfl-hub-ring {
+    position: absolute;
+    inset: -2px;
+    border-radius: 1.95rem;
+    padding: 1.5px;
+    background: linear-gradient(135deg, rgba(253, 86, 49, 0.65), rgba(109, 74, 255, 0.55), rgba(7, 201, 139, 0.55));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.65;
+}
+.wfl-stage-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.85rem;
+    margin-bottom: 1.05rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.74rem;
+    color: #a8a2bc;
+}
+.wfl-dots {
+    display: inline-flex;
+    gap: 6px;
+}
+.wfl-dots i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+.wfl-dots i:nth-child(1) { background: #ff5f56; }
+.wfl-dots i:nth-child(2) { background: #ffbd2e; }
+.wfl-dots i:nth-child(3) { background: #27c93f; }
+
+.wfl-source-card {
+    position: relative;
+    border-radius: 1.15rem;
+    padding: 1.05rem 1.15rem;
+    background: rgba(12, 9, 22, 0.78);
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    overflow: hidden;
+}
+.wfl-laser-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #a78bfa, #fdbc31, #07c98b, transparent);
+    box-shadow: 0 0 22px 5px rgba(139, 92, 246, 0.85);
+    top: -12%;
+    animation: wflLaserScan 3.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* Curved SVG Fiber-Optic Network */
+.wfl-fiber-svg {
+    width: 100%;
+    height: 68px;
+    display: block;
+    overflow: visible;
+}
+.wfl-fiber-base {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1.8;
+}
+.wfl-fiber-pulse {
+    fill: none;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-dasharray: 28 140;
+    animation: wflFiberFlow 2.2s linear infinite;
+}
+.wfl-fiber-pulse.p2 { animation-delay: 0.35s; }
+.wfl-fiber-pulse.p3 { animation-delay: 0.7s; }
+.wfl-fiber-pulse.p4 { animation-delay: 1.05s; }
+.wfl-fiber-pulse.p5 { animation-delay: 1.4s; }
+
+.wfl-node-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+.wfl-node-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.75rem 0.35rem;
+    border-radius: 1rem;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+    animation: wflNodeGlow 3.2s ease-in-out infinite;
+}
+.wfl-node-card:nth-child(2) { animation-delay: 0.45s; }
+.wfl-node-card:nth-child(3) { animation-delay: 0.9s; }
+.wfl-node-card:nth-child(4) { animation-delay: 1.35s; }
+.wfl-node-card:nth-child(5) { animation-delay: 1.8s; }
+.wfl-node-card img {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    object-fit: cover;
+}
+.wfl-node-badge {
+    position: absolute;
+    top: -7px;
+    left: -5px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    background: #07c98b;
+    color: #061b14;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    box-shadow: 0 0 12px rgba(7, 201, 139, 0.85);
+}
+
+.wfl-float-pill {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    background: rgba(16, 13, 28, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 34px -10px rgba(0, 0, 0, 0.85);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    z-index: 4;
+    animation: wflFloatY 4.4s ease-in-out infinite;
+}
+.wfl-float-pill.pill-top { top: -18px; left: 22px; border-color: rgba(253, 188, 49, 0.55); }
+.wfl-float-pill.pill-bot { bottom: -18px; right: 22px; border-color: rgba(7, 201, 139, 0.55); animation-delay: 1.8s; }
+
+/* =====================================================================
+   INFINITE MARQUEE RIBBON
+   ===================================================================== */
+.wfl-marquee {
+    position: relative;
+    overflow: hidden;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.018);
+    mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.wfl-marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 1rem;
+    animation: wflMarqueeScroll 28s linear infinite;
+}
+.wfl-marquee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #d6d1e6;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* =====================================================================
+   BENTO GRID & MINI ANIMATED WIDGETS
+   ===================================================================== */
+.wfl-section {
+    position: relative;
+    padding: 4.4rem 0;
+    z-index: 1;
+}
+.wfl-bento-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 1.05rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    margin-bottom: 1.05rem;
+}
+.wfl-mini-chart-svg path.line {
+    fill: none;
+    stroke: #07c98b;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 260;
+    stroke-dashoffset: 260;
+    animation: wflDrawChart 3.4s ease-in-out infinite alternate;
+}
+.wfl-gold-coin {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffe699, #fdbc31 48%, #d97706 100%);
+    color: #2b1800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    box-shadow: 0 0 36px -4px rgba(253, 188, 49, 0.72), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+    animation: wflCoinFloat 4s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+/* =====================================================================
+   COMPARISON (OLD MANUAL WAY vs WINFORWARD)
+   ===================================================================== */
+.wfl-compare-bad {
+    background: linear-gradient(155deg, rgba(242, 60, 73, 0.09), rgba(20, 15, 28, 0.94));
+    border: 1px solid rgba(242, 60, 73, 0.25);
+    border-radius: 1.4rem;
+    padding: 1.75rem;
+    height: 100%;
+}
+.wfl-compare-good {
+    background: linear-gradient(155deg, rgba(7, 201, 139, 0.12), rgba(20, 17, 36, 0.95));
+    border: 1px solid rgba(7, 201, 139, 0.38);
+    border-radius: 1.4rem;
+    padding: 1.75rem;
+    height: 100%;
+    box-shadow: 0 20px 50px -22px rgba(7, 201, 139, 0.4);
+}
+.wfl-compare-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.86rem;
+}
+.wfl-compare-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    line-height: 1.7;
+}
+
+/* =====================================================================
+   INTERACTIVE DEMO & TABS
+   ===================================================================== */
+.wfl-tab-bar {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.wfl-tab-btn {
+    border: 0;
+    background: transparent;
+    color: #aba6bc;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.42rem 0.95rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.wfl-tab-btn.is-active {
+    background: linear-gradient(135deg, #fd5631, #6d4aff);
+    color: #fff;
+    box-shadow: 0 6px 16px -4px rgba(253, 86, 49, 0.55);
+}
+.wfl-code-card {
+    position: relative;
+    background: rgba(10, 8, 18, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.1rem;
+    padding: 1.15rem;
+    white-space: pre-wrap;
+    font-size: 0.84rem;
+    line-height: 1.88;
+    min-height: 185px;
+    overflow: hidden;
+}
+.wfl-code-card.is-scanning::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #c084fc, #07c98b, transparent);
+    box-shadow: 0 0 22px 6px rgba(139, 92, 246, 0.85);
+    animation: wflScanOnce 0.85s ease-in-out forwards;
+}
+
+/* Pricing Pills & FAQ */
+.wfl-price-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.15rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.wfl-price-pill:hover {
+    border-color: rgba(253, 188, 49, 0.45);
+    transform: translateY(-2px);
+}
+.wfl-faq-item {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.05rem;
+    padding: 1.05rem 1.25rem;
+    margin-bottom: 0.8rem;
+    transition: all 0.22s ease;
+}
+.wfl-faq-item[open] {
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(109, 74, 255, 0.1);
+}
+.wfl-faq-item summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.93rem;
+}
+.wfl-faq-item summary::-webkit-details-marker { display: none; }
+.wfl-faq-item p {
+    margin: 0.85rem 0 0;
+    color: #bfb9d1;
+    font-size: 0.85rem;
+    line-height: 1.95;
+}
+
+/* CTA Finale */
+.wfl-cta-box {
+    position: relative;
+    border-radius: 2rem;
+    padding: 3.4rem 2rem;
+    text-align: center;
+    background:
+        radial-gradient(540px circle at 18% 20%, rgba(253, 86, 49, 0.26), transparent 65%),
+        radial-gradient(540px circle at 82% 80%, rgba(109, 74, 255, 0.32), transparent 65%),
+        rgba(18, 14, 32, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 30px 75px -25px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+}
+
+/* =====================================================================
+   HOMEPAGE SHOWCASE SECTION (index.html)
+   ===================================================================== */
+.wfh-section {
+    position: relative;
+    padding: 4rem 0;
+    background: transparent !important;
+}
+.wfh-panel {
+    position: relative;
+    border-radius: 2rem;
+    padding: 2.6rem;
+    background:
+        radial-gradient(560px circle at 8% 12%, rgba(253, 86, 49, 0.18), transparent 60%),
+        radial-gradient(560px circle at 92% 88%, rgba(109, 74, 255, 0.24), transparent 60%),
+        linear-gradient(155deg, rgba(28, 23, 46, 0.94), rgba(14, 11, 24, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 32px 80px -26px rgba(0, 0, 0, 0.9), 0 0 60px -28px rgba(109, 74, 255, 0.5);
+    overflow: hidden;
+}
+.wfh-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+/* =====================================================================
+   KEYFRAMES
+   ===================================================================== */
+@keyframes wflAuroraDrift {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(35px, -28px) scale(1.12); }
+}
+@keyframes wflPing {
+    0% { box-shadow: 0 0 0 0 rgba(7, 201, 139, 0.75); }
+    70% { box-shadow: 0 0 0 9px rgba(7, 201, 139, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(7, 201, 139, 0); }
+}
+@keyframes wflShimmerText {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+@keyframes wflBtnShine {
+    0%, 72% { left: -120%; }
+    100% { left: 160%; }
+}
+@keyframes wflLaserScan {
+    0% { top: -8%; opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { top: 106%; opacity: 0; }
+}
+@keyframes wflScanOnce {
+    0% { top: 0; opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+@keyframes wflFiberFlow {
+    0% { stroke-dashoffset: 168; }
+    100% { stroke-dashoffset: 0; }
+}
+@keyframes wflNodeGlow {
+    0%, 100% { border-color: rgba(255, 255, 255, 0.1); transform: translateY(0); }
+    50% { border-color: rgba(7, 201, 139, 0.85); transform: translateY(-5px); box-shadow: 0 14px 28px -12px rgba(7, 201, 139, 0.6); }
+}
+@keyframes wflFloatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+@keyframes wflCoinFloat {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-8px) rotate(4deg); }
+}
+@keyframes wflMarqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(50%); }
+}
+@keyframes wflDrawChart {
+    0% { stroke-dashoffset: 260; }
+    65%, 100% { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 767.98px) {
+    .wfl-hero { padding: 3rem 0 2.4rem; }
+    .wfl-node-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .wfl-hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
+    .wfh-panel { padding: 1.45rem; }
+    .wfl-float-pill { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    [data-wfl-reveal] { opacity: 1; transform: none; }
+}

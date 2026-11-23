@@ -75,16 +75,43 @@ def _make_filename(message, downloaded_file_path: str = "") -> str:
 
 
 class ProgressTracker:
-    """مدیریت پیام وضعیت واحد که با تغییر مرحله ویرایش می‌شه."""
+    """مدیریت پیام وضعیت زنده مرحله‌به‌مرحله در ربات‌های بله و تلگرام (با حذف پیام موقت و ارسال گزارش نهایی)."""
 
-    def __init__(self, adapter, chat_id):
+    def __init__(
+        self,
+        adapter,
+        chat_id,
+        *,
+        is_file_msg: bool = False,
+        source_platform: str = "bale",
+        needs_download: bool = False,
+        needs_ai: bool = False,
+        platform_totals: dict | None = None,
+    ):
         self.adapter = adapter
         self.chat_id = chat_id
         self.message_id = None
         self._current_text = None
+        self.is_file_msg = bool(is_file_msg)
+        self.source_platform = source_platform
+        self.needs_download = bool(is_file_msg and needs_download)
+        self.needs_ai = bool(needs_ai)
+
+        self.download_state = "pending"  # pending | running | done | failed
+        self.ai_state = "pending"        # pending | running | done | failed
+        self.platforms: dict[str, dict] = {}
+        for slug, total in (platform_totals or {}).items():
+            if total > 0:
+                self.platforms[slug] = {
+                    "total": int(total),
+                    "started": 0,
+                    "success": 0,
+                    "failed": 0,
+                    "skipped": 0,
+                }
 
     def _update(self, text: str, parse_mode: str = None):
-        if text == self._current_text:
+        if not text or text == self._current_text:
             return
         self._current_text = text
         is_tg = getattr(self.adapter, "platform_slug", "") == "telegram"
@@ -107,14 +134,134 @@ class ProgressTracker:
         except Exception as e:
             logger.warning(f"Failed to send progress message: {e}")
 
-    def start_download(self, source_platform: str = "bale"):
-        self._update(f"📥 در حال دانلود فایل از {_platform_fa(source_platform)}...")
+    def _render_live_text(self) -> str:
+        # حالت پیام صرفاً متنی
+        if not self.is_file_msg:
+            if self.needs_ai and self.ai_state in ("pending", "running"):
+                return "✨ در حال افزودن امضای اختصاصی ⏳"
+            return "در حال ارسال به کانال‌ها ⏳"
+
+        # حالت پیام فایلی (برد زنده مرحله‌به‌مرحله)
+        lines = ["درخواست شما در حال اجراست ⚙️", ""]
+
+        if self.needs_download:
+            dl_map = {
+                "pending": "در صف انتظار 🕒",
+                "running": "در حال انجام ⏳",
+                "done": "انجام شد ✅",
+                "failed": "ناموفق ❌",
+            }
+            lines.append(f"📥 دانلود از {_platform_fa(self.source_platform)}: {dl_map.get(self.download_state, 'در حال انجام ⏳')}")
+
+        if self.needs_ai:
+            ai_map = {
+                "pending": "در صف انتظار 🕒",
+                "running": "در حال انجام ⏳",
+                "done": "انجام شد ✅",
+                "failed": "خطا (ارسال متن اصلی) ⚠️",
+            }
+            lines.append(f"✨ افزودن امضای اختصاصی: {ai_map.get(self.ai_state, 'در صف انتظار 🕒')}")
+
+        for slug, st in self.platforms.items():
+            total = st["total"]
+            done_cnt = st["success"] + st["failed"] + st["skipped"]
+            if done_cnt >= total:
+                if st["success"] == total:
+                    status_str = "ارسال شد ✅"
+                elif st["skipped"] == total:
+                    status_str = "رد شد ⏭️"
+                elif st["success"] > 0:
+                    status_str = f"نیمه‌موفق ({st['success']} از {total}) ⚠️"
+                else:
+                    status_str = "ناموفق ❌"
+            elif st["started"] > 0:
+                if total > 1:
+                    status_str = f"در حال ارسال ({min(st['started'], total)} از {total}) 🚀"
+                else:
+                    status_str = "در حال ارسال 🚀"
+            else:
+                status_str = "در صف انتشار 🕒"
+            lines.append(f"📤 ارسال به {_platform_fa(slug)}: {status_str}")
+
+        return "\n".join(lines)
+
+    def start(self):
+        self._update(self._render_live_text())
+
+    def start_download(self, source_platform: str = None):
+        if source_platform:
+            self.source_platform = source_platform
+        self.needs_download = True
+        self.download_state = "running"
+        self._update(self._render_live_text())
+
+    def finish_download(self, ok: bool = True):
+        if not self.needs_download:
+            return
+        self.download_state = "done" if ok else "failed"
+        self._update(self._render_live_text())
+
+    def start_ai(self):
+        self.needs_ai = True
+        self.ai_state = "running"
+        self._update(self._render_live_text())
+
+    def finish_ai(self, ok: bool = True):
+        if not self.needs_ai:
+            return
+        self.ai_state = "done" if ok else "failed"
+        self._update(self._render_live_text())
+
+    def start_platform_target(self, platform_slug: str):
+        st = self.platforms.get(platform_slug)
+        if st is None:
+            st = {"total": 1, "started": 0, "success": 0, "failed": 0, "skipped": 0}
+            self.platforms[platform_slug] = st
+        st["started"] += 1
+        self._update(self._render_live_text())
+
+    def complete_platform_target(self, platform_slug: str, outcome: str):
+        st = self.platforms.get(platform_slug)
+        if st is None:
+            return
+        if outcome == "success":
+            st["success"] += 1
+        elif outcome == "skipped":
+            st["skipped"] += 1
+        else:
+            st["failed"] += 1
+        self._update(self._render_live_text())
 
     def start_upload(self, platform_slug: str = "eitaa"):
-        self._update(f"📤 در حال آپلود فایل به {_platform_fa(platform_slug)}...")
+        # سازگاری با فراخوانی‌های قبلی؛ وضعیت پلتفرم از طریق start_platform_target مدیریت می‌شود
+        self._update(self._render_live_text())
 
     def finish(self, job):
-        self._update(self._build_final_text(job), parse_mode="Markdown")
+        final_text = self._build_final_text(job)
+        is_tg = getattr(self.adapter, "platform_slug", "") == "telegram"
+
+        # حذف کامل پیام وضعیت زنده و ارسال پیام جدید گزارش نهایی (برای دریافت نوتیفیکیشن توسط کاربر)
+        deleted = False
+        if self.message_id and hasattr(self.adapter, "delete_message"):
+            try:
+                self.adapter.delete_message(self.chat_id, self.message_id)
+                deleted = True
+                self.message_id = None
+                self._current_text = None
+            except Exception as e:
+                logger.warning(f"Failed to delete live progress message {self.message_id}: {e}")
+
+        if deleted or not self.message_id:
+            try:
+                if is_tg:
+                    self.adapter.send_text(self.chat_id, final_text, parse_mode="Markdown")
+                else:
+                    self.adapter.send_text(self.chat_id, final_text)
+                return
+            except Exception as e:
+                logger.warning(f"Failed to send final report message: {e}")
+
+        self._update(final_text, parse_mode="Markdown")
 
     @staticmethod
     def _build_final_text(job) -> str:
@@ -247,17 +394,49 @@ def dispatch_job(
     }
 
     tracker = None
-    if progress_chat_id:
+    if progress_chat_id and all_targets:
         try:
             tracker_adapter = get_adapter(source_platform)
             if tracker_adapter:
-                tracker = ProgressTracker(tracker_adapter, progress_chat_id)
+                is_file_msg = message.content_type != BroadcastMessage.ContentType.TEXT
+                has_text_for_ai = bool((message.text or "").strip()) and (
+                    message.content_type != BroadcastMessage.ContentType.STICKER
+                )
+                needs_ai = has_text_for_ai and any(
+                    (getattr(t.channel, "watermark_mode", "off") or "off") != "off"
+                    for t in all_targets
+                )
+                needs_download = (
+                    is_file_msg
+                    and (not message.file)
+                    and any(
+                        t.channel.platform.slug not in (source_platform, "soroush")
+                        and not file_ids.get(t.channel.platform.slug)
+                        for t in cross_targets
+                    )
+                )
+                ordered_targets = same_source_targets + cross_targets
+                platform_totals: dict[str, int] = {}
+                for t in ordered_targets:
+                    pslug = t.channel.platform.slug
+                    platform_totals[pslug] = platform_totals.get(pslug, 0) + 1
+
+                tracker = ProgressTracker(
+                    tracker_adapter,
+                    progress_chat_id,
+                    is_file_msg=is_file_msg,
+                    source_platform=source_platform,
+                    needs_download=needs_download,
+                    needs_ai=needs_ai,
+                    platform_totals=platform_totals,
+                )
+                tracker.start()
         except Exception as e:
             logger.warning(f"Failed to init tracker: {e}")
 
     try:
         for target in same_source_targets:
-            _process_target(target, message, context=context, tracker=None)
+            _process_target(target, message, context=context, tracker=tracker)
 
         for target in cross_targets:
             _process_target(target, message, context=context, tracker=tracker)
@@ -358,11 +537,11 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
     if context is None:
         context = {}
 
+    platform_slug = target.channel.platform.slug
+    outcome = "failed"
     try:
         target.status = BroadcastTarget.Status.RUNNING
         target.save(update_fields=["status"])
-
-        platform_slug = target.channel.platform.slug
         from product.forward.subscriptions.access import get_user_token_balance
         from product.forward.subscriptions.services import (
             calculate_delivery_token_cost,
@@ -372,21 +551,48 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
 
         file_ids_meta = message.platform_file_ids or {}
         is_hub_msg = bool(file_ids_meta.get("hub_id"))
-        use_ai_wm = bool(file_ids_meta.get("use_ai_watermark"))
         clean_text = (message.text or "").strip()
         has_caption = bool(clean_text)
 
-        # ==================== سیاست اختصاصی سروش‌پلاس (فقط متن و کپشن · ۲ توکن) ====================
+        # ==================== پردازش هوشمند واترمارک متنی (بر اساس تنظیمات هر کانال · کش‌شده در سطح جاب) ====================
+        channel_wm_mode = getattr(target.channel, "watermark_mode", "off") or "off"
+        wants_ai_wm = (channel_wm_mode != "off") and has_caption and (message.content_type != BroadcastMessage.ContentType.STICKER)
+        ai_applied = False
+        effective_text = message.text or ""
+
+        if wants_ai_wm:
+            from product.forward.broadcast.services.ai_watermark import (
+                analyze_text_watermark,
+                apply_channel_watermark,
+            )
+
+            if "ai_watermark_result" not in context:
+                if tracker:
+                    tracker.start_ai()
+                context["ai_watermark_result"] = analyze_text_watermark(message.text or "")
+                if tracker:
+                    tracker.finish_ai(ok=bool(context["ai_watermark_result"].get("ok")))
+            ai_res = context["ai_watermark_result"]
+            if ai_res.get("ok"):
+                max_len = 4096 if (message.content_type == BroadcastMessage.ContentType.TEXT or platform_slug == "soroush") else 1024
+                effective_text = apply_channel_watermark(message.text or "", target.channel, ai_res, max_length=max_len)
+                ai_applied = True
+
+        use_ai_wm = ai_applied
+
+        # ==================== سیاست اختصاصی سروش‌پلاس (فقط متن و کپشن · ۲ توکن + ۲ توکن AI در صورت فعال بودن) ====================
         if platform_slug == "soroush":
             if message.content_type in (
                 BroadcastMessage.ContentType.STICKER,
                 BroadcastMessage.ContentType.ANIMATION,
             ):
                 target.mark_skipped("ارسال استیکر و گیف در سروش‌پلاس پشتیبانی نمی‌شود.")
+                outcome = "skipped"
                 return
 
             if message.content_type != BroadcastMessage.ContentType.TEXT and not has_caption:
                 target.mark_skipped("رسانه بدون کپشن به سروش‌پلاس ارسال نمی‌شود.")
+                outcome = "skipped"
                 return
 
             soroush_unit_cost = calculate_delivery_token_cost(
@@ -394,7 +600,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
                 has_caption=False,
                 file_size_bytes=0,
                 is_hub=is_hub_msg,
-                use_ai_watermark=False,
+                use_ai_watermark=use_ai_wm,
             )
             if get_user_token_balance(target.channel.user) < soroush_unit_cost:
                 target.mark_failed(f"موجودی توکن کافی نیست (نیاز به {soroush_unit_cost} توکن برای این کانال).")
@@ -410,14 +616,18 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
                 target.mark_failed("آداپتور پلتفرم سروش‌پلاس یافت نشد.")
                 return
 
-            send_body = message.text if message.content_type == BroadcastMessage.ContentType.TEXT else clean_text
+            if tracker:
+                tracker.start_platform_target(platform_slug)
+            send_body = effective_text if message.content_type == BroadcastMessage.ContentType.TEXT else effective_text.strip()
             result = adapter.send_text(target.channel.chat_id, send_body)
             target.mark_success(platform_message_id=result.get("message_id", ""))
+            outcome = "success"
             desc_kind = "متن" if message.content_type == BroadcastMessage.ContentType.TEXT else "کپشن"
+            ai_suffix = " + امضای AI" if use_ai_wm else ""
             deduct_tokens_atomic(
                 target.channel.user,
                 soroush_unit_cost,
-                description=f"ارسال {desc_kind} به «{target.channel.title}» ({_platform_fa(platform_slug)})",
+                description=f"ارسال {desc_kind}{ai_suffix} به «{target.channel.title}» ({_platform_fa(platform_slug)})",
                 broadcast_job_id=target.job_id,
             )
             return
@@ -461,12 +671,16 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
 
         # ==================== متن ====================
         if message.content_type == BroadcastMessage.ContentType.TEXT:
-            result = adapter.send_text(target.channel.chat_id, message.text)
+            if tracker:
+                tracker.start_platform_target(platform_slug)
+            result = adapter.send_text(target.channel.chat_id, effective_text)
             target.mark_success(platform_message_id=result.get("message_id", ""))
+            outcome = "success"
+            ai_suffix = " + امضای AI" if use_ai_wm else ""
             deduct_tokens_atomic(
                 target.channel.user,
                 unit_cost,
-                description=f"ارسال متن به «{target.channel.title}» ({_platform_fa(platform_slug)})",
+                description=f"ارسال متن{ai_suffix} به «{target.channel.title}» ({_platform_fa(platform_slug)})",
                 broadcast_job_id=target.job_id,
             )
             return
@@ -477,21 +691,23 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
 
         # ۱. file_id کش‌شده (فقط برای پلتفرم‌هایی که پشتیبانی می‌کنن مثل بله)
         if cached_file_id and platform_slug not in ("eitaa", "rubika", "soroush"):
+            if tracker:
+                tracker.start_platform_target(platform_slug)
             logger.info(f"[{platform_slug}] Using cached file_id for msg {message.pk}")
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, None,
-                message.text, file_id=cached_file_id,
+                effective_text, file_id=cached_file_id,
             )
 
         # ۲. فایل فیزیکی (از پنل وب)
         elif message.file:
             if tracker:
-                tracker.start_upload(platform_slug)
+                tracker.start_platform_target(platform_slug)
             logger.info(f"[{platform_slug}] Uploading physical file for msg {message.pk}")
             rubika_cached = context.get("rubika_file_inline") if platform_slug == "rubika" else None
             result = adapter.send_media(
                 target.channel.chat_id, message.content_type, message.file,
-                message.text, file_id=rubika_cached,
+                effective_text, file_id=rubika_cached,
             )
             if platform_slug == "rubika" and result.get("rubika_file_inline"):
                 context["rubika_file_inline"] = result["rubika_file_inline"]
@@ -510,10 +726,19 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
                 if tracker:
                     tracker.start_download(source_platform)
                 logger.info(f"[{platform_slug}] Downloading from {source_platform} for msg {message.pk}")
-                file_bytes, remote_path = _download_external_file(source_platform, source_file_id)
+                try:
+                    file_bytes, remote_path = _download_external_file(source_platform, source_file_id)
+                except Exception:
+                    if tracker:
+                        tracker.finish_download(ok=False)
+                    raise
                 if len(file_bytes) > max_bytes:
+                    if tracker:
+                        tracker.finish_download(ok=False)
                     target.mark_failed(f"حجم فایل بیشتر از سقف مجاز ({max_bytes // (1024 * 1024)} مگابایت) است و ارسال نشد.")
                     return
+                if tracker:
+                    tracker.finish_download(ok=True)
                 context["downloaded_file_bytes"] = file_bytes
                 context["downloaded_file_path"] = remote_path
                 detected_size = len(file_bytes)
@@ -533,7 +758,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
 
             # 🔑 ارسال فایل بدون هیچ تبدیل و دستکاری (خود ایتا هندل می‌کند)
             if tracker:
-                tracker.start_upload(platform_slug)
+                tracker.start_platform_target(platform_slug)
 
             logger.info(
                 f"[{platform_slug}] Uploading {len(downloaded_file_bytes)} bytes ({resolved_filename}) for msg {message.pk}"
@@ -545,7 +770,7 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             rubika_cached = context.get("rubika_file_inline") if platform_slug == "rubika" else None
             result = adapter.send_media(
                 target.channel.chat_id, send_content_type, file_obj,
-                message.text, file_id=rubika_cached,
+                effective_text, file_id=rubika_cached,
             )
             if platform_slug == "rubika" and result.get("rubika_file_inline"):
                 context["rubika_file_inline"] = result["rubika_file_inline"]
@@ -561,16 +786,23 @@ def _process_target(target: BroadcastTarget, message, context=None, tracker=None
             logger.info(f"[{platform_slug}] Cached file_id for msg {message.pk}")
 
         target.mark_success(platform_message_id=result.get("message_id", ""))
+        outcome = "success"
+        ai_suffix = " + امضای AI" if use_ai_wm else ""
         deduct_tokens_atomic(
             target.channel.user,
             unit_cost,
-            description=f"ارسال {message.get_content_type_display()} به «{target.channel.title}» ({_platform_fa(platform_slug)})",
+            description=f"ارسال {message.get_content_type_display()}{ai_suffix} به «{target.channel.title}» ({_platform_fa(platform_slug)})",
             broadcast_job_id=target.job_id,
         )
 
     except MessengerError as exc:
         logger.warning(f"Failed to send to {target.channel.title}: {exc}")
         target.mark_failed(str(exc))
+        outcome = "failed"
     except Exception as exc:
         logger.exception(f"Unexpected error sending to {target.channel.title}")
         target.mark_failed(f"خطای غیرمنتظره: {exc}")
+        outcome = "failed"
+    finally:
+        if tracker:
+            tracker.complete_platform_target(platform_slug, outcome)

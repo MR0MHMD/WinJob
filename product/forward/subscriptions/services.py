@@ -9,17 +9,19 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from product.forward.constants import (
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MB,
+    PRICING_CONFIG,
+    TokenPricingConfig,
+)
 from .models import (
     FORWARD_PLATFORM_SLUGS,
     ForwardSubscriptionAccount,
     ForwardSubscriptionOrder,
     ForwardSubscriptionPlan,
-    ForwardTokenPricing,
     ForwardTokenTransaction,
 )
-
-MAX_FILE_SIZE_MB = 20
-MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 
 def account_for(user) -> ForwardSubscriptionAccount:
@@ -28,15 +30,14 @@ def account_for(user) -> ForwardSubscriptionAccount:
     return account
 
 
-def get_pricing_config() -> ForwardTokenPricing:
-    """دریافت تنظیمات فعال نرخ مصرف توکن از دیتابیس."""
-    return ForwardTokenPricing.get_active()
+def get_pricing_config() -> TokenPricingConfig:
+    """دریافت ثابت‌های نرخ مصرف توکن وین‌فوروارد از constants.py (بدون کوئری دیتابیس)."""
+    return PRICING_CONFIG
 
 
 def get_max_file_size_bytes() -> int:
-    """سقف حجم مجاز فایل به بایت (پیش‌فرض ۲۰ مگابایت)."""
-    cfg = get_pricing_config()
-    return int(cfg.max_file_size_mb or MAX_FILE_SIZE_MB) * 1024 * 1024
+    """سقف حجم مجاز فایل به بایت (ثابت ۲۰ مگابایت)."""
+    return MAX_FILE_SIZE_BYTES
 
 
 def calculate_delivery_token_cost(
@@ -45,7 +46,7 @@ def calculate_delivery_token_cost(
     file_size_bytes: int = 0,
     is_hub: bool = False,
     use_ai_watermark: bool = False,
-    pricing: Optional[ForwardTokenPricing] = None,
+    pricing: Optional[TokenPricingConfig] = None,
 ) -> int:
     """محاسبه دقیق توکن مصرفی برای هر تحویل موفق در یک کانال طبق تعرفه وین فوروارد.
 

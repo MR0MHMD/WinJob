@@ -166,6 +166,7 @@
                                                            name="channels"
                                                            value="{{ item.channel.pk }}"
                                                            data-platform="{{ grp.slug }}"
+                                                           data-ai-watermark="{% if item.channel.watermark_mode != 'off' %}1{% else %}0{% endif %}"
                                                            data-base-locked="{% if not item.has_access %}1{% else %}0{% endif %}"
                                                            id="id_channels_{{ item.channel.pk }}"
                                                            {% if item.checked and item.has_access %}checked{% endif %}
@@ -181,7 +182,12 @@
                                                         {% endif %}
                                                     </div>
                                                     <div class="overflow-hidden">
-                                                        <div class="text-white fw-bold fs-xs text-truncate">{{ item.channel.title }}</div>
+                                                        <div class="text-white fw-bold fs-xs text-truncate d-flex align-items-center gap-1">
+                                                            <span class="text-truncate">{{ item.channel.title }}</span>
+                                                            {% if item.channel.watermark_mode != 'off' %}
+                                                                <span class="badge rounded-pill" style="background:rgba(139,92,246,0.22);color:#c4b5fd;font-size:0.62rem;" title="امضای هوشمند AI فعال (+۲ توکن)">✨ AI</span>
+                                                            {% endif %}
+                                                        </div>
                                                         <div class="text-muted text-truncate" style="font-size:0.7rem;" dir="ltr">
                                                             {% if item.channel.username %}@{{ item.channel.username }}{% else %}{{ item.channel.chat_id }}{% endif %}
                                                         </div>
@@ -397,7 +403,12 @@ document.addEventListener("DOMContentLoaded", function () {
             perCh = base + (hasCaption ? (pricing.caption_extra || 2) : 0);
         }
 
-        const total = (otherCount * perCh) + (soroushCount * textCost);
+        const aiExtra = pricing.ai_extra || 2;
+        const aiActiveForMsg = hasCaption && ctype !== "sticker";
+        const aiCount = aiActiveForMsg
+            ? checkedCbs.filter(function (cb) { return cb.dataset.aiWatermark === "1"; }).length
+            : 0;
+        const total = (otherCount * perCh) + (soroushCount * textCost) + (aiCount * aiExtra);
         const totalToman = total * tomanRate;
         const remaining = userBalance - total;
 
@@ -406,13 +417,18 @@ document.addEventListener("DOMContentLoaded", function () {
             tomanBadge.textContent = "معادل " + totalToman.toLocaleString("fa-IR") + " تومان";
         }
         if (formulaEl) {
+            let baseFormula = "";
             if (soroushCount > 0 && otherCount > 0 && perCh !== textCost) {
-                formulaEl.textContent = otherCount.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR") + " + " + soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR") + " توکن";
+                baseFormula = otherCount.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR") + " + " + soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR");
             } else if (soroushCount > 0 && otherCount === 0) {
-                formulaEl.textContent = soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR") + " توکن";
+                baseFormula = soroushCount.toLocaleString("fa-IR") + " سروش × " + textCost.toLocaleString("fa-IR");
             } else {
-                formulaEl.textContent = checkedCbs.length.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR") + " توکن";
+                baseFormula = checkedCbs.length.toLocaleString("fa-IR") + " کانال × " + perCh.toLocaleString("fa-IR");
             }
+            if (aiCount > 0) {
+                baseFormula += " + " + aiCount.toLocaleString("fa-IR") + " AI × " + aiExtra.toLocaleString("fa-IR");
+            }
+            formulaEl.textContent = baseFormula + " توکن";
         }
         if (remainingEl) {
             if (remaining >= 0) {

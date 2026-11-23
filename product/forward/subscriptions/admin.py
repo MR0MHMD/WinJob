@@ -7,7 +7,6 @@ from .models import (
     ForwardSubscriptionAccount,
     ForwardSubscriptionOrder,
     ForwardSubscriptionPlan,
-    ForwardTokenPricing,
     ForwardTokenTransaction,
 )
 from .services import credit_tokens_atomic
@@ -93,25 +92,6 @@ class ForwardSubscriptionAccountAdmin(admin.ModelAdmin):
                     description=f"صفر کردن موجودی توسط ادمین ({request.user})",
                 )
         self.message_user(request, "موجودی کاربران انتخاب‌شده صفر شد.")
-
-
-@admin.register(ForwardTokenPricing)
-class ForwardTokenPricingAdmin(admin.ModelAdmin):
-    """ویرایش نرخ مصرف توکن هر نوع پیام، حجم فایل، هاب و هوش مصنوعی."""
-
-    list_display = (
-        "text_cost",
-        "photo_cost",
-        "caption_extra_cost",
-        "sticker_gif_cost",
-        "media_under_5mb_cost",
-        "media_5_to_10mb_cost",
-        "media_10_to_20mb_cost",
-        "hub_extra_cost",
-        "ai_watermark_extra_cost",
-        "free_gift_tokens",
-        "max_file_size_mb",
-    )
 
 
 @admin.register(ForwardTokenTransaction)

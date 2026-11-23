@@ -302,8 +302,13 @@ N8N_CAMPAIGN_REPORT_WEBHOOK = ""
 N8N_CALLBACK_SECRET = ""
 N8N_API_TOKEN = ""
 
-# AI
+# AI (Blog)
 CHABOKAN_API_KEY = os.environ.get('CHABOKAN_API_KEY', '').strip()
+
+# AI (WinForward Watermark Cleaner & Rebrander — مستقل از کلید بلاگ)
+WINFORWARD_AI_API_KEY = os.environ.get('WINFORWARD_AI_API_KEY', 'sk-chbk-520ARfsVEtpf-IHhQLR4J1s8qBbsSjEzt4qdde4SaZVx4').strip()
+WINFORWARD_AI_ENDPOINT = 'https://ai.chabokan.net/v1/chat/completions'
+WINFORWARD_AI_MODEL = 'deepseek/deepseek-v3.2'
 
 # ==================== BoxAPI ====================
 BOXAPI_API_KEY = os.environ.get("BOXAPI_API_KEY", "")

@@ -64,14 +64,14 @@
                 <span class="text-white fw-bold fs-xs">فیلتر و جستجوی هاب‌ها</span>
             </div>
             <div class="wf-view-toggle-group">
-                <a href="?view=grid&q={{ search_q|urlencode }}&platform={{ platform_filter }}&mode={{ mode_filter }}&status={{ status_filter }}"
-                   class="wf-view-toggle-btn {% if view_mode == 'grid' %}is-active{% endif %}">
+                <button type="button" data-view-mode="grid"
+                        class="wf-view-toggle-btn wf-instant-view-btn border-0 {% if view_mode == 'grid' %}is-active{% endif %}">
                     <i class="bi bi-grid-3x3-gap-fill"></i> کارتی
-                </a>
-                <a href="?view=table&q={{ search_q|urlencode }}&platform={{ platform_filter }}&mode={{ mode_filter }}&status={{ status_filter }}"
-                   class="wf-view-toggle-btn {% if view_mode == 'table' %}is-active{% endif %}">
+                </button>
+                <button type="button" data-view-mode="table"
+                        class="wf-view-toggle-btn wf-instant-view-btn border-0 {% if view_mode == 'table' %}is-active{% endif %}">
                     <i class="bi bi-table"></i> جدولی
-                </a>
+                </button>
             </div>
         </div>
 
@@ -113,7 +113,7 @@
     </div>
 
     {% if hubs %}
-        {% if view_mode == 'table' %}
+        <div id="wfViewPaneTable" class="{% if view_mode != 'table' %}d-none{% endif %}">
             <div class="wf-channels-table-wrap wf-reveal wf-delay-2">
                 <div class="table-responsive">
                     <table class="table table-dark table-borderless wf-channels-table align-middle">
@@ -180,7 +180,8 @@
                     </table>
                 </div>
             </div>
-        {% else %}
+        </div>
+        <div id="wfViewPaneGrid" class="{% if view_mode == 'table' %}d-none{% endif %}">
             <div class="row g-4 wf-reveal wf-delay-2">
                 {% for hub in hubs %}
                 <div class="col-md-6 col-lg-4">
@@ -252,7 +253,7 @@
                 </div>
                 {% endfor %}
             </div>
-        {% endif %}
+        </div>
 
         {% if is_paginated %}
         <div class="mt-4">
@@ -268,4 +269,36 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtns = document.querySelectorAll(".wf-instant-view-btn");
+    const gridPane = document.getElementById("wfViewPaneGrid");
+    const tablePane = document.getElementById("wfViewPaneTable");
+    const hiddenViewInput = document.querySelector('input[name="view"]');
+
+    function applyView(mode) {
+        if (gridPane) gridPane.classList.toggle("d-none", mode !== "grid");
+        if (tablePane) tablePane.classList.toggle("d-none", mode !== "table");
+        toggleBtns.forEach(function (b) {
+            b.classList.toggle("is-active", b.dataset.viewMode === mode);
+        });
+        if (hiddenViewInput) hiddenViewInput.value = mode;
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set("view", mode);
+            window.history.replaceState({}, "", url.toString());
+        } catch (e) {}
+    }
+
+    toggleBtns.forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            applyView(btn.dataset.viewMode);
+        });
+    });
+});
+</script>
 {% endblock %}
